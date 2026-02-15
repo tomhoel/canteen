@@ -1,0 +1,66 @@
+name: Weekly Menu Update
+
+on:
+  schedule:
+    # Monday 09:00 and Tuesday 09:00 Oslo time (UTC+1/+2)
+    # CET (winter): UTC+1 → 08:00 UTC
+    # CEST (summer): UTC+2 → 07:00 UTC
+    # Using 07:00 UTC to cover summer time (09:00 CEST)
+    - cron: '0 7 * * 1'  # Monday
+    - cron: '0 7 * * 2'  # Tuesday
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-menu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Python dependencies
+        run: pip install rembg pillow onnxruntime
+
+      - name: Scrape menu
+        run: node scraper.js
+
+      - name: Generate food images
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node generate-images-v2.js
+
+      - name: Remove backgrounds
+        run: python3 remove-bg-v2.py
+
+      - name: Validate images
+        run: node validate-images.js || true
+
+      - name: Commit and push updated menu & images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/menu.json public/images/ public/images_nobg/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update weekly menu and food images $(date +%Y-%m-%d)"
+            git push
+          fi
