@@ -916,7 +916,7 @@ body {
   .card-content {
     flex: 1;
     text-align: left;
-    padding: 0;
+    padding: 0 0 0 6px;
     min-width: 0;
   }
 
@@ -939,6 +939,7 @@ body {
     text-align: left;
     min-height: 35px;
     justify-content: flex-start;
+    align-items: flex-start;
   }
 
   .hours-badge {
