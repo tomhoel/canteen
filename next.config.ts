@@ -1,11 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Only export when building, not in dev
-  ...(process.env.NODE_ENV === 'production' ? {
-    output: "export",
-    distDir: "dist",
-  } : {}),
+  output: "export",
   images: {
     unoptimized: true,
   },
