@@ -852,7 +852,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 14px;
-    padding: calc(80px + env(safe-area-inset-top)) 10px 16px;
+    padding: calc(64px + env(safe-area-inset-top)) 10px 16px;
     flex: 1;
     overflow-y: auto;
   }
