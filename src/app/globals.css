@@ -846,13 +846,13 @@ body {
     display: none;
   }
 
-  /* Cards container - fill space between fixed header and day bar */
+  /* Cards container */
   .cards-container {
     flex-direction: column;
-    justify-content: space-evenly;
+    justify-content: flex-start;
     align-items: stretch;
-    gap: 0;
-    padding: 52px 10px 4px;
+    gap: 14px;
+    padding: 60px 10px 16px;
     flex: 1;
     overflow-y: auto;
   }
