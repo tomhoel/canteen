@@ -937,7 +937,7 @@ body {
     line-height: 1.25;
     margin-bottom: 0;
     text-align: left;
-    min-height: auto;
+    min-height: 35px;
     justify-content: flex-start;
   }
 
@@ -977,14 +977,14 @@ body {
   }
 
   .side-dish-list {
-    gap: 4px;
+    gap: 3px;
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
+    min-height: 46px;
   }
 
   .side-dish-item {
-    padding: 2px 8px;
+    padding: 3px 10px;
     font-size: 10px;
     border-radius: 6px;
     min-width: 0;
