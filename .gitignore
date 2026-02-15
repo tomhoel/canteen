@@ -19,6 +19,14 @@
 
 # production
 /build
+/dist
+
+# screenshots & debug images
+*.png
+!public/**/*.png
+
+# logs
+update.log
 
 # misc
 .DS_Store

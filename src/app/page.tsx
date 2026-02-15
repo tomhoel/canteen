@@ -1,66 +1,217 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import styles from "./page.module.css";
+
+// Types
+interface Allergen { id: string; name: string; }
+interface MenuItem { dish: string; allergens: Allergen[]; isMain: boolean; }
+interface DayMenu { label: string; items: MenuItem[]; }
+interface DayEntry { day: string; no: DayMenu; en: DayMenu; }
+interface CanteenData { week: string; openingHours: string; menu: DayEntry[]; }
+interface MenuData { scrapedAt: string; canteens: Record<string, CanteenData>; }
+
+// Constants
+const DAYS_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
+const DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const FULL_DAYS_NO = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag"];
+const FULL_DAYS_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+
+const ALLERGEN_COLORS: Record<string, string> = {
+  Egg: "#FF9500", Fish: "#30B0C7", Gluten: "#FFCC00", Milk: "#8E8E93",
+  Nuts: "#A05A2C", Peanuts: "#A05A2C", Celery: "#34C759", Mustard: "#FFCC00",
+  "Sesame seeds": "#C7A000", Shellfish: "#FF3B30", Soya: "#5856D6",
+  Sulphites: "#AF52DE", Molluscs: "#5AC8FA", Lupin: "#34C759"
+};
+
+const CANTEEN_ORDER = ["Eat the street", "Fresh4you", "Flow"];
+const CANTEEN_IMAGE_SLUGS: Record<string, string> = {
+  "Eat the street": "the_hub", "Fresh4you": "telenor_expo", "Flow": "bygg_b"
+};
 
 export default function Home() {
+  const [menuData, setMenuData] = useState<MenuData | null>(null);
+  const [lang, setLang] = useState<"no" | "en">("no");
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [todayIndex, setTodayIndex] = useState(-1);
+  const [allergenOpen, setAllergenOpen] = useState(false);
+  const [lightbox, setLightbox] = useState({ isOpen: false, imageSrc: "", dishName: "", canteenName: "" });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const jsDay = new Date().getDay();
+    const idx = jsDay === 0 || jsDay === 6 ? -1 : jsDay - 1;
+    setTodayIndex(idx);
+    setSelectedDay(idx >= 0 ? idx : 0);
+    fetch("/menu.json").then(r => r.json()).then(setMenuData);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(prev => ({ ...prev, isOpen: false })); };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  if (!menuData || !mounted) {
+    return <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: "#999" }}>Loading...</span></div>;
+  }
+
+  const dayLabels = lang === "no" ? DAYS_NO : DAYS_EN;
+  const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
+  const dayKey = DAY_KEYS[selectedDay];
+
+  const sortedCanteens = CANTEEN_ORDER
+    .filter(name => menuData.canteens[name])
+    .map(name => [name, menuData.canteens[name]] as [string, CanteenData]);
+
+  const weekLabel = sortedCanteens[0]?.[1].week || "";
+  const selectedDate = new Date();
+  const currentDayOfWeek = selectedDate.getDay();
+  const mondayOffset = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+  const monday = new Date(selectedDate);
+  monday.setDate(selectedDate.getDate() + mondayOffset);
+  const target = new Date(monday);
+  target.setDate(monday.getDate() + selectedDay);
+  const dateStr = target.toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "long" });
+
+  const dayAllergens = Array.from(new Map(
+    sortedCanteens.flatMap(([, c]) => {
+      const entry = c.menu.find(d => d.day.toLowerCase() === dayKey);
+      const items = lang === "no" ? entry?.no?.items : entry?.en?.items;
+      return items?.flatMap(i => i.allergens.map(a => [a.name, a])) || [];
+    })
+  ).values()).sort((a, b) => a.name.localeCompare(b.name));
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="app-wrapper">
+      {/* Header */}
+      <header className="app-header">
+        <div className="hero-inline">
+          <h1 className="hero-title">{lang === "no" ? "Dagens" : "Today's"} <span>{lang === "no" ? "Lunsj" : "Lunch"}</span></h1>
+          <p className="hero-subtitle">{weekLabel} • {fullDayLabels[selectedDay]} {dateStr}</p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="lang-switcher">
+          <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("no")}>NO</button>
+          <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("en")}>EN</button>
         </div>
+      </header>
+
+      {/* Allergen Section */}
+      {dayAllergens.length > 0 && (
+        <div className="allergen-section" onClick={e => e.stopPropagation()}>
+          <div className="allergen-toggle" onClick={e => { e.stopPropagation(); setAllergenOpen(!allergenOpen); }}>
+            <span className="allergen-toggle-icon">⚠️</span>
+            <span className="allergen-toggle-text">{dayAllergens.length} {lang === "no" ? (dayAllergens.length === 1 ? "allergen i dag" : "allergener i dag") : (dayAllergens.length === 1 ? "allergen today" : "allergens today")}</span>
+            <span className={`allergen-toggle-arrow ${allergenOpen ? "open" : ""}`}>▼</span>
+          </div>
+          {allergenOpen && (
+            <div className="allergen-panel">
+              <div className="allergen-panel-title">{lang === "no" ? "Allergener i dagens meny" : "Allergens in today's menu"}</div>
+              <div className="allergen-grid">
+                {dayAllergens.map(a => (
+                  <div key={a.id} className="allergen-item">
+                    <span className="allergen-item-dot" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }}>{a.name.charAt(0)}</span>
+                    <span className="allergen-item-name">{a.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Cards */}
+      <main className="cards-container">
+        {sortedCanteens.map(([canteenName, canteen]) => {
+          const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
+          const items = lang === "no" ? dayEntry?.no?.items : dayEntry?.en?.items;
+          const mainDish = items?.find(i => i.isMain);
+          const sideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
+          const mainAllergens = mainDish?.allergens || [];
+          const isImageAvailable = todayIndex === -1 ? true : selectedDay <= todayIndex;
+          const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
+          const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
+          const isFeatured = canteenName === "Eat the street";
+
+          return (
+            <article key={canteenName} className={`food-card ${isFeatured ? "featured" : ""}`}>
+              {isFeatured && <div className="popular-badge">Popular</div>}
+              <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
+                <div className="card-image-circle">
+                  {isImageAvailable ? (
+                    <Image src={imagePath} alt={mainDish?.dish || "Matrett"} fill sizes="280px" className="food-image" priority unoptimized />
+                  ) : (
+                    <div className="image-placeholder"><span>🍽️</span></div>
+                  )}
+                </div>
+                <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
+              </div>
+              <div className="card-content">
+                <div className="card-header">
+                  <div className="canteen-name">{canteenName}</div>
+                  <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+                  <div className="hours-badge">{canteen.openingHours}</div>
+                </div>
+                {mainAllergens.length > 0 && (
+                  <div className="allergens-row">
+                    {mainAllergens.map(a => (
+                      <span key={a.id} className="allergen-badge" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }} title={a.name}>{a.name.charAt(0)}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="card-bottom">
+                <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
+                <div className="side-dish-list">
+                  {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
+                    <div key={idx} className="side-dish-item">
+                      <span className="side-dish-text">{item.dish}</span>
+                      {item.allergens.length > 0 && <span className="side-allergens">{item.allergens.map(a => a.name.charAt(0)).join("")}</span>}
+                    </div>
+                  )) : <div className="side-dish-item" style={{ justifyContent: "center", color: "var(--text-muted)" }}>{lang === "no" ? "Ingen andre retter" : "No other dishes"}</div>}
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </main>
+
+      {/* Day Selector */}
+      <nav className="day-bar">
+        <div className="day-selector">
+          {dayLabels.map((dayName, i) => (
+            <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => setSelectedDay(i)}>
+              <span className="day-label-short">{dayName}</span>
+              <span className="day-label-full">{fullDayLabels[i]}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Credit */}
+      <div className="credit-badge">Made by Tom Hoel @ Telenor Finance</div>
+
+      {/* Feedback */}
+      <a href="mailto:tom.chamkrai.hoel@telenor.no?subject=Feedback%20on%20Canteen%20App" className="feedback-btn" title={lang === "no" ? "Send tilbakemelding" : "Send feedback"}>
+        <span className="feedback-icon">✉️</span>
+        <span className="feedback-text">{lang === "no" ? "Tilbakemelding" : "Feedback"}</span>
+      </a>
+
+      {/* Lightbox */}
+      {lightbox.isOpen && (
+        <div className="lightbox-overlay" onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}>
+          <button className="lightbox-close" onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}>×</button>
+          <div className="lightbox-content" onClick={e => e.stopPropagation()}>
+            <div className="lightbox-image-container">
+              <Image src={lightbox.imageSrc} alt={lightbox.dishName} width={800} height={600} className="lightbox-image" priority />
+            </div>
+            <h2 className="lightbox-dish-name">{lightbox.dishName}</h2>
+            <p className="lightbox-canteen">{lightbox.canteenName}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
