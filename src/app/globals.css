@@ -796,7 +796,7 @@ body {
   
   /* Header - fixed at top */
   .app-header {
-    padding: 6px 16px;
+    padding: calc(6px + env(safe-area-inset-top)) 16px 6px;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
@@ -852,7 +852,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 14px;
-    padding: 60px 10px 16px;
+    padding: calc(56px + env(safe-area-inset-top)) 10px 16px;
     flex: 1;
     overflow-y: auto;
   }
