@@ -41,9 +41,11 @@ export default function Home() {
 
   useEffect(() => {
     const jsDay = new Date().getDay();
-    const idx = jsDay === 0 || jsDay === 6 ? -1 : jsDay - 1;
+    const isWeekday = jsDay >= 1 && jsDay <= 5;
+    const idx = isWeekday ? jsDay - 1 : -1;
     setTodayIndex(idx);
-    setSelectedDay(idx >= 0 ? idx : 0);
+    // On weekends, show Friday (index 4) as the nearest weekday
+    setSelectedDay(isWeekday ? jsDay - 1 : 4);
     fetch("/menu.json").then(r => r.json()).then(setMenuData);
     setMounted(true);
   }, []);
