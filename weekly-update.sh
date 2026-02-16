@@ -39,13 +39,18 @@ python3 remove-bg-v2.py || { echo "❌ Background removal failed"; exit 1; }
 echo "✅ Backgrounds removed"
 echo ""
 
-# Step 4: Validate images
-echo "🔍 Step 4: Validating images..."
+# Step 4: AI quality review (regenerates bad images)
+echo "🔍 Step 4: Reviewing image quality..."
+node review-images.js || { echo "⚠️ Review had issues, continuing..."; }
+echo ""
+
+# Step 5: Validate images
+echo "📐 Step 5: Validating images..."
 node validate-images.js
 echo ""
 
-# Step 5: Rebuild static site so dist/ is updated
-echo "🔨 Step 5: Rebuilding static site..."
+# Step 6: Rebuild static site so dist/ is updated
+echo "🔨 Step 6: Rebuilding static site..."
 npm run build || { echo "❌ Build failed"; exit 1; }
 echo "✅ Site rebuilt"
 echo ""
