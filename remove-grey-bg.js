@@ -255,9 +255,10 @@ async function removeBackground(inputPath, outputPath) {
         // Step 4: Apply smooth alpha at edges
         const removedPixels = applyEdgeSmoothing(data, isBackground, width, height, channels, 2);
 
-        // Step 5: Save
+        // Step 5: Save (resize to 512x512 + compress for fast loading)
         await sharp(data, { raw: { width, height, channels } })
-            .png({ compressionLevel: 9 })
+            .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .png({ compressionLevel: 9, palette: true })
             .toFile(outputPath);
 
         const totalPixels = width * height;
