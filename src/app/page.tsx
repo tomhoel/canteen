@@ -147,7 +147,7 @@ export default function Home() {
               </div>
               <div className="card-content">
                 <div className="card-header">
-                  <div className="canteen-name">{canteenName} <span className="week-label">({canteen.week})</span></div>
+                  <div className="canteen-name">{canteenName} <span className="week-label">({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span></div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
                   <div className="hours-badge">{canteen.openingHours}</div>
                 </div>
