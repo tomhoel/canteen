@@ -23,29 +23,36 @@ const GENERATION_PROMPT = (dishName) =>
 STRICT TECHNICAL SPECIFICATIONS:
 Camera & Composition:
 - Angle: Overhead shot, camera at 90° directly above plate
-- Framing: Plate perfectly centered, complete rim visible
+- Framing: Plate perfectly centered, complete rim visible with margin
 - Size: Food covers 60-70% of plate surface
 - Format: Square 1:1 ratio, 1024x1024px
 
-Plate & Styling:
-- Plate: Round BEIGE/CREAM ceramic dinner plate (warm off-white color #F5E6D3)
-- CRITICAL: Plate MUST be beige/cream colored, NOT pure white
-- Plating: Professional restaurant presentation
-- Lighting: Soft diffused overhead light, minimal shadows
-- Quality: Sharp, photorealistic, high detail
+Plate (CRITICAL - MUST FOLLOW EXACTLY):
+- Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)
+- Plate color: Warm sandy beige (#E8D5B7) — NOT white, NOT grey
+- Plate MUST have a clearly visible raised rim/edge all the way around
+- Plate must cast a subtle shadow on the background (shows depth/separation)
 
-Background:
-- Background: Solid neutral grey (#C0C0C0) seamless backdrop
-- MUST be uniform grey color (no gradients, textures, shadows)
-- ONLY visible elements: grey background + beige/cream plate + food
+Food & Styling:
+- Professional restaurant plating, appetizing presentation
+- Food centered on plate with realistic portions
+- Lighting: Soft diffused overhead light, gentle shadow under plate rim
+- Quality: Sharp, photorealistic, high detail, 8K quality
+
+Background (CRITICAL):
+- Background: Solid DARK GREY (#707070) seamless studio backdrop
+- Must be clearly DARKER than the beige plate (high contrast)
+- MUST be perfectly uniform grey — no gradients, no textures
+- Sharp clean edge where plate rim meets grey background
 
 Strict Exclusions:
-- NO white plates (use beige/cream only)
-- NO table surface or wood grain
+- NO white plates — use warm beige/sandy stoneware ONLY
+- NO light grey backgrounds — must be dark grey (#707070)
+- NO table surfaces, wood, marble, or cloth
 - NO utensils, napkins, garnishes outside plate
 - NO hands, people, or decorative elements
 - NO text, watermarks, labels
-- NO angled views or perspective
+- NO angled views — strictly 90° overhead only
 
 Style: Minimalist Scandinavian food photography, clean and professional.`;
 
@@ -109,12 +116,33 @@ async function generateImage(dishName) {
 
 function removeBackground(inputPath, outputPath) {
     try {
-        execSync(`python3 -c "
-from rembg import remove
-from PIL import Image
-inp = Image.open('${inputPath}')
-out = remove(inp)
-out.save('${outputPath}')
+        execSync(`node -e "
+const sharp = require('sharp');
+(async () => {
+    const {data, info} = await sharp('${inputPath}').raw().ensureAlpha().toBuffer({resolveWithObject:true});
+    const {width, height, channels} = info;
+    const total = width * height;
+    const visited = new Uint8Array(total);
+    const isBg = new Uint8Array(total);
+    const queue = [];
+    for (let x=0;x<width;x++) { queue.push(x); queue.push((height-1)*width+x); }
+    for (let y=1;y<height-1;y++) { queue.push(y*width); queue.push(y*width+width-1); }
+    while (queue.length) {
+        const idx = queue.shift();
+        if (idx<0||idx>=total||visited[idx]) continue;
+        visited[idx]=1;
+        const pi=idx*channels, r=data[pi], g=data[pi+1], b=data[pi+2];
+        const maxD=Math.max(Math.abs(r-g),Math.abs(g-b),Math.abs(r-b));
+        const br=(r+g+b)/3;
+        if (!(maxD<30&&br>=60&&br<=170)) continue;
+        isBg[idx]=1;
+        const x=idx%width, y=Math.floor(idx/width);
+        if(x>0)queue.push(idx-1);if(x<width-1)queue.push(idx+1);
+        if(y>0)queue.push(idx-width);if(y<height-1)queue.push(idx+width);
+    }
+    for(let i=0;i<total;i++){if(isBg[i])data[i*channels+3]=0;}
+    await sharp(data,{raw:{width,height,channels}}).png({compressionLevel:9}).toFile('${outputPath}');
+})();
 "`, { stdio: 'pipe' });
         return true;
     } catch (error) {

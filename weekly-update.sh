@@ -33,9 +33,9 @@ node generate-images-v3.js --grey --force || { echo "❌ Image generation failed
 echo "✅ Images generated"
 echo ""
 
-# Step 3: Remove backgrounds
+# Step 3: Remove backgrounds (Sharp-based, precise grey removal)
 echo "🎨 Step 3: Removing backgrounds..."
-python3 remove-bg-v2.py || { echo "❌ Background removal failed"; exit 1; }
+node remove-grey-bg.js || { echo "❌ Background removal failed"; exit 1; }
 echo "✅ Backgrounds removed"
 echo ""
 

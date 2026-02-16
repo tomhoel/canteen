@@ -61,31 +61,41 @@ STRICT TECHNICAL SPECIFICATIONS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Camera & Composition:
 - Angle: Overhead shot, camera at 90° directly above plate
-- Framing: Plate perfectly centered, complete rim visible
+- Framing: Plate perfectly centered, complete rim visible with margin
 - Size: Food covers 60-70% of plate surface
 - Format: Square 1:1 ratio, 1024x1024px
 
-Plate & Styling:
-- Plate: Round BEIGE/CREAM ceramic dinner plate (warm off-white color #F5E6D3)
-- CRITICAL: Plate MUST be beige/cream colored, NOT pure white
-- Plating: Professional restaurant presentation
-- Lighting: Soft diffused overhead light, minimal shadows
-- Quality: Sharp, photorealistic, high detail
+Plate (CRITICAL - MUST FOLLOW EXACTLY):
+- Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)
+- Plate color: Warm sandy beige (#E8D5B7) — NOT white, NOT grey
+- Plate MUST have a clearly visible raised rim/edge all the way around
+- The plate must be IDENTICAL style across all images: same warm beige stoneware
+- EVERY image must show the COMPLETE plate with full rim visible — never cropped
 
-Background:
-- Background: Solid neutral grey (#C0C0C0) seamless backdrop
-- MUST be uniform grey color (no gradients, textures, shadows)
-- ONLY visible elements: grey background + beige/cream plate + food
+Food & Styling:
+- Professional restaurant plating, appetizing presentation
+- Food centered on plate with realistic portions
+- Lighting: Perfectly even flat lighting from all directions — ZERO shadows
+- Quality: Sharp, photorealistic, high detail, 8K quality
+
+Background (CRITICAL):
+- Background: Solid DARK GREY (#707070) seamless studio backdrop
+- Must be clearly DARKER than the beige plate (high contrast between plate edge and background)
+- MUST be perfectly uniform grey — no gradients, no textures
+- ABSOLUTELY NO SHADOWS anywhere — not under the plate, not around the plate, nowhere
+- The plate edge must transition DIRECTLY to the flat grey background with zero shadow
 
 Strict Exclusions:
-- NO white plates (use beige/cream only)
-- NO table surface or wood grain
+- NO white plates — use warm beige/sandy stoneware ONLY
+- NO light grey backgrounds — must be dark grey (#707070)
+- NO SHADOWS of any kind — no drop shadows, no cast shadows, no ambient shadows
+- NO table surfaces, wood, marble, or cloth
 - NO utensils, napkins, garnishes outside plate
 - NO hands, people, or decorative elements
 - NO text, watermarks, labels
-- NO angled views or perspective
+- NO angled views — strictly 90° overhead only
 
-Style: Minimalist Scandinavian food photography, clean and professional.`;
+Style: Minimalist Scandinavian food photography, flat-lit product shot, clean and professional.`;
 
 async function generateImage(dishName, canteenName, style = 'transparent') {
     const prompt = style === 'grey'
