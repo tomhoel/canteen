@@ -56,6 +56,18 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
+  // Preload all images for all days so switching is instant
+  useEffect(() => {
+    if (!menuData) return;
+    DAY_KEYS.forEach(day => {
+      CANTEEN_ORDER.forEach(name => {
+        const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
+        const img = new window.Image();
+        img.src = `/images_nobg/${day}/${slug}.png`;
+      });
+    });
+  }, [menuData]);
+
   if (!menuData || !mounted) {
     return <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: "#999" }}>Loading...</span></div>;
   }
