@@ -741,17 +741,14 @@ body {
   border-color: transparent;
 }
 
-.today-indicator {
-  font-size: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--accent-orange);
-  margin-top: -1px;
+.day-label-today {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-secondary);
 }
 
-.day-btn.active .today-indicator {
-  color: rgba(255, 255, 255, 0.85);
+.day-btn.active .day-label-today {
+  color: white;
 }
 
 .day-label-short {
