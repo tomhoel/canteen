@@ -45,7 +45,7 @@ jobs:
       - name: Generate food images
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: node generate-images-v2.js
+        run: node generate-images-v3.js --grey --force
 
       - name: Remove backgrounds
         run: python3 remove-bg-v2.py

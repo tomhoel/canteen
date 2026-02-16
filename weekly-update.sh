@@ -29,7 +29,7 @@ echo ""
 
 # Step 2: Generate food images for all weekdays
 echo "📸 Step 2: Generating food images..."
-node generate-images-v2.js || { echo "❌ Image generation failed"; exit 1; }
+node generate-images-v3.js --grey --force || { echo "❌ Image generation failed"; exit 1; }
 echo "✅ Images generated"
 echo ""
 

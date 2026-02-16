@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 
 // Types
 interface Allergen { id: string; name: string; }
@@ -27,7 +26,7 @@ const ALLERGEN_COLORS: Record<string, string> = {
 
 const CANTEEN_ORDER = ["Eat the street", "Fresh4you", "Flow"];
 const CANTEEN_IMAGE_SLUGS: Record<string, string> = {
-  "Eat the street": "the_hub", "Fresh4you": "telenor_expo", "Flow": "bygg_b"
+  "Eat the street": "eat_the_street", "Fresh4you": "fresh4you", "Flow": "flow"
 };
 
 export default function Home() {
@@ -153,7 +152,7 @@ export default function Home() {
               {isFeatured && <div className="popular-badge">Popular</div>}
               <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                 <div className="card-image-circle">
-                  <Image src={imagePath} alt={mainDish?.dish || "Matrett"} fill sizes="280px" className="food-image" priority unoptimized />
+                  <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
                 </div>
                 <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
               </div>
@@ -214,7 +213,7 @@ export default function Home() {
           <button className="lightbox-close" onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}>×</button>
           <div className="lightbox-content" onClick={e => e.stopPropagation()}>
             <div className="lightbox-image-container">
-              <Image src={lightbox.imageSrc} alt={lightbox.dishName} width={800} height={600} className="lightbox-image" priority />
+              <img src={lightbox.imageSrc} alt={lightbox.dishName} className="lightbox-image" />
             </div>
             <h2 className="lightbox-dish-name">{lightbox.dishName}</h2>
             <p className="lightbox-canteen">{lightbox.canteenName}</p>
