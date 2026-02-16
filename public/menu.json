@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-02-15T07:51:12.401Z",
+  "scrapedAt": "2026-02-16T08:02:36.940Z",
   "canteens": {
     "Eat the street": {
       "week": "UKE/WEEK 08",
@@ -837,7 +837,7 @@
       ]
     },
     "Flow": {
-      "week": "BYGG / BUILDING B - UKE/WEEK 7",
+      "week": "BYGG / BUILDING B - UKE/WEEK 8",
       "openingHours": "11:00 - 13:00",
       "menu": [
         {
@@ -846,30 +846,17 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Hamburger med blå mugg ost saus, stekt løk og søtpotet fries",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Bali kylling-gryte med ris",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Bakt rotgrønnsaker med sitron og chili",
+                "dish": "Linse gryte",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Fisk suppe",
+                "dish": "Mais suppe",
                 "allergens": [
                   {
                     "id": "2",
@@ -892,30 +879,17 @@
             "label": "MONDAY",
             "items": [
               {
-                "dish": "Hamburger",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Bali chicken stew with rice",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Baked root vegetables with lemon and chilli",
+                "dish": "Lentil casserole",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Fish soup",
+                "dish": "Corn soup",
                 "allergens": [
                   {
                     "id": "2",
@@ -933,7 +907,7 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Kjøttpai med søtpotetlokk",
+                "dish": "Kremet svine-gryte med kokte poteter",
                 "allergens": [
                   {
                     "id": "4",
@@ -943,17 +917,17 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetar skogsgryte",
+                "dish": "Blomkål-gryte med lime",
                 "allergens": [
                   {
-                    "id": "4",
-                    "name": "Milk"
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
                 "isMain": false
               },
               {
-                "dish": "Indisk karri suppe",
+                "dish": "Italiensk pasta suppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -968,7 +942,7 @@
             "label": "TUESDAY",
             "items": [
               {
-                "dish": "Meat pie with sweet potato topping",
+                "dish": "Creamy pork stew with boile potato",
                 "allergens": [
                   {
                     "id": "4",
@@ -978,17 +952,17 @@
                 "isMain": true
               },
               {
-                "dish": "Vegan forest stew",
+                "dish": "Cauliflower casserole with lime",
                 "allergens": [
                   {
-                    "id": "4",
-                    "name": "Milk"
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
                 "isMain": false
               },
               {
-                "dish": "Indian curry soup",
+                "dish": "Italian pasta soup",
                 "allergens": [
                   {
                     "id": "7",
@@ -1006,7 +980,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Sprøbakt hoki, gulrot, potet og remulade ved siden",
+                "dish": "Stekt ternet laks og sei på grønnsaker med fløte",
                 "allergens": [
                   {
                     "id": "2",
@@ -1020,12 +994,12 @@
                 "isMain": true
               },
               {
-                "dish": "Marokkansk ratatouille",
+                "dish": "Indisk linse-gryte med kikert",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Gulrot ingefær suppe",
+                "dish": "Minestronesuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -1040,7 +1014,7 @@
             "label": "WEDNESDAY",
             "items": [
               {
-                "dish": "Crispy baked hoki, carrot, potato and remoulade on the side",
+                "dish": "Fried diced salmon and saithe on creamy vegetables",
                 "allergens": [
                   {
                     "id": "2",
@@ -1054,12 +1028,12 @@
                 "isMain": true
               },
               {
-                "dish": "Moroccan ratatouille",
+                "dish": "Indian lentil stew with chickpeas",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Carrot and ginger soup",
+                "dish": "Minestrone soup",
                 "allergens": [
                   {
                     "id": "7",
@@ -1077,18 +1051,22 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Svinefilet med sitrus, fennikel, rosamarin og poteter",
+                "dish": "Appelsin og chili marinert kylling overlår med ris",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Ovsnbakte poteter med artiskokk",
+                "dish": "Chili sin carne med ris",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Ertesuppe",
+                "dish": "Vestafrikansk peanøttsuppe",
                 "allergens": [
+                  {
+                    "id": "6",
+                    "name": "Peanuts"
+                  },
                   {
                     "id": "7",
                     "name": "Celery"
@@ -1102,18 +1080,22 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Pork fillet with citrus, fennel, rosemary and potato",
+                "dish": "Orange and chilli marinateed chicken tight with rice",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Oven-baked potatoes with artichoke",
+                "dish": "Chilli sin carne with rice",
                 "allergens": [],
                 "isMain": false
               },
               {
                 "dish": "Green pea soup",
                 "allergens": [
+                  {
+                    "id": "6",
+                    "name": "Peanuts"
+                  },
                   {
                     "id": "7",
                     "name": "Celery"
@@ -1130,35 +1112,17 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Burrito med ris",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Svinekjøtt i sursøt med ris",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Vegetar burrito",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Karri med rotgrønnsaker og koriander-myntesaus",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Kremet selleri og eple suppe",
+                "dish": "Kremet sellerisuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -1173,31 +1137,17 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Burrito med ris",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
+                "dish": "Sweet and sour pork with rice",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Vegetar Burrito",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Carry root vegetables with coriander and mint sauce",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Creamy celleri and apple soup",
+                "dish": "Creamy celleri soup",
                 "allergens": [
                   {
                     "id": "7",
