@@ -189,18 +189,17 @@ export default function Home() {
       {/* Day Selector */}
       <nav className="day-bar">
         <div className="day-selector">
-          {dayLabels.map((dayName, i) => (
-            <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => setSelectedDay(i)}>
-              {i === todayIndex ? (
-                <span className="day-label-today"><strong>{fullDayLabels[i]}</strong> ({lang === "no" ? "I dag" : "Today"})</span>
-              ) : (
-                <>
-                  <span className="day-label-short">{dayName}</span>
-                  <span className="day-label-full">{fullDayLabels[i]}</span>
-                </>
-              )}
-            </button>
-          ))}
+          {fullDayLabels.map((dayName, i) => {
+            const dayDate = new Date(monday);
+            dayDate.setDate(monday.getDate() + i);
+            const dateLabel = `${dayDate.getDate().toString().padStart(2, "0")}.${(dayDate.getMonth() + 1).toString().padStart(2, "0")}`;
+            return (
+              <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => setSelectedDay(i)}>
+                <span className="day-label-name">{dayName}</span>
+                <span className="day-label-date">{i === todayIndex ? (lang === "no" ? "I dag" : "Today") : dateLabel}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
 
