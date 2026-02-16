@@ -1,7 +1,7 @@
 #!/bin/bash
 # Weekly Menu Update Script
 # Runs Monday 09:00 and Tuesday 09:00 (backup in case menu isn't published Monday)
-# Scrapes menu, generates food images, removes backgrounds, rebuilds static site
+# Smart update: only regenerates images for canteens whose menus actually changed
 
 set -e
 
@@ -13,7 +13,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo ""
 echo "========================================"
-echo "🍽️  WEEKLY MENU UPDATE"
+echo "🍽️  WEEKLY MENU UPDATE (SMART)"
 echo "📅 $(date '+%A %d %B %Y, %H:%M')"
 echo "========================================"
 echo ""
@@ -21,36 +21,13 @@ echo ""
 # Ensure node and python are available (needed for cron which has minimal PATH)
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-# Step 1: Scrape menu
-echo "📥 Step 1: Scraping latest menu..."
-node scraper.js || { echo "❌ Scraping failed"; exit 1; }
-echo "✅ Menu scraped"
+# Smart update: scrape, compare, only regenerate what changed
+echo "🧠 Running smart update..."
+node smart-update.js || { echo "❌ Smart update failed"; exit 1; }
 echo ""
 
-# Step 2: Generate food images for all weekdays
-echo "📸 Step 2: Generating food images..."
-node generate-images-v3.js --grey --force || { echo "❌ Image generation failed"; exit 1; }
-echo "✅ Images generated"
-echo ""
-
-# Step 3: Remove backgrounds (Sharp-based, precise grey removal)
-echo "🎨 Step 3: Removing backgrounds..."
-node remove-grey-bg.js || { echo "❌ Background removal failed"; exit 1; }
-echo "✅ Backgrounds removed"
-echo ""
-
-# Step 4: AI quality review (regenerates bad images)
-echo "🔍 Step 4: Reviewing image quality..."
-node review-images.js || { echo "⚠️ Review had issues, continuing..."; }
-echo ""
-
-# Step 5: Validate images
-echo "📐 Step 5: Validating images..."
-node validate-images.js
-echo ""
-
-# Step 6: Rebuild static site so dist/ is updated
-echo "🔨 Step 6: Rebuilding static site..."
+# Rebuild static site
+echo "🔨 Rebuilding static site..."
 npm run build || { echo "❌ Build failed"; exit 1; }
 echo "✅ Site rebuilt"
 echo ""
