@@ -733,16 +733,25 @@ body {
   box-shadow: 0 4px 16px rgba(255, 149, 0, 0.4);
 }
 
-.day-btn.today::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 5px;
-  height: 5px;
-  background: white;
-  border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+.day-btn.today {
+  border: 2px solid var(--accent-orange);
+}
+
+.day-btn.today.active {
+  border-color: transparent;
+}
+
+.today-indicator {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-orange);
+  margin-top: -1px;
+}
+
+.day-btn.active .today-indicator {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .day-label-short {

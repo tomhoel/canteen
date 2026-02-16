@@ -193,6 +193,7 @@ export default function Home() {
             <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => setSelectedDay(i)}>
               <span className="day-label-short">{dayName}</span>
               <span className="day-label-full">{fullDayLabels[i]}</span>
+              {i === todayIndex && <span className="today-indicator">{lang === "no" ? "i dag" : "today"}</span>}
             </button>
           ))}
         </div>
