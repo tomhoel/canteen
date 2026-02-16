@@ -191,9 +191,14 @@ export default function Home() {
         <div className="day-selector">
           {dayLabels.map((dayName, i) => (
             <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => setSelectedDay(i)}>
-              <span className="day-label-short">{dayName}</span>
-              <span className="day-label-full">{fullDayLabels[i]}</span>
-              {i === todayIndex && <span className="today-indicator">{lang === "no" ? "i dag" : "today"}</span>}
+              {i === todayIndex ? (
+                <span className="day-label-today"><strong>{fullDayLabels[i]}</strong> ({lang === "no" ? "I dag" : "Today"})</span>
+              ) : (
+                <>
+                  <span className="day-label-short">{dayName}</span>
+                  <span className="day-label-full">{fullDayLabels[i]}</span>
+                </>
+              )}
             </button>
           ))}
         </div>
