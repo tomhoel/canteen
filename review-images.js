@@ -18,17 +18,36 @@ const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const MAX_RETRIES = 2;
 
 const GENERATION_PROMPT = (dishName) =>
-`Professional food photography of "${dishName}", top-down overhead shot on a clean white ceramic plate, soft natural lighting, shallow depth of field, restaurant quality presentation, minimalist Scandinavian style, no text or labels, photorealistic.
+`Professional overhead food photography of "${dishName}".
 
-CRITICAL REQUIREMENTS:
-- Camera: Top-down overhead shot looking straight down at the plate
-- MUST SHOW: Complete round plate fully visible with generous margin around all edges
-- Plate color: Clean white or light ceramic plate
-- Food positioning: Centered on plate, realistic portions
-- Background: Solid light gray (#E8E8E8) seamless backdrop
-- Lighting: Natural soft lighting, subtle shadows
-- NO cropped plates, NO angled shots, entire rim must be visible
-- Style: Restaurant menu photography, appetizing and realistic`;
+STRICT TECHNICAL SPECIFICATIONS:
+Camera & Composition:
+- Angle: Overhead shot, camera at 90° directly above plate
+- Framing: Plate perfectly centered, complete rim visible
+- Size: Food covers 60-70% of plate surface
+- Format: Square 1:1 ratio, 1024x1024px
+
+Plate & Styling:
+- Plate: Round BEIGE/CREAM ceramic dinner plate (warm off-white color #F5E6D3)
+- CRITICAL: Plate MUST be beige/cream colored, NOT pure white
+- Plating: Professional restaurant presentation
+- Lighting: Soft diffused overhead light, minimal shadows
+- Quality: Sharp, photorealistic, high detail
+
+Background:
+- Background: Solid neutral grey (#C0C0C0) seamless backdrop
+- MUST be uniform grey color (no gradients, textures, shadows)
+- ONLY visible elements: grey background + beige/cream plate + food
+
+Strict Exclusions:
+- NO white plates (use beige/cream only)
+- NO table surface or wood grain
+- NO utensils, napkins, garnishes outside plate
+- NO hands, people, or decorative elements
+- NO text, watermarks, labels
+- NO angled views or perspective
+
+Style: Minimalist Scandinavian food photography, clean and professional.`;
 
 async function reviewImage(imagePath, dishName) {
     const imageData = fs.readFileSync(imagePath);
