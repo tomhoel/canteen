@@ -338,6 +338,14 @@ body {
   margin-bottom: 4px;
 }
 
+.week-label {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
 .dish-name {
   font-size: 17px;
   font-weight: 700;

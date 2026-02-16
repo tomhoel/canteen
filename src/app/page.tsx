@@ -132,7 +132,6 @@ export default function Home() {
           const mainDish = items?.find(i => i.isMain);
           const sideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
           const mainAllergens = mainDish?.allergens || [];
-          const isImageAvailable = todayIndex === -1 ? true : selectedDay <= todayIndex;
           const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
           const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
           const isFeatured = canteenName === "Eat the street";
@@ -142,17 +141,13 @@ export default function Home() {
               {isFeatured && <div className="popular-badge">Popular</div>}
               <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                 <div className="card-image-circle">
-                  {isImageAvailable ? (
-                    <Image src={imagePath} alt={mainDish?.dish || "Matrett"} fill sizes="280px" className="food-image" priority unoptimized />
-                  ) : (
-                    <div className="image-placeholder"><span>🍽️</span></div>
-                  )}
+                  <Image src={imagePath} alt={mainDish?.dish || "Matrett"} fill sizes="280px" className="food-image" priority unoptimized />
                 </div>
                 <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
               </div>
               <div className="card-content">
                 <div className="card-header">
-                  <div className="canteen-name">{canteenName}</div>
+                  <div className="canteen-name">{canteenName} <span className="week-label">({canteen.week})</span></div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
                   <div className="hours-badge">{canteen.openingHours}</div>
                 </div>
