@@ -28,38 +28,16 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Install Node dependencies
         run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Install Python dependencies (for review fallback)
-        run: pip install rembg pillow onnxruntime
-
-      - name: Scrape menu
-        run: node scraper.js
-
-      - name: Generate food images
+      - name: Smart update (scrape + compare + regenerate only changes)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: node generate-images-v3.js --grey --force
-
-      - name: Remove backgrounds (Sharp - precise grey removal)
-        run: node remove-grey-bg.js
-
-      - name: Review images with AI (regenerate if quality is poor)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: node review-images.js
-
-      - name: Validate images
-        run: node validate-images.js || true
+        run: node smart-update.js
 
       - name: Commit and push updated menu & images
         run: |
