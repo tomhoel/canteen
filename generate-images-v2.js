@@ -13,19 +13,18 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
-// IMPROVED PROMPT - Shows full plates, consistent angle
-const GENERATION_PROMPT = (dishName, canteenName) => 
-`Professional food photography of "${dishName}" on a plate.
+// IMPROVED PROMPT - Top-down overhead shot, full plate visible
+const GENERATION_PROMPT = (dishName, canteenName) =>
+`Professional food photography of "${dishName}", top-down overhead shot on a clean white ceramic plate, soft natural lighting, shallow depth of field, restaurant quality presentation, minimalist Scandinavian style, no text or labels, photorealistic.
 
 CRITICAL REQUIREMENTS:
-- Camera: 45-degree angle from side (NOT top-down), appetizing perspective
-- MUST SHOW: Complete round plate/dish visible under the food
-- Plate color: Light beige/cream ceramic plate (not pure white, easier for AI)
+- Camera: Top-down overhead shot looking straight down at the plate
+- MUST SHOW: Complete round plate fully visible with generous margin around all edges
+- Plate color: Clean white or light ceramic plate
 - Food positioning: Centered on plate, realistic portions
-- Framing: Show full plate with some margin around it
 - Background: Solid light gray (#E8E8E8) seamless backdrop
-- Lighting: Natural soft lighting from left side, subtle shadows
-- NO top-down view, NO extreme close-ups, NO cropped plates
+- Lighting: Natural soft lighting, subtle shadows
+- NO cropped plates, NO angled shots, entire rim must be visible
 - Style: Restaurant menu photography, appetizing and realistic`;
 
 async function generateImage(dishName, canteenName) {

@@ -18,18 +18,16 @@ const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const MAX_RETRIES = 2;
 
 const GENERATION_PROMPT = (dishName) =>
-`Professional food photography of "${dishName}" on a plate.
+`Professional food photography of "${dishName}", top-down overhead shot on a clean white ceramic plate, soft natural lighting, shallow depth of field, restaurant quality presentation, minimalist Scandinavian style, no text or labels, photorealistic.
 
 CRITICAL REQUIREMENTS:
-- Camera: 45-degree angle from side (NOT top-down), appetizing perspective
-- MUST SHOW: Complete round plate/dish fully visible, NOT cropped at edges
-- Plate color: Light beige/cream ceramic plate (not pure white)
+- Camera: Top-down overhead shot looking straight down at the plate
+- MUST SHOW: Complete round plate fully visible with generous margin around all edges
+- Plate color: Clean white or light ceramic plate
 - Food positioning: Centered on plate, realistic portions
-- Framing: Show FULL plate with generous margin around all edges, no cropping
 - Background: Solid light gray (#E8E8E8) seamless backdrop
-- Lighting: Natural soft lighting from left side, subtle shadows
-- NO top-down view, NO extreme close-ups, NO cropped plates
-- The entire rim of the plate must be visible in the image
+- Lighting: Natural soft lighting, subtle shadows
+- NO cropped plates, NO angled shots, entire rim must be visible
 - Style: Restaurant menu photography, appetizing and realistic`;
 
 async function reviewImage(imagePath, dishName) {
