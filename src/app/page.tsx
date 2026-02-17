@@ -58,14 +58,23 @@ export default function Home() {
   // Preload all images for all days so switching is instant
   useEffect(() => {
     if (!menuData) return;
-    DAY_KEYS.forEach(day => {
+
+    // Prioritize the current selected day to ensure it loads first
+    const sortedDays = [...DAY_KEYS];
+    if (selectedDay >= 0 && selectedDay < sortedDays.length) {
+      const day = sortedDays[selectedDay];
+      sortedDays.splice(selectedDay, 1);
+      sortedDays.unshift(day);
+    }
+
+    sortedDays.forEach(day => {
       CANTEEN_ORDER.forEach(name => {
         const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
         const img = new window.Image();
         img.src = `/images_nobg/${day}/${slug}.png`;
       });
     });
-  }, [menuData]);
+  }, [menuData, selectedDay]);
 
   if (!menuData || !mounted) {
     return <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: "#999" }}>Loading...</span></div>;
