@@ -77,27 +77,38 @@ function parseItem(text, isMain = false) {
     return { dish: dish.replace(/\s+/g, ' ').trim(), allergens, isMain };
 }
 
+/**
+ * Determines if the current line should be merged into the previous line.
+ * Merging happens if the previous line ends with a preposition/conjunction,
+ * or if the current line starts with a lowercase letter and is relatively short.
+ */
+function shouldMerge(prevLine, currentLine) {
+    const CONTINUATION_WORDS = /\b(med|og|with|and|in|på|i|over|under|til|fra|av|uten|mashed)\s*$/i;
+    const STARTS_WITH_LOWERCASE = /^[a-zæøå]/;
+    const MAX_CONTINUATION_LENGTH = 30;
+
+    const endsWithContinuation = CONTINUATION_WORDS.test(prevLine);
+    const startsWithLowercase = STARTS_WITH_LOWERCASE.test(currentLine);
+    const isShortLine = currentLine.length < MAX_CONTINUATION_LENGTH;
+
+    return endsWithContinuation || (startsWithLowercase && isShortLine);
+}
+
 // ─── Merge continuation lines ───
 // e.g. "Fullkorn pasta Bolognese med" + "parmesan 1,3,4" → "Fullkorn pasta Bolognese med parmesan 1,3,4"
 function mergeItems(rawItems) {
-    const merged = [];
-    for (let i = 0; i < rawItems.length; i++) {
-        const line = rawItems[i].trim();
-        if (!line) continue;
-
-        // If the previous line ends with a preposition/conjunction, merge this line into it
-        if (merged.length > 0) {
-            const prev = merged[merged.length - 1];
-            const endsWithPrep = /\b(med|og|with|and|in|på|i|over|under|til|fra|av|uten|mashed)\s*$/i.test(prev);
-            const startsLowercase = /^[a-zæøå]/.test(line);
-            if (endsWithPrep || (startsLowercase && line.length < 30)) {
-                merged[merged.length - 1] = prev + ' ' + line;
-                continue;
+    return rawItems
+        .map(item => item.trim())
+        .filter(item => item.length > 0)
+        .reduce((merged, line) => {
+            const lastIdx = merged.length - 1;
+            if (lastIdx >= 0 && shouldMerge(merged[lastIdx], line)) {
+                merged[lastIdx] = `${merged[lastIdx]} ${line}`;
+            } else {
+                merged.push(line);
             }
-        }
-        merged.push(line);
-    }
-    return merged;
+            return merged;
+        }, []);
 }
 
 // ─── Scrape a single canteen ───
