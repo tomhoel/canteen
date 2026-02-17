@@ -248,4 +248,8 @@ async function main() {
     console.log('\n✅ Scraping complete! Data saved.');
 }
 
-main();
+if (require.main === module) {
+    main();
+}
+
+module.exports = { mergeItems };
