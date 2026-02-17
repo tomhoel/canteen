@@ -103,33 +103,36 @@ function mergeItems(rawItems) {
 // ─── Scrape a single canteen ───
 async function scrapeCanteen(url) {
     const browser = await chromium.launch();
-    const page = await browser.newPage();
-    await page.goto(url);
-    await page.waitForSelector('.menu-container', { timeout: 10000 }).catch(() => { });
+    let rawData;
+    try {
+        const page = await browser.newPage();
+        await page.goto(url);
+        await page.waitForSelector('.menu-container', { timeout: 10000 }).catch(() => { });
 
-    const rawData = await page.evaluate(() => {
-        const elements = Array.from(document.querySelectorAll('h1, .menu-container'));
-        let week = document.querySelector('h2')?.innerText.trim() || "Unknown";
-        let sections = [];
-        let currentHeader = null;
-        let currentItems = [];
+        rawData = await page.evaluate(() => {
+            const elements = Array.from(document.querySelectorAll('h1, .menu-container'));
+            let week = document.querySelector('h2')?.innerText.trim() || "Unknown";
+            let sections = [];
+            let currentHeader = null;
+            let currentItems = [];
 
-        elements.forEach(el => {
-            const text = el.innerText.trim();
-            if (!text) return;
-            if (el.tagName === 'H1') {
-                if (currentHeader) sections.push({ header: currentHeader, items: [...new Set(currentItems)] });
-                currentHeader = text.toUpperCase();
-                currentItems = [];
-            } else {
-                currentItems.push(...text.split('\n').map(i => i.trim()).filter(i => i.length > 1));
-            }
+            elements.forEach(el => {
+                const text = el.innerText.trim();
+                if (!text) return;
+                if (el.tagName === 'H1') {
+                    if (currentHeader) sections.push({ header: currentHeader, items: [...new Set(currentItems)] });
+                    currentHeader = text.toUpperCase();
+                    currentItems = [];
+                } else {
+                    currentItems.push(...text.split('\n').map(i => i.trim()).filter(i => i.length > 1));
+                }
+            });
+            if (currentHeader) sections.push({ header: currentHeader, items: [...new Set(currentItems)] });
+            return { week, sections };
         });
-        if (currentHeader) sections.push({ header: currentHeader, items: [...new Set(currentItems)] });
-        return { week, sections };
-    });
-
-    await browser.close();
+    } finally {
+        await browser.close();
+    }
 
     // Group by language and day
     const groupedMenu = {};
