@@ -193,15 +193,15 @@ async function main() {
     const imagesDir = path.join(__dirname, 'public', 'images');
     if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 
-    // Scrape all canteens
+    // Scrape all canteens in parallel
     const allResults = { scrapedAt: new Date().toISOString(), canteens: {} };
-    for (const canteen of CANTEENS) {
+    await Promise.all(CANTEENS.map(async (canteen) => {
         console.log(`🍽️ Scraping ${canteen.name}...`);
         try {
             const result = await scrapeCanteen(`https://widget.inisign.com/Widget/Customers/Customer.aspx?token=${canteen.token}&scaleToFit=true`);
             allResults.canteens[canteen.displayName] = { week: result.week, openingHours: canteen.hours, menu: result.menu };
         } catch (error) { console.error(`Error ${canteen.name}:`, error); }
-    }
+    }));
 
     // Generate images for today's main dishes (only on weekdays)
     if (todayKey) {
@@ -209,19 +209,19 @@ async function main() {
         const dayImagesDir = path.join(imagesDir, todayKey);
         if (!fs.existsSync(dayImagesDir)) fs.mkdirSync(dayImagesDir, { recursive: true });
 
-        for (const canteen of CANTEENS) {
-            const canteenData = allResults.canteens[canteen.name];
-            if (!canteenData) continue;
+        await Promise.all(CANTEENS.map(async (canteen) => {
+            const canteenData = allResults.canteens[canteen.displayName];
+            if (!canteenData) return;
 
             const dayEntry = canteenData.menu.find(d => d.day.toLowerCase() === todayKey);
-            if (!dayEntry) continue;
+            if (!dayEntry) return;
 
             // Use English dish name for better image generation
             const items = dayEntry.en?.items || dayEntry.no?.items;
-            if (!items) continue;
+            if (!items) return;
 
             const mainDish = items.find(i => i.isMain);
-            if (!mainDish) continue;
+            if (!mainDish) return;
 
             const filename = canteen.name.toLowerCase().replace(/\s+/g, '_') + '.png'; // Use old name for image files
             const filepath = path.join(dayImagesDir, filename);
@@ -229,7 +229,7 @@ async function main() {
             // Skip if image already exists
             if (fs.existsSync(filepath)) {
                 console.log(`  ✅ Image already exists: ${filepath}`);
-                continue;
+                return;
             }
 
             const imageBuffer = await generateFoodImage(mainDish.dish, canteen.name, todayKey);
@@ -237,7 +237,7 @@ async function main() {
                 fs.writeFileSync(filepath, imageBuffer);
                 console.log(`  ✅ Saved: ${filepath}`);
             }
-        }
+        }));
     } else {
         console.log('\n📸 Weekend — skipping image generation');
     }
