@@ -9,7 +9,6 @@ interface DayMenu { label: string; items: MenuItem[]; }
 interface DayEntry { day: string; no: DayMenu; en: DayMenu; }
 interface CanteenData { week: string; openingHours: string; menu: DayEntry[]; }
 interface MenuData { scrapedAt: string; canteens: Record<string, CanteenData>; }
-interface AttendanceData { date: string; canteens: Record<string, number>; }
 
 // Constants
 const DAYS_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
@@ -38,10 +37,6 @@ export default function Home() {
   const [allergenOpen, setAllergenOpen] = useState(false);
   const [lightbox, setLightbox] = useState({ isOpen: false, imageSrc: "", dishName: "", canteenName: "" });
   const [mounted, setMounted] = useState(false);
-  
-  // Attendance states
-  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
-  const [userVotes, setUserVotes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const jsDay = new Date().getDay();
@@ -59,36 +54,6 @@ export default function Home() {
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
-
-  // Fetch attendance data
-  useEffect(() => {
-    if (!mounted) return;
-    
-    const fetchAttendance = async () => {
-      try {
-        const response = await fetch('/api/attendance');
-        if (response.ok) {
-          const data = await response.json();
-          setAttendance(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch attendance:', error);
-      }
-    };
-    
-    // Load user votes from localStorage
-    const today = new Date().toISOString().split('T')[0];
-    const savedVotes = localStorage.getItem(`votes_${today}`);
-    if (savedVotes) {
-      setUserVotes(JSON.parse(savedVotes));
-    }
-    
-    fetchAttendance();
-    
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchAttendance, 30000);
-    return () => clearInterval(interval);
-  }, [mounted]);
 
   // Preload all images for all days so switching is instant
   useEffect(() => {
@@ -110,35 +75,6 @@ export default function Home() {
       });
     });
   }, [menuData, selectedDay]);
-
-  // Toggle attendance for a canteen
-  const toggleAttendance = async (canteenName: string) => {
-    const isGoing = userVotes[canteenName];
-    const action = isGoing ? 'remove' : 'add';
-    
-    try {
-      const response = await fetch('/api/attendance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ canteenName, action })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setAttendance(data);
-        
-        // Update local state
-        const newVotes = { ...userVotes, [canteenName]: !isGoing };
-        setUserVotes(newVotes);
-        
-        // Save to localStorage
-        const today = new Date().toISOString().split('T')[0];
-        localStorage.setItem(`votes_${today}`, JSON.stringify(newVotes));
-      }
-    } catch (error) {
-      console.error('Failed to toggle attendance:', error);
-    }
-  };
 
   if (!menuData || !mounted) {
     return <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: "#999" }}>Loading...</span></div>;
@@ -244,35 +180,14 @@ export default function Home() {
                 )}
               </div>
               <div className="card-bottom">
-                <div className="side-dishes-wrapper">
-                  <div className="side-dishes-section">
-                    <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
-                    <div className="side-dish-list">
-                      {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
-                        <div key={idx} className="side-dish-item">
-                          <span className="side-dish-text">{item.dish}</span>
-                          {item.allergens.length > 0 && <span className="side-allergens">{item.allergens.map(a => a.name.charAt(0)).join("")}</span>}
-                        </div>
-                      )) : <div className="side-dish-item" style={{ justifyContent: "center", color: "var(--text-muted)" }}>{lang === "no" ? "Ingen andre retter" : "No other dishes"}</div>}
+                <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
+                <div className="side-dish-list">
+                  {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
+                    <div key={idx} className="side-dish-item">
+                      <span className="side-dish-text">{item.dish}</span>
+                      {item.allergens.length > 0 && <span className="side-allergens">{item.allergens.map(a => a.name.charAt(0)).join("")}</span>}
                     </div>
-                  </div>
-                  
-                  {/* Mobile attendance button */}
-                  {selectedDay === todayIndex && (
-                    <div className="attendance-section-mobile">
-                      <button 
-                        className={`attendance-btn ${userVotes[canteenName] ? 'active' : ''}`}
-                        onClick={() => toggleAttendance(canteenName)}
-                      >
-                        {userVotes[canteenName] ? "✓ " : ""}{lang === "no" ? "Jeg går!" : "I'm going!"}
-                      </button>
-                      {attendance && attendance.canteens[canteenName] > 0 && (
-                        <span className="attendance-count">
-                          {attendance.canteens[canteenName]} {lang === "no" ? "går" : "going"}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  )) : <div className="side-dish-item" style={{ justifyContent: "center", color: "var(--text-muted)" }}>{lang === "no" ? "Ingen andre retter" : "No other dishes"}</div>}
                 </div>
               </div>
             </article>
