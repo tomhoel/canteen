@@ -154,11 +154,13 @@ export default function Home() {
           const mainAllergens = mainDish?.allergens || [];
           const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
           const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
-          const isFeatured = canteenName === "Eat the street";
+          const isOpen = items && items.length > 0;
 
           return (
-            <article key={canteenName} className={`food-card ${isFeatured ? "featured" : ""}`}>
-              {isFeatured && <div className="popular-badge">Popular</div>}
+            <article key={canteenName} className="food-card">
+              <div className={`status-badge ${isOpen ? "open" : "closed"}`}>
+                {isOpen ? (lang === "no" ? "Åpen" : "Open") : (lang === "no" ? "Stengt" : "Closed")}
+              </div>
               <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                 <div className="card-image-circle">
                   <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
