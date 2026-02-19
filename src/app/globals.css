@@ -222,32 +222,6 @@ body {
   border: 2px solid var(--accent-yellow);
 }
 
-/* Status badge */
-.status-badge {
-  position: absolute;
-  bottom: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 6px 16px;
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-}
-
-.status-badge.open {
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
-.status-badge.closed {
-  background: linear-gradient(135deg, #FF6B4A 0%, #FF3B30 100%);
-  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
-}
 
 /* ─── V3 Overhead Image Container - Transparent Background ─── */
 .card-image-wrapper {
@@ -386,13 +360,6 @@ body {
   border-radius: 50%;
 }
 
-.hours-badge.is-closed::before {
-  background: #FF3B30;
-}
-
-.hours-badge.is-closed {
-  color: #FF3B30;
-}
 
 /* Allergens row */
 .allergens-row {
@@ -932,18 +899,6 @@ body {
     display: none;
   }
   
-  /* Status badge */
-  .status-badge {
-    position: absolute;
-    top: -8px;
-    right: 8px;
-    left: auto;
-    bottom: auto;
-    transform: none;
-    padding: 2px 8px;
-    font-size: 8px;
-  }
-
   /* Content - right of image */
   .card-content {
     flex: 1;
