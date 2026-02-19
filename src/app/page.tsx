@@ -25,6 +25,16 @@ const ALLERGEN_COLORS: Record<string, string> = {
 };
 
 const CANTEEN_ORDER = ["Eat the street", "Fresh4you", "Flow"];
+
+function isCanteenOpen(openingHours: string): boolean {
+  const match = openingHours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (!match) return false;
+  const now = new Date();
+  const current = now.getHours() * 60 + now.getMinutes();
+  const open = parseInt(match[1]) * 60 + parseInt(match[2]);
+  const close = parseInt(match[3]) * 60 + parseInt(match[4]);
+  return current >= open && current < close;
+}
 const CANTEEN_IMAGE_SLUGS: Record<string, string> = {
   "Eat the street": "eat_the_street", "Fresh4you": "fresh4you", "Flow": "flow"
 };
@@ -171,7 +181,12 @@ export default function Home() {
                 <div className="card-header">
                   <div className="canteen-name">{canteenName} <span className="week-label">({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span></div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
-                  <div className="hours-badge">{canteen.openingHours}</div>
+                  <div className={`hours-badge ${isCanteenOpen(canteen.openingHours) ? "is-open" : "is-closed"}`}>
+                    {isCanteenOpen(canteen.openingHours)
+                      ? (lang === "no" ? "Åpen" : "Open")
+                      : (lang === "no" ? "Stengt" : "Closed")}
+                    {" · "}{canteen.openingHours}
+                  </div>
                 </div>
                 {mainAllergens.length > 0 && (
                   <div className="allergens-row">
