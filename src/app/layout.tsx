@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Josefin_Sans } from "next/font/google";
 import "./globals.css";
+
+const josefin = Josefin_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Lunch | Telenor Fornebu",
@@ -44,7 +47,7 @@ export default function RootLayout({
         <meta httpEquiv="Pragma" content="no-cache" />
         <meta httpEquiv="Expires" content="0" />
       </head>
-      <body suppressHydrationWarning>
+      <body suppressHydrationWarning className={josefin.className}>
         {children}
       </body>
     </html>
