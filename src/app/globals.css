@@ -32,7 +32,6 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
   color: var(--text-primary);
   min-height: 100vh;
