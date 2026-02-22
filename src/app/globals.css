@@ -1120,6 +1120,13 @@ body {
   gap: 6px;
   justify-content: center;
   flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.info-badges .hours-badge,
+.info-badges .vote-badge {
+  display: flex;
+  align-items: center;
 }
 
 .vote-badge {
@@ -1234,6 +1241,24 @@ body {
   background: rgba(255, 149, 0, 0.1);
   color: var(--accent-orange);
   border: 1px solid rgba(255, 149, 0, 0.25);
+}
+
+.vote-badge.leader {
+  background: rgba(255, 149, 0, 0.14);
+  color: var(--accent-orange);
+  border-color: rgba(255, 149, 0, 0.35);
+  font-weight: 700;
+}
+
+.vote-count-row.leader {
+  background: rgba(255, 149, 0, 0.08);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.vote-count-row.voted.leader {
+  background: rgba(255, 149, 0, 0.15);
+  font-weight: 700;
 }
 
 .vote-count-number {
