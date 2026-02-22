@@ -38,6 +38,11 @@ export default function Home() {
   const [allergenOpen, setAllergenOpen] = useState(false);
   const [lightbox, setLightbox] = useState({ isOpen: false, imageSrc: "", dishName: "", canteenName: "" });
   const [mounted, setMounted] = useState(false);
+  const [votes, setVotes] = useState<Record<string, number>>({});
+  const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: '' });
+  const [hasVoted, setHasVoted] = useState(false);
+  const [votedCanteen, setVotedCanteen] = useState('');
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
     const jsDay = new Date().getDay();
@@ -48,10 +53,18 @@ export default function Home() {
     setSelectedDay(isWeekday ? jsDay - 1 : 4);
     fetch("/menu.json").then(r => r.json()).then(setMenuData);
     setMounted(true);
+    fetch('/api/attendance').then(r => r.json()).then(data => setVotes(data.canteens || {}));
+    const todayKey = new Date().toISOString().split('T')[0];
+    const voted = localStorage.getItem(`voted_${todayKey}`);
+    if (voted) { setHasVoted(true); setVotedCanteen(voted); }
+    const interval = setInterval(() => {
+      fetch('/api/attendance').then(r => r.json()).then(data => setVotes(data.canteens || {}));
+    }, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(prev => ({ ...prev, isOpen: false })); };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") { setLightbox(prev => ({ ...prev, isOpen: false })); setVoteModal({ isOpen: false, canteenName: '' }); } };
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
@@ -157,7 +170,7 @@ export default function Home() {
           const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
 
           return (
-            <article key={canteenName} className="food-card">
+            <article key={canteenName} className={`food-card${selectedDay === todayIndex ? ' voteable' : ''}`} onClick={selectedDay === todayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
               <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                 <div className="card-image-circle">
                   <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
@@ -168,7 +181,14 @@ export default function Home() {
                 <div className="card-header">
                   <div className="canteen-name">{canteenName} <span className="week-label">({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span></div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
-                  <div className="hours-badge">{canteen.openingHours}</div>
+                  {selectedDay === todayIndex ? (
+                    <div className="info-badges">
+                      <div className="hours-badge">{canteen.openingHours}</div>
+                      <div className="vote-badge">🙋 {votes[canteenName] ?? 0} {lang === 'no' ? 'går' : 'going'}</div>
+                    </div>
+                  ) : (
+                    <div className="hours-badge">{canteen.openingHours}</div>
+                  )}
                 </div>
                 {mainAllergens.length > 0 && (
                   <div className="allergens-row">
@@ -219,6 +239,57 @@ export default function Home() {
         <span className="feedback-icon">✉️</span>
         <span className="feedback-text">{lang === "no" ? "Tilbakemelding" : "Feedback"}</span>
       </a>
+
+      {/* Vote Modal */}
+      {voteModal.isOpen && (
+        <div className="vote-modal-overlay" onClick={() => setVoteModal({ isOpen: false, canteenName: '' })}>
+          <div className="vote-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="vote-modal-title">{voteModal.canteenName}</h3>
+            {!hasVoted ? (
+              <>
+                <p className="vote-modal-subtitle">{lang === 'no' ? 'Skal du dit i dag?' : 'Are you going today?'}</p>
+                <button
+                  className="vote-btn"
+                  disabled={isVoting}
+                  onClick={async () => {
+                    setIsVoting(true);
+                    const res = await fetch('/api/attendance', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ canteenName: voteModal.canteenName, action: 'add' }),
+                    });
+                    const data = await res.json();
+                    setVotes(data.canteens || {});
+                    const todayKey = new Date().toISOString().split('T')[0];
+                    localStorage.setItem(`voted_${todayKey}`, voteModal.canteenName);
+                    setVotedCanteen(voteModal.canteenName);
+                    setHasVoted(true);
+                    setIsVoting(false);
+                  }}
+                >
+                  {isVoting ? '...' : (lang === 'no' ? 'Jeg går dit! 🙋' : "I'm going! 🙋")}
+                </button>
+                <button className="vote-cancel" onClick={() => setVoteModal({ isOpen: false, canteenName: '' })}>
+                  {lang === 'no' ? 'Avbryt' : 'Cancel'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="vote-modal-subtitle">{lang === 'no' ? 'Hvem spiser hvor i dag?' : "Who's going where today?"}</p>
+                {sortedCanteens.map(([name]) => (
+                  <div key={name} className={`vote-count-row${name === votedCanteen ? ' voted' : ''}`}>
+                    <span>{name}</span>
+                    <span className="vote-count-number">🙋 {votes[name] ?? 0}</span>
+                  </div>
+                ))}
+                <button className="vote-cancel" onClick={() => setVoteModal({ isOpen: false, canteenName: '' })}>
+                  {lang === 'no' ? 'Lukk' : 'Close'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightbox.isOpen && (
