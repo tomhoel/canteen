@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ShaderBackground } from "@/components/ShaderBackground";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -49,7 +48,6 @@ export default function RootLayout({
         <meta httpEquiv="Expires" content="0" />
       </head>
       <body suppressHydrationWarning className={inter.className}>
-        <ShaderBackground />
         {children}
       </body>
     </html>
