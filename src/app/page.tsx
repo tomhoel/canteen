@@ -104,6 +104,8 @@ export default function Home() {
     .filter(name => menuData.canteens[name])
     .map(name => [name, menuData.canteens[name]] as [string, CanteenData]);
 
+  const maxVotes = Math.max(0, ...sortedCanteens.map(([name]) => votes[name] ?? 0));
+
   const weekLabel = sortedCanteens[0]?.[1].week || "";
   const selectedDate = new Date();
   const currentDayOfWeek = selectedDate.getDay();
@@ -186,7 +188,7 @@ export default function Home() {
                   {selectedDay === activeDayIndex ? (
                     <div className="info-badges">
                       <div className="hours-badge">{canteen.openingHours}</div>
-                      <div className="vote-badge">🙋 {votes[canteenName] ?? 0} {lang === 'no' ? 'går' : 'going'}</div>
+                      <div className={`vote-badge${(votes[canteenName] ?? 0) > 0 && (votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>{votes[canteenName] ?? 0} {lang === 'no' ? 'går' : 'going'}</div>
                     </div>
                   ) : (
                     <div className="hours-badge">{canteen.openingHours}</div>
@@ -279,9 +281,9 @@ export default function Home() {
               <>
                 <p className="vote-modal-subtitle">{lang === 'no' ? 'Hvem spiser hvor i dag?' : "Who's going where today?"}</p>
                 {sortedCanteens.map(([name]) => (
-                  <div key={name} className={`vote-count-row${name === votedCanteen ? ' voted' : ''}`}>
+                  <div key={name} className={`vote-count-row${name === votedCanteen ? ' voted' : ''}${(votes[name] ?? 0) > 0 && (votes[name] ?? 0) === maxVotes ? ' leader' : ''}`}>
                     <span>{name}</span>
-                    <span className="vote-count-number">🙋 {votes[name] ?? 0}</span>
+                    <span className="vote-count-number">{votes[name] ?? 0}</span>
                   </div>
                 ))}
                 <button className="vote-cancel" onClick={() => setVoteModal({ isOpen: false, canteenName: '' })}>
