@@ -97,6 +97,8 @@ export default function Home() {
   const dayLabels = lang === "no" ? DAYS_NO : DAYS_EN;
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
   const dayKey = DAY_KEYS[selectedDay];
+  // On weekends todayIndex is -1; use Friday (4) as the active day for voting
+  const activeDayIndex = todayIndex >= 0 ? todayIndex : 4;
 
   const sortedCanteens = CANTEEN_ORDER
     .filter(name => menuData.canteens[name])
@@ -170,7 +172,7 @@ export default function Home() {
           const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
 
           return (
-            <article key={canteenName} className={`food-card${selectedDay === todayIndex ? ' voteable' : ''}`} onClick={selectedDay === todayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
+            <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}`} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
               <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                 <div className="card-image-circle">
                   <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
@@ -181,7 +183,7 @@ export default function Home() {
                 <div className="card-header">
                   <div className="canteen-name">{canteenName} <span className="week-label">({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span></div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
-                  {selectedDay === todayIndex ? (
+                  {selectedDay === activeDayIndex ? (
                     <div className="info-badges">
                       <div className="hours-badge">{canteen.openingHours}</div>
                       <div className="vote-badge">🙋 {votes[canteenName] ?? 0} {lang === 'no' ? 'går' : 'going'}</div>
