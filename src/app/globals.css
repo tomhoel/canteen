@@ -38,12 +38,6 @@ body {
   overflow-x: hidden;
 }
 
-@media (min-width: 769px) {
-  body {
-    background: transparent;
-  }
-}
-
 /* ─── Decorative Background Elements ─── */
 .app-wrapper {
   min-height: 100vh;
