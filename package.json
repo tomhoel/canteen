@@ -11,15 +11,20 @@
   },
   "dependencies": {
     "@google/genai": "^1.41.0",
+    "@react-spring/three": "^10.0.3",
+    "@react-three/fiber": "^9.5.0",
+    "@shadergradient/react": "^2.4.20",
     "next": "16.1.6",
     "playwright": "^1.58.2",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "three": "^0.183.1"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.183.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "sharp": "^0.34.5",
