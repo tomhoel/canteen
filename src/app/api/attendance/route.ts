@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
+import { kv } from '@vercel/kv';
 
 export const dynamic = 'force-dynamic';
-
-const ATTENDANCE_FILE = '/tmp/attendance.json';
 
 interface AttendanceData {
   date: string;
@@ -14,27 +12,34 @@ function getTodayKey(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function readAttendance(): AttendanceData {
+async function getAttendanceData(): Promise<AttendanceData> {
   try {
-    const data = fs.readFileSync(ATTENDANCE_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return { date: getTodayKey(), canteens: {} };
+    const data = await kv.get<AttendanceData>('attendance');
+    if (data) {
+      return data;
+    }
+  } catch (err) {
+    console.error('Error reading from KV:', err);
+  }
+  return { date: getTodayKey(), canteens: {} };
+}
+
+async function saveAttendanceData(data: AttendanceData) {
+  try {
+    await kv.set('attendance', data);
+  } catch (err) {
+    console.error('Error writing to KV:', err);
   }
 }
 
-function writeAttendance(data: AttendanceData) {
-  fs.writeFileSync(ATTENDANCE_FILE, JSON.stringify(data, null, 2));
-}
-
 export async function GET() {
-  const data = readAttendance();
+  const data = await getAttendanceData();
   const today = getTodayKey();
   
   // Reset if it's a new day
   if (data.date !== today) {
     const newData = { date: today, canteens: {} };
-    writeAttendance(newData);
+    await saveAttendanceData(newData);
     return NextResponse.json(newData);
   }
   
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
   
-  const data = readAttendance();
+  const data = await getAttendanceData();
   const today = getTodayKey();
   
   // Reset if it's a new day
@@ -65,7 +70,7 @@ export async function POST(request: NextRequest) {
     data.canteens[canteenName] = Math.max(0, currentCount - 1);
   }
   
-  writeAttendance(data);
+  await saveAttendanceData(data);
   
   return NextResponse.json(data);
 }
