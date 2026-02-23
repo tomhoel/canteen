@@ -188,7 +188,7 @@ export default function Home() {
                   {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 ? (
                     <div className="info-badges">
                       <div className="hours-badge">{canteen.openingHours}</div>
-                      <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>{votes[canteenName]} {lang === 'no' ? 'går' : 'going'}</div>
+                      <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>{votes[canteenName]} {lang === 'no' ? 'stemmer' : 'votes'}</div>
                     </div>
                   ) : (
                     <div className="hours-badge">{canteen.openingHours}</div>
@@ -271,7 +271,7 @@ export default function Home() {
                     setIsVoting(false);
                   }}
                 >
-                  {isVoting ? '...' : (lang === 'no' ? 'Jeg går dit! 🙋' : "I'm going! 🙋")}
+                  {isVoting ? '...' : (lang === 'no' ? 'Jeg stemmer på denne! 🙋' : "I vote for this! 🙋")}
                 </button>
                 <button className="vote-cancel" onClick={() => setVoteModal({ isOpen: false, canteenName: '' })}>
                   {lang === 'no' ? 'Avbryt' : 'Cancel'}
