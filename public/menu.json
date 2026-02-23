@@ -1,6 +1,359 @@
 {
-  "scrapedAt": "2026-02-23T05:50:05.137Z",
+  "scrapedAt": "2026-02-23T07:15:02.624Z",
   "canteens": {
+    "Flow": {
+      "week": "BYGG / BUILDING B - UKE/WEEK 9",
+      "openingHours": "11:00 - 13:00",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "Stekt svine over rygg, bakt potet og saus",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Marokkansk kikertgryte",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Brokkolisuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "Shoulder loin with lemon baked potato and sauce",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Maroccan chickpea casserole",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Broccoli soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": [
+              {
+                "dish": "Biff stroganoff med potetmost",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "12",
+                    "name": "Sulphites"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Sjampignongryte med pasta",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Gresskarsuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "TUESDAY",
+            "items": [
+              {
+                "dish": "Biff stroganoff with mashed potato",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "12",
+                    "name": "Sulphites"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Champignon stew with pasta",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Pumpkin soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": [
+              {
+                "dish": "Dampet torsk med mango/chili og ris",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Quinoa pilaff",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Kremet løksuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": [
+              {
+                "dish": "Steamed cod with mango / Chilli and potato",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Quinoa pilaff",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Creany onion soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": [
+              {
+                "dish": "Kylling overlår med jalapeno saus og ris",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "12",
+                    "name": "Sulphites"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Bakt gresskar med linser",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Spinatsuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": [
+              {
+                "dish": "Chicken tight with jalapeno sauce and rice",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "12",
+                    "name": "Sulphites"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Baked pumpkin and lentil",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Spinach soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": [
+              {
+                "dish": "Kylling fredagstaco",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetar meksikansk bønnegryte",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Tomatsuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": [
+              {
+                "dish": "Chicken friday taco",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetarian mexican bean casserole",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Tomato soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        }
+      ]
+    },
     "Fresh4you": {
       "week": "UKE/WEEK 9",
       "openingHours": "11:00 - 13:30",
@@ -821,359 +1174,6 @@
                   {
                     "id": "4",
                     "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        }
-      ]
-    },
-    "Flow": {
-      "week": "BYGG / BUILDING B - UKE/WEEK 9",
-      "openingHours": "11:00 - 13:00",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "Stekt svine over rygg, bakt potet og saus",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Marokkansk kikertgryte",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Brokkolisuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "Shoulder loin with lemon baked potato and sauce",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Maroccan chickpea casserole",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Broccoli soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": [
-              {
-                "dish": "Biff stroganoff med potetmost",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "12",
-                    "name": "Sulphites"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Sjampignongryte med pasta",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Gresskarsuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "TUESDAY",
-            "items": [
-              {
-                "dish": "Biff stroganoff with mashed potato",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "12",
-                    "name": "Sulphites"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Champignon stew with pasta",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Pumpkin soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": [
-              {
-                "dish": "Dampet torsk med mango/chili og ris",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Quinoa pilaff",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Kremet løksuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": [
-              {
-                "dish": "Steamed cod with mango / Chilli and potato",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Quinoa pilaff",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Creany onion soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": [
-              {
-                "dish": "Kylling overlår med jalapeno saus og ris",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "12",
-                    "name": "Sulphites"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Bakt gresskar med linser",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Spinatsuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": [
-              {
-                "dish": "Chicken tight with jalapeno sauce and rice",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "12",
-                    "name": "Sulphites"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Baked pumpkin and lentil",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Spinach soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": [
-              {
-                "dish": "Kylling fredagstaco",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetar meksikansk bønnegryte",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Tomatsuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": [
-              {
-                "dish": "Chicken friday taco",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarian mexican bean casserole",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Tomato soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
                   }
                 ],
                 "isMain": false
