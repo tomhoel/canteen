@@ -236,7 +236,7 @@ body {
 .card-image-wrapper {
   width: 280px;
   height: 280px;
-  margin: -80px auto 8px;
+  margin: -80px auto -4px;
   position: relative;
   flex-shrink: 0;
   cursor: pointer;
@@ -360,7 +360,8 @@ body {
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-top: auto;
+  margin-bottom: 14px;
   min-height: 24px;
   align-items: center;
   flex-wrap: wrap;
@@ -412,6 +413,7 @@ body {
   background: var(--bg-cream);
   padding: 6px 12px;
   border-radius: 10px;
+  min-height: 38px;
 }
 
 .side-dish-item::before {
@@ -1131,6 +1133,8 @@ body {
   flex-wrap: wrap;
   align-items: stretch;
   min-height: 24px;
+  margin-top: 10px;
+  margin-bottom: 4px;
 }
 
 .info-badges .vote-badge {
