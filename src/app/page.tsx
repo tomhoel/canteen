@@ -185,15 +185,12 @@ export default function Home() {
                 <div className="card-header">
                   <div className="canteen-name">{canteenName} <span className="week-label">({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span></div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
-                  {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 ? (
+                  {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 && (
                     <div className="info-badges">
-                      <div className="hours-badge">{canteen.openingHours}</div>
                       <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>
                         {votes[canteenName]} {lang === 'no' ? (votes[canteenName] === 1 ? 'stemme' : 'stemmer') : (votes[canteenName] === 1 ? 'vote' : 'votes')}
                       </div>
                     </div>
-                  ) : (
-                    <div className="hours-badge">{canteen.openingHours}</div>
                   )}
                 </div>
                 {mainAllergens.length > 0 && (
