@@ -189,14 +189,17 @@ body {
 
 /* ─── Cards Container ─── */
 .cards-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  justify-content: center;
   gap: 24px;
   padding: 20px 48px 16px;
   max-width: 1400px;
   margin: 0 auto;
   position: relative;
   z-index: 10;
+  flex-wrap: wrap;
+  align-content: center;
+  flex: 1;
   width: 100%;
 }
 
@@ -204,7 +207,7 @@ body {
 .food-card {
   background: var(--card-white);
   border-radius: 24px;
-  width: 100%;
+  width: 370px;
   padding: 0 22px 18px;
   box-shadow:
     0 4px 20px var(--shadow-soft),
@@ -345,8 +348,9 @@ body {
   margin-bottom: 6px;
   min-height: 42px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  text-align: center;
 }
 
 
@@ -1126,6 +1130,7 @@ body {
   justify-content: center;
   flex-wrap: wrap;
   align-items: stretch;
+  min-height: 24px;
 }
 
 .info-badges .vote-badge {
