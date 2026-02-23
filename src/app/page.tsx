@@ -188,7 +188,9 @@ export default function Home() {
                   {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 ? (
                     <div className="info-badges">
                       <div className="hours-badge">{canteen.openingHours}</div>
-                      <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>{votes[canteenName]} {lang === 'no' ? 'stemmer' : 'votes'}</div>
+                      <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>
+                        {votes[canteenName]} {lang === 'no' ? (votes[canteenName] === 1 ? 'stemme' : 'stemmer') : (votes[canteenName] === 1 ? 'vote' : 'votes')}
+                      </div>
                     </div>
                   ) : (
                     <div className="hours-badge">{canteen.openingHours}</div>
