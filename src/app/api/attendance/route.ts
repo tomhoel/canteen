@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+});
 
 interface AttendanceData {
   date: string;
@@ -14,21 +19,21 @@ function getTodayKey(): string {
 
 async function getAttendanceData(): Promise<AttendanceData> {
   try {
-    const data = await kv.get<AttendanceData>('attendance');
+    const data = await redis.get<AttendanceData>('attendance');
     if (data) {
       return data;
     }
   } catch (err) {
-    console.error('Error reading from KV:', err);
+    console.error('Error reading from Redis:', err);
   }
   return { date: getTodayKey(), canteens: {} };
 }
 
 async function saveAttendanceData(data: AttendanceData) {
   try {
-    await kv.set('attendance', data);
+    await redis.set('attendance', data);
   } catch (err) {
-    console.error('Error writing to KV:', err);
+    console.error('Error writing to Redis:', err);
   }
 }
 
