@@ -51,9 +51,16 @@ export default function Home() {
     setTodayIndex(idx);
     // On weekends, show Friday (index 4) as the nearest weekday
     setSelectedDay(isWeekday ? jsDay - 1 : 4);
-    fetch("/menu.json").then(r => r.json()).then(setMenuData);
+    
+    Promise.all([
+      fetch("/menu.json").then(r => r.json()),
+      fetch('/api/attendance').then(r => r.json())
+    ]).then(([menu, attendance]) => {
+      setVotes(attendance.canteens || {});
+      setMenuData(menu);
+    });
+    
     setMounted(true);
-    fetch('/api/attendance').then(r => r.json()).then(data => setVotes(data.canteens || {}));
     const todayKey = new Date().toISOString().split('T')[0];
     const voted = localStorage.getItem(`voted_${todayKey}`);
     if (voted) { setHasVoted(true); setVotedCanteen(voted); }
