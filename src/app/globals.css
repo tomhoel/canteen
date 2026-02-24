@@ -931,21 +931,20 @@ body {
     line-height: 1.25;
     margin-bottom: 0;
     text-align: left;
-    min-height: 35px;
     justify-content: flex-start;
     align-items: flex-start;
   }
 
-  /* Allergens - top right of card with padding */
+  /* Allergens - under the dish title */
   .allergens-row {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    justify-content: flex-end;
-    margin: 0;
-    gap: 2px;
+    position: relative;
+    top: auto;
+    right: auto;
+    justify-content: flex-start;
+    margin: 4px 0 6px 0;
+    gap: 4px;
     flex-wrap: wrap;
-    max-width: 40%;
+    max-width: 100%;
     min-height: auto;
   }
 
@@ -958,8 +957,8 @@ body {
   /* Side dishes - full width horizontal row */
   .card-bottom {
     flex-basis: 100%;
-    margin: 4px -10px 0;
-    padding: 4px 10px 0;
+    margin: 2px 0 0;
+    padding: 4px 0 0;
     border-top: 1px dashed var(--border-light);
   }
 
@@ -968,14 +967,13 @@ body {
   }
 
   .side-dish-list {
-    gap: 3px;
+    gap: 2px;
     display: flex;
     flex-direction: column;
-    min-height: 46px;
   }
 
   .side-dish-item {
-    padding: 3px 10px;
+    padding: 2px 8px;
     font-size: 10px;
     border-radius: 6px;
     min-width: 0;
@@ -1285,7 +1283,12 @@ body {
 
 @media (max-width: 768px) {
   .info-badges {
-    justify-content: flex-start;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    justify-content: flex-end;
+    margin: 0;
+    min-height: auto;
   }
 }
 
