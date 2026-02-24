@@ -226,11 +226,23 @@ async function removeBgSingle(canteenName, day) {
             if (isBg[i]) data[i * channels + 3] = 0;
         }
 
-        // Save resized + compressed
-        await sharp(data, { raw: { width, height, channels } })
-            .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-            .png({ compressionLevel: 9, palette: true })
-            .toFile(outputPath);
+        // Standardize plate size: trim transparency, scale precisely, and compose onto 512x512 canvas
+        const trimmedBuffer = await sharp(data, { raw: { width, height, channels } })
+            .trim()
+            .resize(440, 440, { fit: 'inside' })
+            .toBuffer();
+
+        await sharp({
+            create: {
+                width: 512,
+                height: 512,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 }
+            }
+        })
+        .composite([{ input: trimmedBuffer, gravity: 'center' }])
+        .png({ compressionLevel: 9, palette: true })
+        .toFile(outputPath);
 
         return true;
     } catch (error) {
