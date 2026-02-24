@@ -106,7 +106,15 @@ export default function Home() {
 
   const maxVotes = Math.max(0, ...sortedCanteens.map(([name]) => votes[name] ?? 0));
 
-  const weekLabel = sortedCanteens[0]?.[1].week || "";
+  const currentWeek = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  })();
+
+  const weekLabel = `${lang === "no" ? "Uke" : "Week"} ${currentWeek}`;
   const selectedDate = new Date();
   const currentDayOfWeek = selectedDate.getDay();
   const mondayOffset = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
@@ -185,8 +193,8 @@ export default function Home() {
                 <div className="card-header">
                   <div className="canteen-name">
                     {canteenName} 
-                    {canteen.week.match(/\d+/)?.[0] !== weekLabel.match(/\d+/)?.[0] && (
-                      <span className="week-label"> ({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span>
+                    {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10) !== currentWeek && (
+                      <span className="week-label"> ({lang === "no" ? "Uke" : "Week"} {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10)})</span>
                     )}
                   </div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
