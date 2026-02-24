@@ -805,7 +805,7 @@ body {
     flex-direction: column;
   }
 
-  /* Header - fixed at top */
+  /* Header - sticky at top for better Safari support */
   .app-header {
     padding: calc(6px + env(safe-area-inset-top)) 16px 6px;
     flex-direction: row;
@@ -813,10 +813,8 @@ body {
     align-items: center;
     flex-shrink: 0;
     min-height: 40px;
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
     z-index: 100;
     background: linear-gradient(
       135deg,
@@ -867,7 +865,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 14px;
-    padding: calc(64px + env(safe-area-inset-top)) 10px 16px;
+    padding: 24px 10px 16px;
     flex: 1;
     overflow-y: auto;
   }
