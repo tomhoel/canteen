@@ -522,6 +522,13 @@ body {
   }
 }
 
+@keyframes votePop {
+  0%   { opacity: 0; transform: scale(0); }
+  60%  { opacity: 1; transform: scale(1.25); }
+  80%  { transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 .lightbox-image-container {
   width: 100%;
   max-height: 85vh;
@@ -1188,6 +1195,10 @@ body {
   border-radius: 20px;
   font-weight: 600;
   border: 1px solid rgba(255, 107, 74, 0.2);
+}
+
+.vote-badge.vote-badge-pop {
+  animation: votePop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .food-card.voteable {

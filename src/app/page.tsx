@@ -47,6 +47,7 @@ export default function Home() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<'swipe-left' | 'swipe-right' | ''>('');
   const scrollRef = useRef<HTMLElement>(null);
+  const votesLoadedRef = useRef(false);
 
   // Restore scroll position after mount and data load
   useEffect(() => {
@@ -107,13 +108,16 @@ export default function Home() {
     // On weekends, show Friday (index 4) as the nearest weekday
     setSelectedDay(isWeekday ? jsDay - 1 : 4);
     
-    Promise.all([
-      fetch("/menu.json").then(r => r.json()),
-      fetch('/api/attendance').then(r => r.json())
-    ]).then(([menu, attendance]) => {
-      setVotes(attendance.canteens || {});
-      setMenuData(menu);
-    });
+    fetch("/menu.json")
+      .then(r => r.json())
+      .then(menu => setMenuData(menu));
+
+    fetch('/api/attendance')
+      .then(r => r.json())
+      .then(data => {
+        setVotes(data.canteens || {});
+        votesLoadedRef.current = true;
+      });
     
     setMounted(true);
     const todayKey = new Date().toISOString().split('T')[0];
@@ -302,7 +306,7 @@ export default function Home() {
                     </div>
                     <div className="info-badges">
                       {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 && (
-                        <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>
+                        <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''} vote-badge-pop`}>
                           {votes[canteenName]} {lang === 'no' ? (votes[canteenName] === 1 ? 'stemme' : 'stemmer') : (votes[canteenName] === 1 ? 'vote' : 'votes')}
                         </div>
                       )}
