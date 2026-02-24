@@ -891,9 +891,9 @@ body {
     left: auto;
     top: auto;
     transform: none;
-    width: 180px;
-    height: 180px;
-    margin: -45px -20px -30px -35px;
+    width: 144px;
+    height: 144px;
+    margin: -25px -10px -15px -25px;
     flex-shrink: 0;
     z-index: 10;
   }
