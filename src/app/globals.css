@@ -936,6 +936,7 @@ body {
     text-align: left;
     padding: 0 0 0 6px;
     min-width: 0;
+    align-self: flex-start;
   }
 
   .card-header {
@@ -964,7 +965,7 @@ body {
     justify-content: space-between;
     align-items: center;
     margin: 4px 0 6px 0;
-    min-height: auto;
+    min-height: 26px;
     width: 100%;
     gap: 6px;
   }
