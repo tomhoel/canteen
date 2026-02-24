@@ -37,6 +37,7 @@ html {
   height: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
 }
 
 body {
@@ -44,6 +45,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 /* ─── Decorative Background Elements ─── */
@@ -798,11 +800,12 @@ body {
 /* ─── Mobile - iPhone Horizontal Layout ─── */
 @media (max-width: 768px) {
   .app-wrapper {
-    padding-bottom: 60px;
-    min-height: 100vh;
-    min-height: 100dvh;
+    padding-bottom: 0;
+    height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   /* Header - fixed at top */
@@ -871,6 +874,7 @@ body {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: none;
   }
 
   /* Card layout - horizontal with image left */
