@@ -50,10 +50,10 @@ body {
 
 /* ─── Decorative Background Elements ─── */
 .app-wrapper {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   position: relative;
   overflow: hidden;
-  padding-bottom: 140px;
   display: flex;
   flex-direction: column;
 }
@@ -194,7 +194,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 24px;
-  padding: 20px 48px 16px;
+  padding: 20px 48px 100px;
   max-width: 1400px;
   margin: 0 auto;
   position: relative;
@@ -202,6 +202,8 @@ body {
   flex-wrap: wrap;
   align-content: center;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   width: 100%;
 }
 
@@ -870,7 +872,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 14px;
-    padding: calc(64px + env(safe-area-inset-top)) 10px calc(80px + env(safe-area-inset-bottom));
+    padding: calc(64px + env(safe-area-inset-top)) 10px calc(58px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
