@@ -43,6 +43,9 @@ export default function Home() {
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState('');
   const [isVoting, setIsVoting] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'swipe-left' | 'swipe-right' | ''>('');
   const scrollRef = useRef<HTMLElement>(null);
 
   // Restore scroll position after mount and data load
@@ -60,6 +63,40 @@ export default function Home() {
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     localStorage.setItem('canteenScrollPos', e.currentTarget.scrollTop.toString());
+  };
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && selectedDay < 4) {
+      setSwipeDirection('swipe-left');
+      setSelectedDay(prev => prev + 1);
+    }
+    if (isRightSwipe && selectedDay > 0) {
+      setSwipeDirection('swipe-right');
+      setSelectedDay(prev => prev - 1);
+    }
+  };
+
+  const handleDaySelect = (i: number) => {
+    if (i > selectedDay) setSwipeDirection('swipe-left');
+    else if (i < selectedDay) setSwipeDirection('swipe-right');
+    else setSwipeDirection('');
+    setSelectedDay(i);
   };
 
   useEffect(() => {
@@ -196,64 +233,66 @@ export default function Home() {
       )}
 
       {/* Cards */}
-      <main className="cards-container" ref={scrollRef} onScroll={handleScroll}>
-        {sortedCanteens.map(([canteenName, canteen]) => {
-          const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
-          const items = lang === "no" ? dayEntry?.no?.items : dayEntry?.en?.items;
-          const mainDish = items?.find(i => i.isMain);
-          const sideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
-          const mainAllergens = mainDish?.allergens || [];
-          const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
-          const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
+      <main className="cards-container" ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
+          {sortedCanteens.map(([canteenName, canteen]) => {
+            const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
+            const items = lang === "no" ? dayEntry?.no?.items : dayEntry?.en?.items;
+            const mainDish = items?.find(i => i.isMain);
+            const sideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
+            const mainAllergens = mainDish?.allergens || [];
+            const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
+            const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
 
-          return (
-            <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}`} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
-              <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
-                <div className="card-image-circle">
-                  <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
-                </div>
-                <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
-              </div>
-              <div className="card-content">
-                <div className="card-header">
-                  <div className="canteen-name">
-                    {canteenName} 
-                    {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10) !== currentWeek && (
-                      <span className="week-label"> ({lang === "no" ? "Uke" : "Week"} {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10)})</span>
-                    )}
+            return (
+              <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}`} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
+                <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
+                  <div className="card-image-circle">
+                    <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
                   </div>
-                  <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+                  <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
                 </div>
-                
-                <div className="dish-meta-row">
-                  <div className="allergens-row">
-                    {mainAllergens.length > 0 && mainAllergens.map(a => (
-                      <span key={a.id} className="allergen-badge" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }} title={a.name}>{a.name.charAt(0)}</span>
-                    ))}
-                  </div>
-                  <div className="info-badges">
-                    {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 && (
-                      <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>
-                        {votes[canteenName]} {lang === 'no' ? (votes[canteenName] === 1 ? 'stemme' : 'stemmer') : (votes[canteenName] === 1 ? 'vote' : 'votes')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="card-bottom">
-                <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
-                <div className="side-dish-list">
-                  {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
-                    <div key={idx} className="side-dish-item">
-                      <span className="side-dish-text">{item.dish}</span>
-                      {item.allergens.length > 0 && <span className="side-allergens">{item.allergens.map(a => a.name.charAt(0)).join("")}</span>}
+                <div className="card-content">
+                  <div className="card-header">
+                    <div className="canteen-name">
+                      {canteenName} 
+                      {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10) !== currentWeek && (
+                        <span className="week-label"> ({lang === "no" ? "Uke" : "Week"} {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10)})</span>
+                      )}
                     </div>
-                  )) : <div className="side-dish-item" style={{ justifyContent: "center", color: "var(--text-muted)" }}>{lang === "no" ? "Ingen andre retter" : "No other dishes"}</div>}
+                    <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+                  </div>
+                  
+                  <div className="dish-meta-row">
+                    <div className="allergens-row">
+                      {mainAllergens.length > 0 && mainAllergens.map(a => (
+                        <span key={a.id} className="allergen-badge" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }} title={a.name}>{a.name.charAt(0)}</span>
+                      ))}
+                    </div>
+                    <div className="info-badges">
+                      {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 && (
+                        <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>
+                          {votes[canteenName]} {lang === 'no' ? (votes[canteenName] === 1 ? 'stemme' : 'stemmer') : (votes[canteenName] === 1 ? 'vote' : 'votes')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </article>
-          );
-        })}
+                <div className="card-bottom">
+                  <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
+                  <div className="side-dish-list">
+                    {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
+                      <div key={idx} className="side-dish-item">
+                        <span className="side-dish-text">{item.dish}</span>
+                        {item.allergens.length > 0 && <span className="side-allergens">{item.allergens.map(a => a.name.charAt(0)).join("")}</span>}
+                      </div>
+                    )) : <div className="side-dish-item" style={{ justifyContent: "center", color: "var(--text-muted)" }}>{lang === "no" ? "Ingen andre retter" : "No other dishes"}</div>}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </main>
 
       {/* Day Selector */}
@@ -264,7 +303,7 @@ export default function Home() {
             dayDate.setDate(monday.getDate() + i);
             const dateLabel = `${dayDate.getDate().toString().padStart(2, "0")}.${(dayDate.getMonth() + 1).toString().padStart(2, "0")}`;
             return (
-              <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => setSelectedDay(i)}>
+              <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => handleDaySelect(i)}>
                 <span className="day-label-name">{dayName}</span>
                 <span className="day-label-date">{i === todayIndex ? (lang === "no" ? "I dag" : "Today") : dateLabel}</span>
               </button>
