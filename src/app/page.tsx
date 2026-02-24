@@ -183,8 +183,21 @@ export default function Home() {
               </div>
               <div className="card-content">
                 <div className="card-header">
-                  <div className="canteen-name">{canteenName} <span className="week-label">({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span></div>
+                  <div className="canteen-name">
+                    {canteenName} 
+                    {canteen.week.match(/\d+/)?.[0] !== weekLabel.match(/\d+/)?.[0] && (
+                      <span className="week-label"> ({lang === "no" ? "Uke" : "Week"} {canteen.week.match(/\d+/)?.[0] || ""})</span>
+                    )}
+                  </div>
                   <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+                </div>
+                
+                <div className="dish-meta-row">
+                  <div className="allergens-row">
+                    {mainAllergens.length > 0 && mainAllergens.map(a => (
+                      <span key={a.id} className="allergen-badge" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }} title={a.name}>{a.name.charAt(0)}</span>
+                    ))}
+                  </div>
                   <div className="info-badges">
                     {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 && (
                       <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''}`}>
@@ -193,13 +206,6 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                {mainAllergens.length > 0 && (
-                  <div className="allergens-row">
-                    {mainAllergens.map(a => (
-                      <span key={a.id} className="allergen-badge" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }} title={a.name}>{a.name.charAt(0)}</span>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="card-bottom">
                 <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
