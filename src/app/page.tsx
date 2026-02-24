@@ -152,6 +152,34 @@ export default function Home() {
     });
   }, [menuData, selectedDay]);
 
+  // Disable vertical scrolling when content fits viewport
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollRef.current) {
+        const { scrollHeight, clientHeight } = scrollRef.current;
+        // Hide scrollbar if content fits (adding a small 2px threshold for rounding errors)
+        if (scrollHeight <= clientHeight + 2) {
+          scrollRef.current.style.overflowY = 'hidden';
+        } else {
+          scrollRef.current.style.overflowY = 'auto';
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(checkScroll, 50);
+    window.addEventListener('resize', checkScroll);
+    
+    // Watch for internal DOM size changes dynamically
+    const observer = new ResizeObserver(() => checkScroll());
+    if (scrollRef.current) observer.observe(scrollRef.current);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkScroll);
+      observer.disconnect();
+    };
+  }, [mounted, menuData, selectedDay]);
+
   if (!menuData || !mounted) {
     return <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: "#999" }}>Loading...</span></div>;
   }
