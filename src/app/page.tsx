@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // Types
 interface Allergen { id: string; name: string; }
@@ -43,6 +43,24 @@ export default function Home() {
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState('');
   const [isVoting, setIsVoting] = useState(false);
+  const scrollRef = useRef<HTMLElement>(null);
+
+  // Restore scroll position after mount and data load
+  useEffect(() => {
+    if (mounted && scrollRef.current) {
+      const savedScroll = localStorage.getItem('canteenScrollPos');
+      if (savedScroll !== null) {
+        // Use a slight timeout to ensure DOM has fully painted the new height
+        setTimeout(() => {
+          if (scrollRef.current) scrollRef.current.scrollTop = parseInt(savedScroll, 10);
+        }, 10);
+      }
+    }
+  }, [mounted, menuData]);
+
+  const handleScroll = (e: React.UIEvent<HTMLElement>) => {
+    localStorage.setItem('canteenScrollPos', e.currentTarget.scrollTop.toString());
+  };
 
   useEffect(() => {
     const jsDay = new Date().getDay();
@@ -178,7 +196,7 @@ export default function Home() {
       )}
 
       {/* Cards */}
-      <main className="cards-container">
+      <main className="cards-container" ref={scrollRef} onScroll={handleScroll}>
         {sortedCanteens.map(([canteenName, canteen]) => {
           const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
           const items = lang === "no" ? dayEntry?.no?.items : dayEntry?.en?.items;
