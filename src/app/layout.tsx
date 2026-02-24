@@ -6,14 +6,20 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Lunch | Telenor Fornebu",
+  title: "🍽️ Dagens Lunsj | Telenor Fornebu",
   description: "Daily lunch menus from The Hub, Telenor Expo, and Bygg B canteens at Telenor Fornebu.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Lunch",
+    title: "Dagens Lunsj",
   },
   icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
   },
   // Prevent caching
@@ -47,6 +53,7 @@ export default function RootLayout({
         <meta httpEquiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
         <meta httpEquiv="Pragma" content="no-cache" />
         <meta httpEquiv="Expires" content="0" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body suppressHydrationWarning className={inter.className}>
         {children}
