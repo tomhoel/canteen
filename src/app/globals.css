@@ -35,6 +35,7 @@
 
 html {
   height: 100%;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
@@ -43,8 +44,8 @@ html {
 body {
   background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
   color: var(--text-primary);
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100%;
+  overflow: hidden;
   overscroll-behavior: none;
 }
 
@@ -874,7 +875,7 @@ body {
     gap: 14px;
     padding: calc(64px + env(safe-area-inset-top)) 10px calc(58px + env(safe-area-inset-bottom));
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
     overflow-x: hidden;
     overscroll-behavior: none;
   }
@@ -1057,6 +1058,7 @@ body {
 .cards-animated-wrapper {
   display: flex;
   flex-direction: inherit;
+  justify-content: inherit;
   gap: inherit;
   width: 100%;
   animation-duration: 0.4s;

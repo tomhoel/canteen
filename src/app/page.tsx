@@ -157,11 +157,14 @@ export default function Home() {
     const checkScroll = () => {
       if (scrollRef.current) {
         const { scrollHeight, clientHeight } = scrollRef.current;
-        // Hide scrollbar if content fits (adding a small 2px threshold for rounding errors)
-        if (scrollHeight <= clientHeight + 2) {
-          scrollRef.current.style.overflowY = 'hidden';
-        } else {
+        // Only enable scroll when content genuinely overflows by more than 50px.
+        // Large threshold absorbs iOS Safari rounding/safe-area discrepancies.
+        if (scrollHeight > clientHeight + 50) {
           scrollRef.current.style.overflowY = 'auto';
+          scrollRef.current.style.touchAction = 'pan-x pan-y';
+        } else {
+          scrollRef.current.style.overflowY = 'hidden';
+          scrollRef.current.style.touchAction = 'pan-x';
         }
       }
     };
