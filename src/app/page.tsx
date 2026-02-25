@@ -107,7 +107,7 @@ export default function Home() {
     setTodayIndex(idx);
     // On weekends, show Friday (index 4) as the nearest weekday
     setSelectedDay(isWeekday ? jsDay - 1 : 4);
-    
+
     fetch("/menu.json")
       .then(r => r.json())
       .then(menu => setMenuData(menu));
@@ -118,7 +118,7 @@ export default function Home() {
         setVotes(data.canteens || {});
         votesLoadedRef.current = true;
       });
-    
+
     setMounted(true);
     const todayKey = new Date().toISOString().split('T')[0];
     const voted = localStorage.getItem(`voted_${todayKey}`);
@@ -175,11 +175,11 @@ export default function Home() {
 
     const timeoutId = setTimeout(checkScroll, 50);
     window.addEventListener('resize', checkScroll);
-    
+
     // Watch for internal DOM size changes dynamically
     const observer = new ResizeObserver(() => checkScroll());
     if (scrollRef.current) observer.observe(scrollRef.current);
-    
+
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener('resize', checkScroll);
@@ -278,10 +278,11 @@ export default function Home() {
             const mainAllergens = mainDish?.allergens || [];
             const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
             const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
+            const highResImagePath = `/images/${dayKey}/${imageSlug}.png`;
 
             return (
               <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}`} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
-                <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
+                <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: highResImagePath, dishName: mainDish.dish, canteenName }); }}>
                   <div className="card-image-circle">
                     <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
                   </div>
@@ -290,14 +291,14 @@ export default function Home() {
                 <div className="card-content">
                   <div className="card-header">
                     <div className="canteen-name">
-                      {canteenName} 
+                      {canteenName}
                       {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10) !== currentWeek && (
                         <span className="week-label"> ({lang === "no" ? "Uke" : "Week"} {parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10)})</span>
                       )}
                     </div>
                     <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
                   </div>
-                  
+
                   <div className="dish-meta-row">
                     <div className="allergens-row">
                       {mainAllergens.length > 0 && mainAllergens.map(a => (
