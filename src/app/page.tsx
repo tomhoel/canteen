@@ -135,7 +135,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
-  // Preload all images for all days so switching is instant
+  // Preload all images for all days so switching is instant, but defer non-active days
   useEffect(() => {
     if (!menuData) return;
 
@@ -147,13 +147,28 @@ export default function Home() {
       sortedDays.unshift(day);
     }
 
-    sortedDays.forEach(day => {
+    // Load active day immediately
+    const today = sortedDays[0];
+    if (today) {
       CANTEEN_ORDER.forEach(name => {
         const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
         const img = new window.Image();
-        img.src = `/images_nobg/${day}/${slug}.png`;
+        img.src = `/images_nobg/${today}/${slug}.png`;
       });
-    });
+    }
+
+    // Defer loading the remaining days by 1.5 seconds to not block active day's images
+    const timer = setTimeout(() => {
+      sortedDays.slice(1).forEach(day => {
+        CANTEEN_ORDER.forEach(name => {
+          const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
+          const img = new window.Image();
+          img.src = `/images_nobg/${day}/${slug}.png`;
+        });
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, [menuData, selectedDay]);
 
   // Disable vertical scrolling when content fits viewport
