@@ -96,7 +96,7 @@ Camera & Composition:
 - Angle: Overhead shot, camera at 90° directly above plate
 - Framing: Plate perfectly centered, complete rim visible with margin
 - Size: Food covers 60-70% of plate surface
-- Format: Square 1:1 ratio, 1024x1024px
+- Format: Square 1:1 ratio
 
 Plate (CRITICAL - MUST FOLLOW EXACTLY):
 - Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)
@@ -132,9 +132,9 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
+            model: 'gemini-3.1-flash-image-preview',
             contents: prompt,
-            config: { responseModalities: ['Text', 'Image'] },
+            config: { responseModalities: ['Text', 'Image'], imageConfig: { imageSize: '512px' } },
         });
 
         for (const part of response.candidates[0].content.parts) {
