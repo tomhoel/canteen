@@ -139,11 +139,13 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
 
         for (const part of response.candidates[0].content.parts) {
             if (part.inlineData) {
-                const buffer = Buffer.from(part.inlineData.data, 'base64');
+                const sharp = require('sharp');
+                const raw = Buffer.from(part.inlineData.data, 'base64');
+                const pngBuffer = await sharp(raw).png().toBuffer();
                 const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
                 const dayDir = path.join(IMAGES_DIR, day);
                 if (!fs.existsSync(dayDir)) fs.mkdirSync(dayDir, { recursive: true });
-                fs.writeFileSync(path.join(dayDir, `${slug}.png`), buffer);
+                fs.writeFileSync(path.join(dayDir, `${slug}.png`), pngBuffer);
                 return true;
             }
         }
@@ -230,6 +232,7 @@ async function removeBgSingle(canteenName, day) {
         const trimmedBuffer = await sharp(data, { raw: { width, height, channels } })
             .trim()
             .resize(440, 440, { fit: 'inside' })
+            .png()
             .toBuffer();
 
         await sharp({
