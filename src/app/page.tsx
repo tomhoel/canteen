@@ -356,15 +356,6 @@ export default function Home() {
                 <div className="card-content">
                   <div className="card-header">
                     <div className="canteen-name">{canteenName}</div>
-                    {isOutdated && (
-                      <div className="stale-banner">
-                        <span className="stale-banner-icon">⏰</span>
-                        <div className="stale-banner-text">
-                          <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
-                          <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>
-                        </div>
-                      </div>
-                    )}
                     <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
                   </div>
 
@@ -394,6 +385,15 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+                {isOutdated && (
+                  <div className="stale-banner">
+                    <span className="stale-banner-icon">⏰</span>
+                    <div className="stale-banner-text">
+                      <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
+                      <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="card-bottom">
                   <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
                   <div className="side-dish-list">

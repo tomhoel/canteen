@@ -286,7 +286,7 @@ body {
   backdrop-filter: blur(6px);
 }
 
-/* Dedicated stale banner inside card-content */
+/* Dedicated stale banner — sibling of card-content, above card-bottom */
 .stale-banner {
   display: flex;
   align-items: center;
@@ -295,7 +295,7 @@ body {
   border: 1px solid rgba(210, 130, 10, 0.25);
   border-radius: 12px;
   padding: 9px 13px;
-  margin: 2px 0 8px;
+  margin: 0 0 10px;
   animation: bannerSlide 0.4s var(--spring) both;
 }
 
@@ -1124,11 +1124,13 @@ body {
     animation: none;
   }
 
-  /* Stale banner - compact on mobile */
+  /* Stale banner — full-width row between content and side dishes */
   .stale-banner {
-    padding: 6px 10px;
-    gap: 7px;
-    margin: 2px 0 5px;
+    flex-basis: 100%;
+    margin: 6px 0 4px;
+    padding: 8px 12px;
+    gap: 8px;
+    border-radius: 10px;
   }
 
   .stale-banner-icon {
@@ -1136,11 +1138,11 @@ body {
   }
 
   .stale-banner-text strong {
-    font-size: 10px;
+    font-size: 10.5px;
   }
 
   .stale-banner-text span {
-    font-size: 9px;
+    font-size: 9.5px;
   }
 
   .stale-image-badge {
