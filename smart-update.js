@@ -283,7 +283,7 @@ async function detectDishOrigin(dishName) {
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview-04-17',
+            model: 'gemini-2.0-flash',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
         });
