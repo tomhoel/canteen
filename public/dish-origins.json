@@ -1,1 +1,38 @@
-{}
+{
+  "Pork cutlet with fennel, rosmarin": {
+    "country": "Italy",
+    "emoji": "🇮🇹"
+  },
+  "Turkey steak with barley": {
+    "country": "Italy",
+    "emoji": "🇮🇹"
+  },
+  "Lemon baked dill trout, serves with potato and leek": {
+    "country": "Sweden",
+    "emoji": "🇸🇪"
+  },
+  "One pot chicken `nduja": {
+    "country": "Italy",
+    "emoji": "🇮🇹"
+  },
+  "Butter chicken with rice": {
+    "country": "India",
+    "emoji": "🇮🇳"
+  },
+  "Shepherd's pie": {
+    "country": "United Kingdom",
+    "emoji": "🇬🇧"
+  },
+  "Gulasj beef stew with potatoes": {
+    "country": "Hungary",
+    "emoji": "🇭🇺"
+  },
+  "Fish balls i curry with butter baked root vegetables and parsley potatoes": {
+    "country": "India",
+    "emoji": "🇮🇳"
+  },
+  "Swedish meatballs with cream sauce, lingonberries and rice": {
+    "country": "Sweden",
+    "emoji": "🇸🇪"
+  }
+}
