@@ -212,9 +212,12 @@ export default function Home() {
   // On weekends todayIndex is -1; use Friday (4) as the active day for voting
   const activeDayIndex = todayIndex >= 0 ? todayIndex : 4;
 
-  const sortedCanteens = useMemo(() => CANTEEN_ORDER
-    .filter(name => menuData.canteens[name])
-    .map(name => [name, menuData.canteens[name]] as [string, CanteenData]), [menuData.canteens]);
+  const sortedCanteens = useMemo(() => {
+    if (!menuData) return [];
+    return CANTEEN_ORDER
+      .filter(name => menuData.canteens[name])
+      .map(name => [name, menuData.canteens[name]] as [string, CanteenData]);
+  }, [menuData]);
 
   const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => votes[name] ?? 0)), [sortedCanteens, votes]);
 
