@@ -1007,8 +1007,8 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    gap: 14px;
-    padding: calc(64px + env(safe-area-inset-top)) 10px calc(58px + env(safe-area-inset-bottom));
+    gap: 20px;
+    padding: calc(72px + env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1022,8 +1022,8 @@ body {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    padding: 8px 10px;
-    border-radius: 14px;
+    padding: 10px 12px;
+    border-radius: 16px;
     position: relative;
     overflow: visible;
   }
