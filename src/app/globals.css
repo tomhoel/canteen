@@ -1536,6 +1536,78 @@ body {
   }
 }
 
+/* ─── Dish Origin Stamp ─── */
+.origin-stamp {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  background: var(--card-white);
+  border: 2px solid var(--border-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px var(--shadow-medium), 0 1px 3px var(--shadow-soft);
+  z-index: 3;
+  transform: rotate(6deg);
+  transition: transform 0.25s var(--spring), box-shadow 0.25s ease;
+  pointer-events: all;
+  cursor: default;
+  animation: stampReveal 0.5s var(--spring) both;
+  animation-delay: 0.3s;
+}
+
+@keyframes stampReveal {
+  from { opacity: 0; transform: rotate(15deg) scale(0.5); }
+  to   { opacity: 1; transform: rotate(6deg) scale(1); }
+}
+
+.origin-stamp:hover {
+  transform: rotate(0deg) scale(1.18);
+  box-shadow: 0 6px 20px var(--shadow-strong);
+}
+
+.origin-stamp::after {
+  content: attr(data-country);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--text-primary);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.origin-stamp:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.origin-flag {
+  font-size: 22px;
+  line-height: 1;
+}
+
+@media (max-width: 600px) {
+  .origin-stamp {
+    width: 30px;
+    height: 30px;
+    bottom: 4px;
+    right: 4px;
+    border-width: 1.5px;
+  }
+  .origin-flag { font-size: 16px; }
+}
+
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   * {
