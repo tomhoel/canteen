@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 // Types
 interface Allergen { id: string; name: string; }
@@ -212,37 +212,73 @@ export default function Home() {
   // On weekends todayIndex is -1; use Friday (4) as the active day for voting
   const activeDayIndex = todayIndex >= 0 ? todayIndex : 4;
 
-  const sortedCanteens = CANTEEN_ORDER
+  const sortedCanteens = useMemo(() => CANTEEN_ORDER
     .filter(name => menuData.canteens[name])
-    .map(name => [name, menuData.canteens[name]] as [string, CanteenData]);
+    .map(name => [name, menuData.canteens[name]] as [string, CanteenData]), [menuData.canteens]);
 
-  const maxVotes = Math.max(0, ...sortedCanteens.map(([name]) => votes[name] ?? 0));
+  const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => votes[name] ?? 0)), [sortedCanteens, votes]);
 
-  const currentWeek = (() => {
+  const currentWeek = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() + 4 - (d.getDay() || 7));
     const yearStart = new Date(d.getFullYear(), 0, 1);
     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  })();
+  }, []);
 
   const weekLabel = `${lang === "no" ? "Uke" : "Week"} ${currentWeek}`;
-  const selectedDate = new Date();
-  const currentDayOfWeek = selectedDate.getDay();
-  const mondayOffset = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
-  const monday = new Date(selectedDate);
-  monday.setDate(selectedDate.getDate() + mondayOffset);
-  const target = new Date(monday);
-  target.setDate(monday.getDate() + selectedDay);
-  const dateStr = target.toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "long" });
 
-  const dayAllergens = Array.from(new Map(
-    sortedCanteens.flatMap(([, c]) => {
-      const entry = c.menu.find(d => d.day.toLowerCase() === dayKey);
-      const items = lang === "no" ? entry?.no?.items : entry?.en?.items;
+  const { monday, dateStr, dayLabelsData } = useMemo(() => {
+    const selectedDate = new Date();
+    const currentDayOfWeek = selectedDate.getDay();
+    const mondayOffset = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+    const m = new Date(selectedDate);
+    m.setDate(selectedDate.getDate() + mondayOffset);
+
+    const t = new Date(m);
+    t.setDate(m.getDate() + selectedDay);
+    const dStr = t.toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "long" });
+
+    const labels = fullDayLabels.map((_, i) => {
+      const dayDate = new Date(m);
+      dayDate.setDate(m.getDate() + i);
+      return `${dayDate.getDate().toString().padStart(2, "0")}.${(dayDate.getMonth() + 1).toString().padStart(2, "0")}`;
+    });
+
+    return { monday: m, dateStr: dStr, dayLabelsData: labels };
+  }, [selectedDay, lang, fullDayLabels]);
+
+  const canteenDayData = useMemo(() => {
+    return sortedCanteens.map(([canteenName, canteen]) => {
+      const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
+      const items = lang === "no" ? dayEntry?.no?.items : dayEntry?.en?.items;
+      const mainDish = items?.find(i => i.isMain);
+      const sideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
+      const mainAllergens = mainDish?.allergens || [];
+      const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
+      const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
+      const highResImagePath = `/images/${dayKey}/${imageSlug}.png`;
+
+      return {
+        canteenName,
+        canteen,
+        dayEntry,
+        items,
+        mainDish,
+        sideDishes,
+        mainAllergens,
+        imageSlug,
+        imagePath,
+        highResImagePath
+      };
+    });
+  }, [sortedCanteens, dayKey, lang]);
+
+  const dayAllergens = useMemo(() => Array.from(new Map(
+    canteenDayData.flatMap(({ items }) => {
       return items?.flatMap(i => i.allergens.map(a => [a.name, a])) || [];
     })
-  ).values()).sort((a, b) => a.name.localeCompare(b.name));
+  ).values()).sort((a, b) => a.name.localeCompare(b.name)), [canteenDayData]);
 
   return (
     <div className="app-wrapper">
@@ -285,16 +321,16 @@ export default function Home() {
       {/* Cards */}
       <main className="cards-container" ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
-          {sortedCanteens.map(([canteenName, canteen]) => {
-            const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
-            const items = lang === "no" ? dayEntry?.no?.items : dayEntry?.en?.items;
-            const mainDish = items?.find(i => i.isMain);
-            const sideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
-            const mainAllergens = mainDish?.allergens || [];
-            const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
-            const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
-            const highResImagePath = `/images/${dayKey}/${imageSlug}.png`;
-
+          {canteenDayData.map(({
+            canteenName,
+            canteen,
+            items,
+            mainDish,
+            sideDishes,
+            mainAllergens,
+            imagePath,
+            highResImagePath
+          }) => {
             return (
               <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}`} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
                 <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: highResImagePath, dishName: mainDish.dish, canteenName }); }}>
@@ -350,9 +386,7 @@ export default function Home() {
       <nav className="day-bar">
         <div className="day-selector">
           {fullDayLabels.map((dayName, i) => {
-            const dayDate = new Date(monday);
-            dayDate.setDate(monday.getDate() + i);
-            const dateLabel = `${dayDate.getDate().toString().padStart(2, "0")}.${(dayDate.getMonth() + 1).toString().padStart(2, "0")}`;
+            const dateLabel = dayLabelsData[i];
             return (
               <button key={i} className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`} onClick={() => handleDaySelect(i)}>
                 <span className="day-label-name">{dayName}</span>
