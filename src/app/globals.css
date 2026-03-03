@@ -237,6 +237,60 @@ body {
   border: 2px solid var(--accent-yellow);
 }
 
+/* ─── Outdated / Stale menu card ─── */
+.food-card.outdated {
+  border-color: rgba(180, 130, 60, 0.25);
+  background: linear-gradient(135deg, #fdfaf6 0%, #faf6ee 100%);
+}
+
+.food-card.outdated .food-image {
+  filter: grayscale(30%) opacity(0.75)
+    drop-shadow(0 8px 20px rgba(0, 0, 0, 0.08));
+}
+
+/* Badge overlaid on image - shows old week number */
+.stale-image-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(160, 100, 20, 0.82);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Warning strip inside card content */
+.stale-notice {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(200, 130, 20, 0.08);
+  border: 1px solid rgba(200, 130, 20, 0.22);
+  color: #a06010;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  margin: 2px auto 6px;
+  width: fit-content;
+  max-width: 100%;
+  text-align: center;
+}
+
+.stale-notice-icon {
+  font-style: normal;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
 /* ─── V3 Overhead Image Container - Transparent Background ─── */
 .card-image-wrapper {
   width: 280px;
@@ -980,6 +1034,19 @@ body {
     width: 18px;
     height: 18px;
     font-size: 8px;
+  }
+
+  /* Stale notice - left-aligned on mobile */
+  .stale-notice {
+    margin: 2px 0 4px;
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .stale-image-badge {
+    bottom: -2px;
+    font-size: 9px;
+    padding: 2px 7px;
   }
 
   /* Side dishes - full width horizontal row */
