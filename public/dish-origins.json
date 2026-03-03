@@ -34,5 +34,21 @@
   "Swedish meatballs with cream sauce, lingonberries and rice": {
     "country": "Sweden",
     "emoji": "🇸🇪"
+  },
+  "BBQ hamburger with coleslaw and fries (Veggie burger available)": {
+    "country": "United States",
+    "emoji": "🇺🇸"
+  },
+  "Marinated chicken with gravy, vegetables and rice": {
+    "country": "Philippines",
+    "emoji": "🇵🇭"
+  },
+  "Oven baked Trout filet with cucumber salad, sour cream and potatoes": {
+    "country": "Germany",
+    "emoji": "🇩🇪"
+  },
+  "Slow-cooked sirloin og beef with cherry, served with mashed potatoes and onions": {
+    "country": "United Kingdom",
+    "emoji": "🇬🇧"
   }
 }
