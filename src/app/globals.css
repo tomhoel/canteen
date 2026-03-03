@@ -1008,7 +1008,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 8px;
-    padding: calc(54px + env(safe-area-inset-top)) 10px calc(58px + env(safe-area-inset-bottom));
+    padding: calc(54px + env(safe-area-inset-top)) 10px calc(66px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1133,13 +1133,30 @@ body {
     animation: none;
   }
 
-  /* Stale banner — full-width row between content and side dishes */
+  /* Stale banner — absolutely positioned overlay at card bottom, no height impact */
   .stale-banner {
-    flex-basis: 100%;
-    margin: 6px 0 4px;
-    padding: 8px 12px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-basis: auto;
+    margin: 0;
+    padding: 10px 14px;
     gap: 8px;
-    border-radius: 10px;
+    border-radius: 0 0 14px 14px;
+    border: none;
+    border-top: 1px solid rgba(210, 130, 10, 0.22);
+    background: linear-gradient(135deg, rgba(255, 249, 228, 0.98) 0%, rgba(255, 241, 195, 0.98) 100%);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    z-index: 5;
+    box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.08);
+  }
+
+  /* Side dishes fade out on outdated cards — stale banner overlays that zone */
+  .food-card.outdated .card-bottom {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .stale-banner-icon {
