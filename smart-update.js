@@ -279,7 +279,7 @@ async function detectDishOrigin(dishName) {
     if (!GEMINI_API_KEY) return null;
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-    const promptText = `You are a food history expert. Identify the single country this dish most likely originated from. Dish: "${dishName}". Respond ONLY with raw JSON: {"country":"Italy","emoji":"🇮🇹"}`;
+    const promptText = `You are a food history expert. Identify the single country this dish most likely originated from. Always provide a best guess — never refuse, even for generic dishes. Use ingredients, cooking style, or cultural context as clues. If truly uncertain, pick the most plausible country. Dish: "${dishName}". Respond ONLY with raw JSON, no explanation: {"country":"Italy","emoji":"🇮🇹"}`;
 
     try {
         const response = await ai.models.generateContent({
