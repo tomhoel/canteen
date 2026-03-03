@@ -80,8 +80,13 @@ function findChanges(oldMenu, newMenu) {
     return changes;
 }
 
+// Path to master plate reference image for consistent plate style across all generations
+const MASTER_PLATE_REF_PATH = path.join(__dirname, 'public', 'images', 'master-plate-ref.png');
+
 /**
  * Generate a single image using the V3 generator prompt.
+ * If master-plate-ref.png exists, it is passed as a visual reference to Gemini
+ * so it can replicate the exact plate style rather than interpreting text alone.
  */
 async function generateSingleImage(dishName, canteenName, day) {
     const { GoogleGenAI } = require('@google/genai');
@@ -89,7 +94,9 @@ async function generateSingleImage(dishName, canteenName, day) {
     if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-    const prompt = `Professional overhead food photography of "${dishName}".
+    const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
+
+    const promptText = `Professional overhead food photography of "${dishName}".
 
 STRICT TECHNICAL SPECIFICATIONS:
 Camera & Composition:
@@ -99,7 +106,7 @@ Camera & Composition:
 - Format: Square 1:1 ratio
 
 Plate (CRITICAL - MUST FOLLOW EXACTLY):
-- Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)
+${hasMasterPlate ? '- REFERENCE IMAGE PROVIDED: Use the EXACT same plate from the reference image — identical shape, color, texture, and rim style. Do not deviate in any way.' : '- Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)'}
 - Plate color: Warm sandy beige (#E8D5B7) — NOT white, NOT grey
 - Plate MUST have a clearly visible raised rim/edge all the way around
 - The plate must be IDENTICAL style across all images: same warm beige stoneware
@@ -130,10 +137,17 @@ Strict Exclusions:
 
 Style: Minimalist Scandinavian food photography, flat-lit product shot, clean and professional.`;
 
+    const parts = [{ text: promptText }];
+    if (hasMasterPlate) {
+        const plateData = fs.readFileSync(MASTER_PLATE_REF_PATH).toString('base64');
+        parts.push({ inlineData: { mimeType: 'image/png', data: plateData } });
+        console.log('  🎨 Using master plate reference for consistent style');
+    }
+
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-3.1-flash-image-preview',
-            contents: prompt,
+            contents: { parts },
             config: { responseModalities: ['Text', 'Image'], imageConfig: { imageSize: '512px' } },
         });
 
