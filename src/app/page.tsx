@@ -313,8 +313,8 @@ export default function Home() {
             <div className="allergen-panel">
               <div className="allergen-panel-title">{lang === "no" ? "Allergener i dagens meny" : "Allergens in today's menu"}</div>
               <div className="allergen-grid">
-                {dayAllergens.map(a => (
-                  <div key={a.id} className="allergen-item">
+                {dayAllergens.map((a, idx) => (
+                  <div key={a.id} className="allergen-item" style={{ animationDelay: `${idx * 40}ms` }}>
                     <span className="allergen-item-dot" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }}>{a.name.charAt(0)}</span>
                     <span className="allergen-item-name">{a.name}</span>
                   </div>
@@ -339,16 +339,16 @@ export default function Home() {
             highResImagePath,
             isOutdated,
             canteenWeekNum
-          }) => {
+          }, cardIdx) => {
             return (
-              <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}${isOutdated ? ' outdated' : ''}`} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
+              <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}${isOutdated ? ' outdated' : ''}`} style={{ animationDelay: `${cardIdx * 75}ms` }} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
                 <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                   <div className="card-image-circle">
                     <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
                   </div>
                   {isOutdated && (
                     <div className="stale-image-badge">
-                      {lang === "no" ? `Uke ${canteenWeekNum}` : `Week ${canteenWeekNum}`}
+                      {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
                     </div>
                   )}
                   <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
@@ -357,9 +357,12 @@ export default function Home() {
                   <div className="card-header">
                     <div className="canteen-name">{canteenName}</div>
                     {isOutdated && (
-                      <div className="stale-notice">
-                        <span className="stale-notice-icon">⚠</span>
-                        <span>{lang === "no" ? `Ikke oppdatert — viser uke ${canteenWeekNum}` : `Not updated — showing week ${canteenWeekNum}`}</span>
+                      <div className="stale-banner">
+                        <span className="stale-banner-icon">⏰</span>
+                        <div className="stale-banner-text">
+                          <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
+                          <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>
+                        </div>
                       </div>
                     )}
                     <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
@@ -367,8 +370,19 @@ export default function Home() {
 
                   <div className="dish-meta-row">
                     <div className="allergens-row">
-                      {mainAllergens.length > 0 && mainAllergens.map(a => (
-                        <span key={a.id} className="allergen-badge" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }} title={a.name}>{a.name.charAt(0)}</span>
+                      {mainAllergens.length > 0 && mainAllergens.map((a, aIdx) => (
+                        <span
+                          key={a.id}
+                          className="allergen-chip"
+                          style={{
+                            color: ALLERGEN_COLORS[a.name] || "#8E8E93",
+                            background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
+                            borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
+                            animationDelay: `${aIdx * 50}ms`,
+                          }}
+                        >
+                          {a.name}
+                        </span>
                       ))}
                     </div>
                     <div className="info-badges">

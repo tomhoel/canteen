@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Outfit } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const outfit = Outfit({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800", "900"] });
 
 export const metadata: Metadata = {
   title: "🍽️ Dagens Lunsj | Telenor Fornebu",
@@ -55,7 +55,7 @@ export default function RootLayout({
         <meta httpEquiv="Expires" content="0" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body suppressHydrationWarning className={inter.className}>
+      <body suppressHydrationWarning className={outfit.className}>
         {children}
         <Analytics />
       </body>
