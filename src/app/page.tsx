@@ -351,10 +351,8 @@ export default function Home() {
             canteenWeekNum,
             origin
           }, cardIdx) => {
-            const isLeader = selectedDay === activeDayIndex && maxVotes > 0 && (votes[canteenName] ?? 0) === maxVotes;
-
             return (
-              <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}${isOutdated ? ' outdated' : ''}${isLeader ? ' leader' : ''}`} style={{ animationDelay: `${cardIdx * 75}ms` }} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
+              <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}${isOutdated ? ' outdated' : ''}`} style={{ animationDelay: `${cardIdx * 75}ms` }} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
                 <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                   <div className="card-image-circle">
                     <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
