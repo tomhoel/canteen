@@ -395,7 +395,7 @@ export default function Home() {
                     <div className="info-badges">
                       {selectedDay === activeDayIndex && (votes[canteenName] ?? 0) > 0 && (
                         <div className={`vote-badge${(votes[canteenName] ?? 0) === maxVotes ? ' leader' : ''} vote-badge-pop`}>
-                          {(votes[canteenName] ?? 0) === maxVotes && <>🏆 </>}{votes[canteenName]} {lang === 'no' ? (votes[canteenName] === 1 ? 'stemme' : 'stemmer') : (votes[canteenName] === 1 ? 'vote' : 'votes')}
+                          {(votes[canteenName] ?? 0) === maxVotes && <span style={{ marginRight: '5px' }}>🏆</span>}{votes[canteenName]} {lang === 'no' ? (votes[canteenName] === 1 ? 'stemme' : 'stemmer') : (votes[canteenName] === 1 ? 'vote' : 'votes')}
                         </div>
                       )}
                     </div>
