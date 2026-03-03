@@ -1007,7 +1007,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 8px;
-    padding: calc(54px + env(safe-area-inset-top)) 10px calc(66px + env(safe-area-inset-bottom));
+    padding: calc(54px + env(safe-area-inset-top)) 10px calc(74px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1042,9 +1042,9 @@ body {
     left: auto;
     top: auto;
     transform: none;
-    width: 130px;
-    height: 130px;
-    margin: -18px 0 -12px -22px;
+    width: 156px;
+    height: 156px;
+    margin: -22px 0 -14px -26px;
     flex-shrink: 0;
     z-index: 10;
   }
