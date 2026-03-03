@@ -43,6 +43,7 @@ export default function Home() {
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState('');
   const [isVoting, setIsVoting] = useState(false);
+  const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; emoji: string }>>({});
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<'swipe-left' | 'swipe-right' | ''>('');
@@ -111,6 +112,11 @@ export default function Home() {
     fetch("/menu.json")
       .then(r => r.json())
       .then(menu => setMenuData(menu));
+
+    fetch('/dish-origins.json')
+      .then(r => r.ok ? r.json() : {})
+      .then(data => setDishOrigins(data || {}))
+      .catch(() => {});
 
     fetch('/api/attendance')
       .then(r => r.json())
@@ -260,6 +266,9 @@ export default function Home() {
       const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
       const isOutdated = canteenWeekNum !== currentWeek;
 
+      const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
+      const origin = dishOrigins[enMainDish?.dish || ''] ?? null;
+
       return {
         canteenName,
         canteen,
@@ -272,10 +281,11 @@ export default function Home() {
         imagePath,
         highResImagePath,
         isOutdated,
-        canteenWeekNum
+        canteenWeekNum,
+        origin
       };
     });
-  }, [sortedCanteens, dayKey, lang]);
+  }, [sortedCanteens, dayKey, lang, dishOrigins]);
 
   const dayAllergens = useMemo(() => Array.from(new Map(
     canteenDayData.flatMap(({ items }) => {
@@ -338,7 +348,8 @@ export default function Home() {
             imagePath,
             highResImagePath,
             isOutdated,
-            canteenWeekNum
+            canteenWeekNum,
+            origin
           }, cardIdx) => {
             return (
               <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}${isOutdated ? ' outdated' : ''}`} style={{ animationDelay: `${cardIdx * 75}ms` }} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
@@ -352,6 +363,11 @@ export default function Home() {
                     </div>
                   )}
                   <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
+                  {origin && (
+                    <div className="origin-stamp" data-country={origin.country}>
+                      <span className="origin-flag">{origin.emoji}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="card-content">
                   <div className="card-header">

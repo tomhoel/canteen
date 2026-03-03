@@ -14,6 +14,7 @@ const MENU_PATH = path.join(__dirname, 'public', 'menu.json');
 const IMAGES_DIR = path.join(__dirname, 'public', 'images');
 const IMAGES_NOBG_DIR = path.join(__dirname, 'public', 'images_nobg');
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
 
 /**
  * Extract main dish names per day for a canteen.
@@ -268,6 +269,34 @@ async function removeBgSingle(canteenName, day) {
     }
 }
 
+/**
+ * Detect the country of origin for a dish using Gemini text generation.
+ * Returns { country, emoji } or null on failure.
+ */
+async function detectDishOrigin(dishName) {
+    const { GoogleGenAI } = require('@google/genai');
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) return null;
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+    const promptText = `You are a food history expert. Identify the single country this dish most likely originated from. Dish: "${dishName}". Respond ONLY with raw JSON: {"country":"Italy","emoji":"🇮🇹"}`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-preview-04-17',
+            contents: { parts: [{ text: promptText }] },
+            config: { responseMimeType: 'application/json' },
+        });
+        const text = response.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(text);
+        if (parsed.country && parsed.emoji) return parsed;
+        return null;
+    } catch (error) {
+        console.error(`  ❌ Origin detection failed for "${dishName}": ${error.message}`);
+        return null;
+    }
+}
+
 async function main() {
     console.log('╔══════════════════════════════════════════════════════════╗');
     console.log('║  SMART WEEKLY UPDATE                                    ║');
@@ -284,6 +313,11 @@ async function main() {
     } else {
         console.log('📋 No existing menu — will generate everything');
     }
+
+    // Load origins cache
+    const origins = fs.existsSync(ORIGINS_PATH)
+        ? JSON.parse(fs.readFileSync(ORIGINS_PATH, 'utf8'))
+        : {};
 
     // Step 2: Scrape new menu
     console.log('\n📥 Scraping fresh menu...');
@@ -306,66 +340,98 @@ async function main() {
     if (changes.length === 0) {
         console.log('\n✅ No changes detected — everything is up to date!');
         console.log('   Skipping image generation entirely.');
-        return;
-    }
-
-    // Group by canteen for display
-    const byCanteen = {};
-    for (const c of changes) {
-        if (!byCanteen[c.canteenName]) byCanteen[c.canteenName] = [];
-        byCanteen[c.canteenName].push(c);
-    }
-
-    console.log(`\n🔄 Changes detected: ${changes.length} images to regenerate`);
-    console.log('═'.repeat(60));
-    for (const [name, items] of Object.entries(byCanteen)) {
-        console.log(`\n  🍽️  ${name} (${items.length} days):`);
-        for (const c of items) {
-            console.log(`     ${c.day}: ${c.reason || 'changed'}`);
-            if (c.oldDish) console.log(`       Old: ${c.oldDish.substring(0, 50)}`);
-            if (c.newDish) console.log(`       New: ${c.newDish.substring(0, 50)}`);
+    } else {
+        // Group by canteen for display
+        const byCanteen = {};
+        for (const c of changes) {
+            if (!byCanteen[c.canteenName]) byCanteen[c.canteenName] = [];
+            byCanteen[c.canteenName].push(c);
         }
-    }
 
-    const skipped = (Object.keys(newMenu.canteens).length * 5) - changes.length;
-    console.log(`\n⏭️  Skipping ${skipped} images (already up to date)`);
-    console.log('═'.repeat(60));
+        console.log(`\n🔄 Changes detected: ${changes.length} images to regenerate`);
+        console.log('═'.repeat(60));
+        for (const [name, items] of Object.entries(byCanteen)) {
+            console.log(`\n  🍽️  ${name} (${items.length} days):`);
+            for (const c of items) {
+                console.log(`     ${c.day}: ${c.reason || 'changed'}`);
+                if (c.oldDish) console.log(`       Old: ${c.oldDish.substring(0, 50)}`);
+                if (c.newDish) console.log(`       New: ${c.newDish.substring(0, 50)}`);
+            }
+        }
 
-    // Step 4: Generate + remove BG only for changed items
-    let generated = 0, failed = 0;
+        const skipped = (Object.keys(newMenu.canteens).length * 5) - changes.length;
+        console.log(`\n⏭️  Skipping ${skipped} images (already up to date)`);
+        console.log('═'.repeat(60));
 
-    for (const change of changes) {
-        const displayDish = change.newDish.substring(0, 45);
-        console.log(`\n📸 ${change.canteenName} / ${change.day}: ${displayDish}...`);
+        // Step 4: Generate + remove BG only for changed items
+        let generated = 0, failed = 0;
 
-        const ok = await generateSingleImage(change.newDish, change.canteenName, change.day);
-        if (ok) {
-            console.log('  ✅ Generated');
-            const bgOk = await removeBgSingle(change.canteenName, change.day);
-            if (bgOk) {
-                console.log('  ✅ Background removed + optimized');
-                generated++;
+        for (const change of changes) {
+            const displayDish = change.newDish.substring(0, 45);
+            console.log(`\n📸 ${change.canteenName} / ${change.day}: ${displayDish}...`);
+
+            const ok = await generateSingleImage(change.newDish, change.canteenName, change.day);
+            if (ok) {
+                console.log('  ✅ Generated');
+                const bgOk = await removeBgSingle(change.canteenName, change.day);
+                if (bgOk) {
+                    console.log('  ✅ Background removed + optimized');
+                    generated++;
+                } else {
+                    console.log('  ❌ Background removal failed');
+                    failed++;
+                }
             } else {
-                console.log('  ❌ Background removal failed');
+                console.log('  ❌ Generation failed');
                 failed++;
             }
-        } else {
-            console.log('  ❌ Generation failed');
-            failed++;
+
+            // Rate limiting
+            await new Promise(r => setTimeout(r, 1500));
         }
 
-        // Rate limiting
-        await new Promise(r => setTimeout(r, 1500));
+        console.log('\n' + '═'.repeat(60));
+        console.log('📊 SMART UPDATE SUMMARY');
+        console.log('═'.repeat(60));
+        console.log(`✅ Regenerated: ${generated} images`);
+        console.log(`⏭️  Skipped:     ${skipped} images (unchanged)`);
+        if (failed > 0) console.log(`❌ Failed:      ${failed} images`);
+        console.log(`💰 API calls saved: ${skipped} (vs full regeneration)`);
+        console.log('═'.repeat(60));
     }
 
-    console.log('\n' + '═'.repeat(60));
-    console.log('📊 SMART UPDATE SUMMARY');
-    console.log('═'.repeat(60));
-    console.log(`✅ Regenerated: ${generated} images`);
-    console.log(`⏭️  Skipped:     ${skipped} images (unchanged)`);
-    if (failed > 0) console.log(`❌ Failed:      ${failed} images`);
-    console.log(`💰 API calls saved: ${skipped} (vs full regeneration)`);
-    console.log('═'.repeat(60));
+    // Step 5: Detect origins for all dishes in the new menu
+    console.log('\n🌍 Checking dish origins...');
+    const allDishNames = new Set();
+    for (const canteen of Object.values(newMenu.canteens)) {
+        for (const dayEntry of canteen.menu) {
+            const enItems = dayEntry?.en?.items || [];
+            const main = enItems.find(i => i.isMain);
+            if (main?.dish) allDishNames.add(main.dish);
+        }
+    }
+
+    let originsUpdated = false;
+    for (const dishName of allDishNames) {
+        if (origins[dishName]) {
+            console.log(`  ✓ cached: ${dishName}`);
+            continue;
+        }
+        const result = await detectDishOrigin(dishName);
+        if (result) {
+            origins[dishName] = result;
+            originsUpdated = true;
+            console.log(`  🌍 ${result.country} ${result.emoji} — ${dishName}`);
+        }
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    if (originsUpdated) {
+        fs.writeFileSync(ORIGINS_PATH, JSON.stringify(origins, null, 2));
+        console.log('  💾 Origins saved');
+    } else {
+        console.log('  ✓ All origins already cached');
+    }
 }
 
 main().catch(console.error);
