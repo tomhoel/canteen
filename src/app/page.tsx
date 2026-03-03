@@ -202,10 +202,6 @@ export default function Home() {
     };
   }, [mounted, menuData, selectedDay]);
 
-  if (!menuData || !mounted) {
-    return <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: "#999" }}>Loading...</span></div>;
-  }
-
   const dayLabels = lang === "no" ? DAYS_NO : DAYS_EN;
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
   const dayKey = DAY_KEYS[selectedDay];
@@ -282,6 +278,10 @@ export default function Home() {
       return items?.flatMap(i => i.allergens.map(a => [a.name, a])) || [];
     })
   ).values()).sort((a, b) => a.name.localeCompare(b.name)), [canteenDayData]);
+
+  if (!menuData || !mounted) {
+    return <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}><span style={{ color: "#999" }}>Loading...</span></div>;
+  }
 
   return (
     <div className="app-wrapper">
