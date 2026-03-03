@@ -336,7 +336,7 @@ export default function Home() {
           }) => {
             return (
               <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}`} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
-                <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: highResImagePath, dishName: mainDish.dish, canteenName }); }}>
+                <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                   <div className="card-image-circle">
                     <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
                   </div>
@@ -463,13 +463,15 @@ export default function Home() {
       {/* Lightbox */}
       {lightbox.isOpen && (
         <div className="lightbox-overlay" onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}>
-          <button className="lightbox-close" onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}>×</button>
           <div className="lightbox-content" onClick={e => e.stopPropagation()}>
+            <button className="lightbox-close" onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}>×</button>
             <div className="lightbox-image-container">
               <img src={lightbox.imageSrc} alt={lightbox.dishName} className="lightbox-image" />
             </div>
-            <h2 className="lightbox-dish-name">{lightbox.dishName}</h2>
-            <p className="lightbox-canteen">{lightbox.canteenName}</p>
+            <div className="lightbox-info">
+              <p className="lightbox-canteen">{lightbox.canteenName}</p>
+              <h2 className="lightbox-dish-name">{lightbox.dishName}</h2>
+            </div>
           </div>
         </div>
       )}
