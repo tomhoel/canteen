@@ -869,12 +869,20 @@ body {
   transform: translateY(-2px);
 }
 
-.day-btn.today {
-  border: 2px solid rgba(200, 116, 26, 0.5);
+.day-btn.today::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-orange);
 }
 
-.day-btn.today.active {
-  border-color: transparent;
+.day-btn.today.active::after {
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .day-label-name {
