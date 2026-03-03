@@ -1608,6 +1608,227 @@ body {
   .origin-flag { font-size: 16px; }
 }
 
+/* ─── Leader Card — Fire Aura & Holographic Badge ─── */
+
+/* Pulsing fire-orange border glow on the card */
+.food-card.leader {
+  border-color: transparent;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 155, 20, 0.75),
+    0 0 18px  rgba(255, 110, 0, 0.40),
+    0 0 45px  rgba(255,  70, 0, 0.20),
+    0 8px 24px var(--shadow-soft);
+  animation: cardFirePulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes cardFirePulse {
+  from {
+    box-shadow:
+      0 0 0 1.5px rgba(255, 155, 20, 0.75),
+      0 0 18px  rgba(255, 110, 0, 0.40),
+      0 0 45px  rgba(255,  70, 0, 0.20),
+      0 8px 24px var(--shadow-soft);
+  }
+  to {
+    box-shadow:
+      0 0 0 2px   rgba(255, 225, 80, 0.95),
+      0 0 30px  rgba(255, 145, 0, 0.60),
+      0 0 70px  rgba(255,  80, 0, 0.30),
+      0 8px 24px var(--shadow-soft);
+  }
+}
+
+/* Radial fire aura behind the plate */
+.food-card.leader .card-image-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 58%,
+    rgba(255, 230, 70, 0.45)  0%,
+    rgba(255, 130, 0,  0.38) 28%,
+    rgba(255,  45, 0,  0.22) 52%,
+    rgba(210,   0, 0,  0.06) 68%,
+    transparent 76%
+  );
+  filter: blur(12px);
+  animation: fireAura 1.9s ease-in-out infinite alternate;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes fireAura {
+  from { transform: scale(0.88); opacity: 0.65; }
+  to   { transform: scale(1.10); opacity: 1.00; }
+}
+
+/* Flame tongues — clip-path spikes at the bottom of the plate */
+.food-card.leader .card-image-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 78%;
+  height: 60px;
+  background: linear-gradient(
+    to top,
+    rgba(255,  45, 0, 0.85)  0%,
+    rgba(255, 145, 0, 0.65) 42%,
+    rgba(255, 230, 0, 0.35) 72%,
+    transparent 100%
+  );
+  clip-path: polygon(
+    0%   100%,
+    9%    52%,
+    19%   74%,
+    31%   24%,
+    42%   60%,
+    52%   12%,
+    63%   55%,
+    74%   30%,
+    85%   65%,
+    100% 100%
+  );
+  filter: blur(2.5px);
+  animation: flameTongues 0.5s ease-in-out infinite alternate;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes flameTongues {
+  from { transform: translateX(-50%) scaleY(0.82) scaleX(0.96); opacity: 0.72; }
+  to   { transform: translateX(-50%) scaleY(1.12) scaleX(1.04); opacity: 1.00; }
+}
+
+/* Flickering fire glow on the food image itself */
+.food-card.leader .food-image {
+  position: relative;
+  z-index: 1;
+  animation: gentleFloat 5s ease-in-out infinite, fireGlow 0.42s ease-in-out infinite alternate;
+}
+
+@keyframes fireGlow {
+  from {
+    filter:
+      drop-shadow(0 0  6px rgba(255, 215, 55, 0.95))
+      drop-shadow(0 0 16px rgba(255, 125, 0,  0.78))
+      drop-shadow(0 0 32px rgba(255,  55, 0,  0.48))
+      drop-shadow(0 14px 28px rgba(80, 40, 0,  0.18));
+  }
+  to {
+    filter:
+      drop-shadow(0 0 10px rgba(255, 245, 110, 1.00))
+      drop-shadow(0 0 26px rgba(255, 165, 0,   0.90))
+      drop-shadow(0 0 52px rgba(255,  75, 0,   0.60))
+      drop-shadow(0 14px 28px rgba(80, 40, 0,  0.18));
+  }
+}
+
+/* Mobile: simplified fire (no flame tongues, lighter aura) */
+@media (max-width: 768px) {
+  .food-card.leader .card-image-wrapper::before {
+    inset: -14px;
+    filter: blur(8px);
+  }
+  .food-card.leader .card-image-wrapper::after {
+    display: none;
+  }
+  .food-card.leader .food-image {
+    animation: fireGlow 0.42s ease-in-out infinite alternate;
+  }
+  @keyframes fireGlow {
+    from {
+      filter:
+        drop-shadow(0 0  4px rgba(255, 215, 55, 0.90))
+        drop-shadow(0 0 10px rgba(255, 125, 0,  0.70))
+        drop-shadow(0  4px 12px rgba(0, 0, 0,   0.15));
+    }
+    to {
+      filter:
+        drop-shadow(0 0  8px rgba(255, 245, 110, 1.00))
+        drop-shadow(0 0 18px rgba(255, 165, 0,   0.85))
+        drop-shadow(0  4px 12px rgba(0, 0, 0,    0.15));
+    }
+  }
+}
+
+/* ─── Holographic Vote Badge ─── */
+.vote-badge.leader {
+  position: relative;
+  overflow: hidden;
+  /* rainbow iridescent gradient — shifts continuously */
+  background: linear-gradient(
+    115deg,
+    rgba(255,   0, 110, 0.22)  0%,
+    rgba(255, 150,   0, 0.22) 16%,
+    rgba(255, 245,   0, 0.22) 32%,
+    rgba(0,   225, 120, 0.22) 48%,
+    rgba(0,   155, 255, 0.22) 64%,
+    rgba(160,   0, 255, 0.22) 80%,
+    rgba(255,   0, 110, 0.22) 100%
+  );
+  background-size: 300% 300%;
+  color: var(--text-primary);
+  font-weight: 700;
+  border: 1px solid transparent;
+  /* iridescent glowing border */
+  box-shadow:
+    0 0 0 1px  rgba(255, 200,  0, 0.55),
+    0 0 10px   rgba(255, 100, 200, 0.28),
+    0 0 22px   rgba(0,  180, 255, 0.18);
+  text-shadow: 0 0 8px rgba(255, 200, 0, 0.45);
+  animation:
+    holoShift        3.5s linear         infinite,
+    holoBorderCycle  2.2s ease-in-out    infinite alternate;
+}
+
+/* Moving sheen/gloss sweep */
+.vote-badge.leader::after {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: -80%;
+  width: 55%;
+  height: 120%;
+  background: linear-gradient(
+    108deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.62) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  animation: holoSweep 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes holoShift {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@keyframes holoBorderCycle {
+  from {
+    box-shadow:
+      0 0 0 1px  rgba(255, 200,  0, 0.55),
+      0 0 10px   rgba(255, 100, 200, 0.28),
+      0 0 22px   rgba(0,  180, 255, 0.18);
+  }
+  to {
+    box-shadow:
+      0 0 0 1.5px rgba(0,  210, 255, 0.75),
+      0 0 14px    rgba(200,  0, 255, 0.38),
+      0 0 28px    rgba(255, 210,  0, 0.22);
+  }
+}
+
+@keyframes holoSweep {
+  0%         { left: -80%;  opacity: 0; }
+  15%        { opacity: 1; }
+  55%, 100%  { left: 160%;  opacity: 0; }
+}
+
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   * {
