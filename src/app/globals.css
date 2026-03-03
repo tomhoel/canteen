@@ -1007,17 +1007,26 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    gap: 20px;
-    padding: calc(72px + env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom));
+    gap: 8px;
+    padding: calc(54px + env(safe-area-inset-top)) 10px calc(58px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
     overscroll-behavior: none;
   }
 
+  /* Animated wrapper fills the container so cards can divide space equally */
+  .cards-animated-wrapper {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+
   /* Card layout - horizontal with image left */
   .food-card {
     width: 100%;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
