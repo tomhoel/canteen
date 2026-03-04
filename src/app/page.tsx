@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 // Types
 interface Allergen { id: string; name: string; }
@@ -94,12 +94,12 @@ export default function Home() {
     }
   };
 
-  const handleDaySelect = (i: number) => {
+  const handleDaySelect = useCallback((i: number) => {
     if (i > selectedDay) setSwipeDirection('swipe-left');
     else if (i < selectedDay) setSwipeDirection('swipe-right');
     else setSwipeDirection('');
     setSelectedDay(i);
-  };
+  }, [selectedDay]);
 
   useEffect(() => {
     const jsDay = new Date().getDay();
@@ -116,7 +116,7 @@ export default function Home() {
     fetch('/dish-origins.json')
       .then(r => r.ok ? r.json() : {})
       .then(data => setDishOrigins(data || {}))
-      .catch(() => {});
+      .catch(() => { });
 
     fetch('/api/attendance')
       .then(r => r.json())
@@ -136,10 +136,23 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") { setLightbox(prev => ({ ...prev, isOpen: false })); setVoteModal({ isOpen: false, canteenName: '' }); } };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, []);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLightbox(prev => ({ ...prev, isOpen: false }));
+        setVoteModal({ isOpen: false, canteenName: '' });
+      } else if (e.key === "ArrowLeft") {
+        if (selectedDay > 0 && !lightbox.isOpen && !voteModal.isOpen) {
+          handleDaySelect(selectedDay - 1);
+        }
+      } else if (e.key === "ArrowRight") {
+        if (selectedDay < 4 && !lightbox.isOpen && !voteModal.isOpen) {
+          handleDaySelect(selectedDay + 1);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedDay, lightbox.isOpen, voteModal.isOpen, handleDaySelect]);
 
   // Preload all images for all days so switching is instant, but defer non-active days
   useEffect(() => {
