@@ -43,7 +43,7 @@ export default function Home() {
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState('');
   const [isVoting, setIsVoting] = useState(false);
-  const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; emoji: string }>>({});
+  const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; code: string }>>({});
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<'swipe-left' | 'swipe-right' | ''>('');
@@ -378,7 +378,12 @@ export default function Home() {
                   <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
                   {origin && (
                     <div className="origin-stamp" data-country={origin.country}>
-                      <span className="origin-flag">{origin.emoji}</span>
+                      <img
+                        className="origin-flag"
+                        src={`https://flagcdn.com/w40/${origin.code}.png`}
+                        srcSet={`https://flagcdn.com/w80/${origin.code}.png 2x`}
+                        alt={origin.country}
+                      />
                     </div>
                   )}
                 </div>

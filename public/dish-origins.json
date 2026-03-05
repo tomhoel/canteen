@@ -1,62 +1,62 @@
 {
   "Pork cutlet with fennel, rosmarin": {
     "country": "Italy",
-    "emoji": "🇮🇹"
+    "code": "it"
   },
   "Turkey steak with barley": {
     "country": "Italy",
-    "emoji": "🇮🇹"
+    "code": "it"
   },
   "Lemon baked dill trout, serves with potato and leek": {
     "country": "Sweden",
-    "emoji": "🇸🇪"
+    "code": "se"
   },
   "One pot chicken `nduja": {
     "country": "Italy",
-    "emoji": "🇮🇹"
+    "code": "it"
   },
   "Butter chicken with rice": {
     "country": "India",
-    "emoji": "🇮🇳"
+    "code": "in"
   },
   "Shepherd's pie": {
     "country": "United Kingdom",
-    "emoji": "🇬🇧"
+    "code": "gb"
   },
   "Gulasj beef stew with potatoes": {
     "country": "Hungary",
-    "emoji": "🇭🇺"
+    "code": "hu"
   },
   "Fish balls i curry with butter baked root vegetables and parsley potatoes": {
     "country": "India",
-    "emoji": "🇮🇳"
+    "code": "in"
   },
   "Swedish meatballs with cream sauce, lingonberries and rice": {
     "country": "Sweden",
-    "emoji": "🇸🇪"
+    "code": "se"
   },
   "BBQ hamburger with coleslaw and fries (Veggie burger available)": {
     "country": "United States",
-    "emoji": "🇺🇸"
+    "code": "us"
   },
   "Marinated chicken with gravy, vegetables and rice": {
     "country": "Philippines",
-    "emoji": "🇵🇭"
+    "code": "ph"
   },
   "Oven baked Trout filet with cucumber salad, sour cream and potatoes": {
     "country": "Germany",
-    "emoji": "🇩🇪"
+    "code": "de"
   },
   "Slow-cooked sirloin og beef with cherry, served with mashed potatoes and onions": {
     "country": "United Kingdom",
-    "emoji": "🇬🇧"
+    "code": "gb"
   },
   "Breaded cod with fried potatoes and remoulade (Gluten free)": {
     "country": "Denmark",
-    "emoji": "🇩🇰"
+    "code": "dk"
   },
   "Pork schnitzel with caper butter green peas and roasted potatoes": {
     "country": "Austria",
-    "emoji": "🇦🇹"
+    "code": "at"
   }
 }

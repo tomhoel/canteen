@@ -1623,8 +1623,10 @@ body {
 }
 
 .origin-flag {
-  font-size: 22px;
-  line-height: 1;
+  width: 28px;
+  height: auto;
+  display: block;
+  border-radius: 2px;
 }
 
 @media (max-width: 600px) {
@@ -1635,7 +1637,7 @@ body {
     right: 4px;
     border-width: 1.5px;
   }
-  .origin-flag { font-size: 16px; }
+  .origin-flag { width: 20px; }
 }
 
 /* ─── Reduced Motion ─── */
