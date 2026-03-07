@@ -58,5 +58,29 @@
   "Pork schnitzel with caper butter green peas and roasted potatoes": {
     "country": "Austria",
     "code": "at"
+  },
+  "Sesame baked chicken leg with fennel gravy and rice": {
+    "country": "Italy",
+    "emoji": "🇮🇹"
+  },
+  "Pasta with Tomato, soffritto, meatballs and grated parmesan": {
+    "country": "Italy",
+    "emoji": "🇮🇹"
+  },
+  "Slow-cooked sirloin og beef with cherry, served with barley": {
+    "country": "United Kingdom",
+    "emoji": "🇬🇧"
+  },
+  "Pasta farfalle with beef, spinach and tomato": {
+    "country": "Italy",
+    "emoji": "🇮🇹"
+  },
+  "Kebab with bread and dressing (Beef)": {
+    "country": "Turkey",
+    "emoji": "🇹🇷"
+  },
+  "Lasagne": {
+    "country": "Italy",
+    "emoji": "🇮🇹"
   }
 }
