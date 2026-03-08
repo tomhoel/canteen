@@ -1043,7 +1043,7 @@ body {
   /* #2 — Allergen section compact on mobile */
   .allergen-section {
     position: fixed;
-    bottom: 68px;
+    bottom: calc(62px + env(safe-area-inset-bottom));
     width: auto;
     max-width: 90%;
     z-index: 100;
@@ -1102,7 +1102,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 8px;
-    padding: calc(54px + env(safe-area-inset-top)) 10px calc(74px + env(safe-area-inset-bottom));
+    padding: calc(62px + env(safe-area-inset-top)) 10px calc(82px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1779,16 +1779,6 @@ body {
   position: absolute;
   top: 5px;
   right: 5px;
-}
-
-.ahead-bar-hint {
-  text-align: center;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--accent-orange);
-  margin-top: 4px;
-  opacity: 0.8;
-  animation: tagPop 0.4s var(--spring) both;
 }
 
 /* ─── #6 Lightbox Navigation ─── */
