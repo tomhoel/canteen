@@ -32,9 +32,6 @@ export default function DaySelector({
               <span className="day-label-date">
                 {i === todayIndex ? (lang === "no" ? "I dag" : "Today") : dateLabel}
               </span>
-              {hasAheadCanteens && i !== todayIndex && (
-                <span className="ahead-dot" />
-              )}
             </button>
           );
         })}
