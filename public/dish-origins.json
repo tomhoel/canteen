@@ -61,38 +61,38 @@
   },
   "Sesame baked chicken leg with fennel gravy and rice": {
     "country": "Italy",
-    "emoji": "🇮🇹"
+    "code": "it"
   },
   "Pasta with Tomato, soffritto, meatballs and grated parmesan": {
     "country": "Italy",
-    "emoji": "🇮🇹"
+    "code": "it"
   },
   "Slow-cooked sirloin og beef with cherry, served with barley": {
     "country": "United Kingdom",
-    "emoji": "🇬🇧"
+    "code": "gb"
   },
   "Pasta farfalle with beef, spinach and tomato": {
     "country": "Italy",
-    "emoji": "🇮🇹"
+    "code": "it"
   },
   "Kebab with bread and dressing (Beef)": {
     "country": "Turkey",
-    "emoji": "🇹🇷"
+    "code": "tr"
   },
   "Lasagne": {
     "country": "Italy",
-    "emoji": "🇮🇹"
+    "code": "it"
   },
   "Lemon baked dill salmon, serves with potato and leek": {
     "country": "Sweden",
-    "emoji": "🇸🇪"
+    "code": "se"
   },
   "Pork roast with bearnaise sauce and small potatoes": {
     "country": "France",
-    "emoji": "🇫🇷"
+    "code": "fr"
   },
   "Chicken Chop Suey with rice": {
     "country": "United States",
-    "emoji": "🇺🇸"
+    "code": "us"
   }
 }

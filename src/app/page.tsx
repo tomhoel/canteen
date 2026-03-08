@@ -277,7 +277,7 @@ export default function Home() {
       const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
       const highResImagePath = `/images/${dayKey}/${imageSlug}.png`;
       const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
-      const isOutdated = canteenWeekNum !== currentWeek;
+      const isOutdated = canteenWeekNum < currentWeek;
 
       const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
       const origin = dishOrigins[enMainDish?.dish || ''] ?? null;
