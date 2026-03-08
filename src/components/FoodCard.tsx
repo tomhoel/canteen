@@ -1,0 +1,169 @@
+import { useState } from "react";
+import { ALLERGEN_COLORS } from "@/lib/constants";
+import type { CanteenDayItem } from "@/lib/types";
+
+interface FoodCardProps {
+  data: CanteenDayItem;
+  cardIdx: number;
+  lang: "no" | "en";
+  selectedDay: number;
+  activeDayIndex: number;
+  voteCount: number;
+  maxVotes: number;
+  totalVotes: number;
+  onImageClick: (data: CanteenDayItem) => void;
+  onCardClick: (canteenName: string) => void;
+}
+
+export default function FoodCard({
+  data,
+  cardIdx,
+  lang,
+  selectedDay,
+  activeDayIndex,
+  voteCount,
+  maxVotes,
+  totalVotes,
+  onImageClick,
+  onCardClick,
+}: FoodCardProps) {
+  const [imgError, setImgError] = useState(false);
+
+  const {
+    canteenName,
+    mainDish,
+    sideDishes,
+    mainAllergens,
+    imagePath,
+    isOutdated,
+    isAhead,
+    canteenWeekNum,
+    origin,
+  } = data;
+
+  const isVoteable = selectedDay === activeDayIndex;
+  const isLeader = voteCount > 0 && voteCount === maxVotes;
+  const voteShare = totalVotes > 0 ? voteCount / totalVotes : 0;
+
+  return (
+    <article
+      className={`food-card${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
+      style={{ animationDelay: `${cardIdx * 75}ms` }}
+      onClick={isVoteable ? () => onCardClick(canteenName) : undefined}
+    >
+      <div
+        className="card-image-wrapper"
+        onClick={e => { e.stopPropagation(); mainDish && onImageClick(data); }}
+      >
+        <div className="card-image-circle">
+          {imgError ? (
+            <div className="image-placeholder">
+              {canteenName.charAt(0)}
+            </div>
+          ) : (
+            <img
+              src={imagePath}
+              alt={mainDish?.dish || "Matrett"}
+              className="food-image"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
+          )}
+        </div>
+        {isOutdated && (
+          <div className="stale-image-badge">
+            {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
+          </div>
+        )}
+        <span className="click-hint">{lang === "no" ? "Klikk for st\u00F8rre" : "Click to enlarge"}</span>
+        {origin && (
+          <div className="origin-stamp" data-country={origin.country}>
+            <img
+              className="origin-flag"
+              src={`https://flagcdn.com/w40/${origin.code}.png`}
+              srcSet={`https://flagcdn.com/w80/${origin.code}.png 2x`}
+              alt={origin.country}
+            />
+          </div>
+        )}
+      </div>
+      <div className="card-content">
+        <div className="card-header">
+          <div className="canteen-name">
+            {canteenName}
+            {isAhead && (
+              <span className="ahead-tag">
+                {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} &#x2728;
+              </span>
+            )}
+          </div>
+          <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+        </div>
+
+        <div className="dish-meta-row">
+          <div className="allergens-row">
+            {mainAllergens.length > 0 && mainAllergens.map((a, aIdx) => (
+              <span
+                key={a.id}
+                className="allergen-chip"
+                style={{
+                  color: ALLERGEN_COLORS[a.name] || "#8E8E93",
+                  background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
+                  borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
+                  animationDelay: `${aIdx * 50}ms`,
+                }}
+              >
+                {a.name}
+              </span>
+            ))}
+          </div>
+          <div className="info-badges">
+            {isVoteable && voteCount > 0 && (
+              <div className={`vote-badge${isLeader ? " leader" : ""} vote-badge-pop`}>
+                {isLeader && <span style={{ marginRight: "5px" }}>&#x1F3C6;</span>}
+                {voteCount} {lang === "no" ? (voteCount === 1 ? "stemme" : "stemmer") : (voteCount === 1 ? "vote" : "votes")}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Vote progress bar */}
+      {isVoteable && totalVotes > 0 && (
+        <div className="vote-progress-track">
+          <div
+            className={`vote-progress-fill${isLeader ? " leader" : ""}`}
+            style={{ width: `${voteShare * 100}%` }}
+          />
+        </div>
+      )}
+
+      {isOutdated && (
+        <div className="stale-banner">
+          <span className="stale-banner-icon">&#x23F0;</span>
+          <div className="stale-banner-text">
+            <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
+            <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>
+          </div>
+        </div>
+      )}
+      <div className="card-bottom">
+        <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
+        <div className="side-dish-list">
+          {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
+            <div key={idx} className="side-dish-item">
+              <span className="side-dish-text">{item.dish}</span>
+              {item.allergens.length > 0 && (
+                <span className="side-allergens">{item.allergens.map(a => a.name.charAt(0)).join("")}</span>
+              )}
+            </div>
+          )) : (
+            <div className="side-dish-item" style={{ justifyContent: "center", color: "var(--text-muted)" }}>
+              {lang === "no" ? "Ingen andre retter" : "No other dishes"}
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}

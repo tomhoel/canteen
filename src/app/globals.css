@@ -44,7 +44,7 @@ html {
 
 body {
   background: linear-gradient(-45deg, #f5f0e8, #ede7db, #f9f3e9, #e8dfd2);
-  background-size: 400% 400%;
+  background-size: 200% 200%;
   animation: gradientDrift 18s ease infinite;
   color: var(--text-primary);
   height: 100%;
@@ -415,7 +415,7 @@ body {
   transition: transform 0.4s var(--spring), filter 0.3s ease;
 }
 
-/* Image placeholder */
+/* #8 — Image placeholder / error fallback */
 .image-placeholder {
   width: 100%;
   height: 100%;
@@ -424,7 +424,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 60px;
+  font-size: 52px;
+  font-weight: 800;
+  color: var(--accent-orange);
+  opacity: 0.6;
+  filter: drop-shadow(0 8px 16px rgba(80, 40, 0, 0.10));
+  animation: gentleFloat 5s ease-in-out infinite;
 }
 
 /* Click hint */
@@ -1030,9 +1035,65 @@ body {
     overflow: hidden;
   }
 
-  /* Allergen section - hidden on mobile */
+  /* #3 — Static gradient on mobile to save battery */
+  body {
+    animation: none;
+  }
+
+  /* #2 — Allergen section compact on mobile */
   .allergen-section {
-    display: none;
+    position: fixed;
+    bottom: 68px;
+    width: auto;
+    max-width: 90%;
+    z-index: 100;
+  }
+
+  .allergen-toggle {
+    padding: 8px 16px;
+    gap: 8px;
+  }
+
+  .allergen-toggle-icon {
+    font-size: 14px;
+  }
+
+  .allergen-toggle-text {
+    font-size: 11px;
+  }
+
+  .allergen-panel {
+    padding: 14px;
+    margin-top: 8px;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+
+  .allergen-panel-title {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .allergen-grid {
+    gap: 6px;
+  }
+
+  .allergen-item {
+    padding: 5px 10px;
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .allergen-item-dot {
+    width: 16px;
+    height: 16px;
+    font-size: 8px;
+  }
+
+  /* #5 — Mobile card press feedback */
+  .food-card:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
   }
 
   /* Cards container */
@@ -1670,6 +1731,137 @@ body {
     border-width: 1.5px;
   }
   .origin-flag { width: 20px; }
+}
+
+/* ─── #7 Vote Progress Bar ─── */
+.vote-progress-track {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-cream);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 4px 0 6px;
+}
+
+.vote-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent-coral);
+  opacity: 0.5;
+  transition: width 0.6s var(--smooth);
+  min-width: 0;
+}
+
+.vote-progress-fill.leader {
+  background: linear-gradient(90deg, var(--accent-yellow), var(--accent-orange));
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .vote-progress-track {
+    height: 3px;
+    margin: 2px 0 4px;
+    flex-basis: 100%;
+  }
+}
+
+/* ─── #4 Day Bar Ahead Indicator ─── */
+.ahead-dot {
+  display: none;
+}
+
+.day-bar.has-ahead .ahead-dot {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.ahead-bar-hint {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  margin-top: 4px;
+  opacity: 0.8;
+  animation: tagPop 0.4s var(--spring) both;
+}
+
+/* ─── #6 Lightbox Navigation ─── */
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px var(--shadow-soft);
+  line-height: 1;
+}
+
+.lightbox-nav:hover {
+  background: white;
+  transform: translateY(-50%) scale(1.08);
+  box-shadow: 0 4px 12px var(--shadow-medium);
+}
+
+.lightbox-prev {
+  left: 12px;
+}
+
+.lightbox-next {
+  right: 12px;
+}
+
+.lightbox-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.lightbox-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-light);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lightbox-dot.active {
+  background: var(--accent-orange);
+  transform: scale(1.2);
+}
+
+@media (max-width: 768px) {
+  .lightbox-nav {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .lightbox-prev {
+    left: 6px;
+  }
+
+  .lightbox-next {
+    right: 6px;
+  }
 }
 
 /* ─── Reduced Motion ─── */
