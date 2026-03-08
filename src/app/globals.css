@@ -1994,10 +1994,16 @@ body {
   transition: opacity 0.2s;
   pointer-events: none;
   border-radius: inherit;
+  z-index: 0;
 }
 
 .action-sheet-btn:hover::before {
   opacity: 1;
+}
+
+.action-sheet-btn > * {
+  position: relative;
+  z-index: 1;
 }
 
 .action-sheet-btn:active {
@@ -2178,18 +2184,14 @@ body {
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.1, 0.64, 1);
 }
 
-/* Custom scrollbar for recipe modal */
+/* Hide scrollbar on recipe modal */
+.recipe-modal {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 .recipe-modal::-webkit-scrollbar {
-  width: 6px;
-}
-
-.recipe-modal::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.recipe-modal::-webkit-scrollbar-thumb {
-  background: var(--border-light);
-  border-radius: 3px;
+  display: none;
 }
 
 .recipe-close {
