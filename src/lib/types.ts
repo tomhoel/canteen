@@ -20,4 +20,5 @@ export interface CanteenDayItem {
   isAhead: boolean;
   canteenWeekNum: number;
   origin: { country: string; code: string } | null;
+  description: string | null;
 }

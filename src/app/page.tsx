@@ -23,6 +23,7 @@ export default function Home() {
   const [votedCanteen, setVotedCanteen] = useState("");
   const [isVoting, setIsVoting] = useState(false);
   const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; code: string }>>({});
+  const [dishDescriptions, setDishDescriptions] = useState<Record<string, string>>({});
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
 
   const scrollRef = useRef<HTMLElement>(null);
@@ -107,6 +108,11 @@ export default function Home() {
     fetch("/dish-origins.json")
       .then(r => r.ok ? r.json() : {})
       .then(data => setDishOrigins(data || {}))
+      .catch(() => {});
+
+    fetch("/dish-descriptions.json")
+      .then(r => r.ok ? r.json() : {})
+      .then(data => setDishDescriptions(data || {}))
       .catch(() => {});
 
     fetch("/api/attendance")
@@ -314,14 +320,15 @@ export default function Home() {
 
       const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
       const origin = dishOrigins[enMainDish?.dish || ""] ?? null;
+      const description = dishDescriptions[enMainDish?.dish || ""] ?? null;
 
       return {
         canteenName, canteen, dayEntry, items, mainDish, sideDishes,
         mainAllergens, imageSlug, imagePath, highResImagePath,
-        isOutdated, isAhead, canteenWeekNum, origin,
+        isOutdated, isAhead, canteenWeekNum, origin, description,
       };
     });
-  }, [sortedCanteens, dayKey, lang, dishOrigins, currentWeek]);
+  }, [sortedCanteens, dayKey, lang, dishOrigins, dishDescriptions, currentWeek]);
 
   const dayAllergens = useMemo(() => Array.from(new Map(
     canteenDayData.flatMap(({ items }) => {

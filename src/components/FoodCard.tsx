@@ -39,6 +39,7 @@ export default function FoodCard({
     isAhead,
     canteenWeekNum,
     origin,
+    description,
   } = data;
 
   const isVoteable = selectedDay === activeDayIndex;
@@ -126,6 +127,10 @@ export default function FoodCard({
             )}
           </div>
         </div>
+
+        {description && (
+          <p className="dish-description">{description}</p>
+        )}
       </div>
 
       {/* Vote progress bar */}

@@ -221,7 +221,8 @@ body {
 .food-card {
   background: var(--card-white);
   border-radius: 24px;
-  width: 370px;
+  width: 380px;
+  min-height: 520px;
   padding: 0 22px 18px;
   box-shadow:
     0 2px 8px var(--shadow-soft),
@@ -552,6 +553,22 @@ body {
 @keyframes chipPop {
   from { opacity: 0; transform: scale(0.7); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+/* Dish Description */
+.dish-description {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-align: center;
+  margin: 2px 0 6px;
+  padding: 0 8px;
+  font-style: italic;
+  letter-spacing: 0.1px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Bottom Section */
@@ -1051,6 +1068,11 @@ body {
     transition: transform 0.1s ease;
   }
 
+  /* Hide description on mobile — not enough room */
+  .dish-description {
+    display: none;
+  }
+
   /* Cards container */
   .cards-container {
     flex-direction: column;
@@ -1075,7 +1097,7 @@ body {
   .food-card {
     width: 100%;
     flex: 1;
-    min-height: 0;
+    min-height: 0 !important;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;

@@ -15,6 +15,7 @@ const IMAGES_DIR = path.join(__dirname, 'public', 'images');
 const IMAGES_NOBG_DIR = path.join(__dirname, 'public', 'images_nobg');
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
+const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json');
 
 /**
  * Extract main dish names per day for a canteen.
@@ -297,6 +298,31 @@ async function detectDishOrigin(dishName) {
     }
 }
 
+/**
+ * Generate a short, appetizing one-line description of a dish using Gemini.
+ * Returns a string or null on failure.
+ */
+async function generateDishDescription(dishName) {
+    const { GoogleGenAI } = require('@google/genai');
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) return null;
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+    const promptText = `Write a single short appetizing description (max 20 words) for this dish: "${dishName}". Be warm and inviting, mention a key flavor or texture. Do not use quotes. Respond with ONLY the description text, nothing else.`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: { parts: [{ text: promptText }] },
+        });
+        const text = response.candidates[0].content.parts[0].text.trim();
+        return text || null;
+    } catch (error) {
+        console.error(`  ❌ Description generation failed for "${dishName}": ${error.message}`);
+        return null;
+    }
+}
+
 async function main() {
     console.log('╔══════════════════════════════════════════════════════════╗');
     console.log('║  SMART WEEKLY UPDATE                                    ║');
@@ -314,9 +340,12 @@ async function main() {
         console.log('📋 No existing menu — will generate everything');
     }
 
-    // Load origins cache
+    // Load origins + descriptions cache
     const origins = fs.existsSync(ORIGINS_PATH)
         ? JSON.parse(fs.readFileSync(ORIGINS_PATH, 'utf8'))
+        : {};
+    const descriptions = fs.existsSync(DESCRIPTIONS_PATH)
+        ? JSON.parse(fs.readFileSync(DESCRIPTIONS_PATH, 'utf8'))
         : {};
 
     // Step 2: Scrape new menu
@@ -431,6 +460,30 @@ async function main() {
         console.log('  💾 Origins saved');
     } else {
         console.log('  ✓ All origins already cached');
+    }
+
+    // Step 6: Generate short descriptions for all dishes
+    console.log('\n📝 Checking dish descriptions...');
+    let descriptionsUpdated = false;
+    for (const dishName of allDishNames) {
+        if (descriptions[dishName]) {
+            console.log(`  ✓ cached: ${dishName.substring(0, 50)}`);
+            continue;
+        }
+        const desc = await generateDishDescription(dishName);
+        if (desc) {
+            descriptions[dishName] = desc;
+            descriptionsUpdated = true;
+            console.log(`  📝 "${desc.substring(0, 60)}" — ${dishName.substring(0, 40)}`);
+        }
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    if (descriptionsUpdated) {
+        fs.writeFileSync(DESCRIPTIONS_PATH, JSON.stringify(descriptions, null, 2));
+        console.log('  💾 Descriptions saved');
+    } else {
+        console.log('  ✓ All descriptions already cached');
     }
 }
 
