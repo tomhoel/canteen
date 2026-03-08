@@ -1721,22 +1721,6 @@ body {
   }
 }
 
-/* ─── #4 Day Bar Ahead Indicator ─── */
-.ahead-dot {
-  display: none;
-}
-
-.day-bar.has-ahead .ahead-dot {
-  display: block;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--accent-yellow);
-  position: absolute;
-  top: 5px;
-  right: 5px;
-}
-
 /* ─── #6 Lightbox Navigation ─── */
 .lightbox-nav {
   position: absolute;
