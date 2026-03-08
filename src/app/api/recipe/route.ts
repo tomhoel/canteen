@@ -49,7 +49,7 @@ Guidelines:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-2.5-flash-lite',
       contents: { parts: [{ text: promptText }] },
       config: { responseMimeType: 'application/json' },
     });
