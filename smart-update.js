@@ -299,8 +299,8 @@ async function detectDishOrigin(dishName) {
 }
 
 /**
- * Generate a short, appetizing one-line description of a dish using Gemini.
- * Returns a string or null on failure.
+ * Generate a short, appetizing one-line description of a dish in both EN and NO using Gemini.
+ * Returns { en: "...", no: "..." } or null on failure.
  */
 async function generateDishDescription(dishName) {
     const { GoogleGenAI } = require('@google/genai');
@@ -308,15 +308,18 @@ async function generateDishDescription(dishName) {
     if (!GEMINI_API_KEY) return null;
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-    const promptText = `Write a single short appetizing description (max 20 words) for this dish: "${dishName}". Be warm and inviting, mention a key flavor or texture. Do not use quotes. Respond with ONLY the description text, nothing else.`;
+    const promptText = `Write a single short appetizing description (max 20 words) for this dish: "${dishName}". Be warm and inviting, mention a key flavor or texture. Provide it in both English and Norwegian. Respond ONLY with raw JSON: {"en":"English description","no":"Norwegian description"}`;
 
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
             contents: { parts: [{ text: promptText }] },
+            config: { responseMimeType: 'application/json' },
         });
         const text = response.candidates[0].content.parts[0].text.trim();
-        return text || null;
+        const parsed = JSON.parse(text);
+        if (parsed.en && parsed.no) return parsed;
+        return null;
     } catch (error) {
         console.error(`  ❌ Description generation failed for "${dishName}": ${error.message}`);
         return null;
