@@ -338,8 +338,13 @@ body {
 .stale-notice-icon { display: none; }
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
-.food-card.ahead {
-  border-left: 3px solid var(--accent-orange);
+
+/* Warm highlight ribbon behind the canteen name row */
+.food-card.ahead .card-header {
+  background: linear-gradient(135deg, rgba(232, 160, 32, 0.14) 0%, rgba(200, 116, 26, 0.08) 100%);
+  margin: 0 -22px 6px;
+  padding: 8px 22px;
+  border-bottom: 1px solid rgba(200, 116, 26, 0.15);
 }
 
 /* Inline tag next to canteen name */
@@ -347,18 +352,18 @@ body {
   display: inline-flex;
   align-items: center;
   margin-left: 8px;
-  padding: 1px 8px;
+  padding: 2px 9px;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: var(--accent-orange);
-  background: rgba(200, 116, 26, 0.10);
-  border: 1px solid rgba(200, 116, 26, 0.22);
+  color: #fff;
+  background: var(--accent-orange);
   border-radius: 20px;
   white-space: nowrap;
   vertical-align: middle;
   animation: tagPop 0.4s var(--spring) both;
+  box-shadow: 0 2px 6px rgba(200, 116, 26, 0.25);
 }
 
 @keyframes tagPop {
@@ -1213,9 +1218,16 @@ body {
     padding: 2px 7px;
   }
 
+  .food-card.ahead .card-header {
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border-bottom: none;
+  }
+
   .ahead-tag {
     font-size: 8px;
-    padding: 1px 6px;
+    padding: 2px 6px;
     margin-left: 6px;
   }
 
