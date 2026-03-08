@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
-import type { MenuData, CanteenData } from "@/lib/types";
+import type { MenuData, CanteenData, Recipe } from "@/lib/types";
 import AllergenPanel from "@/components/AllergenPanel";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
@@ -24,6 +24,7 @@ export default function Home() {
   const [isVoting, setIsVoting] = useState(false);
   const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; code: string }>>({});
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, string | { en: string; no: string }>>({});
+  const [recipeModal, setRecipeModal] = useState<{ isOpen: boolean; dishName: string; canteenName: string; recipe: Recipe | null; isLoading: boolean; error: string | null }>({ isOpen: false, dishName: "", canteenName: "", recipe: null, isLoading: false, error: null });
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
 
   const scrollRef = useRef<HTMLElement>(null);
@@ -93,6 +94,32 @@ export default function Home() {
       return i;
     });
   }, []);
+
+  const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
+    const cacheKey = `recipe_${dishName}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const recipe = JSON.parse(cached) as Recipe;
+        setRecipeModal({ isOpen: true, dishName, canteenName, recipe, isLoading: false, error: null });
+        return;
+      } catch { /* cache corrupted, refetch */ }
+    }
+    setRecipeModal({ isOpen: true, dishName, canteenName, recipe: null, isLoading: true, error: null });
+    try {
+      const res = await fetch('/api/recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dishName, lang }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const recipe = await res.json() as Recipe;
+      localStorage.setItem(cacheKey, JSON.stringify(recipe));
+      setRecipeModal(prev => ({ ...prev, recipe, isLoading: false }));
+    } catch {
+      setRecipeModal(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke generere oppskrift' : 'Could not generate recipe' }));
+    }
+  }, [lang]);
 
   useEffect(() => {
     const jsDay = new Date().getDay();
@@ -165,19 +192,20 @@ export default function Home() {
       if (e.key === "Escape") {
         setLightboxIndex(-1);
         setVoteModal({ isOpen: false, canteenName: "" });
+        setRecipeModal(prev => ({ ...prev, isOpen: false }));
       } else if (e.key === "ArrowLeft") {
-        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen) {
+        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !recipeModal.isOpen) {
           handleDaySelect(selectedDay - 1);
         }
       } else if (e.key === "ArrowRight") {
-        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen) {
+        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !recipeModal.isOpen) {
           handleDaySelect(selectedDay + 1);
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, lightboxIndex, voteModal.isOpen, handleDaySelect]);
+  }, [selectedDay, lightboxIndex, voteModal.isOpen, recipeModal.isOpen, handleDaySelect]);
 
   // #11 — Only preload current day + adjacent days (not all 5)
   useEffect(() => {
@@ -411,6 +439,7 @@ export default function Home() {
               totalVotes={totalVotes}
               onImageClick={handleImageClick}
               onCardClick={handleVoteCardClick}
+              onRecipeClick={handleRecipeClick}
             />
           ))}
         </div>
@@ -459,6 +488,75 @@ export default function Home() {
         onClose={() => setLightboxIndex(-1)}
         onNavigate={setLightboxIndex}
       />
+
+      {/* Recipe Modal */}
+      {recipeModal.isOpen && (
+        <div className="recipe-overlay" onClick={() => setRecipeModal(prev => ({ ...prev, isOpen: false }))}>
+          <div className="recipe-modal" onClick={e => e.stopPropagation()}>
+            <button className="recipe-close" onClick={() => setRecipeModal(prev => ({ ...prev, isOpen: false }))}>&#xD7;</button>
+            <div className="recipe-header">
+              <span className="recipe-canteen">{recipeModal.canteenName}</span>
+              <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
+            </div>
+
+            {recipeModal.isLoading && (
+              <div className="recipe-loading">
+                <span className="recipe-loading-emoji">&#x1F468;&#x200D;&#x1F373;</span>
+                <span className="recipe-loading-text">{lang === "no" ? "Skriver oppskrift..." : "Writing recipe..."}</span>
+              </div>
+            )}
+
+            {recipeModal.error && (
+              <div className="recipe-error">
+                <p>{recipeModal.error}</p>
+                <button className="recipe-retry-btn" onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName)}>
+                  {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                </button>
+              </div>
+            )}
+
+            {recipeModal.recipe && (
+              <>
+                <div className="recipe-meta">
+                  <span>&#x1F37D;&#xFE0F; {recipeModal.recipe.servings} {lang === "no" ? "porsjoner" : "servings"}</span>
+                  <span>&#x23F1;&#xFE0F; {recipeModal.recipe.prepTime}</span>
+                  <span>&#x1F525; {recipeModal.recipe.cookTime}</span>
+                </div>
+                <div className="recipe-content">
+                  <div className="recipe-ingredients">
+                    <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}</h3>
+                    <ul className="recipe-ingredient-list">
+                      {recipeModal.recipe.ingredients.map((ing, i) => (
+                        <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 60}ms` }}>
+                          <span className="recipe-ingredient-amount">{ing.amount} {ing.unit}</span>
+                          <span className="recipe-ingredient-name">{ing.item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="recipe-steps">
+                    <h3 className="recipe-section-title">{lang === "no" ? "Fremgangsm\u00E5te" : "Instructions"}</h3>
+                    <ol className="recipe-step-list">
+                      {recipeModal.recipe.steps.map((step, i) => (
+                        <li key={i} className="recipe-step-item" style={{ animationDelay: `${i * 80 + 200}ms` }}>
+                          <span className="recipe-step-number">{i + 1}</span>
+                          <span className="recipe-step-text">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    {recipeModal.recipe.tip && (
+                      <div className="recipe-tip">
+                        <span className="recipe-tip-icon">&#x1F4A1;</span>
+                        <span className="recipe-tip-text">{recipeModal.recipe.tip}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
