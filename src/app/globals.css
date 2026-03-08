@@ -339,74 +339,31 @@ body {
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
 .food-card.ahead {
-  border-color: rgba(232, 160, 32, 0.35);
-  background: linear-gradient(160deg, #fff6e0 0%, #ffeecc 100%);
+  border-left: 3px solid var(--accent-orange);
 }
 
-.food-card.ahead .side-dish-item {
-  background: var(--card-white);
-}
-
-/* Small pill badge overlaid on the image */
-.ahead-image-badge {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(200, 116, 26, 0.85);
-  color: #fff8ee;
+/* Inline tag next to canteen name */
+.ahead-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 1px 8px;
   font-size: 9px;
   font-weight: 800;
-  padding: 3px 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent-orange);
+  background: rgba(200, 116, 26, 0.10);
+  border: 1px solid rgba(200, 116, 26, 0.22);
   border-radius: 20px;
   white-space: nowrap;
-  pointer-events: none;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  vertical-align: middle;
+  animation: tagPop 0.4s var(--spring) both;
 }
 
-/* Ahead banner — positive version of stale banner */
-.ahead-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, rgba(232, 160, 32, 0.18) 0%, rgba(232, 160, 32, 0.08) 100%);
-  border: 1px solid rgba(200, 116, 26, 0.32);
-  border-radius: 12px;
-  padding: 9px 13px;
-  margin: 0 0 10px;
-  animation: bannerSlide 0.4s var(--spring) both;
-}
-
-.ahead-banner-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.ahead-banner-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.ahead-banner-text strong {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #a06010;
-  letter-spacing: 0.1px;
-}
-
-.ahead-banner-text span {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: #b87a20;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+@keyframes tagPop {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 /* ─── V3 Overhead Image Container - Transparent Background ─── */
@@ -1256,47 +1213,10 @@ body {
     padding: 2px 7px;
   }
 
-  /* Ahead banner — mobile overlay like stale banner */
-  .ahead-banner {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    flex-basis: auto;
-    margin: 0;
-    padding: 10px 14px;
-    gap: 8px;
-    border-radius: 0 0 14px 14px;
-    border: none;
-    border-top: 1px solid rgba(200, 116, 26, 0.30);
-    background: linear-gradient(135deg, rgba(255, 240, 200, 0.97) 0%, rgba(255, 232, 175, 0.97) 100%);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    z-index: 5;
-    box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.12);
-  }
-
-  .food-card.ahead .card-bottom {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .ahead-banner-icon {
-    font-size: 14px;
-  }
-
-  .ahead-banner-text strong {
-    font-size: 10.5px;
-  }
-
-  .ahead-banner-text span {
-    font-size: 9.5px;
-  }
-
-  .ahead-image-badge {
-    bottom: -2px;
+  .ahead-tag {
     font-size: 8px;
-    padding: 2px 7px;
+    padding: 1px 6px;
+    margin-left: 6px;
   }
 
   /* Side dishes - full width horizontal row */
