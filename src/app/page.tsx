@@ -378,11 +378,6 @@ export default function Home() {
                       {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
                     </div>
                   )}
-                  {isAhead && (
-                    <div className="ahead-image-badge">
-                      {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
-                    </div>
-                  )}
                   <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
                   {origin && (
                     <div className="origin-stamp" data-country={origin.country}>
@@ -397,7 +392,7 @@ export default function Home() {
                 </div>
                 <div className="card-content">
                   <div className="card-header">
-                    <div className="canteen-name">{canteenName}</div>
+                    <div className="canteen-name">{canteenName}{isAhead && <span className="ahead-tag">{lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} ✨</span>}</div>
                     <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
                   </div>
 
@@ -433,15 +428,6 @@ export default function Home() {
                     <div className="stale-banner-text">
                       <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
                       <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>
-                    </div>
-                  </div>
-                )}
-                {isAhead && (
-                  <div className="ahead-banner">
-                    <span className="ahead-banner-icon">✨</span>
-                    <div className="ahead-banner-text">
-                      <strong>{lang === "no" ? "Neste ukes meny!" : "Next week's menu!"}</strong>
-                      <span>{lang === "no" ? `Allerede oppdatert for uke ${canteenWeekNum}` : `Already updated for week ${canteenWeekNum}`}</span>
                     </div>
                   </div>
                 )}
