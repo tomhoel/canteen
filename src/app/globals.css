@@ -1040,54 +1040,9 @@ body {
     animation: none;
   }
 
-  /* #2 — Allergen section compact on mobile */
+  /* Allergen section - hidden on mobile */
   .allergen-section {
-    position: fixed;
-    bottom: calc(62px + env(safe-area-inset-bottom));
-    width: auto;
-    max-width: 90%;
-    z-index: 100;
-  }
-
-  .allergen-toggle {
-    padding: 8px 16px;
-    gap: 8px;
-  }
-
-  .allergen-toggle-icon {
-    font-size: 14px;
-  }
-
-  .allergen-toggle-text {
-    font-size: 11px;
-  }
-
-  .allergen-panel {
-    padding: 14px;
-    margin-top: 8px;
-    max-height: 40vh;
-    overflow-y: auto;
-  }
-
-  .allergen-panel-title {
-    font-size: 12px;
-    margin-bottom: 10px;
-  }
-
-  .allergen-grid {
-    gap: 6px;
-  }
-
-  .allergen-item {
-    padding: 5px 10px;
-    font-size: 11px;
-    gap: 6px;
-  }
-
-  .allergen-item-dot {
-    width: 16px;
-    height: 16px;
-    font-size: 8px;
+    display: none;
   }
 
   /* #5 — Mobile card press feedback */
@@ -1102,7 +1057,7 @@ body {
     justify-content: flex-start;
     align-items: stretch;
     gap: 8px;
-    padding: calc(62px + env(safe-area-inset-top)) 10px calc(82px + env(safe-area-inset-bottom));
+    padding: calc(56px + env(safe-area-inset-top)) 10px calc(66px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1125,7 +1080,8 @@ body {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    padding: 10px 12px;
+    align-content: center;
+    padding: 6px 12px;
     border-radius: 16px;
     position: relative;
     overflow: visible;
@@ -1281,7 +1237,7 @@ body {
   .card-bottom {
     flex-basis: 100%;
     margin: 2px 0 0;
-    padding: 4px 0 0;
+    padding: 2px 0 0;
     border-top: 1px dashed var(--border-light);
   }
 
