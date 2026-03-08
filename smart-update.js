@@ -271,7 +271,7 @@ async function removeBgSingle(canteenName, day) {
 
 /**
  * Detect the country of origin for a dish using Gemini text generation.
- * Returns { country, emoji } or null on failure.
+ * Returns { country, code } or null on failure.
  */
 async function detectDishOrigin(dishName) {
     const { GoogleGenAI } = require('@google/genai');
@@ -279,7 +279,7 @@ async function detectDishOrigin(dishName) {
     if (!GEMINI_API_KEY) return null;
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-    const promptText = `You are a food history expert. Identify the single country this dish most likely originated from. Always provide a best guess — never refuse, even for generic dishes. Use ingredients, cooking style, or cultural context as clues. If truly uncertain, pick the most plausible country. Dish: "${dishName}". Respond ONLY with raw JSON, no explanation: {"country":"Italy","emoji":"🇮🇹"}`;
+    const promptText = `You are a food history expert. Identify the single country this dish most likely originated from. Always provide a best guess — never refuse, even for generic dishes. Use ingredients, cooking style, or cultural context as clues. If truly uncertain, pick the most plausible country. Dish: "${dishName}". Respond ONLY with raw JSON, no explanation: {"country":"Italy","code":"it"} where "code" is the ISO 3166-1 alpha-2 country code in lowercase.`;
 
     try {
         const response = await ai.models.generateContent({
@@ -289,7 +289,7 @@ async function detectDishOrigin(dishName) {
         });
         const text = response.candidates[0].content.parts[0].text;
         const parsed = JSON.parse(text);
-        if (parsed.country && parsed.emoji) return parsed;
+        if (parsed.country && parsed.code) return parsed;
         return null;
     } catch (error) {
         console.error(`  ❌ Origin detection failed for "${dishName}": ${error.message}`);
@@ -421,7 +421,7 @@ async function main() {
         if (result) {
             origins[dishName] = result;
             originsUpdated = true;
-            console.log(`  🌍 ${result.country} ${result.emoji} — ${dishName}`);
+            console.log(`  🌍 ${result.country} (${result.code}) — ${dishName}`);
         }
         await new Promise(r => setTimeout(r, 500));
     }
