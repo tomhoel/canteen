@@ -101,32 +101,34 @@ export default function FoodCard({
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
         </div>
 
-        <div className="dish-meta-row">
-          <div className="allergens-row">
-            {mainAllergens.length > 0 && mainAllergens.map((a, aIdx) => (
-              <span
-                key={a.id}
-                className="allergen-chip"
-                style={{
-                  color: ALLERGEN_COLORS[a.name] || "#8E8E93",
-                  background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
-                  borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
-                  animationDelay: `${aIdx * 50}ms`,
-                }}
-              >
-                {a.name}
-              </span>
-            ))}
+        {(mainAllergens.length > 0 || (isVoteable && voteCount > 0)) && (
+          <div className="dish-meta-row">
+            <div className="allergens-row">
+              {mainAllergens.length > 0 && mainAllergens.map((a, aIdx) => (
+                <span
+                  key={a.id}
+                  className="allergen-chip"
+                  style={{
+                    color: ALLERGEN_COLORS[a.name] || "#8E8E93",
+                    background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
+                    borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
+                    animationDelay: `${aIdx * 50}ms`,
+                  }}
+                >
+                  {a.name}
+                </span>
+              ))}
+            </div>
+            <div className="info-badges">
+              {isVoteable && voteCount > 0 && (
+                <div className={`vote-badge${isLeader ? " leader" : ""} vote-badge-pop`}>
+                  {isLeader && <span style={{ marginRight: "5px" }}>&#x1F3C6;</span>}
+                  {voteCount} {lang === "no" ? (voteCount === 1 ? "stemme" : "stemmer") : (voteCount === 1 ? "vote" : "votes")}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="info-badges">
-            {isVoteable && voteCount > 0 && (
-              <div className={`vote-badge${isLeader ? " leader" : ""} vote-badge-pop`}>
-                {isLeader && <span style={{ marginRight: "5px" }}>&#x1F3C6;</span>}
-                {voteCount} {lang === "no" ? (voteCount === 1 ? "stemme" : "stemmer") : (voteCount === 1 ? "vote" : "votes")}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
         {description && (
           <p className="dish-description">{description}</p>
