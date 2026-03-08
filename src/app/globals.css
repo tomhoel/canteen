@@ -1827,7 +1827,7 @@ body {
   background: rgba(26, 21, 17, 0.45);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  z-index: 250;
+  z-index: 1100;
   display: flex;
   align-items: flex-end;
   justify-content: center;
