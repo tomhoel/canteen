@@ -19,7 +19,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: "" });
-  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string }>({ isOpen: false, canteenName: "", dishName: "" });
+  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState("");
   const [isVoting, setIsVoting] = useState(false);
@@ -196,7 +196,7 @@ export default function Home() {
       if (e.key === "Escape") {
         setLightboxIndex(-1);
         setVoteModal({ isOpen: false, canteenName: "" });
-        setActionSheet({ isOpen: false, canteenName: "", dishName: "" });
+        setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
         setRecipeModal(prev => ({ ...prev, isOpen: false }));
       } else if (e.key === "ArrowLeft") {
         if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
@@ -379,9 +379,14 @@ export default function Home() {
   }, [canteenDayData]);
 
   const handleCardClick = useCallback((canteenName: string) => {
-    const canteenData = canteenDayData.find(c => c.canteenName === canteenName);
-    const dishName = canteenData?.mainDish?.dish || "";
-    setActionSheet({ isOpen: true, canteenName, dishName });
+    const data = canteenDayData.find(c => c.canteenName === canteenName);
+    setActionSheet({
+      isOpen: true,
+      canteenName,
+      dishName: data?.mainDish?.dish || "",
+      imagePath: data?.imagePath || "",
+      description: data?.description || null,
+    });
   }, [canteenDayData]);
 
   const handleVote = useCallback(async (canteenName: string) => {
@@ -487,49 +492,71 @@ export default function Home() {
       />
 
       {/* Action Sheet */}
-      {actionSheet.isOpen && (
-        <div className="action-sheet-overlay" onClick={() => setActionSheet({ isOpen: false, canteenName: "", dishName: "" })}>
+      {actionSheet.isOpen && (() => {
+        const closeSheet = () => setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+        return (
+        <div className="action-sheet-overlay" onClick={closeSheet}>
           <div className="action-sheet" onClick={e => e.stopPropagation()}>
             <div className="action-sheet-handle" />
+            <button className="action-sheet-close" onClick={closeSheet} aria-label="Close">&#xD7;</button>
+
+            {/* Hero image */}
+            <div className="action-sheet-hero">
+              <img src={actionSheet.imagePath} alt={actionSheet.dishName} className="action-sheet-img" />
+              <div className="action-sheet-hero-fade" />
+            </div>
+
+            {/* Header */}
             <div className="action-sheet-header">
               <span className="action-sheet-canteen">{actionSheet.canteenName}</span>
-              <span className="action-sheet-dish">{actionSheet.dishName}</span>
+              <h3 className="action-sheet-dish">{actionSheet.dishName}</h3>
+              {actionSheet.description && (
+                <p className="action-sheet-desc">{actionSheet.description}</p>
+              )}
             </div>
+
+            {/* Actions */}
             <div className="action-sheet-actions">
               {selectedDay === activeDayIndex && (
                 <button
                   className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}`}
                   disabled={hasVoted}
-                  onClick={() => {
-                    setActionSheet({ isOpen: false, canteenName: "", dishName: "" });
-                    setVoteModal({ isOpen: true, canteenName: actionSheet.canteenName });
-                  }}
+                  onClick={() => { closeSheet(); setVoteModal({ isOpen: true, canteenName: actionSheet.canteenName }); }}
                 >
-                  <span className="action-sheet-btn-icon">{hasVoted ? "\u2705" : "\uD83D\uDDF3\uFE0F"}</span>
-                  <span className="action-sheet-btn-label">
-                    {hasVoted
-                      ? (lang === "no" ? `Stemt p\u00E5 ${votedCanteen}` : `Voted for ${votedCanteen}`)
-                      : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
-                  </span>
+                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
+                    {hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
+                  </div>
+                  <div className="action-sheet-btn-text">
+                    <span className="action-sheet-btn-label">
+                      {hasVoted
+                        ? (lang === "no" ? "Allerede stemt" : "Already voted")
+                        : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
+                    </span>
+                    <span className="action-sheet-btn-sub">
+                      {hasVoted
+                        ? (lang === "no" ? `Du stemte p\u00E5 ${votedCanteen}` : `You voted for ${votedCanteen}`)
+                        : (lang === "no" ? "Vis at du spiser her i dag" : "Show you\u2019re eating here today")}
+                    </span>
+                  </div>
+                  {!hasVoted && <span className="action-sheet-btn-arrow">&#x203A;</span>}
                 </button>
               )}
               <button
                 className="action-sheet-btn action-sheet-recipe"
-                onClick={() => {
-                  setActionSheet({ isOpen: false, canteenName: "", dishName: "" });
-                  handleRecipeClick(actionSheet.dishName, actionSheet.canteenName);
-                }}
+                onClick={() => { closeSheet(); handleRecipeClick(actionSheet.dishName, actionSheet.canteenName); }}
               >
-                <span className="action-sheet-btn-icon">&#x1F468;&#x200D;&#x1F373;</span>
-                <span className="action-sheet-btn-label">{lang === "no" ? "Lag hjemme" : "Make at home"}</span>
+                <div className="action-sheet-btn-icon-wrap action-sheet-icon-recipe">&#x1F468;&#x200D;&#x1F373;</div>
+                <div className="action-sheet-btn-text">
+                  <span className="action-sheet-btn-label">{lang === "no" ? "Lag hjemme" : "Make at home"}</span>
+                  <span className="action-sheet-btn-sub">{lang === "no" ? "F\u00E5 AI-generert oppskrift" : "Get AI-generated recipe"}</span>
+                </div>
+                <span className="action-sheet-btn-arrow">&#x203A;</span>
               </button>
             </div>
-            <button className="action-sheet-cancel" onClick={() => setActionSheet({ isOpen: false, canteenName: "", dishName: "" })}>
-              {lang === "no" ? "Avbryt" : "Cancel"}
-            </button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* #6 — Lightbox with canteen swipe */}
       <Lightbox

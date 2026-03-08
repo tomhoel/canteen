@@ -1824,9 +1824,9 @@ body {
 .action-sheet-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 21, 17, 0.4);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: rgba(26, 21, 17, 0.45);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   z-index: 250;
   display: flex;
   align-items: flex-end;
@@ -1837,140 +1837,281 @@ body {
 
 .action-sheet {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   background: var(--card-white);
-  border-radius: 20px 20px 0 0;
-  padding: 12px 20px 28px;
+  border-radius: 24px 24px 0 0;
+  padding: 0 0 calc(env(safe-area-inset-bottom, 8px) + 12px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  animation: sheetSlideUp 0.35s var(--spring) both;
-  box-shadow: 0 -8px 40px rgba(60, 30, 0, 0.12);
+  animation: sheetSlideUp 0.4s var(--spring) both;
+  box-shadow:
+    0 -4px 20px rgba(60, 30, 0, 0.08),
+    0 -16px 60px rgba(60, 30, 0, 0.12);
+  position: relative;
+  overflow: hidden;
 }
 
 .action-sheet-handle {
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: var(--border-light);
-  margin: 0 auto 4px;
+  background: rgba(255, 255, 255, 0.5);
+  margin: 10px auto 0;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
 }
 
+.action-sheet-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.25);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: white;
+  font-size: 1.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s var(--smooth);
+}
+
+.action-sheet-close:hover {
+  background: rgba(0, 0, 0, 0.4);
+  transform: scale(1.08);
+}
+
+/* Hero image */
+.action-sheet-hero {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
+  flex-shrink: 0;
+}
+
+.action-sheet-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  animation: sheetImgReveal 0.5s var(--smooth) 0.15s both;
+}
+
+@keyframes sheetImgReveal {
+  from { opacity: 0; transform: scale(1.06); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.action-sheet-hero-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: linear-gradient(to top, var(--card-white) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Header */
 .action-sheet-header {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  padding: 4px 24px 14px;
   text-align: center;
-  padding: 0 8px;
+  animation: sheetContentReveal 0.4s var(--smooth) 0.1s both;
+}
+
+@keyframes sheetContentReveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .action-sheet-canteen {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent-orange);
 }
 
 .action-sheet-dish {
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: 1.25;
+  margin: 0;
 }
 
+.action-sheet-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* Actions */
 .action-sheet-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  padding: 0 16px;
+  animation: sheetContentReveal 0.4s var(--smooth) 0.2s both;
 }
 
 .action-sheet-btn {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 20px;
+  padding: 14px 16px;
   border: 1px solid var(--border-light);
   border-radius: 16px;
-  background: var(--bg-cream);
+  background: var(--card-white);
   cursor: pointer;
   transition: all 0.2s var(--smooth);
   text-align: left;
+  position: relative;
+  overflow: hidden;
 }
 
-.action-sheet-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px var(--shadow-soft);
+.action-sheet-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.action-sheet-btn:hover::before {
+  opacity: 1;
 }
 
 .action-sheet-btn:active {
   transform: scale(0.98);
+  transition-duration: 0.1s;
 }
 
-.action-sheet-btn-icon {
-  font-size: 1.5rem;
-  line-height: 1;
+/* Icon wrap */
+.action-sheet-btn-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
   flex-shrink: 0;
+  transition: transform 0.25s var(--spring);
+}
+
+.action-sheet-btn:hover .action-sheet-btn-icon-wrap {
+  transform: scale(1.08);
+}
+
+.action-sheet-icon-vote {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.action-sheet-icon-recipe {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+}
+
+/* Text */
+.action-sheet-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
 }
 
 .action-sheet-btn-label {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.3;
 }
 
+.action-sheet-btn-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* Arrow chevron */
+.action-sheet-btn-arrow {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  font-weight: 300;
+  flex-shrink: 0;
+  transition: transform 0.2s var(--smooth);
+  line-height: 1;
+}
+
+.action-sheet-btn:hover .action-sheet-btn-arrow {
+  transform: translateX(3px);
+  color: var(--text-secondary);
+}
+
+/* Vote button */
 .action-sheet-vote {
-  border-color: rgba(74, 158, 85, 0.25);
-  background: linear-gradient(135deg, #f0f9f1 0%, #e8f5e9 100%);
+  border-color: rgba(74, 158, 85, 0.2);
+  background: linear-gradient(135deg, #f6faf6 0%, #f0f9f1 100%);
 }
 
-.action-sheet-vote:hover:not(:disabled) {
-  border-color: rgba(74, 158, 85, 0.4);
+.action-sheet-vote::before {
   background: linear-gradient(135deg, #e8f5e9 0%, #dcf0de 100%);
 }
 
 .action-sheet-vote.voted {
-  opacity: 0.55;
+  opacity: 0.6;
   cursor: default;
   background: var(--bg-warm);
   border-color: var(--border-light);
 }
 
+.action-sheet-vote.voted::before { display: none; }
+
 .action-sheet-vote.voted:hover {
   transform: none;
-  box-shadow: none;
+}
+
+.action-sheet-vote.voted:hover .action-sheet-btn-icon-wrap {
+  transform: none;
+}
+
+.action-sheet-vote.voted .action-sheet-icon-vote {
+  background: var(--border-light);
 }
 
 .action-sheet-vote.voted .action-sheet-btn-label {
   color: var(--text-muted);
-  font-weight: 500;
-}
-
-.action-sheet-recipe {
-  border-color: rgba(200, 116, 26, 0.2);
-  background: linear-gradient(135deg, #fef8f0 0%, #fdf3e6 100%);
-}
-
-.action-sheet-recipe:hover {
-  border-color: rgba(200, 116, 26, 0.35);
-  background: linear-gradient(135deg, #fdf3e6 0%, #fcecd8 100%);
-}
-
-.action-sheet-cancel {
-  background: none;
-  border: none;
-  padding: 12px;
-  font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.2s;
-  border-radius: 12px;
 }
 
-.action-sheet-cancel:hover {
-  color: var(--text-secondary);
-  background: var(--bg-cream);
+/* Recipe button */
+.action-sheet-recipe {
+  border-color: rgba(200, 116, 26, 0.15);
+  background: linear-gradient(135deg, #fffaf5 0%, #fef6ee 100%);
+}
+
+.action-sheet-recipe::before {
+  background: linear-gradient(135deg, #fdf3e6 0%, #fcecd8 100%);
 }
 
 @keyframes sheetSlideUp {
@@ -1978,20 +2119,33 @@ body {
   to   { transform: translateY(0); }
 }
 
-/* Desktop: center the sheet as a card instead of bottom-anchored */
+/* Desktop: center the sheet as a floating card */
 @media (min-width: 769px) {
   .action-sheet-overlay {
     align-items: center;
   }
   .action-sheet {
-    border-radius: 20px;
-    padding: 16px 24px 24px;
+    border-radius: 24px;
     max-width: 380px;
     animation-name: scaleIn;
+    box-shadow:
+      0 8px 30px rgba(60, 30, 0, 0.10),
+      0 30px 80px rgba(60, 30, 0, 0.15);
   }
   .action-sheet-handle {
     display: none;
   }
+  .action-sheet-hero {
+    height: 180px;
+    border-radius: 24px 24px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-sheet { animation: none; }
+  .action-sheet-img { animation: none; }
+  .action-sheet-header { animation: none; }
+  .action-sheet-actions { animation: none; }
 }
 
 /* ─── Recipe Modal Overlay ─── */
