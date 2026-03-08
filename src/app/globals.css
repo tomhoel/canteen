@@ -337,6 +337,74 @@ body {
 .stale-notice { display: none; }
 .stale-notice-icon { display: none; }
 
+/* ─── Ahead / Next-week menu card (positive highlight) ─── */
+.food-card.ahead {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: linear-gradient(160deg, #f0fdf8 0%, #e6faf2 100%);
+}
+
+/* Small pill badge overlaid on the image */
+.ahead-image-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(5, 120, 80, 0.82);
+  color: #d1fae5;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Ahead banner — positive version of stale banner */
+.ahead-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.10) 0%, rgba(16, 185, 129, 0.04) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 12px;
+  padding: 9px 13px;
+  margin: 0 0 10px;
+  animation: bannerSlide 0.4s var(--spring) both;
+}
+
+.ahead-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ahead-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ahead-banner-text strong {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #047857;
+  letter-spacing: 0.1px;
+}
+
+.ahead-banner-text span {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #059669;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ─── V3 Overhead Image Container - Transparent Background ─── */
 .card-image-wrapper {
   width: 280px;
@@ -1179,6 +1247,49 @@ body {
   }
 
   .stale-image-badge {
+    bottom: -2px;
+    font-size: 8px;
+    padding: 2px 7px;
+  }
+
+  /* Ahead banner — mobile overlay like stale banner */
+  .ahead-banner {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-basis: auto;
+    margin: 0;
+    padding: 10px 14px;
+    gap: 8px;
+    border-radius: 0 0 14px 14px;
+    border: none;
+    border-top: 1px solid rgba(16, 185, 129, 0.25);
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.98) 0%, rgba(209, 250, 229, 0.98) 100%);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    z-index: 5;
+    box-shadow: 0 -2px 12px rgba(5, 150, 105, 0.08);
+  }
+
+  .food-card.ahead .card-bottom {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ahead-banner-icon {
+    font-size: 14px;
+  }
+
+  .ahead-banner-text strong {
+    font-size: 10.5px;
+  }
+
+  .ahead-banner-text span {
+    font-size: 9.5px;
+  }
+
+  .ahead-image-badge {
     bottom: -2px;
     font-size: 8px;
     padding: 2px 7px;

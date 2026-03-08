@@ -278,6 +278,7 @@ export default function Home() {
       const highResImagePath = `/images/${dayKey}/${imageSlug}.png`;
       const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
       const isOutdated = canteenWeekNum < currentWeek;
+      const isAhead = canteenWeekNum > currentWeek;
 
       const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
       const origin = dishOrigins[enMainDish?.dish || ''] ?? null;
@@ -294,6 +295,7 @@ export default function Home() {
         imagePath,
         highResImagePath,
         isOutdated,
+        isAhead,
         canteenWeekNum,
         origin
       };
@@ -361,17 +363,23 @@ export default function Home() {
             imagePath,
             highResImagePath,
             isOutdated,
+            isAhead,
             canteenWeekNum,
             origin
           }, cardIdx) => {
             return (
-              <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}${isOutdated ? ' outdated' : ''}`} style={{ animationDelay: `${cardIdx * 75}ms` }} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
+              <article key={canteenName} className={`food-card${selectedDay === activeDayIndex ? ' voteable' : ''}${isOutdated ? ' outdated' : ''}${isAhead ? ' ahead' : ''}`} style={{ animationDelay: `${cardIdx * 75}ms` }} onClick={selectedDay === activeDayIndex ? () => setVoteModal({ isOpen: true, canteenName }) : undefined}>
                 <div className="card-image-wrapper" onClick={e => { e.stopPropagation(); mainDish && setLightbox({ isOpen: true, imageSrc: imagePath, dishName: mainDish.dish, canteenName }); }}>
                   <div className="card-image-circle">
                     <img src={imagePath} alt={mainDish?.dish || "Matrett"} className="food-image" />
                   </div>
                   {isOutdated && (
                     <div className="stale-image-badge">
+                      {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
+                    </div>
+                  )}
+                  {isAhead && (
+                    <div className="ahead-image-badge">
                       {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
                     </div>
                   )}
@@ -425,6 +433,15 @@ export default function Home() {
                     <div className="stale-banner-text">
                       <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
                       <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>
+                    </div>
+                  </div>
+                )}
+                {isAhead && (
+                  <div className="ahead-banner">
+                    <span className="ahead-banner-icon">✨</span>
+                    <div className="ahead-banner-text">
+                      <strong>{lang === "no" ? "Neste ukes meny!" : "Next week's menu!"}</strong>
+                      <span>{lang === "no" ? `Allerede oppdatert for uke ${canteenWeekNum}` : `Already updated for week ${canteenWeekNum}`}</span>
                     </div>
                   </div>
                 )}
