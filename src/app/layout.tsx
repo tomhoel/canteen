@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Caveat } from "next/font/google";
+import { Outfit } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 const outfit = Outfit({ subsets: ["latin"], weight: ["400", "600", "700", "800"] });
-const caveat = Caveat({ subsets: ["latin"], variable: "--font-recipe" });
 
 export const metadata: Metadata = {
   title: "🍽️ Dagens Lunsj | Telenor Fornebu",
@@ -56,7 +55,7 @@ export default function RootLayout({
         <meta httpEquiv="Expires" content="0" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body suppressHydrationWarning className={`${outfit.className} ${caveat.variable}`}>
+      <body suppressHydrationWarning className={outfit.className}>
         {children}
         <Analytics />
       </body>

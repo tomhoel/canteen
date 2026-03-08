@@ -501,8 +501,8 @@ export default function Home() {
 
             {recipeModal.isLoading && (
               <div className="recipe-loading">
-                <span className="recipe-loading-emoji">&#x1F468;&#x200D;&#x1F373;</span>
-                <span className="recipe-loading-text">{lang === "no" ? "Skriver oppskrift..." : "Writing recipe..."}</span>
+                <span className="recipe-loading-emoji">&#x1F373;</span>
+                <span className="recipe-loading-text">{lang === "no" ? "Genererer oppskrift..." : "Generating recipe..."}</span>
               </div>
             )}
 
@@ -518,16 +518,16 @@ export default function Home() {
             {recipeModal.recipe && (
               <>
                 <div className="recipe-meta">
-                  <span>&#x1F37D;&#xFE0F; {recipeModal.recipe.servings} {lang === "no" ? "porsjoner" : "servings"}</span>
-                  <span>&#x23F1;&#xFE0F; {recipeModal.recipe.prepTime}</span>
-                  <span>&#x1F525; {recipeModal.recipe.cookTime}</span>
+                  <span>{recipeModal.recipe.servings} {lang === "no" ? "porsjoner" : "servings"}</span>
+                  <span>{lang === "no" ? "Prep" : "Prep"}: {recipeModal.recipe.prepTime}</span>
+                  <span>{lang === "no" ? "Tilbereding" : "Cook"}: {recipeModal.recipe.cookTime}</span>
                 </div>
                 <div className="recipe-content">
                   <div className="recipe-ingredients">
                     <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}</h3>
                     <ul className="recipe-ingredient-list">
                       {recipeModal.recipe.ingredients.map((ing, i) => (
-                        <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 60}ms` }}>
+                        <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 40}ms` }}>
                           <span className="recipe-ingredient-amount">{ing.amount} {ing.unit}</span>
                           <span className="recipe-ingredient-name">{ing.item}</span>
                         </li>
@@ -538,7 +538,7 @@ export default function Home() {
                     <h3 className="recipe-section-title">{lang === "no" ? "Fremgangsm\u00E5te" : "Instructions"}</h3>
                     <ol className="recipe-step-list">
                       {recipeModal.recipe.steps.map((step, i) => (
-                        <li key={i} className="recipe-step-item" style={{ animationDelay: `${i * 80 + 200}ms` }}>
+                        <li key={i} className="recipe-step-item" style={{ animationDelay: `${(i * 50) + 150}ms` }}>
                           <span className="recipe-step-number">{i + 1}</span>
                           <span className="recipe-step-text">{step}</span>
                         </li>
