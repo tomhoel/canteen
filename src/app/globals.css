@@ -1102,7 +1102,7 @@ body {
     flex-wrap: wrap;
     align-items: center;
     align-content: center;
-    padding: 6px 12px;
+    padding: 10px 14px;
     border-radius: 16px;
     position: relative;
     overflow: visible;
@@ -1142,7 +1142,7 @@ body {
   .card-content {
     flex: 1;
     text-align: left;
-    padding: 0 10px 0 18px;
+    padding: 0 4px 0 14px;
     min-width: 0;
     align-self: center;
   }
@@ -1257,8 +1257,8 @@ body {
   /* Side dishes - full width horizontal row */
   .card-bottom {
     flex-basis: 100%;
-    margin: 2px 0 0;
-    padding: 2px 0 0;
+    margin: 4px 0 0;
+    padding: 4px 0 0;
     border-top: 1px dashed var(--border-light);
   }
 
@@ -1273,11 +1273,11 @@ body {
   }
 
   .side-dish-item {
-    padding: 2px 8px;
+    padding: 4px 10px;
     font-size: 10px;
-    border-radius: 6px;
+    border-radius: 8px;
     min-width: 0;
-    min-height: 22px;
+    min-height: 24px;
   }
 
   .side-dish-item::before {
