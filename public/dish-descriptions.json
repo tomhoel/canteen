@@ -1,17 +1,62 @@
 {
-  "Breaded Plaice filet with homemade remoulade, pea stew and roasted small potatoes": "A classic Nordic dish — crispy golden plaice paired with tangy remoulade and creamy pea stew.",
-  "Sesame baked chicken leg with fennel gravy and rice": "Tender chicken with a nutty sesame crust, drizzled with aromatic fennel-infused gravy.",
-  "Swedish meatballs with cream sauce, lingonberries and rice": "The iconic Swedish comfort dish — juicy meatballs in velvety cream sauce with tart lingonberries.",
-  "Pasta with Tomato, soffritto, meatballs and grated parmesan": "Hearty Italian-style meatballs in a slow-simmered soffritto tomato sauce over pasta.",
-  "Pork roast with bearnaise sauce and small potatoes": "Succulent roast pork crowned with rich béarnaise and golden roasted potatoes.",
-  "Pork cutlet with fennel, rosmarin": "Herb-crusted pork cutlet with the warm, anise-like notes of fennel and rosemary.",
-  "Turkey steak with barley": "Lean turkey steak served over nutty pearl barley — wholesome and satisfying.",
-  "Lemon baked dill salmon, serves with potato and leek": "Bright lemon and fresh dill bring out the best in oven-baked salmon, with potato and leek.",
-  "One pot chicken `nduja": "A fiery Southern Italian one-pot — chicken simmered with spicy 'nduja sausage paste.",
-  "Slow-cooked sirloin og beef with cherry, served with barley": "Melt-in-your-mouth beef sirloin braised low and slow with sweet cherry notes.",
-  "Pasta farfalle with beef, spinach and tomato": "Bow-tie pasta tossed with tender beef strips, fresh spinach, and bright tomato.",
-  "Fish & Chips with pea stew ans tartar sauce": "The British classic — crispy battered fish, chunky chips, mushy peas, and tangy tartar.",
-  "Chicken Chop Suey with rice": "A quick-wok stir-fry of chicken and crunchy vegetables in savory sauce over steamed rice.",
-  "Kebab with bread and dressing (Beef)": "Spiced beef kebab wrapped in warm bread with fresh toppings and creamy dressing.",
-  "Lasagne": "Layers of rich meat ragù, silky béchamel, and melted cheese — the ultimate comfort bake."
+  "Breaded Plaice filet with homemade remoulade, pea stew and roasted small potatoes": {
+    "en": "A classic Nordic dish — crispy golden plaice paired with tangy remoulade and creamy pea stew.",
+    "no": "En nordisk klassiker — sprøstekt rødspette med hjemmelaget remulade og fyldig ertestuing."
+  },
+  "Sesame baked chicken leg with fennel gravy and rice": {
+    "en": "Tender chicken with a nutty sesame crust, drizzled with aromatic fennel-infused gravy.",
+    "no": "Mørt kyllinglår med nøtteaktig sesamtopp og aromatisk fennikelsjy."
+  },
+  "Swedish meatballs with cream sauce, lingonberries and rice": {
+    "en": "The iconic Swedish comfort dish — juicy meatballs in velvety cream sauce with tart lingonberries.",
+    "no": "Den svenske klassikeren — saftige kjøttboller i fløtesaus med syrlige tyttebær."
+  },
+  "Pasta with Tomato, soffritto, meatballs and grated parmesan": {
+    "en": "Hearty Italian-style meatballs in a slow-simmered soffritto tomato sauce over pasta.",
+    "no": "Hjemmelagde kjøttboller i langtidskokt tomatsaus med soffritto og parmesan."
+  },
+  "Pork roast with bearnaise sauce and small potatoes": {
+    "en": "Succulent roast pork crowned with rich béarnaise and golden roasted potatoes.",
+    "no": "Saftig svinestek med fyldig béarnaise og gylne småpoteter."
+  },
+  "Pork cutlet with fennel, rosmarin": {
+    "en": "Herb-crusted pork cutlet with the warm, anise-like notes of fennel and rosemary.",
+    "no": "Urtemarinert svinekotelett med varme smaker av fennikel og rosmarin."
+  },
+  "Turkey steak with barley": {
+    "en": "Lean turkey steak served over nutty pearl barley — wholesome and satisfying.",
+    "no": "Mager kalkunbiff servert med nøtteaktig byggkorn — sunt og mettende."
+  },
+  "Lemon baked dill salmon, serves with potato and leek": {
+    "en": "Bright lemon and fresh dill bring out the best in oven-baked salmon, with potato and leek.",
+    "no": "Ovnsbakt laks med sitron og frisk dill, servert med poteter og purre."
+  },
+  "One pot chicken `nduja": {
+    "en": "A fiery Southern Italian one-pot — chicken simmered with spicy 'nduja sausage paste.",
+    "no": "En spicy søritaliensk gryterett — kylling kokt med krydret 'nduja-pølsepasta."
+  },
+  "Slow-cooked sirloin og beef with cherry, served with barley": {
+    "en": "Melt-in-your-mouth beef sirloin braised low and slow with sweet cherry notes.",
+    "no": "Langtidsbakt oksemørbrad som smelter på tungen, med søte kirsebærtoner."
+  },
+  "Pasta farfalle with beef, spinach and tomato": {
+    "en": "Bow-tie pasta tossed with tender beef strips, fresh spinach, and bright tomato.",
+    "no": "Sløyfepasta med møre biffstrimler, frisk spinat og smaksrik tomat."
+  },
+  "Fish & Chips with pea stew ans tartar sauce": {
+    "en": "The British classic — crispy battered fish, chunky chips, mushy peas, and tangy tartar.",
+    "no": "Den britiske klassikeren — sprøstekt fisk, pommes frites, ertestuing og tartarsaus."
+  },
+  "Chicken Chop Suey with rice": {
+    "en": "A quick-wok stir-fry of chicken and crunchy vegetables in savory sauce over steamed rice.",
+    "no": "Rask wok med kylling og sprø grønnsaker i smakfull saus, servert med ris."
+  },
+  "Kebab with bread and dressing (Beef)": {
+    "en": "Spiced beef kebab wrapped in warm bread with fresh toppings and creamy dressing.",
+    "no": "Krydret biffkebab i varmt brød med friske toppinger og kremet dressing."
+  },
+  "Lasagne": {
+    "en": "Layers of rich meat ragù, silky béchamel, and melted cheese — the ultimate comfort bake.",
+    "no": "Lag på lag med kjøttragù, silkemyk béchamel og smeltet ost — tidløs italiensk kos."
+  }
 }

@@ -23,7 +23,7 @@ export default function Home() {
   const [votedCanteen, setVotedCanteen] = useState("");
   const [isVoting, setIsVoting] = useState(false);
   const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; code: string }>>({});
-  const [dishDescriptions, setDishDescriptions] = useState<Record<string, string>>({});
+  const [dishDescriptions, setDishDescriptions] = useState<Record<string, string | { en: string; no: string }>>({});
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
 
   const scrollRef = useRef<HTMLElement>(null);
@@ -320,7 +320,10 @@ export default function Home() {
 
       const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
       const origin = dishOrigins[enMainDish?.dish || ""] ?? null;
-      const description = dishDescriptions[enMainDish?.dish || ""] ?? null;
+      const descEntry = dishDescriptions[enMainDish?.dish || ""];
+      const description = descEntry
+        ? (typeof descEntry === "string" ? descEntry : descEntry[lang] || descEntry["en"] || null)
+        : null;
 
       return {
         canteenName, canteen, dayEntry, items, mainDish, sideDishes,
