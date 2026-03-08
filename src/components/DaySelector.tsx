@@ -39,11 +39,6 @@ export default function DaySelector({
           );
         })}
       </div>
-      {hasAheadCanteens && (
-        <div className="ahead-bar-hint">
-          {lang === "no" ? "Viser neste ukes meny" : "Showing next week's menu"}
-        </div>
-      )}
     </nav>
   );
 }
