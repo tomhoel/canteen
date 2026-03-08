@@ -1924,9 +1924,26 @@ body {
   background: linear-gradient(135deg, #f0f9f1 0%, #e8f5e9 100%);
 }
 
-.action-sheet-vote:hover {
+.action-sheet-vote:hover:not(:disabled) {
   border-color: rgba(74, 158, 85, 0.4);
   background: linear-gradient(135deg, #e8f5e9 0%, #dcf0de 100%);
+}
+
+.action-sheet-vote.voted {
+  opacity: 0.55;
+  cursor: default;
+  background: var(--bg-warm);
+  border-color: var(--border-light);
+}
+
+.action-sheet-vote.voted:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.action-sheet-vote.voted .action-sheet-btn-label {
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .action-sheet-recipe {

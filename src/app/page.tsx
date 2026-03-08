@@ -498,14 +498,19 @@ export default function Home() {
             <div className="action-sheet-actions">
               {selectedDay === activeDayIndex && (
                 <button
-                  className="action-sheet-btn action-sheet-vote"
+                  className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}`}
+                  disabled={hasVoted}
                   onClick={() => {
                     setActionSheet({ isOpen: false, canteenName: "", dishName: "" });
                     setVoteModal({ isOpen: true, canteenName: actionSheet.canteenName });
                   }}
                 >
-                  <span className="action-sheet-btn-icon">&#x1F5F3;&#xFE0F;</span>
-                  <span className="action-sheet-btn-label">{lang === "no" ? "Stem p\u00E5 denne" : "Vote for this"}</span>
+                  <span className="action-sheet-btn-icon">{hasVoted ? "\u2705" : "\uD83D\uDDF3\uFE0F"}</span>
+                  <span className="action-sheet-btn-label">
+                    {hasVoted
+                      ? (lang === "no" ? `Stemt p\u00E5 ${votedCanteen}` : `Voted for ${votedCanteen}`)
+                      : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
+                  </span>
                 </button>
               )}
               <button
