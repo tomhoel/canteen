@@ -343,6 +343,13 @@ body {
   background: linear-gradient(160deg, #fff6e0 0%, #ffeecc 100%);
 }
 
+.food-card.ahead .card-bottom {
+  background: var(--card-white);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0 -4px;
+}
+
 /* Small pill badge overlaid on the image */
 .ahead-image-badge {
   position: absolute;
