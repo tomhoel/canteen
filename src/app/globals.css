@@ -1076,27 +1076,26 @@ body {
   /* Cards container */
   .cards-container {
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: stretch;
-    gap: 8px;
-    padding: calc(56px + env(safe-area-inset-top)) 10px calc(66px + env(safe-area-inset-bottom));
+    gap: 6px;
+    padding: calc(54px + env(safe-area-inset-top)) 10px calc(64px + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
     overscroll-behavior: none;
   }
 
-  /* Animated wrapper fills the container so cards can divide space equally */
+  /* Animated wrapper — content-sized, centered by parent */
   .cards-animated-wrapper {
-    flex: 1;
     min-height: 0;
     align-items: stretch;
   }
 
-  /* Card layout - horizontal with image left */
+  /* Card layout - horizontal with image left, content-sized */
   .food-card {
     width: 100%;
-    flex: 1;
+    flex: 0 1 auto;
     min-height: 0 !important;
     display: flex;
     flex-direction: row;
