@@ -339,8 +339,8 @@ body {
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
 .food-card.ahead {
-  border-color: rgba(232, 160, 32, 0.30);
-  background: linear-gradient(160deg, #fdf8ef 0%, #faf2e2 100%);
+  border-color: rgba(232, 160, 32, 0.35);
+  background: linear-gradient(160deg, #fff6e0 0%, #ffeecc 100%);
 }
 
 /* Small pill badge overlaid on the image */
@@ -368,8 +368,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(135deg, rgba(232, 160, 32, 0.12) 0%, rgba(232, 160, 32, 0.05) 100%);
-  border: 1px solid rgba(232, 160, 32, 0.30);
+  background: linear-gradient(135deg, rgba(232, 160, 32, 0.18) 0%, rgba(232, 160, 32, 0.08) 100%);
+  border: 1px solid rgba(200, 116, 26, 0.32);
   border-radius: 12px;
   padding: 9px 13px;
   margin: 0 0 10px;
@@ -1264,12 +1264,12 @@ body {
     gap: 8px;
     border-radius: 0 0 14px 14px;
     border: none;
-    border-top: 1px solid rgba(232, 160, 32, 0.25);
-    background: linear-gradient(135deg, rgba(253, 248, 239, 0.98) 0%, rgba(250, 242, 226, 0.98) 100%);
+    border-top: 1px solid rgba(200, 116, 26, 0.30);
+    background: linear-gradient(135deg, rgba(255, 240, 200, 0.97) 0%, rgba(255, 232, 175, 0.97) 100%);
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     z-index: 5;
-    box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.08);
+    box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.12);
   }
 
   .food-card.ahead .card-bottom {
