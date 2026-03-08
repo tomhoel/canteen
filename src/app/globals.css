@@ -237,7 +237,6 @@ body {
 }
 
 .food-card:hover {
-  transform: translateY(-10px) scale(1.01);
   box-shadow:
     0 24px 48px var(--shadow-medium),
     0 8px 16px var(--shadow-soft),
@@ -376,7 +375,7 @@ body {
 }
 
 .card-image-wrapper:hover {
-  transform: scale(1.05) rotate(2deg);
+  transform: none;
 }
 
 .card-image-circle {
@@ -410,10 +409,6 @@ body {
 
 .card-image-wrapper:hover .food-image {
   animation-play-state: paused;
-  filter: drop-shadow(0 20px 40px rgba(80, 40, 0, 0.22))
-    drop-shadow(0 6px 14px rgba(80, 40, 0, 0.14));
-  transform: scale(1.08) translateY(-4px);
-  transition: transform 0.4s var(--spring), filter 0.3s ease;
 }
 
 /* #8 — Image placeholder / error fallback */

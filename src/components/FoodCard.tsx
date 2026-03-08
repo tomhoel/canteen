@@ -135,16 +135,6 @@ export default function FoodCard({
         )}
       </div>
 
-      {/* Vote progress bar */}
-      {isVoteable && totalVotes > 0 && (
-        <div className="vote-progress-track">
-          <div
-            className={`vote-progress-fill${isLeader ? " leader" : ""}`}
-            style={{ width: `${voteShare * 100}%` }}
-          />
-        </div>
-      )}
-
       {isOutdated && (
         <div className="stale-banner">
           <span className="stale-banner-icon">&#x23F0;</span>
