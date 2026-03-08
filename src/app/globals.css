@@ -1975,6 +1975,55 @@ body {
   border-right: none;
 }
 
+.recipe-meta-servings {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-servings-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-light);
+  background: var(--card-white);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.recipe-servings-btn:hover {
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  color: white;
+}
+
+.recipe-servings-btn:active {
+  transform: scale(0.9);
+}
+
+.recipe-servings-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  min-width: 20px;
+  text-align: center;
+}
+
+.recipe-servings-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
 /* ─── Recipe Content ─── */
 .recipe-content {
   display: flex;
