@@ -297,7 +297,11 @@ export default function Home() {
   const canteenDayData = useMemo(() => {
     return sortedCanteens.map(([canteenName, canteen]) => {
       const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
-      const items = lang === "no" ? dayEntry?.no?.items : dayEntry?.en?.items;
+      const noItems = dayEntry?.no?.items;
+      const enItems = dayEntry?.en?.items;
+      const items = lang === "no"
+        ? (noItems && noItems.length > 0 ? noItems : enItems)
+        : (enItems && enItems.length > 0 ? enItems : noItems);
       const mainDish = items?.find(i => i.isMain);
       const sideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
       const mainAllergens = mainDish?.allergens || [];
