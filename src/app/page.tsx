@@ -25,6 +25,7 @@ export default function Home() {
   const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; code: string }>>({});
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, string | { en: string; no: string }>>({});
   const [recipeModal, setRecipeModal] = useState<{ isOpen: boolean; dishName: string; canteenName: string; recipe: Recipe | null; isLoading: boolean; error: string | null }>({ isOpen: false, dishName: "", canteenName: "", recipe: null, isLoading: false, error: null });
+  const [recipeServings, setRecipeServings] = useState(4);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
 
   const scrollRef = useRef<HTMLElement>(null);
@@ -101,6 +102,7 @@ export default function Home() {
     if (cached) {
       try {
         const recipe = JSON.parse(cached) as Recipe;
+        setRecipeServings(recipe.servings);
         setRecipeModal({ isOpen: true, dishName, canteenName, recipe, isLoading: false, error: null });
         return;
       } catch { /* cache corrupted, refetch */ }
@@ -115,6 +117,7 @@ export default function Home() {
       if (!res.ok) throw new Error('Failed');
       const recipe = await res.json() as Recipe;
       localStorage.setItem(cacheKey, JSON.stringify(recipe));
+      setRecipeServings(recipe.servings);
       setRecipeModal(prev => ({ ...prev, recipe, isLoading: false }));
     } catch {
       setRecipeModal(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke generere oppskrift' : 'Could not generate recipe' }));
@@ -515,20 +518,33 @@ export default function Home() {
               </div>
             )}
 
-            {recipeModal.recipe && (
+            {recipeModal.recipe && (() => {
+              const scale = recipeServings / recipeModal.recipe.servings;
+              const scaleAmount = (amount: string) => {
+                const num = parseFloat(amount);
+                if (isNaN(num)) return amount;
+                const scaled = num * scale;
+                return scaled % 1 === 0 ? scaled.toString() : scaled.toFixed(1).replace(/\.0$/, "");
+              };
+              return (
               <>
                 <div className="recipe-meta">
-                  <span>{recipeModal.recipe.servings} {lang === "no" ? "porsjoner" : "servings"}</span>
+                  <span className="recipe-meta-servings">
+                    <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.max(1, s - 1))}>&#x2212;</button>
+                    <span className="recipe-servings-value">{recipeServings}</span>
+                    <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.min(20, s + 1))}>+</button>
+                    <span className="recipe-servings-label">{lang === "no" ? "pers." : "serv."}</span>
+                  </span>
                   <span>{lang === "no" ? "Prep" : "Prep"}: {recipeModal.recipe.prepTime}</span>
                   <span>{lang === "no" ? "Tilbereding" : "Cook"}: {recipeModal.recipe.cookTime}</span>
                 </div>
                 <div className="recipe-content">
                   <div className="recipe-ingredients">
-                    <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}</h3>
+                    <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
                     <ul className="recipe-ingredient-list">
                       {recipeModal.recipe.ingredients.map((ing, i) => (
                         <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 40}ms` }}>
-                          <span className="recipe-ingredient-amount">{ing.amount} {ing.unit}</span>
+                          <span className="recipe-ingredient-amount">{scaleAmount(ing.amount)} {ing.unit}</span>
                           <span className="recipe-ingredient-name">{ing.item}</span>
                         </li>
                       ))}
@@ -553,7 +569,8 @@ export default function Home() {
                   </div>
                 </div>
               </>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}
