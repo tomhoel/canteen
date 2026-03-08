@@ -13,7 +13,6 @@ interface FoodCardProps {
   totalVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
-  onRecipeClick: (dishName: string, canteenName: string) => void;
 }
 
 export default function FoodCard({
@@ -27,7 +26,6 @@ export default function FoodCard({
   totalVotes,
   onImageClick,
   onCardClick,
-  onRecipeClick,
 }: FoodCardProps) {
   const [imgError, setImgError] = useState(false);
 
@@ -50,9 +48,9 @@ export default function FoodCard({
 
   return (
     <article
-      className={`food-card${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
+      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
       style={{ animationDelay: `${cardIdx * 75}ms` }}
-      onClick={isVoteable ? () => onCardClick(canteenName) : undefined}
+      onClick={mainDish ? () => onCardClick(canteenName) : undefined}
     >
       <div
         className="card-image-wrapper"
@@ -101,12 +99,6 @@ export default function FoodCard({
             )}
           </div>
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
-          {mainDish && (
-            <button className="recipe-btn" onClick={e => { e.stopPropagation(); onRecipeClick(mainDish.dish, canteenName); }}>
-              <span className="recipe-btn-icon">&#x1F468;&#x200D;&#x1F373;</span>
-              <span>{lang === "no" ? "Oppskrift" : "Recipe"}</span>
-            </button>
-          )}
         </div>
 
         {(mainAllergens.length > 0 || (isVoteable && voteCount > 0)) && (

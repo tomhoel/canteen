@@ -19,6 +19,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: "" });
+  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string }>({ isOpen: false, canteenName: "", dishName: "" });
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState("");
   const [isVoting, setIsVoting] = useState(false);
@@ -195,20 +196,21 @@ export default function Home() {
       if (e.key === "Escape") {
         setLightboxIndex(-1);
         setVoteModal({ isOpen: false, canteenName: "" });
+        setActionSheet({ isOpen: false, canteenName: "", dishName: "" });
         setRecipeModal(prev => ({ ...prev, isOpen: false }));
       } else if (e.key === "ArrowLeft") {
-        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !recipeModal.isOpen) {
+        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
           handleDaySelect(selectedDay - 1);
         }
       } else if (e.key === "ArrowRight") {
-        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !recipeModal.isOpen) {
+        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
           handleDaySelect(selectedDay + 1);
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, lightboxIndex, voteModal.isOpen, recipeModal.isOpen, handleDaySelect]);
+  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, handleDaySelect]);
 
   // #11 — Only preload current day + adjacent days (not all 5)
   useEffect(() => {
@@ -376,9 +378,11 @@ export default function Home() {
     setLightboxIndex(idx >= 0 ? idx : 0);
   }, [canteenDayData]);
 
-  const handleVoteCardClick = useCallback((canteenName: string) => {
-    setVoteModal({ isOpen: true, canteenName });
-  }, []);
+  const handleCardClick = useCallback((canteenName: string) => {
+    const canteenData = canteenDayData.find(c => c.canteenName === canteenName);
+    const dishName = canteenData?.mainDish?.dish || "";
+    setActionSheet({ isOpen: true, canteenName, dishName });
+  }, [canteenDayData]);
 
   const handleVote = useCallback(async (canteenName: string) => {
     setIsVoting(true);
@@ -441,8 +445,7 @@ export default function Home() {
               maxVotes={maxVotes}
               totalVotes={totalVotes}
               onImageClick={handleImageClick}
-              onCardClick={handleVoteCardClick}
-              onRecipeClick={handleRecipeClick}
+              onCardClick={handleCardClick}
             />
           ))}
         </div>
@@ -482,6 +485,46 @@ export default function Home() {
         onVote={handleVote}
         onClose={() => setVoteModal({ isOpen: false, canteenName: "" })}
       />
+
+      {/* Action Sheet */}
+      {actionSheet.isOpen && (
+        <div className="action-sheet-overlay" onClick={() => setActionSheet({ isOpen: false, canteenName: "", dishName: "" })}>
+          <div className="action-sheet" onClick={e => e.stopPropagation()}>
+            <div className="action-sheet-handle" />
+            <div className="action-sheet-header">
+              <span className="action-sheet-canteen">{actionSheet.canteenName}</span>
+              <span className="action-sheet-dish">{actionSheet.dishName}</span>
+            </div>
+            <div className="action-sheet-actions">
+              {selectedDay === activeDayIndex && (
+                <button
+                  className="action-sheet-btn action-sheet-vote"
+                  onClick={() => {
+                    setActionSheet({ isOpen: false, canteenName: "", dishName: "" });
+                    setVoteModal({ isOpen: true, canteenName: actionSheet.canteenName });
+                  }}
+                >
+                  <span className="action-sheet-btn-icon">&#x1F5F3;&#xFE0F;</span>
+                  <span className="action-sheet-btn-label">{lang === "no" ? "Stem p\u00E5 denne" : "Vote for this"}</span>
+                </button>
+              )}
+              <button
+                className="action-sheet-btn action-sheet-recipe"
+                onClick={() => {
+                  setActionSheet({ isOpen: false, canteenName: "", dishName: "" });
+                  handleRecipeClick(actionSheet.dishName, actionSheet.canteenName);
+                }}
+              >
+                <span className="action-sheet-btn-icon">&#x1F468;&#x200D;&#x1F373;</span>
+                <span className="action-sheet-btn-label">{lang === "no" ? "Lag hjemme" : "Make at home"}</span>
+              </button>
+            </div>
+            <button className="action-sheet-cancel" onClick={() => setActionSheet({ isOpen: false, canteenName: "", dishName: "" })}>
+              {lang === "no" ? "Avbryt" : "Cancel"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* #6 — Lightbox with canteen swipe */}
       <Lightbox
