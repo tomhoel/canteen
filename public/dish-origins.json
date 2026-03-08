@@ -94,5 +94,13 @@
   "Chicken Chop Suey with rice": {
     "country": "United States",
     "code": "us"
+  },
+  "Breaded Plaice filet with homemade remoulade, pea stew and roasted small potatoes": {
+    "country": "Denmark",
+    "code": "dk"
+  },
+  "Fish & Chips with pea stew ans tartar sauce": {
+    "country": "United Kingdom",
+    "code": "gb"
   }
 }
