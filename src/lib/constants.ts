@@ -11,6 +11,13 @@ export const ALLERGEN_COLORS: Record<string, string> = {
   Sulphites: "#AF52DE", Molluscs: "#5AC8FA", Lupin: "#34C759"
 };
 
+export const ALLERGEN_NAMES_NO: Record<string, string> = {
+  Egg: "Egg", Fish: "Fisk", Gluten: "Gluten", Milk: "Melk",
+  Nuts: "N\u00F8tter", Peanuts: "Pean\u00F8tter", Celery: "Selleri", Mustard: "Sennep",
+  "Sesame seeds": "Sesamfr\u00F8", Shellfish: "Skalldyr", Soya: "Soya",
+  Sulphites: "Sulfitter", Molluscs: "Bl\u00F8tdyr", Lupin: "Lupin"
+};
+
 export const CANTEEN_ORDER = ["Eat the street", "Fresh4you", "Flow"];
 
 export const CANTEEN_IMAGE_SLUGS: Record<string, string> = {

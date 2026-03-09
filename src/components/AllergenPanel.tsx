@@ -1,4 +1,4 @@
-import { ALLERGEN_COLORS } from "@/lib/constants";
+import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO } from "@/lib/constants";
 import type { Allergen } from "@/lib/types";
 
 interface AllergenPanelProps {
@@ -28,14 +28,17 @@ export default function AllergenPanel({ dayAllergens, allergenOpen, lang, onTogg
             {lang === "no" ? "Allergener i dagens meny" : "Allergens in today's menu"}
           </div>
           <div className="allergen-grid">
-            {dayAllergens.map((a, idx) => (
+            {dayAllergens.map((a, idx) => {
+              const displayName = lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name;
+              return (
               <div key={a.id} className="allergen-item" style={{ animationDelay: `${idx * 40}ms` }}>
                 <span className="allergen-item-dot" style={{ background: ALLERGEN_COLORS[a.name] || "#8E8E93" }}>
-                  {a.name.charAt(0)}
+                  {displayName.charAt(0)}
                 </span>
-                <span className="allergen-item-name">{a.name}</span>
+                <span className="allergen-item-name">{displayName}</span>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
