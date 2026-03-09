@@ -533,35 +533,33 @@ export default function Home() {
               </div>
             ) : (
             <div className="action-sheet-actions">
-              {selectedDay === activeDayIndex && (
-                <button
-                  className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}${isVoting ? " voting" : ""}`}
-                  disabled={hasVoted || isVoting}
-                  onClick={async () => {
-                    await handleVote(actionSheet.canteenName);
-                    setTimeout(closeSheet, 1500);
-                  }}
-                >
-                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
-                    {isVoting ? "\u23F3" : hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
-                  </div>
-                  <div className="action-sheet-btn-text">
-                    <span className="action-sheet-btn-label">
-                      {isVoting
-                        ? (lang === "no" ? "Stemmer..." : "Voting...")
-                        : hasVoted
-                        ? (lang === "no" ? "Allerede stemt" : "Already voted")
-                        : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
-                    </span>
-                    <span className="action-sheet-btn-sub">
-                      {hasVoted
-                        ? (lang === "no" ? `Du stemte p\u00E5 ${votedCanteen}` : `You voted for ${votedCanteen}`)
-                        : (lang === "no" ? "Vis at du spiser her i dag" : "Show you\u2019re eating here today")}
-                    </span>
-                  </div>
-                  {!hasVoted && !isVoting && <span className="action-sheet-btn-arrow">&#x203A;</span>}
-                </button>
-              )}
+              <button
+                className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}${isVoting ? " voting" : ""}`}
+                disabled={hasVoted || isVoting}
+                onClick={async () => {
+                  await handleVote(actionSheet.canteenName);
+                  setTimeout(closeSheet, 1500);
+                }}
+              >
+                <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
+                  {isVoting ? "\u23F3" : hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
+                </div>
+                <div className="action-sheet-btn-text">
+                  <span className="action-sheet-btn-label">
+                    {isVoting
+                      ? (lang === "no" ? "Stemmer..." : "Voting...")
+                      : hasVoted
+                      ? (lang === "no" ? "Allerede stemt" : "Already voted")
+                      : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
+                  </span>
+                  <span className="action-sheet-btn-sub">
+                    {hasVoted
+                      ? (lang === "no" ? `Du stemte p\u00E5 ${votedCanteen}` : `You voted for ${votedCanteen}`)
+                      : (lang === "no" ? "Vis at du spiser her i dag" : "Show you\u2019re eating here today")}
+                  </span>
+                </div>
+                {!hasVoted && !isVoting && <span className="action-sheet-btn-arrow">&#x203A;</span>}
+              </button>
               <button
                 className="action-sheet-btn action-sheet-recipe"
                 onClick={() => { closeSheet(); handleRecipeClick(actionSheet.dishName, actionSheet.canteenName); }}
