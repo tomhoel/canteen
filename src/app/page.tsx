@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
 import type { MenuData, CanteenData, Recipe } from "@/lib/types";
+import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
@@ -624,14 +625,13 @@ export default function Home() {
                     <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
                     <ul className="recipe-ingredient-list">
                       {recipeModal.recipe.ingredients.map((ing, i) => {
-                        const clean = ing.item.trim().split(",")[0].split("(")[0].trim();
-                        const mealDbName = encodeURIComponent(clean);
-                        const spoonName = clean.toLowerCase().replace(/\s+/g, "-");
+                        const fb = getLetterFallback(ing.item);
                         return (
                         <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 50}ms` }}>
                           <div className="recipe-ingredient-img-wrap">
+                            <span className="recipe-ingredient-letter" style={{ background: fb.color }}>{fb.letter}</span>
                             <img
-                              src={`https://www.themealdb.com/images/ingredients/${mealDbName}-Small.png`}
+                              src={getMealDbUrl(ing.item)}
                               alt=""
                               className="recipe-ingredient-img"
                               loading="lazy"
@@ -639,10 +639,9 @@ export default function Home() {
                                 const img = e.target as HTMLImageElement;
                                 if (!img.dataset.fallback) {
                                   img.dataset.fallback = "1";
-                                  img.src = `https://img.spoonacular.com/ingredients_100x100/${spoonName}.jpg`;
+                                  img.src = getSpoonUrl(ing.item);
                                 } else {
                                   img.style.display = "none";
-                                  img.parentElement!.classList.add("no-img");
                                 }
                               }}
                             />
