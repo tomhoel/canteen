@@ -629,7 +629,6 @@ export default function Home() {
                         return (
                         <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 50}ms` }}>
                           <div className="recipe-ingredient-img-wrap">
-                            <span className="recipe-ingredient-letter" style={{ background: fb.color }}>{fb.letter}</span>
                             <img
                               src={getMealDbUrl(ing.item)}
                               alt=""
@@ -642,9 +641,11 @@ export default function Home() {
                                   img.src = getSpoonUrl(ing.item);
                                 } else {
                                   img.style.display = "none";
+                                  img.parentElement!.querySelector(".recipe-ingredient-letter")!.removeAttribute("hidden");
                                 }
                               }}
                             />
+                            <span className="recipe-ingredient-letter" hidden style={{ background: fb.color }}>{fb.letter}</span>
                           </div>
                           <div className="recipe-ingredient-details">
                             <span className="recipe-ingredient-name">{ing.item}</span>
