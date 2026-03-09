@@ -21,6 +21,7 @@ export interface TjekOffer {
   storeLogo: string;
   runTill: string;
   matchedIngredient: string;
+  flyerUrl: string | null;
 }
 
 export interface StoreRecommendation {
