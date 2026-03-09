@@ -730,6 +730,7 @@ export default function Home() {
                         {/* Find Deals Button */}
                         <button
                           className="deals-find-btn"
+                          style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}
                           onClick={() => handleDealsClick(recipeModal.dishName, recipe)}
                         >
                           <span className="deals-find-icon">{"\uD83D\uDED2"}</span>
