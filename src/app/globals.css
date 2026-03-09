@@ -1143,11 +1143,11 @@ body {
     display: none;
   }
 
-  /* Content - right of image, right padding clears the vote pip */
+  /* Content - right of image */
   .card-content {
     flex: 1;
     text-align: left;
-    padding: 0 38px 0 12px;
+    padding: 0 2px 0 12px;
     min-width: 0;
     align-self: center;
   }
@@ -1496,8 +1496,9 @@ body {
 
 @media (max-width: 768px) {
   .vote-pip {
-    top: 8px;
-    right: 8px;
+    top: -2px;
+    right: -2px;
+    left: auto;
     padding: 3px 6px 3px 5px;
     font-size: 11px;
     gap: 2px;
