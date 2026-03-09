@@ -1,4 +1,4 @@
-import type { DealsResponse, TjekOffer } from "@/lib/types";
+import type { DealsResponse, ProductOffer } from "@/lib/types";
 
 interface DealsViewProps {
   deals: DealsResponse;
@@ -9,8 +9,8 @@ interface DealsViewProps {
 export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
   const { recommendation, allStores, searchedIngredients } = deals;
 
-  // Group all deals across stores by ingredient
-  const dealsByIngredient = new Map<string, TjekOffer[]>();
+  // Group all products across stores by ingredient
+  const dealsByIngredient = new Map<string, ProductOffer[]>();
   for (const store of allStores) {
     for (const deal of store.deals) {
       const existing = dealsByIngredient.get(deal.matchedIngredient) || [];
@@ -19,7 +19,12 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
     }
   }
 
-  // Find ingredients with no deals
+  // Sort each ingredient's products by price
+  for (const [, products] of dealsByIngredient) {
+    products.sort((a, b) => a.price - b.price);
+  }
+
+  // Find ingredients with no results
   const ingredientsWithDeals = new Set(dealsByIngredient.keys());
   const noDealsIngredients = searchedIngredients.filter(i => !ingredientsWithDeals.has(i));
 
@@ -41,14 +46,14 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
                 <img src={recommendation.storeLogo} alt={recommendation.store} className="deals-rec-logo" />
               )}
               <div className="deals-rec-info">
-                <span className="deals-rec-label">{lang === "no" ? "Anbefalt butikk" : "Recommended store"}</span>
+                <span className="deals-rec-label">{lang === "no" ? "Billigste butikk" : "Cheapest store"}</span>
                 <span className="deals-rec-store" style={{ color: recommendation.storeColor }}>{recommendation.store}</span>
               </div>
             </div>
             <div className="deals-rec-stats">
               <div className="deals-rec-stat">
                 <span className="deals-rec-stat-value">{recommendation.dealCount}</span>
-                <span className="deals-rec-stat-label">{lang === "no" ? "tilbud" : "deals"}</span>
+                <span className="deals-rec-stat-label">{lang === "no" ? "produkter" : "products"}</span>
               </div>
               <div className="deals-rec-stat">
                 <span className="deals-rec-stat-value">{recommendation.keyIngredientsCovered}</span>
@@ -64,7 +69,7 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
           {/* Other stores summary */}
           {allStores.length > 1 && (
             <div className="deals-other-stores">
-              <span className="deals-other-label">{lang === "no" ? "Andre butikker med tilbud" : "Other stores with deals"}</span>
+              <span className="deals-other-label">{lang === "no" ? "Priser i andre butikker" : "Prices at other stores"}</span>
               <div className="deals-other-list">
                 {allStores.slice(1).map(store => (
                   <div key={store.store} className="deals-other-chip">
@@ -77,69 +82,54 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
             </div>
           )}
 
-          {/* Deals grouped by ingredient */}
+          {/* Products grouped by ingredient */}
           {Array.from(dealsByIngredient.entries()).map(([ingredient, ingredientDeals]) => (
             <div key={ingredient} className="deals-ingredient-group">
               <h4 className="deals-ingredient-title">{ingredient}</h4>
               <div className="deals-cards">
                 {ingredientDeals.map(deal => {
-                  const cardClass = `deals-card${deal.store === recommendation.store ? " deals-card-recommended" : ""}${deal.flyerUrl ? " deals-card-link" : ""}`;
-                  const cardStyle = deal.store === recommendation.store ? { borderColor: recommendation.storeColor + '40' } : undefined;
+                  const isRec = deal.store === recommendation.store;
+                  const cardClass = `deals-card${isRec ? " deals-card-recommended" : ""}${deal.productUrl ? " deals-card-link" : ""}`;
+                  const cardStyle = isRec ? { borderColor: recommendation.storeColor + '40' } : undefined;
                   const content = (
                     <>
                       {deal.imageUrl && (
                         <div className="deals-card-img-wrap">
-                          <img src={deal.imageUrl} alt={deal.heading} className="deals-card-img" loading="lazy" />
+                          <img src={deal.imageUrl} alt={deal.name} className="deals-card-img" loading="lazy" />
                         </div>
                       )}
                       <div className="deals-card-content">
                         <div className="deals-card-store-row">
                           {deal.storeLogo && <img src={deal.storeLogo} alt="" className="deals-card-store-logo" />}
                           <span className="deals-card-store" style={{ color: deal.storeColor }}>{deal.store}</span>
-                          {deal.store === recommendation.store && (
+                          {isRec && (
                             <span className="deals-card-rec-badge">{"\u2605"}</span>
                           )}
                         </div>
-                        <span className="deals-card-heading">{deal.heading}</span>
-                        {deal.quantityLabel && (
-                          <span className="deals-card-qty">{deal.quantityLabel}{deal.unitPrice ? ` \u00B7 ${deal.unitPrice}` : ""}</span>
+                        <span className="deals-card-heading">{deal.name}</span>
+                        {(deal.weight || deal.unitPrice != null) && (
+                          <span className="deals-card-qty">
+                            {deal.weight || ""}
+                            {deal.weight && deal.unitPrice != null ? " \u00B7 " : ""}
+                            {deal.unitPrice != null ? `${deal.unitPrice.toFixed(2).replace('.', ',')} kr/kg` : ""}
+                          </span>
                         )}
                         <div className="deals-card-price-row">
                           <span className="deals-card-price">{deal.price} kr</span>
-                          {deal.prePrice && deal.prePrice > deal.price && (
-                            <span className="deals-card-savings">
-                              -{Math.round(((deal.prePrice - deal.price) / deal.prePrice) * 100)}%
-                            </span>
-                          )}
                         </div>
-                        {deal.prePrice && deal.prePrice > deal.price && (
-                          <span className="deals-card-pre-price">{deal.prePrice} kr</span>
+                        {deal.brand && (
+                          <span className="deals-card-brand">{deal.brand}</span>
                         )}
-                        {deal.runTill && (() => {
-                          const till = new Date(deal.runTill);
-                          const now = new Date();
-                          const daysLeft = Math.ceil((till.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                          if (daysLeft < 0) return null;
-                          const dayNames = lang === "no"
-                            ? ["søn", "man", "tir", "ons", "tor", "fre", "lør"]
-                            : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                          const label = daysLeft <= 1
-                            ? (lang === "no" ? "Siste dag!" : "Last day!")
-                            : daysLeft <= 3
-                            ? (lang === "no" ? `Til ${dayNames[till.getDay()]}` : `Until ${dayNames[till.getDay()]}`)
-                            : null;
-                          return label ? <span className={`deals-card-expiry${daysLeft <= 1 ? " deals-card-expiry-urgent" : ""}`}>{label}</span> : null;
-                        })()}
-                        {deal.flyerUrl && (
+                        {deal.productUrl && (
                           <span className="deals-card-flyer-link">
-                            {lang === "no" ? "Se i kundeavis" : "View in flyer"} {"\u203A"}
+                            {lang === "no" ? "Se i nettbutikk" : "View in store"} {"\u203A"}
                           </span>
                         )}
                       </div>
                     </>
                   );
-                  return deal.flyerUrl ? (
-                    <a key={deal.id} href={deal.flyerUrl} target="_blank" rel="noopener noreferrer" className={cardClass} style={cardStyle}>
+                  return deal.productUrl ? (
+                    <a key={deal.id} href={deal.productUrl} target="_blank" rel="noopener noreferrer" className={cardClass} style={cardStyle}>
                       {content}
                     </a>
                   ) : (
@@ -152,10 +142,10 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
             </div>
           ))}
 
-          {/* No deals section */}
+          {/* No results section */}
           {noDealsIngredients.length > 0 && (
             <div className="deals-no-results">
-              <span className="deals-no-results-label">{lang === "no" ? "Ingen tilbud funnet for" : "No deals found for"}</span>
+              <span className="deals-no-results-label">{lang === "no" ? "Ingen priser funnet for" : "No prices found for"}</span>
               <div className="deals-no-results-list">
                 {noDealsIngredients.map(ing => (
                   <span key={ing} className="deals-no-results-item">{ing}</span>
@@ -168,10 +158,10 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
         <div className="deals-empty">
           <span className="deals-empty-icon">{"\uD83D\uDED2"}</span>
           <span className="deals-empty-text">
-            {lang === "no" ? "Ingen tilbud funnet akkurat nå" : "No deals found right now"}
+            {lang === "no" ? "Ingen produkter funnet" : "No products found"}
           </span>
           <span className="deals-empty-sub">
-            {lang === "no" ? "Prøv igjen senere — nye tilbud kommer hver uke" : "Try again later — new deals come every week"}
+            {lang === "no" ? "Prøv igjen senere" : "Try again later"}
           </span>
         </div>
       )}
