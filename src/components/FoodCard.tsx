@@ -49,6 +49,9 @@ export default function FoodCard({
       style={{ animationDelay: `${cardIdx * 75}ms` }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
     >
+      {isVoteable && voteCount > 0 && (
+        <div className={`vote-pip${isLeader ? " leader" : ""}`}>{voteCount}</div>
+      )}
       <div
         className="card-image-wrapper"
         onClick={e => { e.stopPropagation(); mainDish && onImageClick(data); }}
@@ -93,9 +96,6 @@ export default function FoodCard({
               <span className="ahead-tag">
                 {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} &#x2728;
               </span>
-            )}
-            {isVoteable && voteCount > 0 && (
-              <span className={`vote-pip${isLeader ? " leader" : ""}`}>{voteCount}</span>
             )}
           </div>
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
