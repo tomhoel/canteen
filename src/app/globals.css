@@ -2739,6 +2739,7 @@ body {
   cursor: pointer;
   transition: all 0.25s var(--smooth);
   text-align: left;
+  animation: recipeReveal 0.4s var(--smooth) both;
 }
 
 .deals-find-btn:hover {
