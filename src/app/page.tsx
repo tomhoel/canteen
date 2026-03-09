@@ -634,6 +634,7 @@ export default function Home() {
                               alt=""
                               className="recipe-ingredient-img"
                               loading="lazy"
+                              onLoad={e => { (e.target as HTMLImageElement).parentElement!.classList.add("has-img"); }}
                               onError={e => {
                                 const img = e.target as HTMLImageElement;
                                 if (!img.dataset.fallback) {
@@ -641,11 +642,10 @@ export default function Home() {
                                   img.src = getSpoonUrl(ing.item);
                                 } else {
                                   img.style.display = "none";
-                                  img.parentElement!.querySelector(".recipe-ingredient-letter")!.removeAttribute("hidden");
                                 }
                               }}
                             />
-                            <span className="recipe-ingredient-letter" hidden style={{ background: fb.color }}>{fb.letter}</span>
+                            <span className="recipe-ingredient-letter" style={{ background: fb.color }}>{fb.letter}</span>
                           </div>
                           <div className="recipe-ingredient-details">
                             <span className="recipe-ingredient-name">{ing.item}</span>
