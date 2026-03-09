@@ -78,7 +78,7 @@ interface TjekApiOffer {
   pricing: { price: number; pre_price: number | null; currency: string };
   images: { zoom: string } | null;
   run_till: string;
-  branding: { name: string; color: string; pageflip: { logo: string } };
+  branding: { name: string; color: string; pageflip: { logo: string; color: string } };
 }
 
 async function searchTjekOffers(query: string): Promise<TjekApiOffer[]> {
@@ -92,6 +92,14 @@ async function searchTjekOffers(query: string): Promise<TjekApiOffer[]> {
   return res.json();
 }
 
+function normalizeColor(hex: string | undefined): string {
+  if (!hex) return '#888888';
+  const c = hex.replace(/^#/, '');
+  // White/near-white colors are invisible on white cards — use a neutral dark instead
+  if (['ffffff', 'fff', 'fefefe', 'fafafa'].includes(c.toLowerCase())) return '#333333';
+  return `#${c}`;
+}
+
 function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer {
   return {
     id: offer.id,
@@ -102,7 +110,7 @@ function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer
     currency: offer.pricing?.currency || 'NOK',
     imageUrl: offer.images?.zoom || null,
     store: offer.branding?.name || 'Unknown',
-    storeColor: offer.branding?.color || '#888888',
+    storeColor: normalizeColor(offer.branding?.pageflip?.color || offer.branding?.color),
     storeLogo: offer.branding?.pageflip?.logo || '',
     runTill: offer.run_till || '',
     matchedIngredient,
