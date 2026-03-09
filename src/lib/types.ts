@@ -22,6 +22,8 @@ export interface TjekOffer {
   runTill: string;
   matchedIngredient: string;
   flyerUrl: string | null;
+  quantityLabel: string | null;
+  unitPrice: string | null;
 }
 
 export interface StoreRecommendation {

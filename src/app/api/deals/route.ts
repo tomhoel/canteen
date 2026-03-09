@@ -82,6 +82,11 @@ interface TjekApiOffer {
   heading: string;
   description: string;
   pricing: { price: number; pre_price: number | null; currency: string };
+  quantity: {
+    unit: { symbol: string; si: { symbol: string; factor: number } };
+    size: { from: number; to: number };
+    pieces: { from: number; to: number };
+  } | null;
   images: { zoom: string } | null;
   run_till: string;
   branding: { name: string; color: string; pageflip: { logo: string; color: string } };
@@ -120,13 +125,59 @@ function normalizeColor(hex: string | undefined): string {
   return `#${c}`;
 }
 
+// Parse "Førpris 36,90" or "Førpris: 43,90" or "Førpris fra 345,00" from description
+function parsePrePriceFromDesc(desc: string): number | null {
+  const match = desc.match(/[Ff]ørpris:?\s*(?:fra\s+)?(\d+[.,]\d{2})/);
+  if (match) return parseFloat(match[1].replace(',', '.'));
+  return null;
+}
+
+// Build a human-readable quantity label like "400g", "4×125g", "1 kg"
+function buildQuantityLabel(qty: TjekApiOffer['quantity']): string | null {
+  if (!qty) return null;
+  const unit = qty.unit?.symbol;
+  const size = qty.size;
+  const pieces = qty.pieces;
+  if (!unit || unit === 'pcs') return null;
+
+  const sizeVal = size?.from ?? 0;
+  if (sizeVal <= 0) return null;
+
+  const piecesVal = pieces?.from ?? 1;
+  if (piecesVal > 1) {
+    return `${piecesVal}\u00D7${sizeVal}${unit}`;
+  }
+  return `${sizeVal}${unit}`;
+}
+
+// Extract per-kg/per-l price from description like "199,75 pr. kg", "300,00/KG", "Pr kg 198,00"
+function parseUnitPrice(desc: string): string | null {
+  // "199,75 pr. kg" or "300,00/kg" pattern
+  const match = desc.match(/(\d+[.,]\d{2})\s*(?:pr\.?\s*|\/)(kg|l)\b/i);
+  if (match) {
+    const price = match[1].replace('.', ',');
+    return `${price}/${match[2].toLowerCase()}`;
+  }
+  // "Pr kg 198,00" pattern (unit before price)
+  const match2 = desc.match(/[Pp]r\.?\s*(kg|l)\s+(\d+[.,]\d{2})/i);
+  if (match2) {
+    const price = match2[2].replace('.', ',');
+    return `${price}/${match2[1].toLowerCase()}`;
+  }
+  return null;
+}
+
 function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer {
+  const desc = offer.description || '';
+  const structuredPrePrice = offer.pricing?.pre_price ?? null;
+  const parsedPrePrice = structuredPrePrice ?? parsePrePriceFromDesc(desc);
+
   return {
     id: offer.id,
     heading: offer.heading,
-    description: offer.description || '',
+    description: desc,
     price: offer.pricing?.price ?? 0,
-    prePrice: offer.pricing?.pre_price ?? null,
+    prePrice: parsedPrePrice,
     currency: offer.pricing?.currency || 'NOK',
     imageUrl: offer.images?.zoom || null,
     store: offer.branding?.name || 'Unknown',
@@ -135,6 +186,8 @@ function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer
     runTill: offer.run_till || '',
     matchedIngredient,
     flyerUrl: `https://etilbudsavis.no/offers/${offer.id}`,
+    quantityLabel: buildQuantityLabel(offer.quantity),
+    unitPrice: parseUnitPrice(desc),
   };
 }
 
