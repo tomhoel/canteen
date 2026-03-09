@@ -64,13 +64,21 @@ Return ONLY valid JSON with this exact structure:
   "prepTime": "15 min",
   "cookTime": "25 min",
   "ingredients": [
-    { "amount": "4", "unit": "fillets", "item": "salmon" }
+    { "amount": "4", "unit": "fillets", "item": "Salmon" }
   ],
   "steps": ["Step 1 instruction...", "Step 2 instruction..."],
   "tip": "Optional helpful chef tip"
 }
 
-Guidelines:
+CRITICAL rules for the "item" field in ingredients:
+- Use ONLY the simple base ingredient name in Title Case English, even if the recipe text is Norwegian
+- Examples: "Chicken Breast", "Olive Oil", "Garlic", "Onions", "Tomatoes", "Basil", "Parmesan", "Butter", "Flour", "Rice", "Soy Sauce", "Coconut Milk", "Salmon", "Lemon", "Spinach", "Cream Cheese"
+- NEVER include preparation words like "fresh", "chopped", "diced", "minced", "halved", "pitted", "sliced", "grated", "melted" in the item field
+- NEVER include descriptions like "to taste", "for garnish", "optional" in the item field
+- Put preparation details (chopped, diced, sliced, etc.) into the "unit" field instead. Example: { "amount": "2", "unit": "diced", "item": "Onions" }
+- Keep item names to 1-3 words maximum
+
+Other guidelines:
 - Keep it simple and achievable for a home cook
 - Use metric measurements
 - 4 servings default
