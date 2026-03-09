@@ -101,6 +101,9 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
                           )}
                         </div>
                         <span className="deals-card-heading">{deal.heading}</span>
+                        {deal.quantityLabel && (
+                          <span className="deals-card-qty">{deal.quantityLabel}{deal.unitPrice ? ` \u00B7 ${deal.unitPrice}` : ""}</span>
+                        )}
                         <div className="deals-card-price-row">
                           <span className="deals-card-price">{deal.price} kr</span>
                           {deal.prePrice && deal.prePrice > deal.price && (
@@ -112,6 +115,21 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
                         {deal.prePrice && deal.prePrice > deal.price && (
                           <span className="deals-card-pre-price">{deal.prePrice} kr</span>
                         )}
+                        {deal.runTill && (() => {
+                          const till = new Date(deal.runTill);
+                          const now = new Date();
+                          const daysLeft = Math.ceil((till.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          if (daysLeft < 0) return null;
+                          const dayNames = lang === "no"
+                            ? ["søn", "man", "tir", "ons", "tor", "fre", "lør"]
+                            : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                          const label = daysLeft <= 1
+                            ? (lang === "no" ? "Siste dag!" : "Last day!")
+                            : daysLeft <= 3
+                            ? (lang === "no" ? `Til ${dayNames[till.getDay()]}` : `Until ${dayNames[till.getDay()]}`)
+                            : null;
+                          return label ? <span className={`deals-card-expiry${daysLeft <= 1 ? " deals-card-expiry-urgent" : ""}`}>{label}</span> : null;
+                        })()}
                         {deal.flyerUrl && (
                           <span className="deals-card-flyer-link">
                             {lang === "no" ? "Se i kundeavis" : "View in flyer"} {"\u203A"}
