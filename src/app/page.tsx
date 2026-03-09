@@ -23,6 +23,7 @@ export default function Home() {
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState("");
   const [isVoting, setIsVoting] = useState(false);
+  const [voteSuccess, setVoteSuccess] = useState(false);
   const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; code: string }>>({});
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, string | { en: string; no: string }>>({});
   const [recipeModal, setRecipeModal] = useState<{ isOpen: boolean; dishName: string; canteenName: string; recipe: Recipe | null; isLoading: boolean; error: string | null }>({ isOpen: false, dishName: "", canteenName: "", recipe: null, isLoading: false, error: null });
@@ -403,6 +404,7 @@ export default function Home() {
     setVotedCanteen(canteenName);
     setHasVoted(true);
     setIsVoting(false);
+    setVoteSuccess(true);
   }, []);
 
   if (!menuData || !mounted) {
@@ -493,7 +495,7 @@ export default function Home() {
 
       {/* Action Sheet */}
       {actionSheet.isOpen && (() => {
-        const closeSheet = () => setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+        const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); setVoteSuccess(false); };
         return (
         <div className="action-sheet-overlay" onClick={closeSheet}>
           <div className="action-sheet" onClick={e => e.stopPropagation()}>
@@ -516,19 +518,38 @@ export default function Home() {
             </div>
 
             {/* Actions */}
+            {voteSuccess ? (
+              <div className="action-sheet-success">
+                <div className="vote-celebration">
+                  <span className="celebration-emoji celebration-1">&#x1F389;</span>
+                  <span className="celebration-emoji celebration-2">&#x2B50;</span>
+                  <span className="celebration-emoji celebration-3">&#x1F38A;</span>
+                  <span className="celebration-emoji celebration-4">&#x2728;</span>
+                  <span className="celebration-emoji celebration-5">&#x1F973;</span>
+                </div>
+                <div className="vote-success-check">&#x2714;</div>
+                <span className="vote-success-text">{lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}</span>
+                <span className="vote-success-sub">{actionSheet.canteenName}</span>
+              </div>
+            ) : (
             <div className="action-sheet-actions">
               {selectedDay === activeDayIndex && (
                 <button
-                  className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}`}
-                  disabled={hasVoted}
-                  onClick={() => { closeSheet(); handleVote(actionSheet.canteenName); }}
+                  className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}${isVoting ? " voting" : ""}`}
+                  disabled={hasVoted || isVoting}
+                  onClick={async () => {
+                    await handleVote(actionSheet.canteenName);
+                    setTimeout(closeSheet, 1500);
+                  }}
                 >
                   <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
-                    {hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
+                    {isVoting ? "\u23F3" : hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
                   </div>
                   <div className="action-sheet-btn-text">
                     <span className="action-sheet-btn-label">
-                      {hasVoted
+                      {isVoting
+                        ? (lang === "no" ? "Stemmer..." : "Voting...")
+                        : hasVoted
                         ? (lang === "no" ? "Allerede stemt" : "Already voted")
                         : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
                     </span>
@@ -538,7 +559,7 @@ export default function Home() {
                         : (lang === "no" ? "Vis at du spiser her i dag" : "Show you\u2019re eating here today")}
                     </span>
                   </div>
-                  {!hasVoted && <span className="action-sheet-btn-arrow">&#x203A;</span>}
+                  {!hasVoted && !isVoting && <span className="action-sheet-btn-arrow">&#x203A;</span>}
                 </button>
               )}
               <button
@@ -553,6 +574,7 @@ export default function Home() {
                 <span className="action-sheet-btn-arrow">&#x203A;</span>
               </button>
             </div>
+            )}
           </div>
         </div>
         );

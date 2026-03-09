@@ -2120,6 +2120,104 @@ body {
   background: linear-gradient(135deg, #fdf3e6 0%, #fcecd8 100%);
 }
 
+/* Vote success celebration */
+.action-sheet-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 16px 24px;
+  position: relative;
+  overflow: hidden;
+  animation: successFadeIn 0.3s var(--smooth) both;
+}
+
+@keyframes successFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.vote-celebration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.celebration-emoji {
+  position: absolute;
+  font-size: 1.4rem;
+  animation: emojiFloat 1.4s var(--smooth) both;
+  opacity: 0;
+}
+
+.celebration-1 { left: 15%; top: 60%; animation-delay: 0s; }
+.celebration-2 { right: 18%; top: 50%; animation-delay: 0.1s; }
+.celebration-3 { left: 30%; top: 70%; animation-delay: 0.15s; }
+.celebration-4 { right: 30%; top: 65%; animation-delay: 0.2s; }
+.celebration-5 { left: 50%; top: 55%; animation-delay: 0.08s; transform: translateX(-50%); }
+
+@keyframes emojiFloat {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.5); }
+  20%  { opacity: 1; transform: translateY(-20px) scale(1.1); }
+  60%  { opacity: 1; transform: translateY(-40px) scale(1); }
+  100% { opacity: 0; transform: translateY(-65px) scale(0.7); }
+}
+
+.vote-success-check {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a9e55 0%, #3d8b47 100%);
+  color: white;
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: checkPop 0.5s var(--spring) both;
+  box-shadow: 0 4px 20px rgba(74, 158, 85, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes checkPop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.vote-success-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  position: relative;
+  z-index: 1;
+  animation: successFadeIn 0.4s var(--smooth) 0.15s both;
+}
+
+.vote-success-sub {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--accent-orange);
+  position: relative;
+  z-index: 1;
+  animation: successFadeIn 0.4s var(--smooth) 0.25s both;
+}
+
+/* Voting in progress state */
+.action-sheet-vote.voting {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.action-sheet-vote.voting .action-sheet-icon-vote {
+  animation: votePulse 0.8s ease infinite;
+}
+
+@keyframes votePulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(0.92); }
+}
+
 @keyframes sheetSlideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
