@@ -1143,11 +1143,11 @@ body {
     display: none;
   }
 
-  /* Content - right of image */
+  /* Content - right of image, right padding clears the vote pip */
   .card-content {
     flex: 1;
     text-align: left;
-    padding: 0 2px 0 12px;
+    padding: 0 38px 0 12px;
     min-width: 0;
     align-self: center;
   }
