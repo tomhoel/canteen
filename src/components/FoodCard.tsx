@@ -10,7 +10,6 @@ interface FoodCardProps {
   activeDayIndex: number;
   voteCount: number;
   maxVotes: number;
-  totalVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
 }
@@ -23,7 +22,6 @@ export default function FoodCard({
   activeDayIndex,
   voteCount,
   maxVotes,
-  totalVotes,
   onImageClick,
   onCardClick,
 }: FoodCardProps) {
@@ -44,7 +42,6 @@ export default function FoodCard({
 
   const isVoteable = selectedDay === activeDayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
-  const voteShare = totalVotes > 0 ? voteCount / totalVotes : 0;
 
   return (
     <article
@@ -97,14 +94,17 @@ export default function FoodCard({
                 {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} &#x2728;
               </span>
             )}
+            {isVoteable && voteCount > 0 && (
+              <span className={`vote-pip${isLeader ? " leader" : ""}`}>{voteCount}</span>
+            )}
           </div>
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
         </div>
 
-        {(mainAllergens.length > 0 || (isVoteable && voteCount > 0)) && (
+        {mainAllergens.length > 0 && (
           <div className="dish-meta-row">
             <div className="allergens-row">
-              {mainAllergens.length > 0 && mainAllergens.map((a, aIdx) => {
+              {mainAllergens.map((a, aIdx) => {
                 const displayName = lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name;
                 return (
                 <span
@@ -121,14 +121,6 @@ export default function FoodCard({
                 </span>
                 );
               })}
-            </div>
-            <div className="info-badges">
-              {isVoteable && voteCount > 0 && (
-                <div className={`vote-badge${isLeader ? " leader" : ""} vote-badge-pop`}>
-                  {isLeader && <span style={{ marginRight: "5px" }}>&#x1F3C6;</span>}
-                  {voteCount} {lang === "no" ? (voteCount === 1 ? "stemme" : "stemmer") : (voteCount === 1 ? "vote" : "votes")}
-                </div>
-              )}
             </div>
           </div>
         )}
