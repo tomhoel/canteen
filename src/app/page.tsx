@@ -624,16 +624,27 @@ export default function Home() {
                     <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
                     <ul className="recipe-ingredient-list">
                       {recipeModal.recipe.ingredients.map((ing, i) => {
-                        const imgName = encodeURIComponent(ing.item.trim().split(",")[0].split("(")[0].trim());
+                        const clean = ing.item.trim().split(",")[0].split("(")[0].trim();
+                        const mealDbName = encodeURIComponent(clean);
+                        const spoonName = clean.toLowerCase().replace(/\s+/g, "-");
                         return (
                         <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 50}ms` }}>
                           <div className="recipe-ingredient-img-wrap">
                             <img
-                              src={`https://www.themealdb.com/images/ingredients/${imgName}-Small.png`}
+                              src={`https://www.themealdb.com/images/ingredients/${mealDbName}-Small.png`}
                               alt=""
                               className="recipe-ingredient-img"
                               loading="lazy"
-                              onError={e => { (e.target as HTMLImageElement).style.display = "none"; e.currentTarget.parentElement!.classList.add("no-img"); }}
+                              onError={e => {
+                                const img = e.target as HTMLImageElement;
+                                if (!img.dataset.fallback) {
+                                  img.dataset.fallback = "1";
+                                  img.src = `https://img.spoonacular.com/ingredients_100x100/${spoonName}.jpg`;
+                                } else {
+                                  img.style.display = "none";
+                                  img.parentElement!.classList.add("no-img");
+                                }
+                              }}
                             />
                           </div>
                           <div className="recipe-ingredient-details">
