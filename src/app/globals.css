@@ -1459,9 +1459,9 @@ body {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 10px;
-  font-size: 9px;
-  font-weight: 800;
+  padding: 4px 10px 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
   color: #e8f0ff;
   background: rgba(50, 90, 160, 0.78);
   border-radius: 20px;
@@ -1474,8 +1474,8 @@ body {
 }
 
 .vote-pip-icon {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   opacity: 0.8;
 }
 
@@ -1496,13 +1496,13 @@ body {
 @media (max-width: 768px) {
   .vote-pip {
     bottom: -2px;
-    font-size: 8px;
-    padding: 2px 7px;
+    font-size: 10px;
+    padding: 3px 9px 3px 7px;
     gap: 2px;
   }
   .vote-pip-icon {
-    width: 9px;
-    height: 9px;
+    width: 11px;
+    height: 11px;
   }
 }
 
