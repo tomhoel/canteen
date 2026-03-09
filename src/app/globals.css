@@ -1503,27 +1503,12 @@ body {
     left: 50%;
     transform: translateX(-50%);
     font-size: 10px;
-    font-weight: 800;
     padding: 3px 9px 3px 7px;
     gap: 2px;
-    color: #e8f0ff;
-    background: rgba(50, 90, 160, 0.78);
-    border: none;
-    box-shadow: none;
-    letter-spacing: 0.3px;
-  }
-  .vote-pip.leader {
-    color: #fff5e0;
-    background: rgba(180, 110, 20, 0.78);
-    border: none;
   }
   .vote-pip-icon {
     width: 11px;
     height: 11px;
-    opacity: 0.8;
-  }
-  .vote-pip.leader .vote-pip-icon {
-    opacity: 0.9;
   }
 }
 
