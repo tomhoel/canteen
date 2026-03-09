@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ALLERGEN_COLORS } from "@/lib/constants";
+import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 
 interface FoodCardProps {
@@ -104,7 +104,9 @@ export default function FoodCard({
         {(mainAllergens.length > 0 || (isVoteable && voteCount > 0)) && (
           <div className="dish-meta-row">
             <div className="allergens-row">
-              {mainAllergens.length > 0 && mainAllergens.map((a, aIdx) => (
+              {mainAllergens.length > 0 && mainAllergens.map((a, aIdx) => {
+                const displayName = lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name;
+                return (
                 <span
                   key={a.id}
                   className="allergen-chip"
@@ -115,9 +117,10 @@ export default function FoodCard({
                     animationDelay: `${aIdx * 50}ms`,
                   }}
                 >
-                  {a.name}
+                  {displayName}
                 </span>
-              ))}
+                );
+              })}
             </div>
             <div className="info-badges">
               {isVoteable && voteCount > 0 && (
@@ -151,7 +154,7 @@ export default function FoodCard({
             <div key={idx} className="side-dish-item">
               <span className="side-dish-text">{item.dish}</span>
               {item.allergens.length > 0 && (
-                <span className="side-allergens">{item.allergens.map(a => a.name.charAt(0)).join("")}</span>
+                <span className="side-allergens">{item.allergens.map(a => (lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name).charAt(0)).join("")}</span>
               )}
             </div>
           )) : (
