@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { Redis } from '@upstash/redis';
-import type { RecipeIngredient, TjekOffer, StoreRecommendation, DealsResponse } from '@/lib/types';
+import type { RecipeIngredient, ProductOffer, StoreRecommendation, DealsResponse } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,13 +10,55 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-const NORWEGIAN_DEALER_IDS = 'faa0Ym,257bxm,4333pm,80742m,c062vm,5b11sm,b3e8Fm,68baam,de79dm,f5d5lm,51dawm';
+const KASSAL_API_BASE = 'https://kassal.app/api/v1';
+
+const STORE_COLORS: Record<string, string> = {
+  KIWI: '#6a9c2f',
+  REMA_1000: '#004990',
+  MENY_NO: '#c41230',
+  SPAR_NO: '#e31e2d',
+  JOKER_NO: '#d52b1e',
+  BUNNPRIS: '#0053a0',
+  COOP_NO: '#003ea0',
+  COOP_PRIX: '#ee1c25',
+  COOP_EXTRA: '#003ea0',
+  COOP_MEGA: '#003ea0',
+  COOP_OBS: '#003ea0',
+  COOP_MARKED: '#003ea0',
+  MATKROKEN: '#003ea0',
+  ODA_NO: '#131313',
+  EUROPRIS_NO: '#005ca9',
+  NAERBUTIKKEN: '#d4282d',
+  HOLDBART: '#1a1a2e',
+  HAVARISTEN: '#b22222',
+  FUDI: '#ff6b35',
+  ENGROSSNETT_NO: '#333333',
+};
 
 interface GeminiIngredient {
   ingredient: string;
   searchTerms: string[];
   priority: number;
   isKeyIngredient: boolean;
+}
+
+interface KassalApiProduct {
+  id: number;
+  name: string;
+  brand: string | null;
+  ean: string | null;
+  url: string | null;
+  image: string | null;
+  current_price: number | null;
+  current_unit_price: number | null;
+  weight: number | null;
+  weight_unit: string | null;
+  store: {
+    name: string;
+    code: string;
+    url: string | null;
+    logo: string | null;
+  } | null;
 }
 
 function getWeekNumber(): number {
@@ -27,7 +69,7 @@ function getWeekNumber(): number {
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
-async function rankIngredients(ingredients: RecipeIngredient[], dishName: string, lang: 'no' | 'en'): Promise<GeminiIngredient[]> {
+async function rankIngredients(ingredients: RecipeIngredient[], dishName: string): Promise<GeminiIngredient[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
@@ -39,9 +81,9 @@ async function rankIngredients(ingredients: RecipeIngredient[], dishName: string
 
 ${ingredientList}
 
-Rank the ingredients by shopping importance for finding grocery deals. Focus on ingredients that:
+Rank the ingredients by shopping importance for finding the best grocery prices. Focus on ingredients that:
 1. Are expensive (proteins, cheese, specialty items)
-2. Are frequently on sale at Norwegian grocery stores
+2. Have significant price variation between stores
 3. Define the dish (key ingredients)
 
 Skip cheap basics that everyone already has: salt, pepper, oil, water, sugar, flour, butter, garlic, onion.
@@ -52,13 +94,13 @@ Return ONLY a JSON array (max 6 items, minimum 2) sorted by priority:
 ]
 
 Rules for searchTerms — THIS IS CRITICAL:
-- These terms are used to search a Norwegian grocery flyer database (eTilbudsavis/Tjek)
-- Use the EXACT product name as it appears on a grocery store shelf or flyer, in Norwegian
+- These terms are used to search a Norwegian grocery product database (Kassal.app)
+- Use the EXACT product name as it appears on a grocery store shelf, in Norwegian
 - Be SPECIFIC to the actual product, not a general food category
-- Good examples: "laksfilet" (not just "laks"), "kyllingfilet" (not just "kylling"), "kjøttdeig" (not "kjøtt"), "matfløte" (not "fløte"), "basmatiris" (not "ris"), "rødløk" (not "løk"), "hermetiske tomater" (not "tomat")
-- BAD examples: "ris" (matches rice pudding, protein bowls), "paprika" (matches paprika-flavored chips), "tomat" (matches mackerel in tomato sauce)
-- Include 2-3 variants per ingredient: a specific term AND a broader product term
-  Example for rice: ["basmatiris", "jasminris", "ris"] — specific first, broad last
+- Good examples: "kyllingfilet" (not just "kylling"), "kjøttdeig" (not "kjøtt"), "matfløte" (not "fløte"), "basmatiris" (not "ris"), "hermetiske tomater" (not "tomat")
+- BAD examples: "ris" (matches rice pudding, protein bowls), "tomat" (matches ketchup, sauces)
+- Include 2-3 variants: a specific term AND a broader product term
+  Example for rice: ["basmatiris", "jasminris", "ris"]
   Example for cream: ["matfløte", "kremfløte", "fløte"]
 - Use lowercase
 - 2-3 search terms per ingredient
@@ -66,7 +108,7 @@ Rules for searchTerms — THIS IS CRITICAL:
 Mark isKeyIngredient=true for the 2-3 ingredients that define the dish.`;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3.1-flash-lite-preview',
+    model: 'gemini-2.5-flash',
     contents: { parts: [{ text: prompt }] },
     config: { responseMimeType: 'application/json' },
   });
@@ -77,123 +119,63 @@ Mark isKeyIngredient=true for the 2-3 ingredients that define the dish.`;
   return JSON.parse(text) as GeminiIngredient[];
 }
 
-interface TjekApiOffer {
-  id: string;
-  heading: string;
-  description: string;
-  pricing: { price: number; pre_price: number | null; currency: string };
-  quantity: {
-    unit: { symbol: string; si: { symbol: string; factor: number } };
-    size: { from: number; to: number };
-    pieces: { from: number; to: number };
-  } | null;
-  images: { zoom: string } | null;
-  run_till: string;
-  branding: { name: string; color: string; pageflip: { logo: string; color: string } };
-}
+async function searchKassalProducts(query: string): Promise<KassalApiProduct[]> {
+  const apiKey = process.env.KASSAL_API_KEY;
+  if (!apiKey) throw new Error('KASSAL_API_KEY not configured');
 
-async function searchTjekOffers(query: string): Promise<TjekApiOffer[]> {
-  const url = `https://squid-api.tjek.com/v2/offers/search?query=${encodeURIComponent(query)}&dealer_ids=${NORWEGIAN_DEALER_IDS}&limit=12`;
+  const url = `${KASSAL_API_BASE}/products?search=${encodeURIComponent(query)}&size=60`;
 
   const res = await fetch(url, {
-    headers: { 'Accept': 'application/json' },
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Accept': 'application/json',
+    },
   });
 
   if (!res.ok) return [];
-  return res.json();
+  const json = await res.json();
+  return json.data || [];
 }
 
-// Filter out offers whose heading has nothing to do with the search terms.
-// The Tjek API searches across full flyer text, so "ris" matches protein bowls
-// that mention rice in their description, "paprika" matches paprika-flavored chips, etc.
-function isRelevantOffer(offer: TjekApiOffer, searchTerms: string[]): boolean {
-  const heading = offer.heading.toLowerCase();
-  const desc = (offer.description || '').toLowerCase();
-  const text = heading + ' ' + desc;
-  return searchTerms.some(term => {
-    const t = term.toLowerCase();
-    // Check if any search term appears as a word/substring in heading or description
-    return text.includes(t);
-  });
+function isRelevantProduct(product: KassalApiProduct, searchTerms: string[]): boolean {
+  const name = product.name.toLowerCase();
+  return searchTerms.some(term => name.includes(term.toLowerCase()));
 }
 
-function normalizeColor(hex: string | undefined): string {
-  if (!hex) return '#888888';
-  const c = hex.replace(/^#/, '');
-  // White/near-white colors are invisible on white cards — use a neutral dark instead
-  if (['ffffff', 'fff', 'fefefe', 'fafafa'].includes(c.toLowerCase())) return '#333333';
-  return `#${c}`;
+function buildWeightLabel(weight: number | null, unit: string | null): string | null {
+  if (!weight || !unit) return null;
+  if (unit === 'kg' && weight < 1) return `${Math.round(weight * 1000)}g`;
+  if (unit === 'kg') return `${weight}kg`;
+  return `${weight}${unit}`;
 }
 
-// Parse "Førpris 36,90" or "Førpris: 43,90" or "Førpris fra 345,00" from description
-function parsePrePriceFromDesc(desc: string): number | null {
-  const match = desc.match(/[Ff]ørpris:?\s*(?:fra\s+)?(\d+[.,]\d{2})/);
-  if (match) return parseFloat(match[1].replace(',', '.'));
-  return null;
+function getStoreColor(code: string): string {
+  return STORE_COLORS[code] || '#888888';
 }
 
-// Build a human-readable quantity label like "400g", "4×125g", "1 kg"
-function buildQuantityLabel(qty: TjekApiOffer['quantity']): string | null {
-  if (!qty) return null;
-  const unit = qty.unit?.symbol;
-  const size = qty.size;
-  const pieces = qty.pieces;
-  if (!unit || unit === 'pcs') return null;
-
-  const sizeVal = size?.from ?? 0;
-  if (sizeVal <= 0) return null;
-
-  const piecesVal = pieces?.from ?? 1;
-  if (piecesVal > 1) {
-    return `${piecesVal}\u00D7${sizeVal}${unit}`;
-  }
-  return `${sizeVal}${unit}`;
-}
-
-// Extract per-kg/per-l price from description like "199,75 pr. kg", "300,00/KG", "Pr kg 198,00"
-function parseUnitPrice(desc: string): string | null {
-  // "199,75 pr. kg" or "300,00/kg" pattern
-  const match = desc.match(/(\d+[.,]\d{2})\s*(?:pr\.?\s*|\/)(kg|l)\b/i);
-  if (match) {
-    const price = match[1].replace('.', ',');
-    return `${price}/${match[2].toLowerCase()}`;
-  }
-  // "Pr kg 198,00" pattern (unit before price)
-  const match2 = desc.match(/[Pp]r\.?\s*(kg|l)\s+(\d+[.,]\d{2})/i);
-  if (match2) {
-    const price = match2[2].replace('.', ',');
-    return `${price}/${match2[1].toLowerCase()}`;
-  }
-  return null;
-}
-
-function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer {
-  const desc = offer.description || '';
-  const structuredPrePrice = offer.pricing?.pre_price ?? null;
-  const parsedPrePrice = structuredPrePrice ?? parsePrePriceFromDesc(desc);
+function mapKassalProduct(product: KassalApiProduct, matchedIngredient: string): ProductOffer | null {
+  if (!product.current_price || !product.store) return null;
 
   return {
-    id: offer.id,
-    heading: offer.heading,
-    description: desc,
-    price: offer.pricing?.price ?? 0,
-    prePrice: parsedPrePrice,
-    currency: offer.pricing?.currency || 'NOK',
-    imageUrl: offer.images?.zoom || null,
-    store: offer.branding?.name || 'Unknown',
-    storeColor: normalizeColor(offer.branding?.pageflip?.color || offer.branding?.color),
-    storeLogo: offer.branding?.pageflip?.logo || '',
-    runTill: offer.run_till || '',
+    id: product.id.toString(),
+    name: product.name,
+    brand: product.brand,
+    price: product.current_price,
+    unitPrice: product.current_unit_price,
+    imageUrl: product.image,
+    store: product.store.name,
+    storeCode: product.store.code,
+    storeColor: getStoreColor(product.store.code),
+    storeLogo: product.store.logo || '',
     matchedIngredient,
-    flyerUrl: `https://etilbudsavis.no/offers/${offer.id}`,
-    quantityLabel: buildQuantityLabel(offer.quantity),
-    unitPrice: parseUnitPrice(desc),
+    productUrl: product.url || null,
+    weight: buildWeightLabel(product.weight, product.weight_unit),
   };
 }
 
-function buildRecommendation(allDeals: TjekOffer[], keyIngredients: string[], allSearchedIngredients: string[]): DealsResponse {
-  // Group deals by store
-  const storeMap = new Map<string, TjekOffer[]>();
+function buildRecommendation(allDeals: ProductOffer[], keyIngredients: string[], allSearchedIngredients: string[]): DealsResponse {
+  // Group by store
+  const storeMap = new Map<string, ProductOffer[]>();
   for (const deal of allDeals) {
     const existing = storeMap.get(deal.store) || [];
     existing.push(deal);
@@ -203,8 +185,8 @@ function buildRecommendation(allDeals: TjekOffer[], keyIngredients: string[], al
   // Build store recommendations
   const storeRecs: StoreRecommendation[] = [];
   for (const [store, deals] of storeMap) {
-    // Pick cheapest deal per ingredient for this store
-    const bestPerIngredient = new Map<string, TjekOffer>();
+    // Pick cheapest product per ingredient for this store
+    const bestPerIngredient = new Map<string, ProductOffer>();
     for (const deal of deals) {
       const existing = bestPerIngredient.get(deal.matchedIngredient);
       if (!existing || deal.price < existing.price) {
@@ -261,7 +243,7 @@ export async function POST(request: NextRequest) {
 
   // Check Redis cache
   const weekNum = getWeekNumber();
-  const cacheKey = `deals:wk${weekNum}:${dishName}`;
+  const cacheKey = `prices:wk${weekNum}:${dishName}`;
 
   try {
     const cached = await redis.get(cacheKey);
@@ -274,25 +256,26 @@ export async function POST(request: NextRequest) {
 
   try {
     // Step 1: Rank ingredients with Gemini
-    const ranked = await rankIngredients(ingredients as RecipeIngredient[], dishName, lang as 'no' | 'en');
+    const ranked = await rankIngredients(ingredients as RecipeIngredient[], dishName);
 
     const keyIngredients = ranked.filter(r => r.isKeyIngredient).map(r => r.ingredient);
 
-    // Step 2: Search Tjek API in parallel for each ingredient
-    const allDeals: TjekOffer[] = [];
+    // Step 2: Search Kassal.app in parallel for each ingredient
+    const allDeals: ProductOffer[] = [];
     const searchPromises = ranked.map(async (ing) => {
-      const results: TjekOffer[] = [];
+      const results: ProductOffer[] = [];
       // Search all terms in parallel for this ingredient
       const termResults = await Promise.all(
-        ing.searchTerms.map(term => searchTjekOffers(term))
+        ing.searchTerms.map(term => searchKassalProducts(term))
       );
-      // Deduplicate by offer ID + filter irrelevant results
-      const seen = new Set<string>();
-      for (const offers of termResults) {
-        for (const offer of offers) {
-          if (!seen.has(offer.id) && isRelevantOffer(offer, ing.searchTerms)) {
-            seen.add(offer.id);
-            results.push(mapTjekOffer(offer, ing.ingredient));
+      // Deduplicate by product ID + filter irrelevant results
+      const seen = new Set<number>();
+      for (const products of termResults) {
+        for (const product of products) {
+          if (!seen.has(product.id) && isRelevantProduct(product, ing.searchTerms)) {
+            seen.add(product.id);
+            const mapped = mapKassalProduct(product, ing.ingredient);
+            if (mapped) results.push(mapped);
           }
         }
       }
@@ -317,7 +300,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Deals search failed:', error);
-    return NextResponse.json({ error: 'Failed to find deals' }, { status: 500 });
+    console.error('Price search failed:', error);
+    return NextResponse.json({ error: 'Failed to find prices' }, { status: 500 });
   }
 }

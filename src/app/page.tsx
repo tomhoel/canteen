@@ -131,7 +131,7 @@ export default function Home() {
 
   const handleDealsClick = useCallback(async (dishName: string, recipe: Recipe) => {
     // Check localStorage cache
-    const cacheKey = `deals_${dishName}`;
+    const cacheKey = `deals_v2_${dishName}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -156,7 +156,7 @@ export default function Home() {
       localStorage.setItem(cacheKey, JSON.stringify(deals));
       setDealsView(prev => ({ ...prev, deals, isLoading: false }));
     } catch {
-      setDealsView(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke finne tilbud' : 'Could not find deals' }));
+      setDealsView(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke finne priser' : 'Could not find prices' }));
     }
   }, [lang]);
 
@@ -639,7 +639,7 @@ export default function Home() {
                 {dealsView.isLoading && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji deals-loading-cart">{"\uD83D\uDED2"}</span>
-                    <span className="recipe-loading-text">{lang === "no" ? "S\u00F8ker etter tilbud..." : "Searching for deals..."}</span>
+                    <span className="recipe-loading-text">{lang === "no" ? "Sammenligner priser..." : "Comparing prices..."}</span>
                   </div>
                 )}
 
@@ -747,8 +747,8 @@ export default function Home() {
                         >
                           <span className="deals-find-icon">{"\uD83D\uDED2"}</span>
                           <span className="deals-find-text">
-                            <span className="deals-find-label">{lang === "no" ? "Finn tilbud" : "Find deals"}</span>
-                            <span className="deals-find-sub">{lang === "no" ? "Se beste priser p\u00E5 ingrediensene" : "See best prices on ingredients"}</span>
+                            <span className="deals-find-label">{lang === "no" ? "Sammenlign priser" : "Compare prices"}</span>
+                            <span className="deals-find-sub">{lang === "no" ? "Finn billigste butikk for ingrediensene" : "Find the cheapest store for ingredients"}</span>
                           </span>
                           <span className="deals-find-arrow">{"\u203A"}</span>
                         </button>

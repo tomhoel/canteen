@@ -3144,15 +3144,6 @@ body {
   color: var(--accent-orange);
 }
 
-.deals-card-savings {
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
-  background: var(--accent-coral);
-  padding: 1px 6px;
-  border-radius: 8px;
-}
-
 .deals-card-qty {
   font-size: 10px;
   font-weight: 600;
@@ -3160,22 +3151,10 @@ body {
   letter-spacing: 0.2px;
 }
 
-.deals-card-pre-price {
-  font-size: 11px;
+.deals-card-brand {
+  font-size: 10px;
   color: var(--text-muted);
-  text-decoration: line-through;
   font-weight: 500;
-}
-
-.deals-card-expiry {
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-
-.deals-card-expiry-urgent {
-  color: var(--accent-coral);
 }
 
 a.deals-card-link {
