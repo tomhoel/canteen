@@ -114,3 +114,23 @@ Other guidelines:
     return NextResponse.json({ error: 'Failed to generate recipe' }, { status: 500 });
   }
 }
+
+// Temporary: clear all cached recipes
+export async function DELETE() {
+  try {
+    let cursor = '0';
+    let deleted = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, { match: 'recipe:*', count: 100 }) as [string, string[]];
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        deleted += keys.length;
+      }
+    } while (cursor !== '0');
+    return NextResponse.json({ deleted });
+  } catch (err) {
+    console.error('Cache clear error:', err);
+    return NextResponse.json({ error: 'Failed to clear cache' }, { status: 500 });
+  }
+}
