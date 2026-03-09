@@ -1090,25 +1090,24 @@ body {
     overscroll-behavior: none;
   }
 
-  /* Animated wrapper — fills parent, distributes space evenly between cards */
+  /* Animated wrapper — fills parent, distributes space to cards */
   .cards-animated-wrapper {
     min-height: 0;
     flex: 1;
     align-items: stretch;
-    justify-content: space-evenly;
   }
 
-  /* Card layout - horizontal, content-sized */
+  /* Card layout - horizontal, grows to fill viewport */
   .food-card {
     width: 100%;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-height: 0 !important;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    align-content: center;
-    padding: clamp(8px, 1.2dvh, 12px) 16px;
+    align-content: start;
+    padding: clamp(8px, 1.4dvh, 14px) 16px clamp(6px, 0.8dvh, 10px);
     border-radius: 18px;
     position: relative;
     overflow: visible;
