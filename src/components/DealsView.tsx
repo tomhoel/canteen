@@ -82,40 +82,54 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
             <div key={ingredient} className="deals-ingredient-group">
               <h4 className="deals-ingredient-title">{ingredient}</h4>
               <div className="deals-cards">
-                {ingredientDeals.map(deal => (
-                  <div
-                    key={deal.id}
-                    className={`deals-card${deal.store === recommendation.store ? " deals-card-recommended" : ""}`}
-                    style={deal.store === recommendation.store ? { borderColor: recommendation.storeColor + '40' } : undefined}
-                  >
-                    {deal.imageUrl && (
-                      <div className="deals-card-img-wrap">
-                        <img src={deal.imageUrl} alt={deal.heading} className="deals-card-img" loading="lazy" />
-                      </div>
-                    )}
-                    <div className="deals-card-content">
-                      <div className="deals-card-store-row">
-                        {deal.storeLogo && <img src={deal.storeLogo} alt="" className="deals-card-store-logo" />}
-                        <span className="deals-card-store" style={{ color: deal.storeColor }}>{deal.store}</span>
-                        {deal.store === recommendation.store && (
-                          <span className="deals-card-rec-badge">{"\u2605"}</span>
-                        )}
-                      </div>
-                      <span className="deals-card-heading">{deal.heading}</span>
-                      <div className="deals-card-price-row">
-                        <span className="deals-card-price">{deal.price} kr</span>
+                {ingredientDeals.map(deal => {
+                  const cardClass = `deals-card${deal.store === recommendation.store ? " deals-card-recommended" : ""}${deal.flyerUrl ? " deals-card-link" : ""}`;
+                  const cardStyle = deal.store === recommendation.store ? { borderColor: recommendation.storeColor + '40' } : undefined;
+                  const content = (
+                    <>
+                      {deal.imageUrl && (
+                        <div className="deals-card-img-wrap">
+                          <img src={deal.imageUrl} alt={deal.heading} className="deals-card-img" loading="lazy" />
+                        </div>
+                      )}
+                      <div className="deals-card-content">
+                        <div className="deals-card-store-row">
+                          {deal.storeLogo && <img src={deal.storeLogo} alt="" className="deals-card-store-logo" />}
+                          <span className="deals-card-store" style={{ color: deal.storeColor }}>{deal.store}</span>
+                          {deal.store === recommendation.store && (
+                            <span className="deals-card-rec-badge">{"\u2605"}</span>
+                          )}
+                        </div>
+                        <span className="deals-card-heading">{deal.heading}</span>
+                        <div className="deals-card-price-row">
+                          <span className="deals-card-price">{deal.price} kr</span>
+                          {deal.prePrice && deal.prePrice > deal.price && (
+                            <span className="deals-card-savings">
+                              -{Math.round(((deal.prePrice - deal.price) / deal.prePrice) * 100)}%
+                            </span>
+                          )}
+                        </div>
                         {deal.prePrice && deal.prePrice > deal.price && (
-                          <span className="deals-card-savings">
-                            -{Math.round(((deal.prePrice - deal.price) / deal.prePrice) * 100)}%
+                          <span className="deals-card-pre-price">{deal.prePrice} kr</span>
+                        )}
+                        {deal.flyerUrl && (
+                          <span className="deals-card-flyer-link">
+                            {lang === "no" ? "Se i kundeavis" : "View in flyer"} {"\u203A"}
                           </span>
                         )}
                       </div>
-                      {deal.prePrice && deal.prePrice > deal.price && (
-                        <span className="deals-card-pre-price">{deal.prePrice} kr</span>
-                      )}
+                    </>
+                  );
+                  return deal.flyerUrl ? (
+                    <a key={deal.id} href={deal.flyerUrl} target="_blank" rel="noopener noreferrer" className={cardClass} style={cardStyle}>
+                      {content}
+                    </a>
+                  ) : (
+                    <div key={deal.id} className={cardClass} style={cardStyle}>
+                      {content}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
