@@ -484,7 +484,7 @@ export default function Home() {
         canteenName={voteModal.canteenName}
         hasVoted={hasVoted}
         votedCanteen={votedCanteen}
-        canteenNames={sortedCanteens.map(([name]) => name)}
+        canteenNames={canteenDayData.filter(c => !c.isOutdated && !c.isAhead).map(c => c.canteenName)}
         votes={votes}
         maxVotes={maxVotes}
         lang={lang}
@@ -496,6 +496,8 @@ export default function Home() {
       {/* Action Sheet */}
       {actionSheet.isOpen && (() => {
         const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); setVoteSuccess(false); };
+        const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
+        const canVote = selectedDay === activeDayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
         return (
         <div className="action-sheet-overlay" onClick={closeSheet}>
           <div className="action-sheet" onClick={e => e.stopPropagation()}>
@@ -533,6 +535,7 @@ export default function Home() {
               </div>
             ) : (
             <div className="action-sheet-actions">
+              {canVote && (
               <button
                 className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}${isVoting ? " voting" : ""}`}
                 disabled={hasVoted || isVoting}
@@ -560,6 +563,7 @@ export default function Home() {
                 </div>
                 {!hasVoted && !isVoting && <span className="action-sheet-btn-arrow">&#x203A;</span>}
               </button>
+              )}
               <button
                 className="action-sheet-btn action-sheet-recipe"
                 onClick={() => { closeSheet(); handleRecipeClick(actionSheet.dishName, actionSheet.canteenName); }}
