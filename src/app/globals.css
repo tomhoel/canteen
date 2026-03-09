@@ -1083,7 +1083,7 @@ body {
     justify-content: center;
     align-items: stretch;
     gap: clamp(6px, 1dvh, 14px);
-    padding: calc(56px + env(safe-area-inset-top)) 10px calc(clamp(56px, 8dvh, 76px) + env(safe-area-inset-bottom));
+    padding: calc(64px + env(safe-area-inset-top)) 10px calc(clamp(62px, 9dvh, 82px) + env(safe-area-inset-bottom));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1107,7 +1107,7 @@ body {
     flex-wrap: wrap;
     align-items: center;
     align-content: center;
-    padding: clamp(8px, 1.4dvh, 18px) 16px;
+    padding: clamp(8px, 1.4dvh, 14px) 16px clamp(6px, 0.8dvh, 10px);
     border-radius: 18px;
     position: relative;
     overflow: visible;
