@@ -1106,8 +1106,8 @@ body {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    align-content: center;
-    padding: clamp(8px, 1.4dvh, 14px) 16px clamp(6px, 0.8dvh, 10px);
+    align-content: space-between;
+    padding: clamp(8px, 1.2dvh, 14px) 16px;
     border-radius: 18px;
     position: relative;
     overflow: visible;
@@ -1119,9 +1119,9 @@ body {
     left: auto;
     top: auto;
     transform: none;
-    width: clamp(120px, 17dvh, 200px);
-    height: clamp(120px, 17dvh, 200px);
-    margin: clamp(-22px, -2.5dvh, -12px) 0 clamp(-14px, -1.5dvh, -6px) -22px;
+    width: clamp(125px, 19dvh, 210px);
+    height: clamp(125px, 19dvh, 210px);
+    margin: clamp(-24px, -3dvh, -14px) 0 clamp(-16px, -2dvh, -8px) -22px;
     flex-shrink: 0;
     z-index: 10;
   }
