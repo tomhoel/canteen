@@ -22,34 +22,6 @@ async function getMenuVersion(): Promise<string> {
   }
 }
 
-export async function DELETE() {
-  try {
-    // Scan and delete all recipe:* and deals:* keys
-    let cursor = 0;
-    let deleted = 0;
-    do {
-      const [nextCursor, keys] = await redis.scan(cursor, { match: 'recipe:*', count: 100 });
-      cursor = typeof nextCursor === 'string' ? parseInt(nextCursor, 10) : nextCursor;
-      if (keys.length > 0) {
-        await Promise.all(keys.map(k => redis.del(k)));
-        deleted += keys.length;
-      }
-    } while (cursor !== 0);
-    let cursor2 = 0;
-    do {
-      const [nextCursor, keys] = await redis.scan(cursor2, { match: 'deals:*', count: 100 });
-      cursor2 = typeof nextCursor === 'string' ? parseInt(nextCursor, 10) : nextCursor;
-      if (keys.length > 0) {
-        await Promise.all(keys.map(k => redis.del(k)));
-        deleted += keys.length;
-      }
-    } while (cursor2 !== 0);
-    return NextResponse.json({ deleted });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
-}
-
 export async function POST(request: NextRequest) {
   const { dishName, lang } = await request.json();
 
