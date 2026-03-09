@@ -17,6 +17,27 @@ const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
 const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json');
 
+const EXPECTED_CANTEENS = ['Eat the street', 'Fresh4you', 'Flow'];
+
+/**
+ * Retry a function up to `maxRetries` times with exponential backoff.
+ */
+async function withRetry(fn, label, maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (attempt < maxRetries) {
+                const delay = 1000 * Math.pow(2, attempt);
+                console.log(`  ⟳ Retry ${attempt + 1}/${maxRetries} for "${label}" in ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
 /**
  * Extract main dish names per day for a canteen.
  * Returns { monday: "Chicken jalfrezi...", tuesday: "Cod with...", ... }
@@ -80,6 +101,59 @@ function findChanges(oldMenu, newMenu) {
     }
 
     return changes;
+}
+
+/**
+ * Validate scraped menu data before overwriting.
+ * Returns { valid: boolean, issues: string[] }
+ */
+function validateMenu(menu) {
+    const issues = [];
+
+    if (!menu || !menu.canteens) {
+        issues.push('Menu data is null or missing canteens object');
+        return { valid: false, issues };
+    }
+
+    const canteenNames = Object.keys(menu.canteens);
+    if (canteenNames.length === 0) {
+        issues.push('No canteens found in scraped data');
+        return { valid: false, issues };
+    }
+
+    for (const expected of EXPECTED_CANTEENS) {
+        if (!menu.canteens[expected]) {
+            issues.push(`Missing expected canteen: ${expected}`);
+        }
+    }
+
+    for (const [name, canteen] of Object.entries(menu.canteens)) {
+        if (!canteen.menu || canteen.menu.length === 0) {
+            issues.push(`${name}: No menu entries`);
+            continue;
+        }
+
+        let dishCount = 0;
+        for (const dayEntry of canteen.menu) {
+            const items = dayEntry?.en?.items || dayEntry?.no?.items || [];
+            dishCount += items.length;
+        }
+
+        if (dishCount === 0) {
+            issues.push(`${name}: Zero dishes across all days`);
+        }
+    }
+
+    // Allow partial data (some canteens missing) but not total failure
+    const hasSomeData = canteenNames.some(name => {
+        const canteen = menu.canteens[name];
+        const totalItems = (canteen.menu || []).reduce((sum, day) => {
+            return sum + (day?.en?.items?.length || 0) + (day?.no?.items?.length || 0);
+        }, 0);
+        return totalItems > 0;
+    });
+
+    return { valid: hasSomeData, issues };
 }
 
 // Path to master plate reference image for consistent plate style across all generations
@@ -147,11 +221,11 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
     }
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-3.1-flash-image-preview',
             contents: { parts },
             config: { responseModalities: ['Text', 'Image'], imageConfig: { imageSize: '512px' } },
-        });
+        }), `image: ${dishName}`);
 
         for (const part of response.candidates[0].content.parts) {
             if (part.inlineData) {
@@ -174,6 +248,7 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
 
 /**
  * Remove background for a single image using Sharp.
+ * Uses flood-fill from edges with an index-based queue for performance.
  */
 async function removeBgSingle(canteenName, day) {
     const sharp = require('sharp');
@@ -191,16 +266,19 @@ async function removeBgSingle(canteenName, day) {
         const { width, height, channels } = info;
         const totalPixels = width * height;
 
-        // Flood fill from edges
+        // Flood fill from edges using index-based queue (avoids O(n) shift)
         const visited = new Uint8Array(totalPixels);
         const isBg = new Uint8Array(totalPixels);
-        const queue = [];
+        const queue = new Int32Array(totalPixels);
+        let qHead = 0, qTail = 0;
 
-        for (let x = 0; x < width; x++) { queue.push(x); queue.push((height - 1) * width + x); }
-        for (let y = 1; y < height - 1; y++) { queue.push(y * width); queue.push(y * width + width - 1); }
+        const enqueue = (idx) => { queue[qTail++] = idx; };
 
-        while (queue.length > 0) {
-            const idx = queue.shift();
+        for (let x = 0; x < width; x++) { enqueue(x); enqueue((height - 1) * width + x); }
+        for (let y = 1; y < height - 1; y++) { enqueue(y * width); enqueue(y * width + width - 1); }
+
+        while (qHead < qTail) {
+            const idx = queue[qHead++];
             if (idx < 0 || idx >= totalPixels || visited[idx]) continue;
             visited[idx] = 1;
             const pi = idx * channels;
@@ -210,10 +288,10 @@ async function removeBgSingle(canteenName, day) {
             if (!(maxDiff < 50 && brightness <= 185)) continue;
             isBg[idx] = 1;
             const x = idx % width, y = Math.floor(idx / width);
-            if (x > 0) queue.push(idx - 1);
-            if (x < width - 1) queue.push(idx + 1);
-            if (y > 0) queue.push(idx - width);
-            if (y < height - 1) queue.push(idx + width);
+            if (x > 0) enqueue(idx - 1);
+            if (x < width - 1) enqueue(idx + 1);
+            if (y > 0) enqueue(idx - width);
+            if (y < height - 1) enqueue(idx + width);
         }
 
         // Keep largest blob
@@ -283,11 +361,11 @@ async function detectDishOrigin(dishName) {
     const promptText = `You are a food history expert. Identify the single country this dish most likely originated from. Always provide a best guess — never refuse, even for generic dishes. Use ingredients, cooking style, or cultural context as clues. If truly uncertain, pick the most plausible country. Dish: "${dishName}". Respond ONLY with raw JSON, no explanation: {"country":"Italy","code":"it"} where "code" is the ISO 3166-1 alpha-2 country code in lowercase.`;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
-        });
+        }), `origin: ${dishName}`);
         const text = response.candidates[0].content.parts[0].text;
         const parsed = JSON.parse(text);
         if (parsed.country && parsed.code) return parsed;
@@ -311,11 +389,11 @@ async function generateDishDescription(dishName) {
     const promptText = `Write a single short appetizing description (max 20 words) for this dish: "${dishName}". Be warm and inviting, mention a key flavor or texture. Provide it in both English and Norwegian. Respond ONLY with raw JSON: {"en":"English description","no":"Norwegian description"}`;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
-        });
+        }), `description: ${dishName}`);
         const text = response.candidates[0].content.parts[0].text.trim();
         const parsed = JSON.parse(text);
         if (parsed.en && parsed.no) return parsed;
@@ -360,7 +438,26 @@ async function main() {
         process.exit(1);
     }
 
+    // Step 2b: Validate scraped data
     const newMenu = JSON.parse(fs.readFileSync(MENU_PATH, 'utf8'));
+    const validation = validateMenu(newMenu);
+
+    if (validation.issues.length > 0) {
+        console.log('\n⚠️  Validation issues:');
+        for (const issue of validation.issues) {
+            console.log(`   - ${issue}`);
+        }
+    }
+
+    if (!validation.valid) {
+        console.error('\n❌ Scraped data failed validation — aborting to preserve existing menu');
+        if (oldMenu) {
+            fs.writeFileSync(MENU_PATH, JSON.stringify(oldMenu, null, 2));
+            console.log('   Restored previous menu.json');
+        }
+        process.exit(1);
+    }
+
     console.log(`\n📋 New menu: scraped ${newMenu.scrapedAt}`);
     for (const [name, data] of Object.entries(newMenu.canteens)) {
         console.log(`   ${name}: ${data.week}`);
@@ -444,6 +541,7 @@ async function main() {
     }
 
     let originsUpdated = false;
+    let originsGenerated = 0, originsFailed = 0;
     for (const dishName of allDishNames) {
         if (origins[dishName]) {
             console.log(`  ✓ cached: ${dishName}`);
@@ -453,7 +551,11 @@ async function main() {
         if (result) {
             origins[dishName] = result;
             originsUpdated = true;
+            originsGenerated++;
             console.log(`  🌍 ${result.country} (${result.code}) — ${dishName}`);
+        } else {
+            originsFailed++;
+            console.log(`  ✗ failed: ${dishName}`);
         }
         await new Promise(r => setTimeout(r, 500));
     }
@@ -461,6 +563,9 @@ async function main() {
     if (originsUpdated) {
         fs.writeFileSync(ORIGINS_PATH, JSON.stringify(origins, null, 2));
         console.log('  💾 Origins saved');
+    }
+    if (originsGenerated > 0 || originsFailed > 0) {
+        console.log(`  📊 Origins: ${originsGenerated} generated, ${originsFailed} failed, ${allDishNames.size - originsGenerated - originsFailed} cached`);
     } else {
         console.log('  ✓ All origins already cached');
     }
@@ -468,6 +573,7 @@ async function main() {
     // Step 6: Generate short descriptions for all dishes
     console.log('\n📝 Checking dish descriptions...');
     let descriptionsUpdated = false;
+    let descsGenerated = 0, descsFailed = 0;
     for (const dishName of allDishNames) {
         if (descriptions[dishName]) {
             console.log(`  ✓ cached: ${dishName.substring(0, 50)}`);
@@ -477,7 +583,11 @@ async function main() {
         if (desc) {
             descriptions[dishName] = desc;
             descriptionsUpdated = true;
-            console.log(`  📝 "${desc.substring(0, 60)}" — ${dishName.substring(0, 40)}`);
+            descsGenerated++;
+            console.log(`  📝 "${desc.en.substring(0, 60)}" — ${dishName.substring(0, 40)}`);
+        } else {
+            descsFailed++;
+            console.log(`  ✗ failed: ${dishName}`);
         }
         await new Promise(r => setTimeout(r, 500));
     }
@@ -485,9 +595,23 @@ async function main() {
     if (descriptionsUpdated) {
         fs.writeFileSync(DESCRIPTIONS_PATH, JSON.stringify(descriptions, null, 2));
         console.log('  💾 Descriptions saved');
+    }
+    if (descsGenerated > 0 || descsFailed > 0) {
+        console.log(`  📊 Descriptions: ${descsGenerated} generated, ${descsFailed} failed, ${allDishNames.size - descsGenerated - descsFailed} cached`);
     } else {
         console.log('  ✓ All descriptions already cached');
     }
+
+    // Final summary
+    console.log('\n' + '═'.repeat(60));
+    console.log('🏁 UPDATE COMPLETE');
+    console.log('═'.repeat(60));
+    console.log(`   Canteens: ${Object.keys(newMenu.canteens).length}`);
+    console.log(`   Dishes:   ${allDishNames.size}`);
+    if (originsFailed > 0 || descsFailed > 0) {
+        console.log(`   ⚠️  Failures: ${originsFailed} origins, ${descsFailed} descriptions`);
+    }
+    console.log('═'.repeat(60));
 }
 
 main().catch(console.error);

@@ -173,7 +173,7 @@ async function generateFoodImage(dishName, canteenName, dayName) {
     console.log(`  📸 Generating image for: ${dishName}...`);
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
+            model: 'gemini-3.1-flash-image-preview',
             contents: prompt,
             config: {
                 responseModalities: ['Text', 'Image'],
