@@ -42,7 +42,7 @@ export default function FoodCard({
     description,
   } = data;
 
-  const isVoteable = selectedDay === activeDayIndex;
+  const isVoteable = selectedDay === activeDayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
   const voteShare = totalVotes > 0 ? voteCount / totalVotes : 0;
 
