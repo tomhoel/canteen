@@ -97,13 +97,18 @@ Rules for searchTerms — THIS IS CRITICAL:
 - These terms are used to search a Norwegian grocery product database (Kassal.app)
 - Use the EXACT product name as it appears on a grocery store shelf, in Norwegian
 - Be SPECIFIC to the actual product, not a general food category
-- Good examples: "kyllingfilet" (not just "kylling"), "kjøttdeig" (not "kjøtt"), "matfløte" (not "fløte"), "basmatiris" (not "ris"), "hermetiske tomater" (not "tomat")
-- BAD examples: "ris" (matches rice pudding, protein bowls), "tomat" (matches ketchup, sauces)
-- Include 2-3 variants: a specific term AND a broader product term
-  Example for rice: ["basmatiris", "jasminris", "ris"]
-  Example for cream: ["matfløte", "kremfløte", "fløte"]
+- NEVER use short generic terms that match unrelated products. Every term must be specific enough to find the actual raw ingredient, not processed foods, baby food, or flavored snacks.
+- Good examples: "kyllingfilet" (not "kylling"), "kjøttdeig" (not "kjøtt"), "matfløte" (not "fløte"), "basmatiris" (not "ris"), "hermetiske tomater" (not "tomat"), "revet parmesan" (not "ost"), "frisk spinat" (not "spinat" alone)
+- BAD examples that return garbage: "ris" (baby food), "fløte" (ice cream), "ost" (cheese-flavored snacks), "laks" (baby food), "pasta" (baby food)
+- Provide 2-3 SPECIFIC variants. Do NOT include a broad fallback term.
+  Example for rice: ["basmatiris", "jasminris", "langkornet ris"]
+  Example for cream: ["matfløte", "kremfløte", "matfløte 18"]
+  Example for salmon: ["laksfilet", "laksefilet", "fersk laks"]
+  Example for chicken: ["kyllingfilet", "kyllingbryst", "kylling hel"]
+  Example for cheese: ["revet ost", "norvegia", "revet parmesan"]
+  Example for spinach: ["frisk spinat", "babyspinat", "spinat pose"]
 - Use lowercase
-- 2-3 search terms per ingredient
+- 2-3 search terms per ingredient, ALL specific
 
 Mark isKeyIngredient=true for the 2-3 ingredients that define the dish.`;
 
@@ -137,9 +142,34 @@ async function searchKassalProducts(query: string): Promise<KassalApiProduct[]> 
   return json.data || [];
 }
 
+// Baby food / irrelevant product patterns to exclude
+const EXCLUDE_PATTERNS = [
+  /\b\d+\s*mnd\b/i,          // "6mnd", "8 mnd" = baby food age labels
+  /\b\d+-\d+\s*år\b/i,       // "1-3år" = toddler food
+  /\bfra\s+\d+\s*mnd\b/i,    // "fra 6 mnd"
+  /\bbarnegrøt\b/i,           // baby porridge
+  /\bbarnemat\b/i,            // baby food
+  /\bsmoothie\b/i,            // smoothie pouches (often baby food)
+];
+
+const EXCLUDE_BRANDS = new Set([
+  'semper', 'hipp', 'nestlé', 'nestle', 'ella\'s kitchen',
+  'ellas kitchen', 'holle', 'kiddylicious',
+]);
+
 function isRelevantProduct(product: KassalApiProduct, searchTerms: string[]): boolean {
   const name = product.name.toLowerCase();
-  return searchTerms.some(term => name.includes(term.toLowerCase()));
+
+  // Must contain at least one search term
+  if (!searchTerms.some(term => name.includes(term.toLowerCase()))) return false;
+
+  // Exclude baby food by pattern
+  if (EXCLUDE_PATTERNS.some(p => p.test(product.name))) return false;
+
+  // Exclude known baby food brands
+  if (product.brand && EXCLUDE_BRANDS.has(product.brand.toLowerCase())) return false;
+
+  return true;
 }
 
 function buildWeightLabel(weight: number | null, unit: string | null): string | null {
