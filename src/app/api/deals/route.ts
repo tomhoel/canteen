@@ -85,8 +85,6 @@ interface TjekApiOffer {
   images: { zoom: string } | null;
   run_till: string;
   branding: { name: string; color: string; pageflip: { logo: string; color: string } };
-  catalog_id: string | null;
-  catalog_page: number | null;
 }
 
 async function searchTjekOffers(query: string): Promise<TjekApiOffer[]> {
@@ -122,12 +120,6 @@ function normalizeColor(hex: string | undefined): string {
   return `#${c}`;
 }
 
-function buildFlyerUrl(catalogId: string | null, catalogPage: number | null): string | null {
-  if (!catalogId) return null;
-  const page = catalogPage ?? 1;
-  return `https://etilbudsavis.no/publications/${catalogId}/pages/${page}`;
-}
-
 function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer {
   return {
     id: offer.id,
@@ -142,7 +134,7 @@ function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer
     storeLogo: offer.branding?.pageflip?.logo || '',
     runTill: offer.run_till || '',
     matchedIngredient,
-    flyerUrl: buildFlyerUrl(offer.catalog_id, offer.catalog_page),
+    flyerUrl: `https://etilbudsavis.no/offers/${offer.id}`,
   };
 }
 
