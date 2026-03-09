@@ -51,11 +51,17 @@ Return ONLY a JSON array (max 6 items, minimum 2) sorted by priority:
   { "ingredient": "Original ingredient name", "searchTerms": ["norwegian_term1", "norwegian_term2"], "priority": 1, "isKeyIngredient": true }
 ]
 
-Rules for searchTerms:
-- Use short Norwegian grocery words (1-2 words max)
-- Include common product variants (e.g. "laks" and "laksfilet" for salmon)
+Rules for searchTerms — THIS IS CRITICAL:
+- These terms are used to search a Norwegian grocery flyer database (eTilbudsavis/Tjek)
+- Use the EXACT product name as it appears on a grocery store shelf or flyer, in Norwegian
+- Be SPECIFIC to the actual product, not a general food category
+- Good examples: "laksfilet" (not just "laks"), "kyllingfilet" (not just "kylling"), "kjøttdeig" (not "kjøtt"), "matfløte" (not "fløte"), "basmatiris" (not "ris"), "rødløk" (not "løk"), "hermetiske tomater" (not "tomat")
+- BAD examples: "ris" (matches rice pudding, protein bowls), "paprika" (matches paprika-flavored chips), "tomat" (matches mackerel in tomato sauce)
+- Include 2-3 variants per ingredient: a specific term AND a broader product term
+  Example for rice: ["basmatiris", "jasminris", "ris"] — specific first, broad last
+  Example for cream: ["matfløte", "kremfløte", "fløte"]
 - Use lowercase
-- 1-3 search terms per ingredient
+- 2-3 search terms per ingredient
 
 Mark isKeyIngredient=true for the 2-3 ingredients that define the dish.`;
 
@@ -82,7 +88,7 @@ interface TjekApiOffer {
 }
 
 async function searchTjekOffers(query: string): Promise<TjekApiOffer[]> {
-  const url = `https://squid-api.tjek.com/v2/offers/search?query=${encodeURIComponent(query)}&dealer_ids=${NORWEGIAN_DEALER_IDS}&limit=4`;
+  const url = `https://squid-api.tjek.com/v2/offers/search?query=${encodeURIComponent(query)}&dealer_ids=${NORWEGIAN_DEALER_IDS}&limit=12`;
 
   const res = await fetch(url, {
     headers: { 'Accept': 'application/json' },
@@ -90,6 +96,20 @@ async function searchTjekOffers(query: string): Promise<TjekApiOffer[]> {
 
   if (!res.ok) return [];
   return res.json();
+}
+
+// Filter out offers whose heading has nothing to do with the search terms.
+// The Tjek API searches across full flyer text, so "ris" matches protein bowls
+// that mention rice in their description, "paprika" matches paprika-flavored chips, etc.
+function isRelevantOffer(offer: TjekApiOffer, searchTerms: string[]): boolean {
+  const heading = offer.heading.toLowerCase();
+  const desc = (offer.description || '').toLowerCase();
+  const text = heading + ' ' + desc;
+  return searchTerms.some(term => {
+    const t = term.toLowerCase();
+    // Check if any search term appears as a word/substring in heading or description
+    return text.includes(t);
+  });
 }
 
 function normalizeColor(hex: string | undefined): string {
@@ -117,7 +137,7 @@ function mapTjekOffer(offer: TjekApiOffer, matchedIngredient: string): TjekOffer
   };
 }
 
-function buildRecommendation(allDeals: TjekOffer[], keyIngredients: string[]): DealsResponse {
+function buildRecommendation(allDeals: TjekOffer[], keyIngredients: string[], allSearchedIngredients: string[]): DealsResponse {
   // Group deals by store
   const storeMap = new Map<string, TjekOffer[]>();
   for (const deal of allDeals) {
@@ -173,7 +193,7 @@ function buildRecommendation(allDeals: TjekOffer[], keyIngredients: string[]): D
   return {
     recommendation,
     allStores: storeRecs,
-    searchedIngredients: [...new Set(allDeals.map(d => d.matchedIngredient))],
+    searchedIngredients: allSearchedIngredients,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -212,11 +232,11 @@ export async function POST(request: NextRequest) {
       const termResults = await Promise.all(
         ing.searchTerms.map(term => searchTjekOffers(term))
       );
-      // Deduplicate by offer ID
+      // Deduplicate by offer ID + filter irrelevant results
       const seen = new Set<string>();
       for (const offers of termResults) {
         for (const offer of offers) {
-          if (!seen.has(offer.id)) {
+          if (!seen.has(offer.id) && isRelevantOffer(offer, ing.searchTerms)) {
             seen.add(offer.id);
             results.push(mapTjekOffer(offer, ing.ingredient));
           }
@@ -231,7 +251,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 3: Build recommendation
-    const response = buildRecommendation(allDeals, keyIngredients);
+    const allSearchedIngredients = ranked.map(r => r.ingredient);
+    const response = buildRecommendation(allDeals, keyIngredients, allSearchedIngredients);
 
     // Cache in Redis for 3 days
     try {
