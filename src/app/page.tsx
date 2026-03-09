@@ -521,7 +521,7 @@ export default function Home() {
                 <button
                   className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}`}
                   disabled={hasVoted}
-                  onClick={() => { closeSheet(); setVoteModal({ isOpen: true, canteenName: actionSheet.canteenName }); }}
+                  onClick={() => { closeSheet(); handleVote(actionSheet.canteenName); }}
                 >
                   <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
                     {hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
