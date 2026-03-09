@@ -22,23 +22,6 @@ async function getMenuVersion(): Promise<string> {
   }
 }
 
-export async function DELETE() {
-  try {
-    let deleted = 0;
-    for (const pattern of ['recipe:*', 'deals:*']) {
-      let cursor = 0;
-      do {
-        const [next, keys] = await redis.scan(cursor, { match: pattern, count: 100 });
-        cursor = typeof next === 'string' ? parseInt(next, 10) : next;
-        if (keys.length > 0) { await Promise.all(keys.map(k => redis.del(k))); deleted += keys.length; }
-      } while (cursor !== 0);
-    }
-    return NextResponse.json({ deleted });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
-}
-
 export async function POST(request: NextRequest) {
   const { dishName, lang } = await request.json();
 
