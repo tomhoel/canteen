@@ -1450,34 +1450,32 @@ body {
 }
 
 /* ─── Vote Feature ─── */
-.info-badges {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  flex-wrap: wrap;
-  align-items: stretch;
-}
-
-.info-badges .vote-badge {
-  display: flex;
-  align-items: center;
-}
-
-.vote-badge {
+.vote-pip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--accent-coral);
-  background: rgba(255, 107, 74, 0.08);
-  padding: 4px 10px;
-  border-radius: 20px;
+  justify-content: center;
+  font-size: 10px;
   font-weight: 600;
-  border: 1px solid rgba(255, 107, 74, 0.2);
+  color: var(--text-muted);
+  background: rgba(142, 142, 147, 0.1);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: -0.02em;
+  animation: votePipIn 0.3s ease both;
 }
 
-.vote-badge.vote-badge-pop {
-  animation: votePop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+.vote-pip.leader {
+  color: var(--accent-orange);
+  background: rgba(255, 149, 0, 0.1);
+}
+
+@keyframes votePipIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .food-card.voteable,
@@ -1587,34 +1585,6 @@ body {
   border: 1px solid rgba(255, 149, 0, 0.25);
 }
 
-.vote-badge.leader {
-  position: relative;
-  overflow: hidden;
-  background: rgba(255, 149, 0, 0.14);
-  color: var(--accent-orange);
-  border-color: rgba(255, 149, 0, 0.35);
-  font-weight: 700;
-}
-
-.vote-badge.leader::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    108deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.45) 50%,
-    transparent 100%
-  );
-  transform: translateX(-100%) skewX(-15deg);
-  animation: holoSweep 2.8s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes holoSweep {
-  0%, 30%  { transform: translateX(-100%) skewX(-15deg); }
-  70%, 100% { transform: translateX( 200%) skewX(-15deg); }
-}
 
 .vote-count-row.leader {
   background: rgba(255, 149, 0, 0.08);
@@ -1632,14 +1602,6 @@ body {
   font-size: clamp(12px, 2.5vw, 14px);
 }
 
-@media (max-width: 768px) {
-  .info-badges {
-    justify-content: flex-end;
-    margin: 0;
-    min-height: auto;
-    flex-shrink: 0;
-  }
-}
 
 /* ─── Dish Origin Stamp ─── */
 .origin-stamp {

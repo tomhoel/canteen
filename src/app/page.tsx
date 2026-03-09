@@ -288,7 +288,6 @@ export default function Home() {
   }, [menuData]);
 
   const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => votes[name] ?? 0)), [sortedCanteens, votes]);
-  const totalVotes = useMemo(() => sortedCanteens.reduce((sum, [name]) => sum + (votes[name] ?? 0), 0), [sortedCanteens, votes]);
 
   const currentWeek = useMemo(() => {
     const d = new Date();
@@ -450,7 +449,6 @@ export default function Home() {
               activeDayIndex={activeDayIndex}
               voteCount={votes[data.canteenName] ?? 0}
               maxVotes={maxVotes}
-              totalVotes={totalVotes}
               onImageClick={handleImageClick}
               onCardClick={handleCardClick}
             />
