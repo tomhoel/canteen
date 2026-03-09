@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
 import type { MenuData, CanteenData, Recipe } from "@/lib/types";
-import AllergenPanel from "@/components/AllergenPanel";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
@@ -14,7 +13,6 @@ export default function Home() {
   const [lang, setLang] = useState<"no" | "en">("no");
   const [selectedDay, setSelectedDay] = useState(0);
   const [todayIndex, setTodayIndex] = useState(-1);
-  const [allergenOpen, setAllergenOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   const [votes, setVotes] = useState<Record<string, number>>({});
@@ -366,12 +364,6 @@ export default function Home() {
     });
   }, [sortedCanteens, dayKey, lang, dishOrigins, dishDescriptions, currentWeek]);
 
-  const dayAllergens = useMemo(() => Array.from(new Map(
-    canteenDayData.flatMap(({ items }) => {
-      return items?.flatMap(i => i.allergens.map(a => [a.name, a])) || [];
-    })
-  ).values()).sort((a, b) => a.name.localeCompare(b.name)), [canteenDayData]);
-
   // #6 — Lightbox image click handler using canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
     const idx = canteenDayData.findIndex(c => c.canteenName === data.canteenName);
@@ -427,14 +419,6 @@ export default function Home() {
           <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("en")}>EN</button>
         </div>
       </header>
-
-      {/* #2 — Allergen Section (now visible on mobile too) */}
-      <AllergenPanel
-        dayAllergens={dayAllergens}
-        allergenOpen={allergenOpen}
-        lang={lang}
-        onToggle={() => setAllergenOpen(!allergenOpen)}
-      />
 
       {/* Cards */}
       <main className="cards-container" ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
