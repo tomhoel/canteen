@@ -623,12 +623,26 @@ export default function Home() {
                   <div className="recipe-ingredients">
                     <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
                     <ul className="recipe-ingredient-list">
-                      {recipeModal.recipe.ingredients.map((ing, i) => (
-                        <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 40}ms` }}>
-                          <span className="recipe-ingredient-amount">{scaleAmount(ing.amount)} {ing.unit}</span>
-                          <span className="recipe-ingredient-name">{ing.item}</span>
+                      {recipeModal.recipe.ingredients.map((ing, i) => {
+                        const imgName = encodeURIComponent(ing.item.trim().split(",")[0].split("(")[0].trim());
+                        return (
+                        <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 50}ms` }}>
+                          <div className="recipe-ingredient-img-wrap">
+                            <img
+                              src={`https://www.themealdb.com/images/ingredients/${imgName}-Small.png`}
+                              alt=""
+                              className="recipe-ingredient-img"
+                              loading="lazy"
+                              onError={e => { (e.target as HTMLImageElement).style.display = "none"; e.currentTarget.parentElement!.classList.add("no-img"); }}
+                            />
+                          </div>
+                          <div className="recipe-ingredient-details">
+                            <span className="recipe-ingredient-name">{ing.item}</span>
+                            <span className="recipe-ingredient-amount">{scaleAmount(ing.amount)} {ing.unit}</span>
+                          </div>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   </div>
                   <div className="recipe-steps">
