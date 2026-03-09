@@ -106,5 +106,21 @@
   "Turkey with feta, sun dry tomato and baked potato": {
     "country": "Greece",
     "code": "gr"
+  },
+  "Goulash with mashed potato": {
+    "country": "Hungary",
+    "code": "hu"
+  },
+  "Marinated pork loin with plum, baked potato": {
+    "country": "Denmark",
+    "code": "dk"
+  },
+  "Steam cod with mashed cellery root and leek oil": {
+    "country": "Norway",
+    "code": "no"
+  },
+  "Lemon baked chicken tight with whole grain rice": {
+    "country": "Greece",
+    "code": "gr"
   }
 }
