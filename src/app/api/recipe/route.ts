@@ -1,13 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { Redis } from '@upstash/redis';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+});
+
+async function getMenuVersion(): Promise<string> {
+  try {
+    const menuPath = path.join(process.cwd(), 'public', 'menu.json');
+    const raw = await fs.readFile(menuPath, 'utf-8');
+    const menu = JSON.parse(raw);
+    return menu.scrapedAt || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
 
 export async function POST(request: NextRequest) {
   const { dishName, lang } = await request.json();
 
   if (!dishName || !['no', 'en'].includes(lang)) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+
+  // Check Redis cache first
+  const menuVersion = await getMenuVersion();
+  const cacheKey = `recipe:${menuVersion}:${dishName}:${lang}`;
+
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+  } catch (err) {
+    console.error('Redis read error:', err);
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -60,6 +92,14 @@ Guidelines:
     }
 
     const recipe = JSON.parse(text);
+
+    // Cache in Redis for future requests
+    try {
+      await redis.set(cacheKey, recipe);
+    } catch (err) {
+      console.error('Redis write error:', err);
+    }
+
     return NextResponse.json(recipe);
   } catch (error) {
     console.error('Recipe generation failed:', error);
