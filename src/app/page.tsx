@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
-import type { MenuData, CanteenData, Recipe } from "@/lib/types";
+import type { MenuData, CanteenData, Recipe, DealsResponse } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
 import Lightbox from "@/components/Lightbox";
+import DealsView from "@/components/DealsView";
 
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
@@ -28,6 +29,7 @@ export default function Home() {
   const [recipeModal, setRecipeModal] = useState<{ isOpen: boolean; dishName: string; canteenName: string; recipe: Recipe | null; isLoading: boolean; error: string | null }>({ isOpen: false, dishName: "", canteenName: "", recipe: null, isLoading: false, error: null });
   const [recipeServings, setRecipeServings] = useState(4);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
+  const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, error: null });
 
   const scrollRef = useRef<HTMLElement>(null);
   const votesLoadedRef = useRef(false);
@@ -125,6 +127,37 @@ export default function Home() {
     }
   }, [lang]);
 
+  const handleDealsClick = useCallback(async (dishName: string, recipe: Recipe) => {
+    // Check localStorage cache
+    const cacheKey = `deals_${dishName}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as DealsResponse;
+        const age = Date.now() - new Date(parsed.generatedAt).getTime();
+        if (age < 24 * 60 * 60 * 1000) {
+          setDealsView({ isOpen: true, deals: parsed, isLoading: false, error: null });
+          return;
+        }
+      } catch { /* stale/corrupt cache */ }
+    }
+
+    setDealsView({ isOpen: true, deals: null, isLoading: true, error: null });
+    try {
+      const res = await fetch('/api/deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients: recipe.ingredients, dishName, lang }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const deals = await res.json() as DealsResponse;
+      localStorage.setItem(cacheKey, JSON.stringify(deals));
+      setDealsView(prev => ({ ...prev, deals, isLoading: false }));
+    } catch {
+      setDealsView(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke finne tilbud' : 'Could not find deals' }));
+    }
+  }, [lang]);
+
   useEffect(() => {
     const jsDay = new Date().getDay();
     const isWeekday = jsDay >= 1 && jsDay <= 5;
@@ -194,10 +227,14 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setLightboxIndex(-1);
-        setVoteModal({ isOpen: false, canteenName: "" });
-        setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-        setRecipeModal(prev => ({ ...prev, isOpen: false }));
+        if (dealsView.isOpen) {
+          setDealsView({ isOpen: false, deals: null, isLoading: false, error: null });
+        } else {
+          setLightboxIndex(-1);
+          setVoteModal({ isOpen: false, canteenName: "" });
+          setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+          setRecipeModal(prev => ({ ...prev, isOpen: false }));
+        }
       } else if (e.key === "ArrowLeft") {
         if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
           handleDaySelect(selectedDay - 1);
@@ -210,7 +247,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, handleDaySelect]);
+  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, handleDaySelect]);
 
   // #11 — Only preload current day + adjacent days (not all 5)
   useEffect(() => {
@@ -576,107 +613,156 @@ export default function Home() {
 
       {/* Recipe Modal */}
       {recipeModal.isOpen && (
-        <div className="recipe-overlay" onClick={() => setRecipeModal(prev => ({ ...prev, isOpen: false }))}>
+        <div className="recipe-overlay" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); }}>
           <div className="recipe-modal" onClick={e => e.stopPropagation()}>
-            <button className="recipe-close" onClick={() => setRecipeModal(prev => ({ ...prev, isOpen: false }))}>&#xD7;</button>
-            <div className="recipe-header">
-              <span className="recipe-canteen">{recipeModal.canteenName}</span>
-              <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
-            </div>
+            <button className="recipe-close" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); }}>&#xD7;</button>
 
-            {recipeModal.isLoading && (
-              <div className="recipe-loading">
-                <span className="recipe-loading-emoji">&#x1F373;</span>
-                <span className="recipe-loading-text">{lang === "no" ? "Genererer oppskrift..." : "Generating recipe..."}</span>
-              </div>
-            )}
-
-            {recipeModal.error && (
-              <div className="recipe-error">
-                <p>{recipeModal.error}</p>
-                <button className="recipe-retry-btn" onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName)}>
-                  {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
-                </button>
-              </div>
-            )}
-
-            {recipeModal.recipe && (() => {
-              const scale = recipeServings / recipeModal.recipe.servings;
-              const scaleAmount = (amount: string) => {
-                const num = parseFloat(amount);
-                if (isNaN(num)) return amount;
-                const scaled = num * scale;
-                return scaled % 1 === 0 ? scaled.toString() : scaled.toFixed(1).replace(/\.0$/, "");
-              };
-              return (
+            {dealsView.isOpen ? (
               <>
-                <div className="recipe-meta">
-                  <span className="recipe-meta-servings">
-                    <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.max(1, s - 1))}>&#x2212;</button>
-                    <span className="recipe-servings-value">{recipeServings}</span>
-                    <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.min(20, s + 1))}>+</button>
-                    <span className="recipe-servings-label">{lang === "no" ? "pers." : "serv."}</span>
-                  </span>
-                  <span>{lang === "no" ? "Prep" : "Prep"}: {recipeModal.recipe.prepTime}</span>
-                  <span>{lang === "no" ? "Tilbereding" : "Cook"}: {recipeModal.recipe.cookTime}</span>
+                <div className="recipe-header">
+                  <span className="recipe-canteen">{recipeModal.canteenName}</span>
+                  <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
                 </div>
-                <div className="recipe-content">
-                  <div className="recipe-ingredients">
-                    <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
-                    <ul className="recipe-ingredient-list">
-                      {recipeModal.recipe.ingredients.map((ing, i) => {
-                        const fb = getLetterFallback(ing.item);
-                        return (
-                        <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 50}ms` }}>
-                          <div className="recipe-ingredient-img-wrap">
-                            <img
-                              src={getMealDbUrl(ing.item)}
-                              alt=""
-                              className="recipe-ingredient-img"
-                              loading="lazy"
-                              onLoad={e => { (e.target as HTMLImageElement).parentElement!.classList.add("has-img"); }}
-                              onError={e => {
-                                const img = e.target as HTMLImageElement;
-                                if (!img.dataset.fallback) {
-                                  img.dataset.fallback = "1";
-                                  img.src = getSpoonUrl(ing.item);
-                                } else {
-                                  img.style.display = "none";
-                                }
-                              }}
-                            />
-                            <span className="recipe-ingredient-letter" style={{ background: fb.color }}>{fb.letter}</span>
-                          </div>
-                          <div className="recipe-ingredient-details">
-                            <span className="recipe-ingredient-name">{ing.item}</span>
-                            <span className="recipe-ingredient-amount">{scaleAmount(ing.amount)} {ing.unit}</span>
-                          </div>
-                        </li>
-                        );
-                      })}
-                    </ul>
+
+                {dealsView.isLoading && (
+                  <div className="recipe-loading">
+                    <span className="recipe-loading-emoji deals-loading-cart">{"\uD83D\uDED2"}</span>
+                    <span className="recipe-loading-text">{lang === "no" ? "S\u00F8ker etter tilbud..." : "Searching for deals..."}</span>
                   </div>
-                  <div className="recipe-steps">
-                    <h3 className="recipe-section-title">{lang === "no" ? "Fremgangsm\u00E5te" : "Instructions"}</h3>
-                    <ol className="recipe-step-list">
-                      {recipeModal.recipe.steps.map((step, i) => (
-                        <li key={i} className="recipe-step-item" style={{ animationDelay: `${(i * 50) + 150}ms` }}>
-                          <span className="recipe-step-number">{i + 1}</span>
-                          <span className="recipe-step-text">{step}</span>
-                        </li>
-                      ))}
-                    </ol>
-                    {recipeModal.recipe.tip && (
-                      <div className="recipe-tip">
-                        <span className="recipe-tip-icon">&#x1F4A1;</span>
-                        <span className="recipe-tip-text">{recipeModal.recipe.tip}</span>
-                      </div>
-                    )}
+                )}
+
+                {dealsView.error && (
+                  <div className="recipe-error">
+                    <p>{dealsView.error}</p>
+                    <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleDealsClick(recipeModal.dishName, recipeModal.recipe)}>
+                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                    </button>
                   </div>
-                </div>
+                )}
+
+                {dealsView.deals && (
+                  <DealsView
+                    deals={dealsView.deals}
+                    lang={lang}
+                    onBack={() => setDealsView({ isOpen: false, deals: null, isLoading: false, error: null })}
+                  />
+                )}
               </>
-              );
-            })()}
+            ) : (
+              <>
+                <div className="recipe-header">
+                  <span className="recipe-canteen">{recipeModal.canteenName}</span>
+                  <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
+                </div>
+
+                {recipeModal.isLoading && (
+                  <div className="recipe-loading">
+                    <span className="recipe-loading-emoji">&#x1F373;</span>
+                    <span className="recipe-loading-text">{lang === "no" ? "Genererer oppskrift..." : "Generating recipe..."}</span>
+                  </div>
+                )}
+
+                {recipeModal.error && (
+                  <div className="recipe-error">
+                    <p>{recipeModal.error}</p>
+                    <button className="recipe-retry-btn" onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName)}>
+                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                    </button>
+                  </div>
+                )}
+
+                {recipeModal.recipe && (() => {
+                  const scale = recipeServings / recipeModal.recipe.servings;
+                  const scaleAmount = (amount: string) => {
+                    const num = parseFloat(amount);
+                    if (isNaN(num)) return amount;
+                    const scaled = num * scale;
+                    return scaled % 1 === 0 ? scaled.toString() : scaled.toFixed(1).replace(/\.0$/, "");
+                  };
+                  const recipe = recipeModal.recipe;
+                  return (
+                  <>
+                    <div className="recipe-meta">
+                      <span className="recipe-meta-servings">
+                        <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.max(1, s - 1))}>&#x2212;</button>
+                        <span className="recipe-servings-value">{recipeServings}</span>
+                        <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.min(20, s + 1))}>+</button>
+                        <span className="recipe-servings-label">{lang === "no" ? "pers." : "serv."}</span>
+                      </span>
+                      <span>{lang === "no" ? "Prep" : "Prep"}: {recipe.prepTime}</span>
+                      <span>{lang === "no" ? "Tilbereding" : "Cook"}: {recipe.cookTime}</span>
+                    </div>
+                    <div className="recipe-content">
+                      <div className="recipe-ingredients">
+                        <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
+                        <ul className="recipe-ingredient-list">
+                          {recipe.ingredients.map((ing, i) => {
+                            const fb = getLetterFallback(ing.item);
+                            return (
+                            <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 50}ms` }}>
+                              <div className="recipe-ingredient-img-wrap">
+                                <img
+                                  src={getMealDbUrl(ing.item)}
+                                  alt=""
+                                  className="recipe-ingredient-img"
+                                  loading="lazy"
+                                  onLoad={e => { (e.target as HTMLImageElement).parentElement!.classList.add("has-img"); }}
+                                  onError={e => {
+                                    const img = e.target as HTMLImageElement;
+                                    if (!img.dataset.fallback) {
+                                      img.dataset.fallback = "1";
+                                      img.src = getSpoonUrl(ing.item);
+                                    } else {
+                                      img.style.display = "none";
+                                    }
+                                  }}
+                                />
+                                <span className="recipe-ingredient-letter" style={{ background: fb.color }}>{fb.letter}</span>
+                              </div>
+                              <div className="recipe-ingredient-details">
+                                <span className="recipe-ingredient-name">{ing.item}</span>
+                                <span className="recipe-ingredient-amount">{scaleAmount(ing.amount)} {ing.unit}</span>
+                              </div>
+                            </li>
+                            );
+                          })}
+                        </ul>
+                        {/* Find Deals Button */}
+                        <button
+                          className="deals-find-btn"
+                          onClick={() => handleDealsClick(recipeModal.dishName, recipe)}
+                        >
+                          <span className="deals-find-icon">{"\uD83D\uDED2"}</span>
+                          <span className="deals-find-text">
+                            <span className="deals-find-label">{lang === "no" ? "Finn tilbud" : "Find deals"}</span>
+                            <span className="deals-find-sub">{lang === "no" ? "Se beste priser p\u00E5 ingrediensene" : "See best prices on ingredients"}</span>
+                          </span>
+                          <span className="deals-find-arrow">{"\u203A"}</span>
+                        </button>
+                      </div>
+                      <div className="recipe-steps">
+                        <h3 className="recipe-section-title">{lang === "no" ? "Fremgangsm\u00E5te" : "Instructions"}</h3>
+                        <ol className="recipe-step-list">
+                          {recipe.steps.map((step, i) => (
+                            <li key={i} className="recipe-step-item" style={{ animationDelay: `${(i * 50) + 150}ms` }}>
+                              <span className="recipe-step-number">{i + 1}</span>
+                              <span className="recipe-step-text">{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                        {recipe.tip && (
+                          <div className="recipe-tip">
+                            <span className="recipe-tip-icon">&#x1F4A1;</span>
+                            <span className="recipe-tip-text">{recipe.tip}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                  );
+                })()}
+              </>
+            )}
           </div>
         </div>
       )}

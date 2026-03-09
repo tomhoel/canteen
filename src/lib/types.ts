@@ -8,6 +8,38 @@ export interface MenuData { scrapedAt: string; canteens: Record<string, CanteenD
 export interface RecipeIngredient { amount: string; unit: string; item: string; }
 export interface Recipe { title: string; servings: number; prepTime: string; cookTime: string; ingredients: RecipeIngredient[]; steps: string[]; tip?: string; }
 
+export interface TjekOffer {
+  id: string;
+  heading: string;
+  description: string;
+  price: number;
+  prePrice: number | null;
+  currency: string;
+  imageUrl: string | null;
+  store: string;
+  storeColor: string;
+  storeLogo: string;
+  runTill: string;
+  matchedIngredient: string;
+}
+
+export interface StoreRecommendation {
+  store: string;
+  storeColor: string;
+  storeLogo: string;
+  totalPrice: number;
+  dealCount: number;
+  keyIngredientsCovered: number;
+  deals: TjekOffer[];
+}
+
+export interface DealsResponse {
+  recommendation: StoreRecommendation;
+  allStores: StoreRecommendation[];
+  searchedIngredients: string[];
+  generatedAt: string;
+}
+
 export interface CanteenDayItem {
   canteenName: string;
   canteen: CanteenData;
