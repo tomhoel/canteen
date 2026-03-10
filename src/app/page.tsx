@@ -804,29 +804,13 @@ export default function Home() {
                             );
                           })}
                         </ul>
-                        {/* Shopping Buttons */}
-                        <div className="recipe-shop-buttons" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
-                          <button
-                            className="meny-find-btn"
-                            onClick={() => handleMenyClick(recipeModal.dishName, recipe)}
-                          >
-                            <span className="meny-find-icon">MENY</span>
-                            <span className="meny-find-text">
-                              <span className="meny-find-label">{lang === "no" ? "Kj\u00F8p alt p\u00E5 Meny" : "Buy all at Meny"}</span>
-                              <span className="meny-find-sub">{lang === "no" ? "Se priser og handleliste" : "See prices and shopping list"}</span>
-                            </span>
-                            <span className="meny-find-arrow">{"\u203A"}</span>
+                        {/* Shopping options */}
+                        <div className="recipe-shop-row" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
+                          <button className="shop-pill shop-pill-meny" onClick={() => handleMenyClick(recipeModal.dishName, recipe)}>
+                            {lang === "no" ? "Se priser" : "See prices"}<span className="shop-pill-dot">&middot;</span>Meny
                           </button>
-                          <button
-                            className="deals-find-btn"
-                            onClick={() => handleDealsClick(recipeModal.dishName, recipe)}
-                          >
-                            <span className="deals-find-icon">{"\uD83D\uDED2"}</span>
-                            <span className="deals-find-text">
-                              <span className="deals-find-label">{lang === "no" ? "Sammenlign priser" : "Compare prices"}</span>
-                              <span className="deals-find-sub">{lang === "no" ? "Finn billigste butikk for ingrediensene" : "Find the cheapest store for ingredients"}</span>
-                            </span>
-                            <span className="deals-find-arrow">{"\u203A"}</span>
+                          <button className="shop-pill shop-pill-deals" onClick={() => handleDealsClick(recipeModal.dishName, recipe)}>
+                            {lang === "no" ? "Sammenlign butikker" : "Compare stores"}
                           </button>
                         </div>
                       </div>
