@@ -8,6 +8,8 @@ interface MenyViewProps {
 
 export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
   const { matches, totalPrice, matchedCount, totalCount, allMatched, storeName } = meny;
+  const outOfStockCount = matches.filter(m => m.outOfStock).length;
+  const trueAllMatched = allMatched && outOfStockCount === 0;
   const matched = matches.filter(m => m.matched);
   const unmatched = matches.filter(m => !m.matched);
 
@@ -22,8 +24,8 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
       <div className="meny-summary">
         <div className="meny-summary-top">
           <span className="meny-summary-store">{storeName}</span>
-          <span className={`meny-summary-match${allMatched ? "" : " partial"}`}>
-            {allMatched
+          <span className={`meny-summary-match${trueAllMatched ? "" : " partial"}`}>
+            {trueAllMatched
               ? (lang === "no" ? `${matchedCount} av ${totalCount}` : `${matchedCount} of ${totalCount}`)
               : `${matchedCount}/${totalCount}`}
           </span>
@@ -35,7 +37,7 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
       {matched.length > 0 && (
         <div className="meny-product-list">
           {matched.map((match, i) => (
-            <div key={match.ingredient} className="meny-product-card" style={{ animationDelay: `${i * 50}ms` }}>
+            <div key={match.ingredient} className={`meny-product-card${match.outOfStock ? " out-of-stock" : ""}`} style={{ animationDelay: `${i * 50}ms` }}>
               <div className="meny-product-img-wrap">
                 {match.product?.imageUrl ? (
                   <img
@@ -56,8 +58,15 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
                   {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
                   {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
                 </span>
+                {match.outOfStock && (
+                  <span className="meny-out-of-stock-badge">
+                    {lang === "no" ? "Utilgjengelig" : "Out of stock"}
+                  </span>
+                )}
               </div>
-              <span className="meny-product-price">{match.product!.price} kr</span>
+              <span className="meny-product-price">
+                {match.outOfStock ? "–" : `${match.product!.price} kr`}
+              </span>
             </div>
           ))}
         </div>
