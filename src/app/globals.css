@@ -3630,6 +3630,11 @@ a.deals-card-link {
   opacity: 0.8;
 }
 
+.mv-expand-spacer {
+  width: 32px;
+  flex-shrink: 0;
+}
+
 /* ─── Alternatives List ─── */
 .mv-alts {
   background: var(--bg-cream);
@@ -3715,6 +3720,10 @@ a.deals-card-link {
 }
 
 .mv-list--pantry .mv-card {
+  opacity: 0.5;
+}
+
+.mv-list--pantry .mv-alts {
   opacity: 0.5;
 }
 

@@ -49,7 +49,7 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
             </div>
           </div>
         </ProductLink>
-        {hasAlts && (
+        {hasAlts ? (
           <button
             className={`mv-expand${showAlts ? " open" : ""}`}
             onClick={() => setShowAlts(!showAlts)}
@@ -57,6 +57,8 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
           >
             {"\u203A"}
           </button>
+        ) : (
+          <div className="mv-expand-spacer" />
         )}
       </div>
 
