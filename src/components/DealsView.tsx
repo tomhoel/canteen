@@ -19,9 +19,12 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
     }
   }
 
-  // Sort each ingredient's products by price
+  // Sort each ingredient's products by price (campaigns first at equal price)
   for (const [, products] of dealsByIngredient) {
-    products.sort((a, b) => a.price - b.price);
+    products.sort((a, b) => {
+      if (a.price !== b.price) return a.price - b.price;
+      return (b.isCampaign ? 1 : 0) - (a.isCampaign ? 1 : 0);
+    });
   }
 
   // Find ingredients with no results
@@ -89,7 +92,7 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
               <div className="deals-cards">
                 {ingredientDeals.map(deal => {
                   const isRec = deal.store === recommendation.store;
-                  const cardClass = `deals-card${isRec ? " deals-card-recommended" : ""}${deal.productUrl ? " deals-card-link" : ""}`;
+                  const cardClass = `deals-card${isRec ? " deals-card-recommended" : ""}${deal.isCampaign ? " deals-card-campaign" : ""}${deal.productUrl ? " deals-card-link" : ""}`;
                   const cardStyle = isRec ? { borderColor: recommendation.storeColor + '40' } : undefined;
                   const content = (
                     <>
@@ -105,6 +108,7 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
                           {isRec && (
                             <span className="deals-card-rec-badge">{"\u2605"}</span>
                           )}
+                          {deal.isCampaign && <span className="deals-card-campaign-badge">{lang === "no" ? "Tilbud" : "Sale"}</span>}
                         </div>
                         <span className="deals-card-heading">{deal.name}</span>
                         {(deal.weight || deal.unitPrice != null) && (
@@ -115,14 +119,24 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
                           </span>
                         )}
                         <div className="deals-card-price-row">
-                          <span className="deals-card-price">{deal.price} kr</span>
+                          <span className={deal.isCampaign ? "deals-card-price deals-card-price-campaign" : "deals-card-price"}>{deal.price} kr</span>
+                          {deal.originalPrice != null && <span className="deals-card-original-price">{deal.originalPrice} kr</span>}
+                          {deal.savingsPercent != null && <span className="deals-card-savings">-{deal.savingsPercent}%</span>}
                         </div>
                         {deal.brand && (
                           <span className="deals-card-brand">{deal.brand}</span>
                         )}
+                        {deal.validUntil && (
+                          <span className="deals-card-expiry">
+                            {lang === "no" ? "Gyldig til" : "Valid until"} {new Date(deal.validUntil).toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "short" })}
+                          </span>
+                        )}
                         {deal.productUrl && (
                           <span className="deals-card-flyer-link">
-                            {lang === "no" ? "Se i nettbutikk" : "View in store"} {"\u203A"}
+                            {deal.isCampaign
+                              ? (lang === "no" ? "Se i tilbudsavis" : "View flyer")
+                              : (lang === "no" ? "Se i nettbutikk" : "View in store")
+                            } {"\u203A"}
                           </span>
                         )}
                       </div>
