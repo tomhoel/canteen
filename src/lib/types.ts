@@ -26,6 +26,7 @@ export interface ProductOffer {
   originalPrice: number | null;
   savingsPercent: number | null;
   validUntil: string | null;
+  source: 'kassal' | 'tjek';
 }
 
 export interface StoreRecommendation {

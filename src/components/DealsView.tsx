@@ -126,11 +126,10 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
                         {deal.brand && (
                           <span className="deals-card-brand">{deal.brand}</span>
                         )}
-                        {deal.validUntil && (
-                          <span className="deals-card-expiry">
-                            {lang === "no" ? "Gyldig til" : "Valid until"} {new Date(deal.validUntil).toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "short" })}
-                          </span>
-                        )}
+                        <span className="deals-card-source">
+                          via {deal.source === 'tjek' ? 'eTilbudsavis' : 'Kassal'}
+                          {deal.validUntil && <> · {lang === "no" ? "til" : "until"} {new Date(deal.validUntil).toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "short" })}</>}
+                        </span>
                         {deal.productUrl && (
                           <span className="deals-card-flyer-link">
                             {deal.isCampaign

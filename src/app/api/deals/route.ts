@@ -250,6 +250,7 @@ function mapTjekOffer(offer: TjekOffer, matchedIngredient: string): ProductOffer
     originalPrice: offer.pricing.pre_price || null,
     savingsPercent,
     validUntil: offer.run_till,
+    source: 'tjek',
   };
 }
 
@@ -315,6 +316,7 @@ function mapKassalProduct(product: KassalApiProduct, matchedIngredient: string):
     originalPrice: null,
     savingsPercent: null,
     validUntil: null,
+    source: 'kassal',
   };
 }
 
@@ -401,11 +403,14 @@ export async function POST(request: NextRequest) {
 
   try {
     // Step 1: Rank ingredients with Gemini
+    const t0 = Date.now();
     const ranked = await rankIngredients(ingredients as RecipeIngredient[], dishName);
+    const tGemini = Date.now() - t0;
 
     const keyIngredients = ranked.filter(r => r.isKeyIngredient).map(r => r.ingredient);
 
     // Step 2: Search Kassal + Tjek in parallel for each ingredient
+    const t1 = Date.now();
     const allDeals: ProductOffer[] = [];
     const searchPromises = ranked.map(async (ing) => {
       const results: ProductOffer[] = [];
@@ -445,6 +450,9 @@ export async function POST(request: NextRequest) {
     for (const results of ingredientResults) {
       allDeals.push(...results);
     }
+    const tSearch = Date.now() - t1;
+
+    console.log(`[deals] Gemini: ${tGemini}ms | Search (Kassal+Tjek): ${tSearch}ms | Total: ${tGemini + tSearch}ms | Ingredients: ${ranked.length} | Deals: ${allDeals.length}`);
 
     // Step 3: Build recommendation
     const allSearchedIngredients = ranked.map(r => r.ingredient);
