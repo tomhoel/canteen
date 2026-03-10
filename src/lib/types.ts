@@ -59,7 +59,10 @@ export interface MenyIngredientMatch {
   product: MenyProduct | null;
   alternatives: MenyProduct[];
   matched: boolean;
-  outOfStock?: boolean; // true when matched only via out-of-stock product
+  outOfStock?: boolean;
+  recipeAmount?: string;
+  recipeUnit?: string;
+  pantryStaple?: boolean;
 }
 
 export interface MenyResponse {
