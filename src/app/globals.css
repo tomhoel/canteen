@@ -1575,66 +1575,40 @@ body {
   color: var(--text-secondary);
 }
 
-.info-linkedin {
+.info-footer-links {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+
+.info-footer-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12px;
   font-weight: 600;
-  color: #0077b5;
+  color: var(--text-secondary);
   text-decoration: none;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 8px;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.info-linkedin:hover {
+.info-footer-link:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
+.info-footer-link.info-linkedin {
+  color: #0077b5;
+}
+
+.info-footer-link.info-linkedin:hover {
   background: rgba(0, 119, 181, 0.08);
-}
-
-/* ─── Feedback Button - Bottom Right ─── */
-.feedback-btn {
-  position: fixed;
-  bottom: 90px;
-  right: 20px;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(
-    135deg,
-    var(--accent-yellow) 0%,
-    var(--accent-orange) 100%
-  );
-  color: white;
-  text-decoration: none;
-  padding: 12px 20px;
-  border-radius: 50px;
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.35);
-}
-
-.feedback-btn:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(255, 149, 0, 0.45);
-}
-
-.feedback-icon {
-  font-size: 16px;
-}
-
-.feedback-text {
-  white-space: nowrap;
 }
 
 /* ─── Mobile Adjustments ─── */
 @media (max-width: 768px) {
-  .feedback-btn {
-    display: none !important;
-  }
-
   .info-btn {
     width: 30px;
     height: 30px;
