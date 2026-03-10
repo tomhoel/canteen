@@ -3560,22 +3560,30 @@ a.deals-card-link {
 
 /* ─── Alternatives List ─── */
 .mv-alts {
-  padding: 0 0 10px 54px;
-  animation: recipeReveal 0.2s var(--smooth) both;
+  background: var(--bg-cream);
+  border-radius: 12px;
+  margin: 0 0 10px;
+  padding: 4px 10px;
 }
 
 .mv-alt {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 0;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  animation: recipeReveal 0.25s var(--smooth) both;
+}
+
+.mv-alt:last-child {
+  border-bottom: none;
 }
 
 .mv-alt-thumb {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--bg-cream);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--card-white);
   border: 1px solid var(--border-light);
   display: flex;
   align-items: center;
@@ -3584,22 +3592,37 @@ a.deals-card-link {
   flex-shrink: 0;
 }
 
-.mv-alt-name {
+.mv-alt-detail {
   flex: 1;
   min-width: 0;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mv-alt-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.mv-alt-meta {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
 .mv-alt-price {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 /* ─── Section (Pantry / Not Found) ─── */
@@ -3666,9 +3689,6 @@ a.deals-card-link {
     padding: 10px 16px;
   }
 
-  .mv-alts {
-    padding-left: 44px;
-  }
 }
 
 /* ─── Deals Mobile ─── */
