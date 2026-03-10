@@ -1,3 +1,4 @@
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { DealsResponse, ProductOffer } from "@/lib/types";
 
 interface DealsViewProps {
@@ -5,6 +6,54 @@ interface DealsViewProps {
   lang: "no" | "en";
   onBack: () => void;
   isStreaming?: boolean;
+}
+
+function DealsCarousel({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", checkScroll); ro.disconnect(); };
+  }, [checkScroll, children]);
+
+  const scroll = useCallback((dir: 1 | -1) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Scroll by ~4 card widths (168px card + 8px gap)
+    el.scrollBy({ left: dir * 168 * 4, behavior: "smooth" });
+  }, []);
+
+  return (
+    <div className="deals-carousel">
+      {canScrollLeft && (
+        <button className="deals-carousel-arrow deals-carousel-arrow-left" onClick={() => scroll(-1)} aria-label="Previous">
+          {"\u2039"}
+        </button>
+      )}
+      <div className="deals-cards" ref={scrollRef}>
+        {children}
+      </div>
+      {canScrollRight && (
+        <button className="deals-carousel-arrow deals-carousel-arrow-right" onClick={() => scroll(1)} aria-label="Next">
+          {"\u203A"}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function DealsView({ deals, lang, onBack, isStreaming }: DealsViewProps) {
@@ -93,7 +142,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
           {Array.from(dealsByIngredient.entries()).map(([ingredient, ingredientDeals]) => (
             <div key={ingredient} className="deals-ingredient-group">
               <h4 className="deals-ingredient-title">{ingredient}</h4>
-              <div className="deals-cards">
+              <DealsCarousel>
                 {ingredientDeals.map(deal => {
                   const isRec = !isStreaming && deal.store === recommendation.store;
                   const cardClass = `deals-card${isRec ? " deals-card-recommended" : ""}${deal.isCampaign ? " deals-card-campaign" : ""}${deal.productUrl ? " deals-card-link" : ""}`;
@@ -155,7 +204,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
                     </div>
                   );
                 })}
-              </div>
+              </DealsCarousel>
             </div>
           ))}
 
