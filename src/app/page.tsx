@@ -161,7 +161,7 @@ export default function Home() {
   }, [lang]);
 
   const handleMenyClick = useCallback(async (dishName: string, recipe: Recipe) => {
-    const cacheKey = `meny_v2_${dishName}`;
+    const cacheKey = `meny_v3_${dishName}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
