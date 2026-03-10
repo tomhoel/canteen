@@ -173,14 +173,29 @@ export async function POST(request: NextRequest) {
       const t = translations[i];
       if (i > 0) await delay(50);
 
-      const hits = await searchMeny(t.searchTerm, activeStoreId);
-      const inStockHits = hits.filter(h => !h.contentData._source.isOutOfStock);
+      // Tier 1: try specific searchTerm, in-stock only
+      let hits = await searchMeny(t.searchTerm, activeStoreId);
+      let inStockHits = hits.filter(h => !h.contentData._source.isOutOfStock);
+
+      // Tier 2: try fallbackTerm if primary returned nothing in-stock
+      if (inStockHits.length === 0 && t.fallbackTerm && t.fallbackTerm !== t.searchTerm) {
+        await delay(50);
+        const fallbackHits = await searchMeny(t.fallbackTerm, activeStoreId);
+        const fallbackInStock = fallbackHits.filter(h => !h.contentData._source.isOutOfStock);
+        if (fallbackInStock.length > 0) {
+          inStockHits = fallbackInStock;
+          hits = fallbackHits;
+        } else {
+          // merge both hit sets for out-of-stock fallback below
+          hits = [...hits, ...fallbackHits].filter(
+            (h, idx, arr) => arr.findIndex(x => x.contentId === h.contentId) === idx
+          );
+        }
+      }
 
       if (inStockHits.length > 0) {
-        // Best match = first result (highest relevance), prefer cheapest among top results
         const products = inStockHits.map(mapHitToProduct);
         const sorted = [...products].sort((a, b) => a.price - b.price);
-
         matches.push({
           ingredient: t.ingredient,
           searchTerm: t.searchTerm,
@@ -189,13 +204,28 @@ export async function POST(request: NextRequest) {
           matched: true,
         });
       } else {
-        matches.push({
-          ingredient: t.ingredient,
-          searchTerm: t.searchTerm,
-          product: null,
-          alternatives: [],
-          matched: false,
-        });
+        // Tier 3: if truly nothing in-stock, use best out-of-stock result
+        const outOfStockHits = hits.filter(h => h.contentData._source.isOutOfStock);
+        if (outOfStockHits.length > 0) {
+          const products = outOfStockHits.map(mapHitToProduct);
+          const sorted = [...products].sort((a, b) => a.price - b.price);
+          matches.push({
+            ingredient: t.ingredient,
+            searchTerm: t.searchTerm,
+            product: sorted[0],
+            alternatives: [],
+            matched: true,
+            outOfStock: true,
+          });
+        } else {
+          matches.push({
+            ingredient: t.ingredient,
+            searchTerm: t.searchTerm,
+            product: null,
+            alternatives: [],
+            matched: false,
+          });
+        }
       }
     }
 
