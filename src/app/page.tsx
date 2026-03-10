@@ -101,18 +101,16 @@ export default function Home() {
     });
   }, []);
 
-  const handleRecipeClick = useCallback(async (dishName: string, canteenName: string, forceRefresh = false) => {
+  const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
     const cacheKey = `recipe_v2_${dishName}`;
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const recipe = JSON.parse(cached) as Recipe;
-          setRecipeServings(recipe.servings);
-          setRecipeModal({ isOpen: true, dishName, canteenName, recipe, isLoading: false, error: null });
-          return;
-        } catch { /* cache corrupted, refetch */ }
-      }
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const recipe = JSON.parse(cached) as Recipe;
+        setRecipeServings(recipe.servings);
+        setRecipeModal({ isOpen: true, dishName, canteenName, recipe, isLoading: false, error: null });
+        return;
+      } catch { /* cache corrupted, refetch */ }
     }
     setRecipeModal({ isOpen: true, dishName, canteenName, recipe: null, isLoading: true, error: null });
     try {
@@ -653,17 +651,7 @@ export default function Home() {
           <div className="recipe-modal" onClick={e => e.stopPropagation()}>
             <button className="recipe-close" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>&#xD7;</button>
 
-            {recipeModal.recipe && !recipeModal.isLoading && !dealsView.isOpen && !menyView.isOpen && (
-              <button
-                className="recipe-regenerate-btn"
-                onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName, true)}
-                title={lang === "no" ? "Generer ny oppskrift" : "Regenerate recipe"}
-              >
-                &#x1F504;
-              </button>
-            )}
-
-            {menyView.isOpen ? (
+{menyView.isOpen ? (
               <>
                 <div className="recipe-header">
                   <span className="recipe-canteen">{recipeModal.canteenName}</span>
