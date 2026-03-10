@@ -106,6 +106,9 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
   const toBuy = matched.filter(m => !m.pantryStaple);
   const pantry = matched.filter(m => m.pantryStaple);
 
+  const toBuyPrice = toBuy.reduce((s, m) => s + (!m.outOfStock ? (m.product?.price || 0) : 0), 0);
+  const pantryPrice = pantry.reduce((s, m) => s + (!m.outOfStock ? (m.product?.price || 0) : 0), 0);
+
   return (
     <div className="mv">
       <button className="mv-back" onClick={onBack}>
@@ -121,7 +124,12 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
             {matchedCount}/{totalCount} {lang === "no" ? "varer" : "items"}
           </span>
         </div>
-        <span className="mv-total">~{Math.round(totalPrice)} kr</span>
+        <div className="mv-totals">
+          <span className="mv-total">~{Math.round(toBuyPrice)} kr</span>
+          {pantryPrice > 0 && (
+            <span className="mv-total-pantry">+{Math.round(pantryPrice)} kr</span>
+          )}
+        </div>
       </div>
 
       {/* Products to buy */}
