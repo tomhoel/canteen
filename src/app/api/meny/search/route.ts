@@ -90,6 +90,7 @@ interface MenyApiHit {
       unit: string;
       imagePath: string;
       isOutOfStock: boolean;
+      slugifiedUrl: string;
     };
   };
 }
@@ -133,7 +134,7 @@ function mapHitToProduct(hit: MenyApiHit): MenyProduct {
       : null,
     imageUrl: `https://bilder.ngdata.no/${src.ean}/meny/large.jpg`,
     weight: src.weight ? `${src.weight} ${src.compareUnit || 'kg'}` : null,
-    productUrl: src.ean ? `https://meny.no/search/?q=${src.ean}` : null,
+    productUrl: src.slugifiedUrl ? `https://meny.no/varer${src.slugifiedUrl}` : null,
   };
 }
 
