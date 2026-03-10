@@ -102,7 +102,7 @@ export default function Home() {
   }, []);
 
   const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
-    const cacheKey = `recipe_v2_${dishName}`;
+    const cacheKey = `recipe_v3_${dishName}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -161,7 +161,7 @@ export default function Home() {
   }, [lang]);
 
   const handleMenyClick = useCallback(async (dishName: string, recipe: Recipe) => {
-    const cacheKey = `meny_v1_${dishName}`;
+    const cacheKey = `meny_v2_${dishName}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
