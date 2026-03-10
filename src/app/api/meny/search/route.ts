@@ -24,7 +24,8 @@ function getWeekNumber(): number {
 interface GeminiTranslation {
   ingredient: string;
   searchTerm: string;
-  fallbackTerm: string; // broader/alternative Norwegian term to try if searchTerm returns nothing
+  fallbackTerm: string;
+  pantryStaple: boolean;
 }
 
 async function translateIngredients(ingredients: RecipeIngredient[], dishName: string): Promise<GeminiTranslation[]> {
@@ -43,7 +44,7 @@ Translate ALL ingredients to Norwegian product search terms for Meny.no grocery 
 
 Return ONLY a JSON array with one entry per ingredient:
 [
-  { "ingredient": "Original ingredient name", "searchTerm": "specific norwegian product name", "fallbackTerm": "broader fallback if specific not found" }
+  { "ingredient": "Original ingredient name", "searchTerm": "specific norwegian product name", "fallbackTerm": "broader fallback if specific not found", "pantryStaple": false }
 ]
 
 Rules for searchTerm — THIS IS CRITICAL:
@@ -58,7 +59,11 @@ Rules for fallbackTerm:
 - A broader or alternative Norwegian name to search if searchTerm returns no results
 - Still specific enough to return the right product category
 - Examples: "kyllingbryst" → "kylling", "rapsolje" → "matolje", "hvetemel" → "mel", "matfløte" → "fløte", "olivenolje" → "olje", "basmatiris" → "ris"
-- For items with only one natural name (salt, pepper, sukker), repeat the same term as fallback`;
+- For items with only one natural name (salt, pepper, sukker), repeat the same term as fallback
+
+Rules for pantryStaple:
+- Set to true for basic ingredients most people already have at home: salt, pepper, sugar, oil, butter, flour, water, soy sauce, vinegar, stock cubes, spices, garlic
+- Set to false for ingredients you'd specifically buy for this dish: meat, fish, vegetables, rice, pasta, cream, cheese, specialty items`;
 
   const response = await ai.models.generateContent({
     model: 'gemini-3.1-flash-lite-preview',
@@ -166,13 +171,15 @@ export async function POST(request: NextRequest) {
 
   try {
     // Step 1: Translate ingredients with Gemini
-    const translations = await translateIngredients(ingredients as RecipeIngredient[], dishName);
+    const ingredientArr = ingredients as RecipeIngredient[];
+    const translations = await translateIngredients(ingredientArr, dishName);
 
     // Step 2: Search Meny API for each ingredient with staggered requests
     const matches: MenyIngredientMatch[] = [];
 
     for (let i = 0; i < translations.length; i++) {
       const t = translations[i];
+      const orig = ingredientArr[i];
       if (i > 0) await delay(50);
 
       // Tier 1: try specific searchTerm, in-stock only
@@ -204,6 +211,9 @@ export async function POST(request: NextRequest) {
           product: sorted[0],
           alternatives: sorted.slice(1, 4),
           matched: true,
+          recipeAmount: orig?.amount,
+          recipeUnit: orig?.unit,
+          pantryStaple: t.pantryStaple || false,
         });
       } else {
         // Tier 3: if truly nothing in-stock, use best out-of-stock result
@@ -218,6 +228,9 @@ export async function POST(request: NextRequest) {
             alternatives: [],
             matched: true,
             outOfStock: true,
+            recipeAmount: orig?.amount,
+            recipeUnit: orig?.unit,
+            pantryStaple: t.pantryStaple || false,
           });
         } else {
           matches.push({
@@ -226,13 +239,16 @@ export async function POST(request: NextRequest) {
             product: null,
             alternatives: [],
             matched: false,
+            recipeAmount: orig?.amount,
+            recipeUnit: orig?.unit,
+            pantryStaple: t.pantryStaple || false,
           });
         }
       }
     }
 
     const matchedCount = matches.filter(m => m.matched).length;
-    const totalPrice = matches.reduce((sum, m) => sum + (m.product?.price || 0), 0);
+    const totalPrice = matches.reduce((sum, m) => sum + (m.matched && !m.outOfStock ? (m.product?.price || 0) : 0), 0);
 
     const response: MenyResponse = {
       storeId: activeStoreId,
