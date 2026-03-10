@@ -3443,6 +3443,16 @@ a.deals-card-link {
   opacity: 0.5;
 }
 
+.meny-product-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.meny-product-link .meny-product-card.linkable:active {
+  opacity: 0.7;
+}
+
 .meny-out-of-stock-badge {
   font-size: 10px;
   color: var(--color-text-muted, #999);

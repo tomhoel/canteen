@@ -36,39 +36,48 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
       {/* Product list */}
       {matched.length > 0 && (
         <div className="meny-product-list">
-          {matched.map((match, i) => (
-            <div key={match.ingredient} className={`meny-product-card${match.outOfStock ? " out-of-stock" : ""}`} style={{ animationDelay: `${i * 50}ms` }}>
-              <div className="meny-product-img-wrap">
-                {match.product?.imageUrl ? (
-                  <img
-                    src={match.product.imageUrl}
-                    alt={match.product.name}
-                    className="meny-product-img"
-                    loading="lazy"
-                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                ) : (
-                  <span className="meny-product-img-placeholder">{match.ingredient.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="meny-product-details">
-                <span className="meny-product-ingredient">{match.ingredient}</span>
-                <span className="meny-product-name">
-                  {match.product!.name}
-                  {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
-                  {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
-                </span>
-                {match.outOfStock && (
-                  <span className="meny-out-of-stock-badge">
-                    {lang === "no" ? "Utilgjengelig" : "Out of stock"}
+          {matched.map((match, i) => {
+            const card = (
+              <div className={`meny-product-card${match.outOfStock ? " out-of-stock" : ""}${match.product?.productUrl ? " linkable" : ""}`} style={{ animationDelay: `${i * 50}ms` }}>
+                <div className="meny-product-img-wrap">
+                  {match.product?.imageUrl ? (
+                    <img
+                      src={match.product.imageUrl}
+                      alt={match.product.name}
+                      className="meny-product-img"
+                      loading="lazy"
+                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <span className="meny-product-img-placeholder">{match.ingredient.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="meny-product-details">
+                  <span className="meny-product-ingredient">{match.ingredient}</span>
+                  <span className="meny-product-name">
+                    {match.product!.name}
+                    {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
+                    {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
                   </span>
-                )}
+                  {match.outOfStock && (
+                    <span className="meny-out-of-stock-badge">
+                      {lang === "no" ? "Utilgjengelig" : "Out of stock"}
+                    </span>
+                  )}
+                </div>
+                <span className="meny-product-price">
+                  {match.outOfStock ? "–" : `${match.product!.price} kr`}
+                </span>
               </div>
-              <span className="meny-product-price">
-                {match.outOfStock ? "–" : `${match.product!.price} kr`}
-              </span>
-            </div>
-          ))}
+            );
+            return match.product?.productUrl ? (
+              <a key={match.ingredient} href={match.product.productUrl} target="_blank" rel="noopener noreferrer" className="meny-product-link">
+                {card}
+              </a>
+            ) : (
+              <div key={match.ingredient}>{card}</div>
+            );
+          })}
         </div>
       )}
 
