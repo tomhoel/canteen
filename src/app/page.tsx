@@ -32,6 +32,7 @@ export default function Home() {
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
   const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; isStreaming: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
   const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const scrollRef = useRef<HTMLElement>(null);
   const votesLoadedRef = useRef(false);
@@ -536,9 +537,14 @@ export default function Home() {
           <h1 className="hero-title">{lang === "no" ? "Dagens" : "Today's"} <span>{lang === "no" ? "Lunsj" : "Lunch"}</span></h1>
           <p className="hero-subtitle">{weekLabel} &bull; {fullDayLabels[selectedDay]} {dateStr}</p>
         </div>
-        <div className="lang-switcher">
-          <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("no")}>NO</button>
-          <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("en")}>EN</button>
+        <div className="header-actions">
+          <button className="info-btn" onClick={() => setInfoOpen(true)} title={lang === "no" ? "Om appen" : "About"}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/><path d="M8 7v4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="4.75" r="0.75" fill="currentColor"/></svg>
+          </button>
+          <div className="lang-switcher">
+            <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("no")}>NO</button>
+            <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("en")}>EN</button>
+          </div>
         </div>
       </header>
 
@@ -573,14 +579,79 @@ export default function Home() {
         onDaySelect={handleDaySelect}
       />
 
-      {/* Credit */}
-      <div className="credit-badge">Made by Tom Hoel @ Telenor Finance</div>
-
       {/* Feedback */}
       <a href="mailto:tom.chamkrai.hoel@telenor.no?subject=Feedback%20on%20Canteen%20App" className="feedback-btn" title={lang === "no" ? "Send tilbakemelding" : "Send feedback"}>
         <span className="feedback-icon">&#x2709;&#xFE0F;</span>
         <span className="feedback-text">{lang === "no" ? "Tilbakemelding" : "Feedback"}</span>
       </a>
+
+      {/* Info Modal */}
+      {infoOpen && (
+        <div className="info-overlay" onClick={() => setInfoOpen(false)}>
+          <div className="info-modal" onClick={e => e.stopPropagation()}>
+            <button className="info-close" onClick={() => setInfoOpen(false)}>&times;</button>
+            <div className="info-header">
+              <h2 className="info-title">{lang === "no" ? "Dagens" : "Today's"} <span>{lang === "no" ? "Lunsj" : "Lunch"}</span></h2>
+              <p className="info-tagline">{lang === "no" ? "Din daglige lunsjfølgesvenn på Fornebu" : "Your daily lunch companion at Fornebu"}</p>
+            </div>
+            <div className="info-body">
+              <p className="info-intro">
+                {lang === "no"
+                  ? "En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."
+                  : "An all-in-one lunch app that scrapes fresh menus from the Telenor Fornebu canteens every week. See what's being served, vote on your favorite lunch, and discover new recipes — all in one place."}
+              </p>
+              <div className="info-features">
+                <div className="info-feature">
+                  <span className="info-feature-icon">&#x1F37D;&#xFE0F;</span>
+                  <div>
+                    <strong>{lang === "no" ? "Daglige menyer" : "Daily menus"}</strong>
+                    <span>{lang === "no" ? "Tre kantiner, fem dager, komplett med allergener og bilder generert av AI." : "Three canteens, five days, complete with allergens and AI-generated food imagery."}</span>
+                  </div>
+                </div>
+                <div className="info-feature">
+                  <span className="info-feature-icon">&#x1F5F3;&#xFE0F;</span>
+                  <div>
+                    <strong>{lang === "no" ? "Stem i dag" : "Vote today"}</strong>
+                    <span>{lang === "no" ? "Se hvilken kantine kollegene dine velger. Stemmetall oppdateres i sanntid." : "See which canteen your colleagues are choosing. Vote counts update in real-time."}</span>
+                  </div>
+                </div>
+                <div className="info-feature">
+                  <span className="info-feature-icon">&#x1F468;&#x200D;&#x1F373;</span>
+                  <div>
+                    <strong>{lang === "no" ? "AI-oppskrifter" : "AI recipes"}</strong>
+                    <span>{lang === "no" ? "Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI." : "Love a dish? Get a complete recipe with ingredients, steps, and cooking tips, generated by AI."}</span>
+                  </div>
+                </div>
+                <div className="info-feature">
+                  <span className="info-feature-icon">&#x1F6D2;</span>
+                  <div>
+                    <strong>{lang === "no" ? "Handle smart" : "Shop smart"}</strong>
+                    <span>{lang === "no" ? "Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY." : "Find the cheapest ingredients across Norwegian grocery stores, or build a shopping list at MENY."}</span>
+                  </div>
+                </div>
+                <div className="info-feature">
+                  <span className="info-feature-icon">&#x1F310;</span>
+                  <div>
+                    <strong>{lang === "no" ? "Tospråklig" : "Bilingual"}</strong>
+                    <span>{lang === "no" ? "Full norsk og engelsk støtte — bytt med en knapp." : "Full Norwegian and English support — switch with a tap."}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="info-tech">
+                <p className="info-tech-label">{lang === "no" ? "Bygget med" : "Built with"}</p>
+                <p className="info-tech-stack">Next.js &middot; React 19 &middot; Gemini AI &middot; Upstash Redis &middot; Vercel</p>
+              </div>
+            </div>
+            <div className="info-footer">
+              <span className="info-made-by">{lang === "no" ? "Laget av" : "Made by"} Tom Hoel</span>
+              <a href="https://www.linkedin.com/in/tom-hoel-47923215b/" target="_blank" rel="noopener noreferrer" className="info-linkedin">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                LinkedIn
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Vote Modal */}
       <VoteModal
