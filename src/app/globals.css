@@ -3263,7 +3263,7 @@ a.deals-card-link {
 .deals-card-price-campaign { color: var(--accent-coral); }
 .deals-card-original-price { font-size: 12px; color: var(--text-muted); text-decoration: line-through; margin-left: 6px; }
 .deals-card-savings { font-size: 10px; font-weight: 800; color: var(--accent-green); background: rgba(74,158,85,0.1); padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
-.deals-card-expiry { font-size: 9px; color: var(--text-muted); }
+.deals-card-source { font-size: 9px; color: var(--text-muted); }
 
 /* ─── No Results ─── */
 .deals-no-results {
