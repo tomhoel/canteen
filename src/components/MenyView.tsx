@@ -12,64 +12,68 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
   const hasAlts = match.alternatives.length > 0;
   const recipeDesc = [match.recipeAmount, match.recipeUnit].filter(Boolean).join(" ");
 
-  const card = (
-    <div
-      className={`meny-card${match.outOfStock ? " oos" : ""}${match.product?.productUrl ? " has-link" : ""}`}
-      style={{ animationDelay: `${index * 40}ms` }}
-    >
-      <div className="meny-card-thumb">
-        {match.product?.imageUrl ? (
-          <img
-            src={match.product.imageUrl}
-            alt={match.product.name}
-            className="meny-card-img"
-            loading="lazy"
-            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-        ) : (
-          <span className="meny-card-initial">{match.ingredient.charAt(0).toUpperCase()}</span>
-        )}
-      </div>
-      <div className="meny-card-info">
-        <span className="meny-card-ingredient">
-          {match.ingredient}
-          {recipeDesc && <span className="meny-card-qty">{recipeDesc}</span>}
-        </span>
-        <span className="meny-card-product">
-          {match.product!.name}
-          {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
-          {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
-        </span>
-        {match.outOfStock && (
-          <span className="meny-card-oos">{lang === "no" ? "Ikke tilgjengelig" : "Unavailable"}</span>
-        )}
-      </div>
-      <span className="meny-card-price">
-        {match.outOfStock ? "\u2013" : <>{match.product!.price}<span className="meny-kr">kr</span></>}
-      </span>
-    </div>
-  );
-
   return (
-    <div className="meny-row" style={{ animationDelay: `${index * 40}ms` }}>
-      {match.product?.productUrl ? (
-        <a href={match.product.productUrl} target="_blank" rel="noopener noreferrer" className="meny-link">
-          {card}
-        </a>
-      ) : (
-        card
-      )}
+    <div className="mv-row" style={{ animationDelay: `${index * 40}ms` }}>
+      <ProductLink url={match.product?.productUrl}>
+        <div className={`mv-card${match.outOfStock ? " mv-oos" : ""}`}>
+          <div className="mv-thumb">
+            {match.product?.imageUrl ? (
+              <img
+                src={match.product.imageUrl}
+                alt={match.product.name}
+                className="mv-thumb-img"
+                loading="lazy"
+                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            ) : (
+              <span className="mv-thumb-letter">{match.ingredient.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="mv-detail">
+            <span className="mv-name">{match.ingredient}</span>
+            <span className="mv-product">
+              {match.product!.name}
+              {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
+              {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
+            </span>
+            {match.outOfStock && (
+              <span className="mv-oos-label">{lang === "no" ? "Ikke tilgjengelig" : "Unavailable"}</span>
+            )}
+          </div>
+          <div className="mv-right">
+            {recipeDesc && <span className="mv-qty">{recipeDesc}</span>}
+            <span className="mv-price">
+              {match.outOfStock ? "\u2013" : <>{match.product!.price} <span className="mv-kr">kr</span></>}
+            </span>
+          </div>
+        </div>
+      </ProductLink>
 
       {hasAlts && (
-        <button className="meny-alts-pill" onClick={() => setShowAlts(!showAlts)}>
-          {showAlts ? "\u2212" : `+${match.alternatives.length}`}
+        <button className="mv-alts-btn" onClick={() => setShowAlts(!showAlts)}>
+          {showAlts
+            ? (lang === "no" ? "Skjul" : "Hide")
+            : (lang === "no" ? `${match.alternatives.length} alternativer` : `${match.alternatives.length} alternatives`)}
         </button>
       )}
 
       {hasAlts && showAlts && (
-        <div className="meny-alts">
+        <div className="mv-alts">
           {match.alternatives.map(alt => (
-            <AltItem key={alt.ean} product={alt} />
+            <ProductLink key={alt.ean} url={alt.productUrl}>
+              <div className="mv-alt">
+                <div className="mv-alt-thumb">
+                  {alt.imageUrl ? (
+                    <img src={alt.imageUrl} alt={alt.name} className="mv-thumb-img" loading="lazy"
+                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  ) : null}
+                </div>
+                <span className="mv-alt-name">
+                  {alt.name}{alt.brand ? ` \u00B7 ${alt.brand}` : ""}{alt.weight ? ` \u00B7 ${alt.weight}` : ""}
+                </span>
+                <span className="mv-alt-price">{alt.price} <span className="mv-kr">kr</span></span>
+              </div>
+            </ProductLink>
           ))}
         </div>
       )}
@@ -77,27 +81,11 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
   );
 }
 
-function AltItem({ product }: { product: MenyProduct }) {
-  const inner = (
-    <div className="meny-alt">
-      <div className="meny-alt-thumb">
-        {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.name} className="meny-alt-img" loading="lazy"
-            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-        ) : null}
-      </div>
-      <span className="meny-alt-label">
-        {product.name}
-        {product.brand ? ` \u00B7 ${product.brand}` : ""}
-        {product.weight ? ` \u00B7 ${product.weight}` : ""}
-      </span>
-      <span className="meny-alt-price">{product.price}<span className="meny-kr">kr</span></span>
-    </div>
+function ProductLink({ url, children }: { url: string | null | undefined; children: React.ReactNode }) {
+  if (!url) return <>{children}</>;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="mv-link">{children}</a>
   );
-
-  return product.productUrl ? (
-    <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className="meny-link">{inner}</a>
-  ) : inner;
 }
 
 export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
@@ -107,35 +95,30 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
 
   const matched = matches.filter(m => m.matched);
   const unmatched = matches.filter(m => !m.matched);
-
   const toBuy = matched.filter(m => !m.pantryStaple);
   const pantry = matched.filter(m => m.pantryStaple);
 
   return (
-    <div className="meny-view">
-      <button className="meny-back" onClick={onBack}>
-        <span className="meny-back-arrow">{"\u2039"}</span>
+    <div className="mv">
+      <button className="mv-back" onClick={onBack}>
+        <span className="mv-back-arrow">{"\u2039"}</span>
         <span>{lang === "no" ? "Tilbake til oppskrift" : "Back to recipe"}</span>
       </button>
 
-      {/* Summary */}
-      <div className="meny-header">
-        <div className="meny-header-left">
-          <span className="meny-header-store">{storeName}</span>
-          <span className={`meny-header-count${trueAllMatched ? "" : " partial"}`}>
-            {matchedCount}/{totalCount} {lang === "no" ? "varer funnet" : "items found"}
+      {/* Header */}
+      <div className="mv-header">
+        <div>
+          <span className="mv-store">{storeName}</span>
+          <span className={`mv-count${trueAllMatched ? "" : " partial"}`}>
+            {matchedCount}/{totalCount} {lang === "no" ? "varer" : "items"}
           </span>
         </div>
-        <div className="meny-header-total">
-          <span className="meny-header-ca">ca.</span>
-          <span className="meny-header-sum">{Math.round(totalPrice)}</span>
-          <span className="meny-header-currency">kr</span>
-        </div>
+        <span className="mv-total">~{Math.round(totalPrice)} kr</span>
       </div>
 
       {/* Products to buy */}
       {toBuy.length > 0 && (
-        <div className="meny-list">
+        <div className="mv-list">
           {toBuy.map((match, i) => (
             <ProductCard key={match.ingredient} match={match} lang={lang} index={i} />
           ))}
@@ -144,11 +127,11 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
 
       {/* Pantry staples */}
       {pantry.length > 0 && (
-        <div className="meny-pantry">
-          <span className="meny-pantry-label">
+        <div className="mv-section">
+          <span className="mv-section-label">
             {lang === "no" ? "Har trolig hjemme" : "Likely at home"}
           </span>
-          <div className="meny-list meny-list-pantry">
+          <div className="mv-list mv-list--pantry">
             {pantry.map((match, i) => (
               <ProductCard key={match.ingredient} match={match} lang={lang} index={toBuy.length + i} />
             ))}
@@ -158,13 +141,13 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
 
       {/* Unmatched */}
       {unmatched.length > 0 && (
-        <div className="meny-missed">
-          <span className="meny-missed-label">
+        <div className="mv-section">
+          <span className="mv-section-label">
             {lang === "no" ? "Ikke funnet" : "Not found"}
           </span>
-          <div className="meny-missed-items">
+          <div className="mv-chips">
             {unmatched.map(m => (
-              <span key={m.ingredient} className="meny-missed-item">{m.ingredient}</span>
+              <span key={m.ingredient} className="mv-chip">{m.ingredient}</span>
             ))}
           </div>
         </div>
