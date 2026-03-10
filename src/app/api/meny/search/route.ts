@@ -133,7 +133,7 @@ function mapHitToProduct(hit: MenyApiHit): MenyProduct {
       : null,
     imageUrl: `https://bilder.ngdata.no/${src.ean}/meny/large.jpg`,
     weight: src.weight ? `${src.weight} ${src.compareUnit || 'kg'}` : null,
-    productUrl: hit.contentId ? `https://meny.no/varer/${hit.contentId}/` : null,
+    productUrl: src.ean ? `https://meny.no/search/?q=${src.ean}` : null,
   };
 }
 
