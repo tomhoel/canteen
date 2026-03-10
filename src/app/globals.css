@@ -255,31 +255,25 @@ body {
 
 /* ─── Active / voteable card — the hero treatment ─── */
 .food-card.voteable {
-  border-color: rgba(200, 150, 60, 0.18);
-  background: linear-gradient(180deg, #fffaf2 0%, var(--card-white) 50%);
+  background: linear-gradient(180deg, #fffbf5 0%, var(--card-white) 45%);
+  border-color: rgba(200, 150, 60, 0.14);
   box-shadow:
-    0 1px 2px rgba(200, 116, 26, 0.06),
-    0 4px 14px rgba(200, 116, 26, 0.06),
-    0 14px 36px rgba(60, 30, 0, 0.07);
-}
-
-.food-card.voteable::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 24px;
-  right: 24px;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent-yellow), var(--accent-orange));
-  border-radius: 0 0 3px 3px;
-  opacity: 0.7;
+    0 1px 3px rgba(200, 116, 26, 0.05),
+    0 6px 16px rgba(200, 116, 26, 0.06),
+    0 16px 40px rgba(60, 30, 0, 0.08);
 }
 
 .food-card.voteable:hover {
   box-shadow:
     0 4px 10px rgba(200, 116, 26, 0.06),
     0 14px 28px rgba(200, 116, 26, 0.08),
-    0 28px 56px rgba(60, 30, 0, 0.09);
+    0 28px 56px rgba(60, 30, 0, 0.10);
+}
+
+.food-card.voteable .food-image {
+  filter: drop-shadow(0 10px 24px rgba(80, 40, 0, 0.18))
+    drop-shadow(0 3px 8px rgba(80, 40, 0, 0.12))
+    saturate(1.08);
 }
 
 /* Featured card style */
@@ -1165,21 +1159,11 @@ body {
   }
 
   .food-card.voteable {
-    background: linear-gradient(135deg, #fffaf2 0%, var(--card-white) 40%);
-    border-color: rgba(200, 150, 60, 0.15);
+    background: linear-gradient(135deg, #fffbf5 0%, var(--card-white) 40%);
+    border-color: rgba(200, 150, 60, 0.12);
     box-shadow:
-      0 1px 3px rgba(200, 116, 26, 0.06),
+      0 1px 3px rgba(200, 116, 26, 0.05),
       0 6px 16px rgba(60, 30, 0, 0.06);
-  }
-
-  .food-card.voteable::before {
-    left: 0;
-    right: auto;
-    top: 12px;
-    bottom: 12px;
-    width: 3px;
-    height: auto;
-    border-radius: 0 3px 3px 0;
   }
 
   .food-card.outdated {
