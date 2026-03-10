@@ -3328,24 +3328,23 @@ a.deals-card-link {
 
 /* ─── Meny View ─── */
 .meny-view {
-  padding: 0 0 24px;
+  padding: 0 0 20px;
   animation: sheetContentReveal 0.3s var(--smooth) both;
 }
 
 .meny-back {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 12px 24px;
+  gap: 5px;
+  padding: 14px 24px;
   background: none;
   border: none;
-  border-bottom: 1px solid var(--border-light);
   width: 100%;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent-orange);
-  transition: color 0.2s ease;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s;
 }
 
 .meny-back:hover {
@@ -3353,96 +3352,115 @@ a.deals-card-link {
 }
 
 .meny-back-arrow {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   line-height: 1;
+  opacity: 0.6;
 }
 
-/* ─── Meny Summary ─── */
-.meny-summary {
-  padding: 16px 24px 12px;
+/* ─── Meny Header ─── */
+.meny-header {
+  padding: 8px 24px 16px;
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-light);
   animation: recipeReveal 0.35s var(--smooth) both;
 }
 
-.meny-summary-top {
+.meny-header-left {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
-.meny-summary-store {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.meny-summary-match {
+.meny-header-store {
   font-size: 11px;
   font-weight: 600;
-  color: #4a9e55;
-}
-
-.meny-summary-match.partial {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
-.meny-summary-total {
-  font-size: 20px;
-  font-weight: 800;
+.meny-header-count {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--accent-green, #4a9e55);
+}
+
+.meny-header-count.partial {
+  color: var(--text-muted);
+}
+
+.meny-header-total {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.meny-header-ca {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.meny-header-sum {
+  font-size: 26px;
+  font-weight: 300;
   color: var(--text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.meny-header-currency {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 1px;
 }
 
 /* ─── Meny Product List ─── */
-.meny-product-list {
+.meny-list {
   padding: 0 24px;
 }
 
-.meny-product-row {
+.meny-row {
+  position: relative;
   border-bottom: 1px solid var(--border-light);
   animation: recipeReveal 0.3s var(--smooth) both;
 }
 
-.meny-product-row:last-child {
+.meny-row:last-child {
   border-bottom: none;
 }
 
-.meny-product-card {
+.meny-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
+  gap: 11px;
+  padding: 11px 0;
+  transition: opacity 0.15s;
 }
 
-.meny-product-card.out-of-stock {
-  opacity: 0.5;
+.meny-card.oos {
+  opacity: 0.4;
 }
 
-.meny-product-link {
+.meny-link {
   display: block;
   text-decoration: none;
   color: inherit;
 }
 
-.meny-product-link .meny-product-card.linkable:active {
-  opacity: 0.7;
+.meny-link:active .meny-card.has-link {
+  opacity: 0.6;
 }
 
-.meny-out-of-stock-badge {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-top: 2px;
-}
-
-.meny-product-img-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+/* ─── Card Thumbnail ─── */
+.meny-card-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   background: var(--bg-cream);
   display: flex;
   align-items: center;
@@ -3451,44 +3469,46 @@ a.deals-card-link {
   flex-shrink: 0;
 }
 
-.meny-product-img {
+.meny-card-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 2px;
+  padding: 3px;
 }
 
-.meny-product-img-placeholder {
-  font-size: 13px;
-  font-weight: 700;
+.meny-card-initial {
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-muted);
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
-.meny-product-details {
+/* ─── Card Info ─── */
+.meny-card-info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
-.meny-product-ingredient {
-  font-size: 12.5px;
+.meny-card-ingredient {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
-.meny-recipe-amount {
+.meny-card-qty {
   font-weight: 400;
   color: var(--text-muted);
-  font-size: 11.5px;
+  font-size: 11px;
+  margin-left: 5px;
 }
 
-.meny-product-name {
+.meny-card-product {
   font-size: 10.5px;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--text-muted);
   line-height: 1.3;
   white-space: nowrap;
@@ -3496,75 +3516,69 @@ a.deals-card-link {
   text-overflow: ellipsis;
 }
 
-.meny-product-right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.meny-product-price {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.meny-link-arrow {
-  font-size: 11px;
+.meny-card-oos {
+  font-size: 9.5px;
+  font-weight: 500;
   color: var(--text-muted);
-  opacity: 0.5;
-  transition: opacity 0.15s;
+  letter-spacing: 0.03em;
+  margin-top: 1px;
 }
 
-.meny-link-arrow.small {
-  font-size: 10px;
+/* ─── Card Price ─── */
+.meny-card-price {
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
 }
 
-.meny-product-link:hover .meny-link-arrow {
-  opacity: 1;
+.meny-kr {
+  font-size: 0.7em;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 2px;
 }
 
-/* ─── Alternatives Toggle ─── */
-.meny-alts-toggle {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+/* ─── Alternatives Pill ─── */
+.meny-alts-pill {
+  position: absolute;
+  right: 0;
+  top: 0;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 500;
   color: var(--text-muted);
-  padding: 2px 0 8px;
-  transition: color 0.15s;
+  opacity: 0.5;
+  padding: 4px 0 4px 8px;
+  transition: opacity 0.15s;
+  font-variant-numeric: tabular-nums;
 }
 
-.meny-alts-toggle:hover {
-  color: var(--text-primary);
-}
-
-.meny-alts-chevron {
-  font-size: 9px;
-  line-height: 1;
+.meny-alts-pill:hover {
+  opacity: 1;
 }
 
 /* ─── Alternatives List ─── */
-.meny-alts-list {
-  padding: 0 0 8px 50px;
+.meny-alts {
+  padding: 0 0 10px 53px;
   animation: recipeReveal 0.2s var(--smooth) both;
 }
 
-.meny-alt-card {
+.meny-alt {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 0;
+  padding: 4px 0;
 }
 
-.meny-alt-img-wrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+.meny-alt-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
   background: var(--bg-cream);
   display: flex;
   align-items: center;
@@ -3580,11 +3594,11 @@ a.deals-card-link {
   padding: 1px;
 }
 
-.meny-alt-name {
+.meny-alt-label {
   flex: 1;
   min-width: 0;
-  font-size: 10.5px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 400;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -3592,77 +3606,91 @@ a.deals-card-link {
 }
 
 .meny-alt-price {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 400;
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Pantry Section ─── */
-.meny-pantry-header {
-  padding: 14px 24px 0;
+.meny-pantry {
+  padding-top: 6px;
 }
 
 .meny-pantry-label {
-  font-size: 10.5px;
-  font-weight: 600;
+  display: block;
+  padding: 10px 24px 2px;
+  font-size: 10px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
-  opacity: 0.7;
-}
-
-.meny-pantry-list {
   opacity: 0.6;
 }
 
+.meny-list-pantry .meny-card {
+  opacity: 0.45;
+}
+
+.meny-list-pantry .meny-card.oos {
+  opacity: 0.3;
+}
+
 /* ─── Meny Not Found ─── */
-.meny-not-found {
-  padding: 12px 24px;
+.meny-missed {
+  padding: 14px 24px 0;
+}
+
+.meny-missed-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.meny-missed-items {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  gap: 5px;
+  margin-top: 6px;
 }
 
-.meny-not-found-label {
+.meny-missed-item {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--text-muted);
-}
-
-.meny-not-found-item {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-  padding: 2px 8px;
+  padding: 3px 9px;
   background: var(--bg-cream);
-  border-radius: 6px;
+  border-radius: 20px;
 }
 
 /* ─── Meny Mobile ─── */
 @media (max-width: 768px) {
-  .meny-summary {
-    padding: 12px 16px 10px;
+  .meny-header {
+    padding: 6px 16px 14px;
   }
 
-  .meny-product-list {
+  .meny-list {
     padding: 0 16px;
   }
 
-  .meny-pantry-header {
-    padding: 14px 16px 0;
+  .meny-pantry-label {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
-  .meny-not-found {
-    padding: 10px 16px;
+  .meny-missed {
+    padding: 12px 16px 0;
   }
 
   .meny-back {
-    padding: 10px 16px;
+    padding: 12px 16px;
   }
 
-  .meny-alts-list {
-    padding-left: 40px;
+  .meny-alts {
+    padding-left: 42px;
   }
 }
 
