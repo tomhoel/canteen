@@ -53,6 +53,14 @@ export async function POST(request: NextRequest) {
     ? 'Respond entirely in Norwegian (bokmål).'
     : 'Respond entirely in English.';
 
+  const itemLocalField = lang === 'no'
+    ? `\n    { "amount": "4", "unit": "fileter", "item": "Salmon", "itemLocal": "Laks" }`
+    : `\n    { "amount": "4", "unit": "fillets", "item": "Salmon" }`;
+
+  const itemLocalRule = lang === 'no'
+    ? `\n- Also include an "itemLocal" field with the Norwegian name for each ingredient (e.g. "Kyllingbryst", "Olivenolje", "Hvitløk", "Løk", "Tomater", "Smør", "Mel", "Ris"). Use simple, natural Norwegian grocery names in Title Case.`
+    : '';
+
   const promptText = `You are a warm, experienced Scandinavian home cook. Generate a practical recipe to replicate this canteen dish at home: "${dishName}".
 
 ${langInstruction}
@@ -63,8 +71,7 @@ Return ONLY valid JSON with this exact structure:
   "servings": 4,
   "prepTime": "15 min",
   "cookTime": "25 min",
-  "ingredients": [
-    { "amount": "4", "unit": "fillets", "item": "Salmon" }
+  "ingredients": [${itemLocalField}
   ],
   "steps": ["Step 1 instruction...", "Step 2 instruction..."],
   "tip": "Optional helpful chef tip"
@@ -76,7 +83,7 @@ CRITICAL rules for the "item" field in ingredients:
 - NEVER include preparation words like "fresh", "chopped", "diced", "minced", "halved", "pitted", "sliced", "grated", "melted" in the item field
 - NEVER include descriptions like "to taste", "for garnish", "optional" in the item field
 - Put preparation details (chopped, diced, sliced, etc.) into the "unit" field instead. Example: { "amount": "2", "unit": "diced", "item": "Onions" }
-- Keep item names to 1-3 words maximum
+- Keep item names to 1-3 words maximum${itemLocalRule}
 
 Other guidelines:
 - Keep it simple and achievable for a home cook

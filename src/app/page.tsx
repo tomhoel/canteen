@@ -102,7 +102,7 @@ export default function Home() {
   }, []);
 
   const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
-    const cacheKey = `recipe_v3_${dishName}`;
+    const cacheKey = `recipe_v4_${lang}_${dishName}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -785,7 +785,7 @@ export default function Home() {
                                 <span className="recipe-ingredient-letter" style={{ background: fb.color }}>{fb.letter}</span>
                               </div>
                               <div className="recipe-ingredient-details">
-                                <span className="recipe-ingredient-name">{ing.item}</span>
+                                <span className="recipe-ingredient-name">{ing.itemLocal || ing.item}</span>
                                 <span className="recipe-ingredient-amount">{scaleAmount(ing.amount)} {ing.unit}</span>
                               </div>
                             </li>
