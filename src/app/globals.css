@@ -3519,22 +3519,43 @@ a.deals-card-link {
   color: var(--text-muted);
 }
 
-/* ─── Alternatives Button ─── */
-.mv-alts-btn {
-  display: inline-flex;
+/* ─── Card Row + Expand Chevron ─── */
+.mv-card-row {
+  display: flex;
   align-items: center;
+}
+
+.mv-card-row > .mv-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.mv-expand {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
+  width: 32px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
   color: var(--text-muted);
-  padding: 4px 0 10px;
-  transition: color 0.15s;
+  opacity: 0.5;
+  transition: transform 0.25s var(--smooth), color 0.15s, opacity 0.15s;
 }
 
-.mv-alts-btn:hover {
+.mv-expand:hover,
+.mv-expand:active {
   color: var(--accent-orange);
+  opacity: 1;
+}
+
+.mv-expand.open {
+  transform: rotate(90deg);
+  color: var(--accent-orange);
+  opacity: 0.8;
 }
 
 /* ─── Alternatives List ─── */
