@@ -3265,6 +3265,17 @@ a.deals-card-link {
 .deals-card-savings { font-size: 10px; font-weight: 800; color: var(--accent-green); background: rgba(74,158,85,0.1); padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
 .deals-card-source { font-size: 9px; color: var(--text-muted); }
 
+/* ─── Streaming Indicator ─── */
+.deals-streaming {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+}
+.deals-streaming-icon { font-size: 18px; }
+.deals-streaming-text { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
 /* ─── No Results ─── */
 .deals-no-results {
   padding: 12px 24px;
