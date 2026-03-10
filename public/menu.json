@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-03-09T07:11:27.305Z",
+  "scrapedAt": "2026-03-10T06:37:55.260Z",
   "canteens": {
     "Eat the street": {
       "week": "UKE/WEEK 11",
@@ -32,7 +32,12 @@
               },
               {
                 "dish": "Hummus med ovnsbakte grønnsaker",
-                "allergens": [],
+                "allergens": [
+                  {
+                    "id": "12",
+                    "name": "Sulphites"
+                  }
+                ],
                 "isMain": false
               },
               {
@@ -75,8 +80,13 @@
                 "isMain": false
               },
               {
-                "dish": "Hummus with oven baked vegetables",
-                "allergens": [],
+                "dish": "Hummus with oven-baked vegetables",
+                "allergens": [
+                  {
+                    "id": "12",
+                    "name": "Sulphites"
+                  }
+                ],
                 "isMain": false
               },
               {
@@ -105,10 +115,6 @@
                 "dish": "Fish & Chips med ertestuing og tartarsaus",
                 "allergens": [
                   {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
                     "id": "2",
                     "name": "Fish"
                   },
@@ -119,26 +125,27 @@
                   {
                     "id": "4",
                     "name": "Milk"
+                  },
+                  {
+                    "id": "8",
+                    "name": "Mustard"
                   }
                 ],
                 "isMain": true
               },
               {
                 "dish": "Fransk kjøttsuppe",
-                "allergens": [],
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
-                "dish": "Pad Thai med scampi",
+                "dish": "Jambalaya med scampi",
                 "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
                   {
                     "id": "10",
                     "name": "Shellfish"
@@ -171,16 +178,26 @@
                 "isMain": true
               },
               {
-                "dish": "1",
+                "dish": "2",
                 "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
                   {
                     "id": "3",
                     "name": "Gluten"
                   },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "8",
+                    "name": "Mustard"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "French meat soup",
+                "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
@@ -189,21 +206,8 @@
                 "isMain": false
               },
               {
-                "dish": "French meat soup",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Pad Thai with scampi",
+                "dish": "Jambalaya with scampi",
                 "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
                   {
                     "id": "10",
                     "name": "Shellfish"
