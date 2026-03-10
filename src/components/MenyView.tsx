@@ -8,7 +8,7 @@ interface MenyViewProps {
 
 export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
   const { matches, totalPrice, matchedCount, totalCount, allMatched, storeName } = meny;
-  const outOfStockCount = matches.filter(m => m.outOfStock).length;
+  const outOfStockCount = matches.filter(m => m.matched && m.outOfStock).length;
   const trueAllMatched = allMatched && outOfStockCount === 0;
   const matched = matches.filter(m => m.matched);
   const unmatched = matches.filter(m => !m.matched);
