@@ -14,48 +14,51 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
 
   return (
     <div className="mv-row" style={{ animationDelay: `${index * 40}ms` }}>
-      <ProductLink url={match.product?.productUrl}>
-        <div className={`mv-card${match.outOfStock ? " mv-oos" : ""}`}>
-          <div className="mv-thumb">
-            {match.product?.imageUrl ? (
-              <img
-                src={match.product.imageUrl}
-                alt={match.product.name}
-                className="mv-thumb-img"
-                loading="lazy"
-                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            ) : (
-              <span className="mv-thumb-letter">{match.ingredient.charAt(0).toUpperCase()}</span>
-            )}
+      <div className="mv-card-row">
+        <ProductLink url={match.product?.productUrl}>
+          <div className={`mv-card${match.outOfStock ? " mv-oos" : ""}`}>
+            <div className="mv-thumb">
+              {match.product?.imageUrl ? (
+                <img
+                  src={match.product.imageUrl}
+                  alt={match.product.name}
+                  className="mv-thumb-img"
+                  loading="lazy"
+                  onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <span className="mv-thumb-letter">{match.ingredient.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="mv-detail">
+              <span className="mv-name">{match.ingredient}</span>
+              <span className="mv-product">
+                {match.product!.name}
+                {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
+                {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
+              </span>
+              {match.outOfStock && (
+                <span className="mv-oos-label">{lang === "no" ? "Ikke tilgjengelig" : "Unavailable"}</span>
+              )}
+            </div>
+            <div className="mv-right">
+              {recipeDesc && <span className="mv-qty">{recipeDesc}</span>}
+              <span className="mv-price">
+                {match.outOfStock ? "\u2013" : <>{match.product!.price} <span className="mv-kr">kr</span></>}
+              </span>
+            </div>
           </div>
-          <div className="mv-detail">
-            <span className="mv-name">{match.ingredient}</span>
-            <span className="mv-product">
-              {match.product!.name}
-              {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
-              {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
-            </span>
-            {match.outOfStock && (
-              <span className="mv-oos-label">{lang === "no" ? "Ikke tilgjengelig" : "Unavailable"}</span>
-            )}
-          </div>
-          <div className="mv-right">
-            {recipeDesc && <span className="mv-qty">{recipeDesc}</span>}
-            <span className="mv-price">
-              {match.outOfStock ? "\u2013" : <>{match.product!.price} <span className="mv-kr">kr</span></>}
-            </span>
-          </div>
-        </div>
-      </ProductLink>
-
-      {hasAlts && (
-        <button className="mv-alts-btn" onClick={() => setShowAlts(!showAlts)}>
-          {showAlts
-            ? (lang === "no" ? "Skjul" : "Hide")
-            : (lang === "no" ? `${match.alternatives.length} alternativer` : `${match.alternatives.length} alternatives`)}
-        </button>
-      )}
+        </ProductLink>
+        {hasAlts && (
+          <button
+            className={`mv-expand${showAlts ? " open" : ""}`}
+            onClick={() => setShowAlts(!showAlts)}
+            aria-label={showAlts ? "Hide alternatives" : "Show alternatives"}
+          >
+            {"\u203A"}
+          </button>
+        )}
+      </div>
 
       {hasAlts && showAlts && (
         <div className="mv-alts">
