@@ -14,51 +14,46 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
 
   const card = (
     <div
-      className={`meny-product-card${match.outOfStock ? " out-of-stock" : ""}${match.product?.productUrl ? " linkable" : ""}`}
-      style={{ animationDelay: `${index * 50}ms` }}
+      className={`meny-card${match.outOfStock ? " oos" : ""}${match.product?.productUrl ? " has-link" : ""}`}
+      style={{ animationDelay: `${index * 40}ms` }}
     >
-      <div className="meny-product-img-wrap">
+      <div className="meny-card-thumb">
         {match.product?.imageUrl ? (
           <img
             src={match.product.imageUrl}
             alt={match.product.name}
-            className="meny-product-img"
+            className="meny-card-img"
             loading="lazy"
             onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
-          <span className="meny-product-img-placeholder">{match.ingredient.charAt(0).toUpperCase()}</span>
+          <span className="meny-card-initial">{match.ingredient.charAt(0).toUpperCase()}</span>
         )}
       </div>
-      <div className="meny-product-details">
-        <span className="meny-product-ingredient">
+      <div className="meny-card-info">
+        <span className="meny-card-ingredient">
           {match.ingredient}
-          {recipeDesc && <span className="meny-recipe-amount"> · {recipeDesc}</span>}
+          {recipeDesc && <span className="meny-card-qty">{recipeDesc}</span>}
         </span>
-        <span className="meny-product-name">
+        <span className="meny-card-product">
           {match.product!.name}
-          {match.product!.brand ? ` · ${match.product!.brand}` : ""}
-          {match.product!.weight ? ` · ${match.product!.weight}` : ""}
+          {match.product!.brand ? ` \u00B7 ${match.product!.brand}` : ""}
+          {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
         </span>
         {match.outOfStock && (
-          <span className="meny-out-of-stock-badge">
-            {lang === "no" ? "Utilgjengelig" : "Out of stock"}
-          </span>
+          <span className="meny-card-oos">{lang === "no" ? "Ikke tilgjengelig" : "Unavailable"}</span>
         )}
       </div>
-      <div className="meny-product-right">
-        <span className="meny-product-price">
-          {match.outOfStock ? "–" : `${match.product!.price} kr`}
-        </span>
-        {match.product?.productUrl && <span className="meny-link-arrow">↗</span>}
-      </div>
+      <span className="meny-card-price">
+        {match.outOfStock ? "\u2013" : <>{match.product!.price}<span className="meny-kr">kr</span></>}
+      </span>
     </div>
   );
 
   return (
-    <div className="meny-product-row">
+    <div className="meny-row" style={{ animationDelay: `${index * 40}ms` }}>
       {match.product?.productUrl ? (
-        <a href={match.product.productUrl} target="_blank" rel="noopener noreferrer" className="meny-product-link">
+        <a href={match.product.productUrl} target="_blank" rel="noopener noreferrer" className="meny-link">
           {card}
         </a>
       ) : (
@@ -66,21 +61,15 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
       )}
 
       {hasAlts && (
-        <button
-          className={`meny-alts-toggle${showAlts ? " open" : ""}`}
-          onClick={() => setShowAlts(!showAlts)}
-        >
-          <span className="meny-alts-chevron">{showAlts ? "▾" : "▸"}</span>
-          {showAlts
-            ? (lang === "no" ? "Skjul alternativer" : "Hide alternatives")
-            : (lang === "no" ? `${match.alternatives.length} andre` : `${match.alternatives.length} others`)}
+        <button className="meny-alts-pill" onClick={() => setShowAlts(!showAlts)}>
+          {showAlts ? "\u2212" : `+${match.alternatives.length}`}
         </button>
       )}
 
       {hasAlts && showAlts && (
-        <div className="meny-alts-list">
+        <div className="meny-alts">
           {match.alternatives.map(alt => (
-            <AltProduct key={alt.ean} product={alt} />
+            <AltItem key={alt.ean} product={alt} />
           ))}
         </div>
       )}
@@ -88,33 +77,26 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
   );
 }
 
-function AltProduct({ product }: { product: MenyProduct }) {
+function AltItem({ product }: { product: MenyProduct }) {
   const inner = (
-    <div className="meny-alt-card">
-      <div className="meny-alt-img-wrap">
+    <div className="meny-alt">
+      <div className="meny-alt-thumb">
         {product.imageUrl ? (
           <img src={product.imageUrl} alt={product.name} className="meny-alt-img" loading="lazy"
             onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-        ) : (
-          <span className="meny-product-img-placeholder">{product.name.charAt(0)}</span>
-        )}
+        ) : null}
       </div>
-      <span className="meny-alt-name">
+      <span className="meny-alt-label">
         {product.name}
-        {product.brand ? ` · ${product.brand}` : ""}
-        {product.weight ? ` · ${product.weight}` : ""}
+        {product.brand ? ` \u00B7 ${product.brand}` : ""}
+        {product.weight ? ` \u00B7 ${product.weight}` : ""}
       </span>
-      <div className="meny-product-right">
-        <span className="meny-alt-price">{product.price} kr</span>
-        {product.productUrl && <span className="meny-link-arrow small">↗</span>}
-      </div>
+      <span className="meny-alt-price">{product.price}<span className="meny-kr">kr</span></span>
     </div>
   );
 
   return product.productUrl ? (
-    <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className="meny-product-link">
-      {inner}
-    </a>
+    <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className="meny-link">{inner}</a>
   ) : inner;
 }
 
@@ -137,21 +119,23 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
       </button>
 
       {/* Summary */}
-      <div className="meny-summary">
-        <div className="meny-summary-top">
-          <span className="meny-summary-store">{storeName}</span>
-          <span className={`meny-summary-match${trueAllMatched ? "" : " partial"}`}>
-            {trueAllMatched
-              ? (lang === "no" ? `${matchedCount} av ${totalCount}` : `${matchedCount} of ${totalCount}`)
-              : `${matchedCount}/${totalCount}`}
+      <div className="meny-header">
+        <div className="meny-header-left">
+          <span className="meny-header-store">{storeName}</span>
+          <span className={`meny-header-count${trueAllMatched ? "" : " partial"}`}>
+            {matchedCount}/{totalCount} {lang === "no" ? "varer funnet" : "items found"}
           </span>
         </div>
-        <span className="meny-summary-total">~{Math.round(totalPrice)} kr</span>
+        <div className="meny-header-total">
+          <span className="meny-header-ca">ca.</span>
+          <span className="meny-header-sum">{Math.round(totalPrice)}</span>
+          <span className="meny-header-currency">kr</span>
+        </div>
       </div>
 
       {/* Products to buy */}
       {toBuy.length > 0 && (
-        <div className="meny-product-list">
+        <div className="meny-list">
           {toBuy.map((match, i) => (
             <ProductCard key={match.ingredient} match={match} lang={lang} index={i} />
           ))}
@@ -160,29 +144,29 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
 
       {/* Pantry staples */}
       {pantry.length > 0 && (
-        <>
-          <div className="meny-pantry-header">
-            <span className="meny-pantry-label">
-              {lang === "no" ? "Har sannsynligvis hjemme" : "Likely have at home"}
-            </span>
-          </div>
-          <div className="meny-product-list meny-pantry-list">
+        <div className="meny-pantry">
+          <span className="meny-pantry-label">
+            {lang === "no" ? "Har trolig hjemme" : "Likely at home"}
+          </span>
+          <div className="meny-list meny-list-pantry">
             {pantry.map((match, i) => (
               <ProductCard key={match.ingredient} match={match} lang={lang} index={toBuy.length + i} />
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {/* Unmatched */}
       {unmatched.length > 0 && (
-        <div className="meny-not-found">
-          <span className="meny-not-found-label">
+        <div className="meny-missed">
+          <span className="meny-missed-label">
             {lang === "no" ? "Ikke funnet" : "Not found"}
           </span>
-          {unmatched.map(m => (
-            <span key={m.ingredient} className="meny-not-found-item">{m.ingredient}</span>
-          ))}
+          <div className="meny-missed-items">
+            {unmatched.map(m => (
+              <span key={m.ingredient} className="meny-missed-item">{m.ingredient}</span>
+            ))}
+          </div>
         </div>
       )}
     </div>
