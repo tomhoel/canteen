@@ -131,7 +131,7 @@ export default function Home() {
 
   const handleDealsClick = useCallback(async (dishName: string, recipe: Recipe) => {
     // Check localStorage cache
-    const cacheKey = `deals_v2_${dishName}`;
+    const cacheKey = `deals_v3_${dishName}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {

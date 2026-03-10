@@ -22,6 +22,10 @@ export interface ProductOffer {
   matchedIngredient: string;
   productUrl: string | null;
   weight: string | null;
+  isCampaign: boolean;
+  originalPrice: number | null;
+  savingsPercent: number | null;
+  validUntil: string | null;
 }
 
 export interface StoreRecommendation {
