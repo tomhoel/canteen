@@ -62,18 +62,23 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
 
       {hasAlts && showAlts && (
         <div className="mv-alts">
-          {match.alternatives.map(alt => (
+          {match.alternatives.map((alt, ai) => (
             <ProductLink key={alt.ean} url={alt.productUrl}>
-              <div className="mv-alt">
+              <div className="mv-alt" style={{ animationDelay: `${ai * 50}ms` }}>
                 <div className="mv-alt-thumb">
                   {alt.imageUrl ? (
                     <img src={alt.imageUrl} alt={alt.name} className="mv-thumb-img" loading="lazy"
                       onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  ) : null}
+                  ) : (
+                    <span className="mv-thumb-letter">{alt.name.charAt(0).toUpperCase()}</span>
+                  )}
                 </div>
-                <span className="mv-alt-name">
-                  {alt.name}{alt.brand ? ` \u00B7 ${alt.brand}` : ""}{alt.weight ? ` \u00B7 ${alt.weight}` : ""}
-                </span>
+                <div className="mv-alt-detail">
+                  <span className="mv-alt-name">{alt.name}</span>
+                  <span className="mv-alt-meta">
+                    {alt.brand || ""}{alt.brand && alt.weight ? " \u00B7 " : ""}{alt.weight || ""}
+                  </span>
+                </div>
                 <span className="mv-alt-price">{alt.price} <span className="mv-kr">kr</span></span>
               </div>
             </ProductLink>
