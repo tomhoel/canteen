@@ -4,9 +4,10 @@ interface DealsViewProps {
   deals: DealsResponse;
   lang: "no" | "en";
   onBack: () => void;
+  isStreaming?: boolean;
 }
 
-export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
+export default function DealsView({ deals, lang, onBack, isStreaming }: DealsViewProps) {
   const { recommendation, allStores, searchedIngredients } = deals;
 
   // Group all products across stores by ingredient
@@ -31,7 +32,8 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
   const ingredientsWithDeals = new Set(dealsByIngredient.keys());
   const noDealsIngredients = searchedIngredients.filter(i => !ingredientsWithDeals.has(i));
 
-  const hasDeals = recommendation.dealCount > 0;
+  const hasDeals = dealsByIngredient.size > 0;
+  const showRecommendation = !isStreaming && recommendation.store !== '';
 
   return (
     <div className="deals-view">
@@ -40,37 +42,39 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
         <span>{lang === "no" ? "Tilbake til oppskrift" : "Back to recipe"}</span>
       </button>
 
-      {hasDeals ? (
+      {hasDeals || isStreaming ? (
         <>
-          {/* Recommendation Card */}
-          <div className="deals-recommendation" style={{ borderColor: recommendation.storeColor + '30' }}>
-            <div className="deals-rec-header">
-              {recommendation.storeLogo && (
-                <img src={recommendation.storeLogo} alt={recommendation.store} className="deals-rec-logo" />
-              )}
-              <div className="deals-rec-info">
-                <span className="deals-rec-label">{lang === "no" ? "Billigste butikk" : "Cheapest store"}</span>
-                <span className="deals-rec-store" style={{ color: recommendation.storeColor }}>{recommendation.store}</span>
+          {/* Recommendation Card — only after streaming completes */}
+          {showRecommendation && (
+            <div className="deals-recommendation" style={{ borderColor: recommendation.storeColor + '30' }}>
+              <div className="deals-rec-header">
+                {recommendation.storeLogo && (
+                  <img src={recommendation.storeLogo} alt={recommendation.store} className="deals-rec-logo" />
+                )}
+                <div className="deals-rec-info">
+                  <span className="deals-rec-label">{lang === "no" ? "Billigste butikk" : "Cheapest store"}</span>
+                  <span className="deals-rec-store" style={{ color: recommendation.storeColor }}>{recommendation.store}</span>
+                </div>
+              </div>
+              <div className="deals-rec-stats">
+                <div className="deals-rec-stat">
+                  <span className="deals-rec-stat-value">{recommendation.dealCount}</span>
+                  <span className="deals-rec-stat-label">{lang === "no" ? "produkter" : "products"}</span>
+                </div>
+                <div className="deals-rec-stat">
+                  <span className="deals-rec-stat-value">{recommendation.keyIngredientsCovered}</span>
+                  <span className="deals-rec-stat-label">{lang === "no" ? "ingredienser" : "ingredients"}</span>
+                </div>
+                <div className="deals-rec-stat">
+                  <span className="deals-rec-stat-value">~{Math.round(recommendation.totalPrice)} kr</span>
+                  <span className="deals-rec-stat-label">{lang === "no" ? "totalt" : "total"}</span>
+                </div>
               </div>
             </div>
-            <div className="deals-rec-stats">
-              <div className="deals-rec-stat">
-                <span className="deals-rec-stat-value">{recommendation.dealCount}</span>
-                <span className="deals-rec-stat-label">{lang === "no" ? "produkter" : "products"}</span>
-              </div>
-              <div className="deals-rec-stat">
-                <span className="deals-rec-stat-value">{recommendation.keyIngredientsCovered}</span>
-                <span className="deals-rec-stat-label">{lang === "no" ? "nøkkelingredienser" : "key ingredients"}</span>
-              </div>
-              <div className="deals-rec-stat">
-                <span className="deals-rec-stat-value">~{Math.round(recommendation.totalPrice)} kr</span>
-                <span className="deals-rec-stat-label">{lang === "no" ? "totalt" : "total"}</span>
-              </div>
-            </div>
-          </div>
+          )}
 
-          {/* Other stores summary */}
-          {allStores.length > 1 && (
+          {/* Other stores summary — only after streaming */}
+          {showRecommendation && allStores.length > 1 && (
             <div className="deals-other-stores">
               <span className="deals-other-label">{lang === "no" ? "Priser i andre butikker" : "Prices at other stores"}</span>
               <div className="deals-other-list">
@@ -91,7 +95,7 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
               <h4 className="deals-ingredient-title">{ingredient}</h4>
               <div className="deals-cards">
                 {ingredientDeals.map(deal => {
-                  const isRec = deal.store === recommendation.store;
+                  const isRec = !isStreaming && deal.store === recommendation.store;
                   const cardClass = `deals-card${isRec ? " deals-card-recommended" : ""}${deal.isCampaign ? " deals-card-campaign" : ""}${deal.productUrl ? " deals-card-link" : ""}`;
                   const cardStyle = isRec ? { borderColor: recommendation.storeColor + '40' } : undefined;
                   const content = (
@@ -155,8 +159,16 @@ export default function DealsView({ deals, lang, onBack }: DealsViewProps) {
             </div>
           ))}
 
-          {/* No results section */}
-          {noDealsIngredients.length > 0 && (
+          {/* Streaming indicator */}
+          {isStreaming && (
+            <div className="deals-streaming">
+              <span className="deals-loading-cart deals-streaming-icon">{"\uD83D\uDED2"}</span>
+              <span className="deals-streaming-text">{lang === "no" ? "Søker flere ingredienser..." : "Searching more ingredients..."}</span>
+            </div>
+          )}
+
+          {/* No results section — only after streaming */}
+          {!isStreaming && noDealsIngredients.length > 0 && (
             <div className="deals-no-results">
               <span className="deals-no-results-label">{lang === "no" ? "Ingen priser funnet for" : "No prices found for"}</span>
               <div className="deals-no-results-list">

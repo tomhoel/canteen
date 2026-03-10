@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 import { Redis } from '@upstash/redis';
 import type { RecipeIngredient, ProductOffer, StoreRecommendation, DealsResponse } from '@/lib/types';
 
@@ -36,13 +35,6 @@ const STORE_COLORS: Record<string, string> = {
   FUDI: '#ff6b35',
   ENGROSSNETT_NO: '#333333',
 };
-
-interface GeminiIngredient {
-  ingredient: string;
-  searchTerms: string[];
-  priority: number;
-  isKeyIngredient: boolean;
-}
 
 interface KassalApiProduct {
   id: number;
@@ -92,6 +84,17 @@ const STORE_NAME_MAP: Record<string, string> = {
   'europris': 'Europris',
 };
 
+const PANTRY_STAPLES = new Set([
+  'salt', 'pepper', 'oil', 'water', 'sugar', 'flour', 'butter', 'garlic', 'onion',
+  'vann', 'olje', 'olivenolje', 'rapsolje', 'smør', 'sukker', 'mel', 'hvitløk', 'løk',
+  'hvitløksfedd', 'vegetabilsk olje', 'bakepulver', 'natron', 'eddik', 'sitronsaft',
+  'soyasaus', 'salt og pepper', 'olje til steking',
+]);
+
+function isPantryStaple(name: string): boolean {
+  return PANTRY_STAPLES.has(name.toLowerCase().trim());
+}
+
 function normalizeStoreName(name: string): string {
   const lower = name.toLowerCase().trim();
   return STORE_NAME_MAP[lower] || name;
@@ -103,61 +106,6 @@ function getWeekNumber(): number {
   d.setDate(d.getDate() + 4 - (d.getDay() || 7));
   const yearStart = new Date(d.getFullYear(), 0, 1);
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-}
-
-async function rankIngredients(ingredients: RecipeIngredient[], dishName: string): Promise<GeminiIngredient[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
-
-  const ai = new GoogleGenAI({ apiKey });
-
-  const ingredientList = ingredients.map(i => `${i.amount} ${i.unit} ${i.item}`).join('\n');
-
-  const prompt = `You are a Norwegian grocery shopping assistant. Given this recipe "${dishName}" with these ingredients:
-
-${ingredientList}
-
-Rank the ingredients by shopping importance for finding the best grocery prices. Focus on ingredients that:
-1. Are expensive (proteins, cheese, specialty items)
-2. Have significant price variation between stores
-3. Define the dish (key ingredients)
-
-Skip cheap basics that everyone already has: salt, pepper, oil, water, sugar, flour, butter, garlic, onion.
-
-Return ONLY a JSON array (max 6 items, minimum 2) sorted by priority:
-[
-  { "ingredient": "Original ingredient name", "searchTerms": ["norwegian_term1", "norwegian_term2"], "priority": 1, "isKeyIngredient": true }
-]
-
-Rules for searchTerms — THIS IS CRITICAL:
-- These terms are used to search a Norwegian grocery product database (Kassal.app)
-- Use the EXACT product name as it appears on a grocery store shelf, in Norwegian
-- Be SPECIFIC to the actual product, not a general food category
-- NEVER use short generic terms that match unrelated products. Every term must be specific enough to find the actual raw ingredient, not processed foods, baby food, or flavored snacks.
-- Good examples: "kyllingfilet" (not "kylling"), "kjøttdeig" (not "kjøtt"), "matfløte" (not "fløte"), "basmatiris" (not "ris"), "hermetiske tomater" (not "tomat"), "revet parmesan" (not "ost"), "frisk spinat" (not "spinat" alone)
-- BAD examples that return garbage: "ris" (baby food), "fløte" (ice cream), "ost" (cheese-flavored snacks), "laks" (baby food), "pasta" (baby food)
-- Provide 2-3 SPECIFIC variants. Do NOT include a broad fallback term.
-  Example for rice: ["basmatiris", "jasminris", "langkornet ris"]
-  Example for cream: ["matfløte", "kremfløte", "matfløte 18"]
-  Example for salmon: ["laksfilet", "laksefilet", "fersk laks"]
-  Example for chicken: ["kyllingfilet", "kyllingbryst", "kylling hel"]
-  Example for cheese: ["revet ost", "norvegia", "revet parmesan"]
-  Example for spinach: ["frisk spinat", "babyspinat", "spinat pose"]
-- Use lowercase
-- 2-3 search terms per ingredient, ALL specific
-
-Mark isKeyIngredient=true for the 2-3 ingredients that define the dish.`;
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: { parts: [{ text: prompt }] },
-    config: { responseMimeType: 'application/json' },
-  });
-
-  const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('No response from Gemini');
-
-  return JSON.parse(text) as GeminiIngredient[];
 }
 
 async function searchKassalProducts(query: string): Promise<KassalApiProduct[]> {
@@ -189,12 +137,46 @@ async function searchTjekOffers(query: string): Promise<TjekOffer[]> {
   }
 }
 
+// Baby food / irrelevant product patterns to exclude
+const EXCLUDE_PATTERNS = [
+  /\b\d+\s*mnd\b/i,
+  /\b\d+-\d+\s*år\b/i,
+  /\bfra\s+\d+\s*mnd\b/i,
+  /\bbarnegrøt\b/i,
+  /\bbarnemat\b/i,
+  /\bsmoothie\b/i,
+];
+
+const EXCLUDE_BRANDS = new Set([
+  'semper', 'hipp', 'nestlé', 'nestle', 'ella\'s kitchen',
+  'ellas kitchen', 'holle', 'kiddylicious',
+]);
+
+function isRelevantProduct(product: KassalApiProduct, searchTerms: string[]): boolean {
+  const name = product.name.toLowerCase();
+  if (!searchTerms.some(term => name.includes(term.toLowerCase()))) return false;
+  if (EXCLUDE_PATTERNS.some(p => p.test(product.name))) return false;
+  if (product.brand && EXCLUDE_BRANDS.has(product.brand.toLowerCase())) return false;
+  return true;
+}
+
 function isRelevantTjekOffer(offer: TjekOffer, searchTerms: string[]): boolean {
   const heading = offer.heading.toLowerCase();
   if (!searchTerms.some(term => heading.includes(term.toLowerCase()))) return false;
   if (EXCLUDE_PATTERNS.some(p => p.test(offer.heading))) return false;
   if (offer.pricing.price == null) return false;
   return true;
+}
+
+function buildWeightLabel(weight: number | null, unit: string | null): string | null {
+  if (!weight || !unit) return null;
+  if (unit === 'kg' && weight < 1) return `${Math.round(weight * 1000)}g`;
+  if (unit === 'kg') return `${weight}kg`;
+  return `${weight}${unit}`;
+}
+
+function getStoreColor(code: string): string {
+  return STORE_COLORS[code] || '#888888';
 }
 
 function getTjekStoreCode(storeName: string): string {
@@ -212,6 +194,31 @@ function getTjekStoreCode(storeName: string): string {
   if (lower.includes('coop')) return 'COOP_NO';
   if (lower.includes('europris')) return 'EUROPRIS_NO';
   return '';
+}
+
+function mapKassalProduct(product: KassalApiProduct, matchedIngredient: string): ProductOffer | null {
+  if (!product.current_price || !product.store) return null;
+
+  return {
+    id: product.id.toString(),
+    name: product.name,
+    brand: product.brand,
+    price: product.current_price,
+    unitPrice: product.current_unit_price,
+    imageUrl: product.image,
+    store: product.store.name,
+    storeCode: product.store.code,
+    storeColor: getStoreColor(product.store.code),
+    storeLogo: product.store.logo || '',
+    matchedIngredient,
+    productUrl: product.url || null,
+    weight: buildWeightLabel(product.weight, product.weight_unit),
+    isCampaign: false,
+    originalPrice: null,
+    savingsPercent: null,
+    validUntil: null,
+    source: 'kassal',
+  };
 }
 
 function mapTjekOffer(offer: TjekOffer, matchedIngredient: string): ProductOffer | null {
@@ -254,74 +261,7 @@ function mapTjekOffer(offer: TjekOffer, matchedIngredient: string): ProductOffer
   };
 }
 
-// Baby food / irrelevant product patterns to exclude
-const EXCLUDE_PATTERNS = [
-  /\b\d+\s*mnd\b/i,          // "6mnd", "8 mnd" = baby food age labels
-  /\b\d+-\d+\s*år\b/i,       // "1-3år" = toddler food
-  /\bfra\s+\d+\s*mnd\b/i,    // "fra 6 mnd"
-  /\bbarnegrøt\b/i,           // baby porridge
-  /\bbarnemat\b/i,            // baby food
-  /\bsmoothie\b/i,            // smoothie pouches (often baby food)
-];
-
-const EXCLUDE_BRANDS = new Set([
-  'semper', 'hipp', 'nestlé', 'nestle', 'ella\'s kitchen',
-  'ellas kitchen', 'holle', 'kiddylicious',
-]);
-
-function isRelevantProduct(product: KassalApiProduct, searchTerms: string[]): boolean {
-  const name = product.name.toLowerCase();
-
-  // Must contain at least one search term
-  if (!searchTerms.some(term => name.includes(term.toLowerCase()))) return false;
-
-  // Exclude baby food by pattern
-  if (EXCLUDE_PATTERNS.some(p => p.test(product.name))) return false;
-
-  // Exclude known baby food brands
-  if (product.brand && EXCLUDE_BRANDS.has(product.brand.toLowerCase())) return false;
-
-  return true;
-}
-
-function buildWeightLabel(weight: number | null, unit: string | null): string | null {
-  if (!weight || !unit) return null;
-  if (unit === 'kg' && weight < 1) return `${Math.round(weight * 1000)}g`;
-  if (unit === 'kg') return `${weight}kg`;
-  return `${weight}${unit}`;
-}
-
-function getStoreColor(code: string): string {
-  return STORE_COLORS[code] || '#888888';
-}
-
-function mapKassalProduct(product: KassalApiProduct, matchedIngredient: string): ProductOffer | null {
-  if (!product.current_price || !product.store) return null;
-
-  return {
-    id: product.id.toString(),
-    name: product.name,
-    brand: product.brand,
-    price: product.current_price,
-    unitPrice: product.current_unit_price,
-    imageUrl: product.image,
-    store: product.store.name,
-    storeCode: product.store.code,
-    storeColor: getStoreColor(product.store.code),
-    storeLogo: product.store.logo || '',
-    matchedIngredient,
-    productUrl: product.url || null,
-    weight: buildWeightLabel(product.weight, product.weight_unit),
-    isCampaign: false,
-    originalPrice: null,
-    savingsPercent: null,
-    validUntil: null,
-    source: 'kassal',
-  };
-}
-
-function buildRecommendation(allDeals: ProductOffer[], keyIngredients: string[], allSearchedIngredients: string[]): DealsResponse {
-  // Group by store
+function buildRecommendation(allDeals: ProductOffer[], allSearchedIngredients: string[]): DealsResponse {
   const storeMap = new Map<string, ProductOffer[]>();
   for (const deal of allDeals) {
     const existing = storeMap.get(deal.store) || [];
@@ -329,10 +269,8 @@ function buildRecommendation(allDeals: ProductOffer[], keyIngredients: string[],
     storeMap.set(deal.store, existing);
   }
 
-  // Build store recommendations
   const storeRecs: StoreRecommendation[] = [];
   for (const [store, deals] of storeMap) {
-    // Pick cheapest product per ingredient for this store
     const bestPerIngredient = new Map<string, ProductOffer>();
     for (const deal of deals) {
       const existing = bestPerIngredient.get(deal.matchedIngredient);
@@ -342,7 +280,6 @@ function buildRecommendation(allDeals: ProductOffer[], keyIngredients: string[],
     }
 
     const bestDeals = Array.from(bestPerIngredient.values());
-    const keyCount = bestDeals.filter(d => keyIngredients.includes(d.matchedIngredient)).length;
 
     storeRecs.push({
       store,
@@ -350,12 +287,11 @@ function buildRecommendation(allDeals: ProductOffer[], keyIngredients: string[],
       storeLogo: deals[0].storeLogo,
       totalPrice: bestDeals.reduce((sum, d) => sum + d.price, 0),
       dealCount: bestDeals.length,
-      keyIngredientsCovered: keyCount,
+      keyIngredientsCovered: bestDeals.length,
       deals: bestDeals,
     });
   }
 
-  // Sort: most key ingredients covered, then lowest total price
   storeRecs.sort((a, b) => {
     if (b.keyIngredientsCovered !== a.keyIngredientsCovered) {
       return b.keyIngredientsCovered - a.keyIngredientsCovered;
@@ -381,6 +317,38 @@ function buildRecommendation(allDeals: ProductOffer[], keyIngredients: string[],
   };
 }
 
+async function searchIngredient(ing: RecipeIngredient): Promise<{ name: string; deals: ProductOffer[] }> {
+  const searchTerm = (ing.itemLocal || ing.item).toLowerCase();
+  const ingredientName = ing.itemLocal || ing.item;
+
+  const [kassalProducts, tjekOffers] = await Promise.all([
+    searchKassalProducts(searchTerm),
+    searchTjekOffers(searchTerm),
+  ]);
+
+  const deals: ProductOffer[] = [];
+
+  const seenKassal = new Set<number>();
+  for (const product of kassalProducts) {
+    if (!seenKassal.has(product.id) && isRelevantProduct(product, [searchTerm])) {
+      seenKassal.add(product.id);
+      const mapped = mapKassalProduct(product, ingredientName);
+      if (mapped) deals.push(mapped);
+    }
+  }
+
+  const seenTjek = new Set<string>();
+  for (const offer of tjekOffers) {
+    if (!seenTjek.has(offer.id) && isRelevantTjekOffer(offer, [searchTerm])) {
+      seenTjek.add(offer.id);
+      const mapped = mapTjekOffer(offer, ingredientName);
+      if (mapped) deals.push(mapped);
+    }
+  }
+
+  return { name: ingredientName, deals };
+}
+
 export async function POST(request: NextRequest) {
   const { ingredients, dishName, lang } = await request.json();
 
@@ -388,9 +356,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  // Check Redis cache
+  // Check Redis cache — return JSON immediately
   const weekNum = getWeekNumber();
-  const cacheKey = `prices:v3:wk${weekNum}:${dishName}`;
+  const cacheKey = `prices:v4:wk${weekNum}:${dishName}`;
 
   try {
     const cached = await redis.get(cacheKey);
@@ -401,73 +369,93 @@ export async function POST(request: NextRequest) {
     console.error('Redis read error:', err);
   }
 
-  try {
-    // Step 1: Rank ingredients with Gemini
-    const t0 = Date.now();
-    const ranked = await rankIngredients(ingredients as RecipeIngredient[], dishName);
-    const tGemini = Date.now() - t0;
+  // Filter pantry staples, keep recipe order
+  const searchableIngs = (ingredients as RecipeIngredient[])
+    .filter(ing => !isPantryStaple(ing.itemLocal || ing.item))
+    .slice(0, 8);
 
-    const keyIngredients = ranked.filter(r => r.isKeyIngredient).map(r => r.ingredient);
-
-    // Step 2: Search Kassal + Tjek in parallel for each ingredient
-    const t1 = Date.now();
-    const allDeals: ProductOffer[] = [];
-    const searchPromises = ranked.map(async (ing) => {
-      const results: ProductOffer[] = [];
-      // Search all terms in parallel across both APIs
-      const kassalPromises = ing.searchTerms.map(term => searchKassalProducts(term));
-      const tjekPromises = ing.searchTerms.map(term => searchTjekOffers(term));
-      const [kassalResults, tjekResults] = await Promise.all([
-        Promise.all(kassalPromises),
-        Promise.all(tjekPromises),
-      ]);
-      // Deduplicate Kassal by product ID + filter irrelevant results
-      const seenKassal = new Set<number>();
-      for (const products of kassalResults) {
-        for (const product of products) {
-          if (!seenKassal.has(product.id) && isRelevantProduct(product, ing.searchTerms)) {
-            seenKassal.add(product.id);
-            const mapped = mapKassalProduct(product, ing.ingredient);
-            if (mapped) results.push(mapped);
-          }
-        }
-      }
-      // Deduplicate Tjek by offer ID + filter irrelevant results
-      const seenTjek = new Set<string>();
-      for (const offers of tjekResults) {
-        for (const offer of offers) {
-          if (!seenTjek.has(offer.id) && isRelevantTjekOffer(offer, ing.searchTerms)) {
-            seenTjek.add(offer.id);
-            const mapped = mapTjekOffer(offer, ing.ingredient);
-            if (mapped) results.push(mapped);
-          }
-        }
-      }
-      return results;
-    });
-
-    const ingredientResults = await Promise.all(searchPromises);
-    for (const results of ingredientResults) {
-      allDeals.push(...results);
-    }
-    const tSearch = Date.now() - t1;
-
-    console.log(`[deals] Gemini: ${tGemini}ms | Search (Kassal+Tjek): ${tSearch}ms | Total: ${tGemini + tSearch}ms | Ingredients: ${ranked.length} | Deals: ${allDeals.length}`);
-
-    // Step 3: Build recommendation
-    const allSearchedIngredients = ranked.map(r => r.ingredient);
-    const response = buildRecommendation(allDeals, keyIngredients, allSearchedIngredients);
-
-    // Cache in Redis for 3 days
-    try {
-      await redis.set(cacheKey, response, { ex: 3 * 24 * 60 * 60 });
-    } catch (err) {
-      console.error('Redis write error:', err);
-    }
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('Price search failed:', error);
-    return NextResponse.json({ error: 'Failed to find prices' }, { status: 500 });
+  if (searchableIngs.length === 0) {
+    return NextResponse.json({ error: 'No searchable ingredients' }, { status: 400 });
   }
+
+  const encoder = new TextEncoder();
+  const allDeals: ProductOffer[] = [];
+  const searchedIngredients = searchableIngs.map(ing => ing.itemLocal || ing.item);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const t0 = Date.now();
+
+        // Fire all ingredient searches in parallel, stream in recipe order
+        const results: ({ name: string; deals: ProductOffer[] } | undefined)[] = new Array(searchableIngs.length).fill(undefined);
+        let nextIndex = 0;
+
+        await new Promise<void>((resolve) => {
+          let completed = 0;
+
+          searchableIngs.forEach((ing, i) => {
+            searchIngredient(ing).then(result => {
+              results[i] = result;
+              completed++;
+
+              // Flush all consecutive ready results in recipe order
+              while (nextIndex < searchableIngs.length && results[nextIndex] !== undefined) {
+                const r = results[nextIndex]!;
+                allDeals.push(...r.deals);
+
+                const event = JSON.stringify({ type: 'ingredient', name: r.name, deals: r.deals });
+                controller.enqueue(encoder.encode(`data: ${event}\n\n`));
+                nextIndex++;
+              }
+
+              if (completed === searchableIngs.length) resolve();
+            }).catch(() => {
+              results[i] = { name: searchableIngs[i].itemLocal || searchableIngs[i].item, deals: [] };
+              completed++;
+
+              while (nextIndex < searchableIngs.length && results[nextIndex] !== undefined) {
+                const r = results[nextIndex]!;
+                allDeals.push(...r.deals);
+                const event = JSON.stringify({ type: 'ingredient', name: r.name, deals: r.deals });
+                controller.enqueue(encoder.encode(`data: ${event}\n\n`));
+                nextIndex++;
+              }
+
+              if (completed === searchableIngs.length) resolve();
+            });
+          });
+        });
+
+        console.log(`[deals] Search: ${Date.now() - t0}ms | Ingredients: ${searchableIngs.length} | Deals: ${allDeals.length}`);
+
+        // Build final recommendation
+        const response = buildRecommendation(allDeals, searchedIngredients);
+
+        // Cache in Redis for 3 days
+        try {
+          await redis.set(cacheKey, response, { ex: 3 * 24 * 60 * 60 });
+        } catch (err) {
+          console.error('Redis write error:', err);
+        }
+
+        // Send final event with full recommendation
+        const doneEvent = JSON.stringify({ type: 'done', ...response });
+        controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
+        controller.close();
+      } catch (err) {
+        console.error('Streaming error:', err);
+        const errEvent = JSON.stringify({ type: 'error', message: 'Search failed' });
+        controller.enqueue(encoder.encode(`data: ${errEvent}\n\n`));
+        controller.close();
+      }
+    }
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+    },
+  });
 }

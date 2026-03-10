@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
-import type { MenuData, CanteenData, Recipe, DealsResponse, MenyResponse } from "@/lib/types";
+import type { MenuData, CanteenData, Recipe, DealsResponse, MenyResponse, ProductOffer } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
@@ -30,7 +30,7 @@ export default function Home() {
   const [recipeModal, setRecipeModal] = useState<{ isOpen: boolean; dishName: string; canteenName: string; recipe: Recipe | null; isLoading: boolean; error: string | null }>({ isOpen: false, dishName: "", canteenName: "", recipe: null, isLoading: false, error: null });
   const [recipeServings, setRecipeServings] = useState(4);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
-  const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, error: null });
+  const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; isStreaming: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
   const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
 
   const scrollRef = useRef<HTMLElement>(null);
@@ -131,20 +131,20 @@ export default function Home() {
 
   const handleDealsClick = useCallback(async (dishName: string, recipe: Recipe) => {
     // Check localStorage cache
-    const cacheKey = `deals_v3_${dishName}`;
+    const cacheKey = `deals_v4_${dishName}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
         const parsed = JSON.parse(cached) as DealsResponse;
         const age = Date.now() - new Date(parsed.generatedAt).getTime();
         if (age < 24 * 60 * 60 * 1000) {
-          setDealsView({ isOpen: true, deals: parsed, isLoading: false, error: null });
+          setDealsView({ isOpen: true, deals: parsed, isLoading: false, isStreaming: false, error: null });
           return;
         }
       } catch { /* stale/corrupt cache */ }
     }
 
-    setDealsView({ isOpen: true, deals: null, isLoading: true, error: null });
+    setDealsView({ isOpen: true, deals: null, isLoading: true, isStreaming: true, error: null });
     try {
       const res = await fetch('/api/deals', {
         method: 'POST',
@@ -152,11 +152,61 @@ export default function Home() {
         body: JSON.stringify({ ingredients: recipe.ingredients, dishName, lang }),
       });
       if (!res.ok) throw new Error('Failed');
-      const deals = await res.json() as DealsResponse;
-      localStorage.setItem(cacheKey, JSON.stringify(deals));
-      setDealsView(prev => ({ ...prev, deals, isLoading: false }));
+
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        // Cached response from Redis — not streaming
+        const deals = await res.json() as DealsResponse;
+        localStorage.setItem(cacheKey, JSON.stringify(deals));
+        setDealsView(prev => ({ ...prev, deals, isLoading: false, isStreaming: false }));
+      } else {
+        // Streaming SSE response
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const accumulated: ProductOffer[] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+
+          for (const part of parts) {
+            const line = part.trim();
+            if (!line.startsWith('data: ')) continue;
+            const data = JSON.parse(line.slice(6));
+
+            if (data.type === 'ingredient') {
+              accumulated.push(...(data.deals as ProductOffer[]));
+              // Build partial DealsResponse for immediate display
+              const partial: DealsResponse = {
+                recommendation: { store: '', storeColor: '', storeLogo: '', totalPrice: 0, dealCount: 0, keyIngredientsCovered: 0, deals: [] },
+                allStores: [{ store: '_stream', storeColor: '', storeLogo: '', totalPrice: 0, dealCount: accumulated.length, keyIngredientsCovered: 0, deals: [...accumulated] }],
+                searchedIngredients: [data.name],
+                generatedAt: '',
+              };
+              setDealsView(prev => {
+                // Merge searchedIngredients from previous partial
+                const prevSearched = prev.deals?.searchedIngredients || [];
+                partial.searchedIngredients = [...prevSearched, data.name];
+                return { ...prev, deals: partial };
+              });
+            } else if (data.type === 'done') {
+              const { type: _, ...response } = data;
+              const deals = response as DealsResponse;
+              localStorage.setItem(cacheKey, JSON.stringify(deals));
+              setDealsView(prev => ({ ...prev, deals, isLoading: false, isStreaming: false }));
+            } else if (data.type === 'error') {
+              setDealsView(prev => ({ ...prev, isLoading: false, isStreaming: false, error: lang === 'no' ? 'Kunne ikke finne priser' : 'Could not find prices' }));
+            }
+          }
+        }
+      }
     } catch {
-      setDealsView(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke finne priser' : 'Could not find prices' }));
+      setDealsView(prev => ({ ...prev, isLoading: false, isStreaming: false, error: lang === 'no' ? 'Kunne ikke finne priser' : 'Could not find prices' }));
     }
   }, [lang]);
 
@@ -262,7 +312,7 @@ export default function Home() {
         if (menyView.isOpen) {
           setMenyView({ isOpen: false, data: null, isLoading: false, error: null });
         } else if (dealsView.isOpen) {
-          setDealsView({ isOpen: false, deals: null, isLoading: false, error: null });
+          setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
         } else {
           setLightboxIndex(-1);
           setVoteModal({ isOpen: false, canteenName: "" });
@@ -647,9 +697,9 @@ export default function Home() {
 
       {/* Recipe Modal */}
       {recipeModal.isOpen && (
-        <div className="recipe-overlay" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>
+        <div className="recipe-overlay" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>
           <div className="recipe-modal" onClick={e => e.stopPropagation()}>
-            <button className="recipe-close" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>&#xD7;</button>
+            <button className="recipe-close" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>&#xD7;</button>
 
 {menyView.isOpen ? (
               <>
@@ -689,7 +739,7 @@ export default function Home() {
                   <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
                 </div>
 
-                {dealsView.isLoading && (
+                {dealsView.isLoading && !dealsView.deals && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji deals-loading-cart">{"\uD83D\uDED2"}</span>
                     <span className="recipe-loading-text">{lang === "no" ? "Sammenligner priser..." : "Comparing prices..."}</span>
@@ -709,7 +759,8 @@ export default function Home() {
                   <DealsView
                     deals={dealsView.deals}
                     lang={lang}
-                    onBack={() => setDealsView({ isOpen: false, deals: null, isLoading: false, error: null })}
+                    isStreaming={dealsView.isStreaming}
+                    onBack={() => setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null })}
                   />
                 )}
               </>
