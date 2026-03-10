@@ -29,7 +29,7 @@ export async function DELETE() {
   return NextResponse.json({
     cleared: deleted.length,
     keys: deleted,
-    localStorageKeys: ['recipe_v2_*', 'deals_v2_*', 'meny_v1_*'],
-    message: 'Redis cache cleared. Clear localStorage in browser: Object.keys(localStorage).filter(k => k.startsWith("recipe_v2_") || k.startsWith("deals_v2_") || k.startsWith("meny_v1_")).forEach(k => localStorage.removeItem(k))',
+    localStorageKeys: ['recipe_v4_*', 'deals_v2_*', 'meny_v4_*'],
+    message: 'Redis cache cleared. Clear localStorage in browser: Object.keys(localStorage).filter(k => k.startsWith("recipe_v4_") || k.startsWith("deals_v2_") || k.startsWith("meny_v4_")).forEach(k => localStorage.removeItem(k))',
   });
 }

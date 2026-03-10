@@ -5,7 +5,7 @@ export interface DayEntry { day: string; no: DayMenu; en: DayMenu; }
 export interface CanteenData { week: string; openingHours: string; menu: DayEntry[]; }
 export interface MenuData { scrapedAt: string; canteens: Record<string, CanteenData>; }
 
-export interface RecipeIngredient { amount: string; unit: string; item: string; }
+export interface RecipeIngredient { amount: string; unit: string; item: string; itemLocal?: string; }
 export interface Recipe { title: string; servings: number; prepTime: string; cookTime: string; ingredients: RecipeIngredient[]; steps: string[]; tip?: string; }
 
 export interface ProductOffer {
