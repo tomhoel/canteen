@@ -806,11 +806,23 @@ export default function Home() {
                         </ul>
                         {/* Shopping options */}
                         <div className="recipe-shop-row" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
-                          <button className="shop-pill shop-pill-meny" onClick={() => handleMenyClick(recipeModal.dishName, recipe)}>
-                            {lang === "no" ? "Se priser" : "See prices"}<span className="shop-pill-dot">&middot;</span>Meny
+                          <button className="shop-card shop-card-meny" onClick={() => handleMenyClick(recipeModal.dishName, recipe)}>
+                            <span className="shop-card-icon shop-icon-meny">
+                              <span className="shop-icon-check" />
+                            </span>
+                            <span className="shop-card-text">
+                              <span className="shop-card-label">{lang === "no" ? "Handleliste" : "Shopping list"}</span>
+                              <span className="shop-card-sub">Meny</span>
+                            </span>
                           </button>
-                          <button className="shop-pill shop-pill-deals" onClick={() => handleDealsClick(recipeModal.dishName, recipe)}>
-                            {lang === "no" ? "Sammenlign butikker" : "Compare stores"}
+                          <button className="shop-card shop-card-deals" onClick={() => handleDealsClick(recipeModal.dishName, recipe)}>
+                            <span className="shop-card-icon shop-icon-deals">
+                              <span className="shop-icon-tag" />
+                            </span>
+                            <span className="shop-card-text">
+                              <span className="shop-card-label">{lang === "no" ? "Ukens tilbud" : "Weekly deals"}</span>
+                              <span className="shop-card-sub">{lang === "no" ? "Alle butikker" : "All stores"}</span>
+                            </span>
                           </button>
                         </div>
                       </div>
