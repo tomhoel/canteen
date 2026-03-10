@@ -3116,6 +3116,42 @@ body {
   padding-top: 0;
 }
 
+/* ─── Deals Carousel ─── */
+.deals-carousel {
+  position: relative;
+}
+.deals-carousel-arrow {
+  display: none;
+}
+@media (min-width: 769px) {
+  .deals-carousel-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-light);
+    background: var(--card-white);
+    box-shadow: 0 2px 8px var(--shadow-soft);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .deals-carousel-arrow:hover {
+    background: var(--bg-cream);
+    box-shadow: 0 3px 12px var(--shadow-medium);
+  }
+  .deals-carousel-arrow-left { left: -6px; }
+  .deals-carousel-arrow-right { right: -6px; }
+}
+
 .deals-cards {
   display: flex;
   gap: 8px;
