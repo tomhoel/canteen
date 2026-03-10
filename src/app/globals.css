@@ -3386,12 +3386,27 @@ a.deals-card-link {
   color: var(--text-muted);
 }
 
+.mv-totals {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .mv-total {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.3px;
   font-variant-numeric: tabular-nums;
+}
+
+.mv-total-pantry {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
 }
 
 /* ─── Meny Product List ─── */
@@ -3512,6 +3527,7 @@ a.deals-card-link {
   font-weight: 700;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+  min-width: 46px;
 }
 
 .mv-kr {
@@ -3563,7 +3579,7 @@ a.deals-card-link {
   background: var(--bg-cream);
   border-radius: 12px;
   margin: 0 0 10px;
-  padding: 4px 10px;
+  padding: 4px 12px;
 }
 
 .mv-alt {
@@ -3623,6 +3639,8 @@ a.deals-card-link {
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  min-width: 46px;
+  text-align: right;
 }
 
 /* ─── Section (Pantry / Not Found) ─── */
