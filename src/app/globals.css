@@ -569,61 +569,56 @@ body {
 /* Bottom Section */
 .card-bottom {
   margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px dashed var(--border-light);
+  padding-top: 12px;
 }
 
 .side-dishes-title {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 9.5px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   color: var(--text-muted);
-  margin-bottom: 6px;
-  text-align: center;
+  margin-bottom: 8px;
+  padding-left: 2px;
 }
 
 .side-dish-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
 }
 
 .side-dish-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 0;
   font-size: 12.5px;
   color: var(--text-secondary);
-  background: var(--bg-cream);
-  padding: 8px 14px;
-  border-radius: 12px;
-  min-height: 40px;
+  padding: 6px 2px;
+  border-top: 1px solid var(--border-light);
+  line-height: 1.35;
+}
+
+.side-dish-item:last-child {
+  padding-bottom: 0;
 }
 
 .side-dish-item::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  background: var(--accent-yellow);
-  border-radius: 50%;
-  flex-shrink: 0;
+  display: none;
 }
 
 .side-dish-text {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
 }
 
 .side-allergens {
   font-size: 10px;
   color: var(--text-muted);
-  background: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 600;
+  padding-left: 8px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ─── Lightbox ─── */
@@ -1262,32 +1257,32 @@ body {
   /* Side dishes - full width horizontal row */
   .card-bottom {
     flex-basis: 100%;
-    margin: clamp(2px, 0.5dvh, 8px) 0 0;
-    padding: clamp(2px, 0.5dvh, 8px) 0 0;
-    border-top: 1px dashed var(--border-light);
+    margin: clamp(2px, 0.5dvh, 6px) 0 0;
+    padding: clamp(2px, 0.5dvh, 6px) 0 0;
   }
 
   .side-dishes-title {
-    display: none;
+    font-size: clamp(7.5px, 1dvh, 9px);
+    margin-bottom: clamp(2px, 0.4dvh, 6px);
+    padding-left: 0;
   }
 
   .side-dish-list {
-    gap: clamp(1px, 0.3dvh, 4px);
     display: flex;
     flex-direction: column;
   }
 
   .side-dish-item {
-    padding: clamp(3px, 0.5dvh, 8px) 10px;
+    padding: clamp(3px, 0.5dvh, 6px) 0;
     font-size: clamp(9px, 1.2dvh, 12px);
-    border-radius: 8px;
+    border-radius: 0;
     min-width: 0;
-    min-height: clamp(20px, 3dvh, 32px);
+    min-height: 0;
+    border-top-color: color-mix(in srgb, var(--border-light) 60%, transparent);
   }
 
-  .side-dish-item::before {
-    width: 4px;
-    height: 4px;
+  .side-dish-item:last-child {
+    padding-bottom: 0;
   }
 
   /* Day bar */
