@@ -2750,6 +2750,34 @@ body {
   }
 }
 
+/* ─── Recipe Shopping Divider ─── */
+.recipe-shop-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 6px;
+  animation: recipeReveal 0.4s var(--smooth) both;
+}
+
+.recipe-shop-divider::before,
+.recipe-shop-divider::after {
+  content: "";
+  flex: 1;
+  height: 0;
+  border-top: 1.5px dashed var(--border-light);
+}
+
+.shop-divider-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
 /* ─── Recipe Shopping Cards ─── */
 .recipe-shop-row {
   display: flex;
