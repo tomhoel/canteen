@@ -253,22 +253,70 @@ body {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ─── Active / voteable card — the hero treatment ─── */
+.food-card.voteable {
+  border-color: rgba(200, 150, 60, 0.18);
+  background: linear-gradient(180deg, #fffaf2 0%, var(--card-white) 50%);
+  box-shadow:
+    0 1px 2px rgba(200, 116, 26, 0.06),
+    0 4px 14px rgba(200, 116, 26, 0.06),
+    0 14px 36px rgba(60, 30, 0, 0.07);
+}
+
+.food-card.voteable::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-yellow), var(--accent-orange));
+  border-radius: 0 0 3px 3px;
+  opacity: 0.7;
+}
+
+.food-card.voteable:hover {
+  box-shadow:
+    0 4px 10px rgba(200, 116, 26, 0.06),
+    0 14px 28px rgba(200, 116, 26, 0.08),
+    0 28px 56px rgba(60, 30, 0, 0.09);
+}
+
 /* Featured card style */
 .food-card.featured {
   background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
   border: 2px solid var(--accent-yellow);
 }
 
-/* ─── Outdated / Stale menu card ─── */
+/* ─── Outdated / Stale menu card — pushed back ─── */
 .food-card.outdated {
-  border-color: rgba(180, 120, 20, 0.22);
-  background: linear-gradient(160deg, #fdf9f2 0%, #f9f3e6 100%);
+  border-color: rgba(0, 0, 0, 0.06);
+  background: linear-gradient(180deg, #faf8f5 0%, #f5f2ee 100%);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.03);
+  opacity: 0.8;
+}
+
+.food-card.outdated:hover {
+  transform: none;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .food-card.outdated .food-image {
-  filter: grayscale(40%)
-    drop-shadow(0 8px 18px rgba(0, 0, 0, 0.08));
-  animation: gentleFloat 7s ease-in-out infinite;
+  filter: grayscale(55%) saturate(0.6)
+    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.06));
+  animation: gentleFloat 8s ease-in-out infinite;
+}
+
+.food-card.outdated .canteen-name {
+  opacity: 0.6;
+}
+
+.food-card.outdated .dish-name {
+  color: var(--text-secondary);
 }
 
 /* Small pill badge overlaid on the image */
@@ -277,10 +325,10 @@ body {
   bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(140, 85, 10, 0.78);
-  color: #fff5e0;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 700;
   padding: 3px 10px;
   border-radius: 20px;
   white-space: nowrap;
@@ -296,8 +344,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(135deg, rgba(210, 130, 10, 0.10) 0%, rgba(210, 130, 10, 0.05) 100%);
-  border: 1px solid rgba(210, 130, 10, 0.25);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 12px;
   padding: 9px 13px;
   margin: 0 0 10px;
@@ -324,15 +372,15 @@ body {
 
 .stale-banner-text strong {
   font-size: 11.5px;
-  font-weight: 800;
-  color: #92570a;
+  font-weight: 700;
+  color: var(--text-secondary);
   letter-spacing: 0.1px;
 }
 
 .stale-banner-text span {
   font-size: 10.5px;
   font-weight: 500;
-  color: #a87030;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1116,6 +1164,35 @@ body {
     transform: none;
   }
 
+  .food-card.voteable {
+    background: linear-gradient(135deg, #fffaf2 0%, var(--card-white) 40%);
+    border-color: rgba(200, 150, 60, 0.15);
+    box-shadow:
+      0 1px 3px rgba(200, 116, 26, 0.06),
+      0 6px 16px rgba(60, 30, 0, 0.06);
+  }
+
+  .food-card.voteable::before {
+    left: 0;
+    right: auto;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    height: auto;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .food-card.outdated {
+    background: #f7f5f2;
+    border-color: rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  }
+
+  .food-card.outdated:hover,
+  .food-card.outdated:active {
+    transform: none;
+  }
+
   /* Image - left side, scales with viewport height */
   .card-image-wrapper {
     position: relative;
@@ -1224,8 +1301,8 @@ body {
     gap: 8px;
     border-radius: 0 0 14px 14px;
     border: none;
-    border-top: 1px solid rgba(210, 130, 10, 0.22);
-    background: linear-gradient(135deg, rgba(255, 249, 228, 0.98) 0%, rgba(255, 241, 195, 0.98) 100%);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    background: linear-gradient(135deg, rgba(245, 242, 238, 0.98) 0%, rgba(240, 237, 232, 0.98) 100%);
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     z-index: 5;
