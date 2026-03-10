@@ -219,28 +219,33 @@ body {
 
 /* ─── Food Card ─── */
 .food-card {
-  background: var(--card-white);
+  background: linear-gradient(180deg, #fffcf8 0%, var(--card-white) 40%);
   border-radius: 24px;
   width: 380px;
   min-height: 520px;
-  padding: 0 26px 26px;
+  padding: 0 26px 24px;
   box-shadow:
-    0 2px 8px var(--shadow-soft),
-    0 8px 24px var(--shadow-soft),
-    0 1px 2px rgba(255,255,255,0.8) inset;
-  transition: transform 0.4s var(--spring), box-shadow 0.4s var(--smooth);
+    0 1px 2px rgba(60, 30, 0, 0.04),
+    0 4px 12px rgba(60, 30, 0, 0.05),
+    0 12px 32px rgba(60, 30, 0, 0.06);
+  transition: transform 0.35s var(--spring), box-shadow 0.35s var(--smooth);
   position: relative;
-  border: 1px solid var(--border-light);
+  border: 1px solid rgba(236, 228, 216, 0.6);
   display: flex;
   flex-direction: column;
   animation: cardReveal 0.5s var(--smooth) both;
 }
 
+.food-card.clickable {
+  cursor: pointer;
+}
+
 .food-card:hover {
+  transform: translateY(-4px);
   box-shadow:
-    0 24px 48px var(--shadow-medium),
-    0 8px 16px var(--shadow-soft),
-    0 1px 2px rgba(255,255,255,0.8) inset;
+    0 4px 8px rgba(60, 30, 0, 0.04),
+    0 12px 24px rgba(60, 30, 0, 0.07),
+    0 24px 48px rgba(60, 30, 0, 0.08);
 }
 
 @keyframes cardReveal {
@@ -365,9 +370,9 @@ body {
 
 /* ─── V3 Overhead Image Container - Transparent Background ─── */
 .card-image-wrapper {
-  width: 280px;
-  height: 280px;
-  margin: -80px auto -4px;
+  width: 260px;
+  height: 260px;
+  margin: -68px auto 0;
   position: relative;
   flex-shrink: 0;
   cursor: pointer;
@@ -402,8 +407,8 @@ body {
   height: 100%;
   object-fit: contain;
   animation: gentleFloat 5s ease-in-out infinite;
-  filter: drop-shadow(0 14px 28px rgba(80, 40, 0, 0.18))
-    drop-shadow(0 4px 10px rgba(80, 40, 0, 0.10));
+  filter: drop-shadow(0 8px 20px rgba(80, 40, 0, 0.15))
+    drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10));
   transition: filter 0.4s ease;
 }
 
@@ -455,19 +460,19 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-top: 12px;
+  padding-top: 8px;
 }
 
 .card-header {
   text-align: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .canteen-name {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   color: var(--accent-orange);
   margin-bottom: 4px;
 }
@@ -481,14 +486,15 @@ body {
 }
 
 .dish-name {
-  font-size: clamp(14px, 3.5vw, 17px);
+  font-size: clamp(14px, 3.5vw, 16.5px);
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: 1.35;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   text-align: center;
+  letter-spacing: -0.15px;
 }
 
 
@@ -532,13 +538,13 @@ body {
 .allergen-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
   white-space: nowrap;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   border: 1px solid;
   line-height: 1.2;
   flex-shrink: 0;
@@ -552,18 +558,19 @@ body {
 
 /* Dish Description */
 .dish-description {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.5;
   text-align: center;
-  margin: 2px 0 6px;
-  padding: 0 8px;
+  margin: 2px 0 4px;
+  padding: 0 4px;
   font-style: italic;
   letter-spacing: 0.1px;
-  max-width: 320px;
+  max-width: 300px;
   margin-left: auto;
   margin-right: auto;
+  opacity: 0.75;
 }
 
 /* Bottom Section */
@@ -956,9 +963,9 @@ body {
   }
 
   .card-image-wrapper {
-    width: 230px;
-    height: 230px;
-    margin-top: -70px;
+    width: 220px;
+    height: 220px;
+    margin-top: -60px;
   }
 
   .allergen-section {
@@ -1106,6 +1113,12 @@ body {
     border-radius: 18px;
     position: relative;
     overflow: visible;
+    background: var(--card-white);
+    border-color: rgba(236, 228, 216, 0.5);
+  }
+
+  .food-card:hover {
+    transform: none;
   }
 
   /* Image - left side, scales with viewport height */
