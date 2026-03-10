@@ -2321,31 +2321,6 @@ body {
   color: white;
 }
 
-.recipe-regenerate-btn {
-  position: sticky;
-  top: 12px;
-  float: left;
-  margin-left: 12px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: var(--card-bg);
-  color: var(--text-secondary);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  transition: background 0.15s, color 0.15s;
-}
-.recipe-regenerate-btn:hover {
-  background: var(--text-primary);
-  border-color: var(--text-primary);
-  color: white;
-}
-
 /* ─── Recipe Header ─── */
 .recipe-header {
   padding: 32px 32px 0;
