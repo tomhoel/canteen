@@ -2750,13 +2750,105 @@ body {
   }
 }
 
-/* ─── Find Deals Button (inside recipe ingredients) ─── */
+/* ─── Recipe Shopping Buttons Container ─── */
+.recipe-shop-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  animation: recipeReveal 0.4s var(--smooth) both;
+}
+
+/* ─── Meny Primary Button ─── */
+.meny-find-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px 10px 10px;
+  border: 1.5px solid #2d6a3f;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0f9f2 0%, #e8f5eb 100%);
+  cursor: pointer;
+  transition: all 0.25s var(--smooth);
+  text-align: left;
+}
+
+.meny-find-btn:hover {
+  border-color: #2d6a3f;
+  box-shadow: 0 2px 14px rgba(45, 106, 63, 0.15);
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #e8f5eb 0%, #dcf0e0 100%);
+}
+
+.meny-find-btn:active {
+  transform: scale(0.98);
+  transition-duration: 0.1s;
+}
+
+.meny-find-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #2d6a3f 0%, #3a8a52 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 900;
+  color: white;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  transition: transform 0.25s var(--spring);
+}
+
+.meny-find-btn:hover .meny-find-icon {
+  transform: scale(1.06);
+}
+
+.meny-find-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.meny-find-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2d6a3f;
+  line-height: 1.3;
+}
+
+.meny-find-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.meny-find-arrow {
+  font-size: 1.3rem;
+  color: #2d6a3f;
+  font-weight: 300;
+  flex-shrink: 0;
+  transition: transform 0.2s var(--smooth), color 0.2s ease;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.meny-find-btn:hover .meny-find-arrow {
+  transform: translateX(3px);
+  opacity: 1;
+}
+
+/* ─── Find Deals Button (secondary, inside recipe ingredients) ─── */
 .deals-find-btn {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  margin-top: 14px;
   padding: 10px 14px 10px 10px;
   border: 1px dashed var(--border-light);
   border-radius: 14px;
@@ -2764,7 +2856,6 @@ body {
   cursor: pointer;
   transition: all 0.25s var(--smooth);
   text-align: left;
-  animation: recipeReveal 0.4s var(--smooth) both;
 }
 
 .deals-find-btn:hover {
@@ -3233,6 +3324,278 @@ a.deals-card-link {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
+}
+
+/* ─── Meny Loading Animation ─── */
+.meny-loading-bag {
+  animation: menyBagPulse 1.6s ease-in-out infinite !important;
+}
+
+@keyframes menyBagPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12) rotate(5deg); }
+}
+
+/* ─── Meny View ─── */
+.meny-view {
+  padding: 0 0 24px;
+  animation: sheetContentReveal 0.3s var(--smooth) both;
+}
+
+.meny-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  width: 100%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d6a3f;
+  transition: color 0.2s ease;
+}
+
+.meny-back:hover {
+  color: var(--text-primary);
+}
+
+.meny-back-arrow {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+/* ─── Meny Status Card ─── */
+.meny-status-card {
+  margin: 16px 24px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1.5px solid rgba(45, 106, 63, 0.2);
+  background: linear-gradient(135deg, #f0f9f2 0%, #e8f5eb 100%);
+  box-shadow: 0 4px 20px rgba(45, 106, 63, 0.06);
+  animation: recipeReveal 0.4s var(--smooth) both;
+}
+
+.meny-status-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.meny-store-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2d6a3f 0%, #3a8a52 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: 0.8px;
+  flex-shrink: 0;
+}
+
+.meny-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meny-store-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #2d6a3f;
+  line-height: 1.2;
+}
+
+.meny-confidence-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-self: flex-start;
+}
+
+.meny-confidence-full {
+  background: rgba(45, 106, 63, 0.12);
+  color: #2d6a3f;
+}
+
+.meny-confidence-partial {
+  background: rgba(200, 140, 20, 0.12);
+  color: #9a6b10;
+}
+
+.meny-status-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(45, 106, 63, 0.12);
+  padding-top: 12px;
+}
+
+.meny-total-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.meny-total-price {
+  font-size: 22px;
+  font-weight: 900;
+  color: #2d6a3f;
+}
+
+/* ─── Meny Product List ─── */
+.meny-product-list {
+  padding: 0 24px;
+}
+
+.meny-product-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+  animation: recipeReveal 0.35s var(--smooth) both;
+}
+
+.meny-product-card:last-child {
+  border-bottom: none;
+}
+
+.meny-product-img-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--bg-cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.meny-product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+}
+
+.meny-product-img-placeholder {
+  font-size: 20px;
+  opacity: 0.4;
+}
+
+.meny-product-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.meny-product-ingredient {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.meny-product-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meny-product-meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.meny-product-price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 1px;
+}
+
+.meny-product-price {
+  font-size: 14px;
+  font-weight: 800;
+  color: #2d6a3f;
+}
+
+.meny-product-unit-price {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ─── Meny Not Found ─── */
+.meny-not-found {
+  padding: 12px 24px;
+  margin-top: 4px;
+}
+
+.meny-not-found-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.meny-not-found-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.meny-not-found-item {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  background: var(--bg-cream);
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+}
+
+/* ─── Meny + Deals Mobile ─── */
+@media (max-width: 768px) {
+  .meny-status-card {
+    margin: 12px 16px;
+    padding: 14px 16px;
+  }
+
+  .meny-product-list {
+    padding: 0 16px;
+  }
+
+  .meny-not-found {
+    padding: 12px 16px;
+  }
+
+  .meny-back {
+    padding: 10px 16px;
+  }
 }
 
 /* ─── Deals Mobile ─── */

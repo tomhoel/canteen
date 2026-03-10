@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
-import type { MenuData, CanteenData, Recipe, DealsResponse } from "@/lib/types";
+import type { MenuData, CanteenData, Recipe, DealsResponse, MenyResponse } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
 import Lightbox from "@/components/Lightbox";
 import DealsView from "@/components/DealsView";
+import MenyView from "@/components/MenyView";
 
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
@@ -30,6 +31,7 @@ export default function Home() {
   const [recipeServings, setRecipeServings] = useState(4);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
   const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, error: null });
+  const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
 
   const scrollRef = useRef<HTMLElement>(null);
   const votesLoadedRef = useRef(false);
@@ -160,6 +162,36 @@ export default function Home() {
     }
   }, [lang]);
 
+  const handleMenyClick = useCallback(async (dishName: string, recipe: Recipe) => {
+    const cacheKey = `meny_${dishName}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as MenyResponse;
+        const age = Date.now() - new Date(parsed.generatedAt).getTime();
+        if (age < 24 * 60 * 60 * 1000) {
+          setMenyView({ isOpen: true, data: parsed, isLoading: false, error: null });
+          return;
+        }
+      } catch { /* stale/corrupt cache */ }
+    }
+
+    setMenyView({ isOpen: true, data: null, isLoading: true, error: null });
+    try {
+      const res = await fetch('/api/meny/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients: recipe.ingredients, dishName, lang }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json() as MenyResponse;
+      localStorage.setItem(cacheKey, JSON.stringify(data));
+      setMenyView(prev => ({ ...prev, data, isLoading: false }));
+    } catch {
+      setMenyView(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke søke hos Meny' : 'Could not search Meny' }));
+    }
+  }, [lang]);
+
   useEffect(() => {
     const jsDay = new Date().getDay();
     const isWeekday = jsDay >= 1 && jsDay <= 5;
@@ -229,7 +261,9 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (dealsView.isOpen) {
+        if (menyView.isOpen) {
+          setMenyView({ isOpen: false, data: null, isLoading: false, error: null });
+        } else if (dealsView.isOpen) {
           setDealsView({ isOpen: false, deals: null, isLoading: false, error: null });
         } else {
           setLightboxIndex(-1);
@@ -249,7 +283,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, handleDaySelect]);
+  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, handleDaySelect]);
 
   // #11 — Only preload current day + adjacent days (not all 5)
   useEffect(() => {
@@ -615,11 +649,11 @@ export default function Home() {
 
       {/* Recipe Modal */}
       {recipeModal.isOpen && (
-        <div className="recipe-overlay" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); }}>
+        <div className="recipe-overlay" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>
           <div className="recipe-modal" onClick={e => e.stopPropagation()}>
-            <button className="recipe-close" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); }}>&#xD7;</button>
+            <button className="recipe-close" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>&#xD7;</button>
 
-            {recipeModal.recipe && !recipeModal.isLoading && !dealsView.isOpen && (
+            {recipeModal.recipe && !recipeModal.isLoading && !dealsView.isOpen && !menyView.isOpen && (
               <button
                 className="recipe-regenerate-btn"
                 onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName, true)}
@@ -629,7 +663,38 @@ export default function Home() {
               </button>
             )}
 
-            {dealsView.isOpen ? (
+            {menyView.isOpen ? (
+              <>
+                <div className="recipe-header">
+                  <span className="recipe-canteen">{recipeModal.canteenName}</span>
+                  <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
+                </div>
+
+                {menyView.isLoading && (
+                  <div className="recipe-loading">
+                    <span className="recipe-loading-emoji meny-loading-bag">{"\uD83D\uDECD\uFE0F"}</span>
+                    <span className="recipe-loading-text">{lang === "no" ? "S\u00F8ker hos Meny..." : "Searching Meny..."}</span>
+                  </div>
+                )}
+
+                {menyView.error && (
+                  <div className="recipe-error">
+                    <p>{menyView.error}</p>
+                    <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleMenyClick(recipeModal.dishName, recipeModal.recipe)}>
+                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                    </button>
+                  </div>
+                )}
+
+                {menyView.data && (
+                  <MenyView
+                    meny={menyView.data}
+                    lang={lang}
+                    onBack={() => setMenyView({ isOpen: false, data: null, isLoading: false, error: null })}
+                  />
+                )}
+              </>
+            ) : dealsView.isOpen ? (
               <>
                 <div className="recipe-header">
                   <span className="recipe-canteen">{recipeModal.canteenName}</span>
@@ -739,19 +804,31 @@ export default function Home() {
                             );
                           })}
                         </ul>
-                        {/* Find Deals Button */}
-                        <button
-                          className="deals-find-btn"
-                          style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}
-                          onClick={() => handleDealsClick(recipeModal.dishName, recipe)}
-                        >
-                          <span className="deals-find-icon">{"\uD83D\uDED2"}</span>
-                          <span className="deals-find-text">
-                            <span className="deals-find-label">{lang === "no" ? "Sammenlign priser" : "Compare prices"}</span>
-                            <span className="deals-find-sub">{lang === "no" ? "Finn billigste butikk for ingrediensene" : "Find the cheapest store for ingredients"}</span>
-                          </span>
-                          <span className="deals-find-arrow">{"\u203A"}</span>
-                        </button>
+                        {/* Shopping Buttons */}
+                        <div className="recipe-shop-buttons" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
+                          <button
+                            className="meny-find-btn"
+                            onClick={() => handleMenyClick(recipeModal.dishName, recipe)}
+                          >
+                            <span className="meny-find-icon">MENY</span>
+                            <span className="meny-find-text">
+                              <span className="meny-find-label">{lang === "no" ? "Kj\u00F8p alt p\u00E5 Meny" : "Buy all at Meny"}</span>
+                              <span className="meny-find-sub">{lang === "no" ? "Se priser og handleliste" : "See prices and shopping list"}</span>
+                            </span>
+                            <span className="meny-find-arrow">{"\u203A"}</span>
+                          </button>
+                          <button
+                            className="deals-find-btn"
+                            onClick={() => handleDealsClick(recipeModal.dishName, recipe)}
+                          >
+                            <span className="deals-find-icon">{"\uD83D\uDED2"}</span>
+                            <span className="deals-find-text">
+                              <span className="deals-find-label">{lang === "no" ? "Sammenlign priser" : "Compare prices"}</span>
+                              <span className="deals-find-sub">{lang === "no" ? "Finn billigste butikk for ingrediensene" : "Find the cheapest store for ingredients"}</span>
+                            </span>
+                            <span className="deals-find-arrow">{"\u203A"}</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="recipe-steps">
                         <h3 className="recipe-section-title">{lang === "no" ? "Fremgangsm\u00E5te" : "Instructions"}</h3>

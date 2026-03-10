@@ -41,6 +41,36 @@ export interface DealsResponse {
   generatedAt: string;
 }
 
+export interface MenyProduct {
+  ean: string;
+  name: string;
+  subtitle: string;
+  brand: string;
+  price: number;
+  pricePerUnit: string | null;
+  imageUrl: string | null;
+  weight: string | null;
+}
+
+export interface MenyIngredientMatch {
+  ingredient: string;
+  searchTerm: string;
+  product: MenyProduct | null;
+  alternatives: MenyProduct[];
+  matched: boolean;
+}
+
+export interface MenyResponse {
+  storeId: string;
+  storeName: string;
+  matches: MenyIngredientMatch[];
+  totalPrice: number;
+  matchedCount: number;
+  totalCount: number;
+  allMatched: boolean;
+  generatedAt: string;
+}
+
 export interface CanteenDayItem {
   canteenName: string;
   canteen: CanteenData;
