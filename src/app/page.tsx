@@ -804,7 +804,10 @@ export default function Home() {
                             );
                           })}
                         </ul>
-                        {/* Shopping options */}
+                        {/* Shopping divider + options */}
+                        <div className="recipe-shop-divider" style={{ animationDelay: `${recipe.ingredients.length * 50 + 30}ms` }}>
+                          <span className="shop-divider-label">{lang === "no" ? "Handle" : "Shop"}</span>
+                        </div>
                         <div className="recipe-shop-row" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
                           <button className="shop-card shop-card-meny" onClick={() => handleMenyClick(recipeModal.dishName, recipe)}>
                             <span className="shop-card-icon shop-icon-meny">
