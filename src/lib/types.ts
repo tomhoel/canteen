@@ -58,6 +58,7 @@ export interface MenyIngredientMatch {
   product: MenyProduct | null;
   alternatives: MenyProduct[];
   matched: boolean;
+  outOfStock?: boolean; // true when matched only via out-of-stock product
 }
 
 export interface MenyResponse {
