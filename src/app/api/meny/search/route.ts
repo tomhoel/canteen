@@ -24,6 +24,7 @@ function getWeekNumber(): number {
 interface GeminiTranslation {
   ingredient: string;
   searchTerm: string;
+  fallbackTerm: string; // broader/alternative Norwegian term to try if searchTerm returns nothing
 }
 
 async function translateIngredients(ingredients: RecipeIngredient[], dishName: string): Promise<GeminiTranslation[]> {
@@ -42,7 +43,7 @@ Translate ALL ingredients to Norwegian product search terms for Meny.no grocery 
 
 Return ONLY a JSON array with one entry per ingredient:
 [
-  { "ingredient": "Original ingredient name", "searchTerm": "norwegian product search term" }
+  { "ingredient": "Original ingredient name", "searchTerm": "specific norwegian product name", "fallbackTerm": "broader fallback if specific not found" }
 ]
 
 Rules for searchTerm — THIS IS CRITICAL:
@@ -51,7 +52,13 @@ Rules for searchTerm — THIS IS CRITICAL:
 - Use singular form and lowercase
 - For basics like salt, pepper, sugar: still translate them (e.g., "salt", "pepper", "sukker")
 - One search term per ingredient — pick the most common product name
-- Examples: chicken breast → "kyllingbryst", cream → "matfløte", rice → "basmatiris", pasta → "pasta", tomato → "tomat", garlic → "hvitløk", onion → "løk", olive oil → "olivenolje"`;
+- Examples: chicken breast → "kyllingbryst", cream → "matfløte", rice → "basmatiris", pasta → "pasta", tomato → "tomat", garlic → "hvitløk", onion → "løk", olive oil → "olivenolje", vegetable oil → "rapsolje", canola oil → "rapsolje", sunflower oil → "solsikkeolje", flour → "hvetemel", butter → "smør", egg → "egg", milk → "melk"
+
+Rules for fallbackTerm:
+- A broader or alternative Norwegian name to search if searchTerm returns no results
+- Still specific enough to return the right product category
+- Examples: "kyllingbryst" → "kylling", "rapsolje" → "matolje", "hvetemel" → "mel", "matfløte" → "fløte", "olivenolje" → "olje", "basmatiris" → "ris"
+- For items with only one natural name (salt, pepper, sukker), repeat the same term as fallback`;
 
   const response = await ai.models.generateContent({
     model: 'gemini-3.1-flash-lite-preview',
