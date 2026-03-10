@@ -50,6 +50,7 @@ export interface MenyProduct {
   pricePerUnit: string | null;
   imageUrl: string | null;
   weight: string | null;
+  productUrl: string | null;
 }
 
 export interface MenyIngredientMatch {
