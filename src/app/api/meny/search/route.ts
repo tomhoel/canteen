@@ -83,6 +83,7 @@ interface MenyApiHit {
   description: string;
   imageId: string;
   contentData: {
+    _score: number;
     _source: {
       ean: string;
       title: string;
@@ -96,8 +97,44 @@ interface MenyApiHit {
       imagePath: string;
       isOutOfStock: boolean;
       slugifiedUrl: string;
+      categoryName: string;
+      shoppingListGroupName: string;
     };
   };
+}
+
+// Extract meaningful words (3+ chars) from a term, handling Norwegian compound words
+function extractWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[\s,.\-\/]+/)
+    .filter(w => w.length >= 3);
+}
+
+// Check if a product is actually relevant to the search term.
+// Prevents "nudler" from matching when searching for "kyllingbryst".
+function isRelevantProduct(hit: MenyApiHit, searchTerm: string): boolean {
+  const src = hit.contentData._source;
+  const productText = `${src.title} ${src.subtitle || ''} ${src.categoryName || ''} ${src.shoppingListGroupName || ''}`.toLowerCase();
+  const termWords = extractWords(searchTerm);
+
+  // For compound Norwegian words like "kyllingbryst", also check the root (first 5+ chars)
+  const termLower = searchTerm.toLowerCase().replace(/[\s-]/g, '');
+
+  // Strategy 1: product text contains the full search term
+  if (productText.includes(termLower)) return true;
+
+  // Strategy 2: product title starts with or contains a significant portion of the search term
+  const titleLower = src.title.toLowerCase();
+  if (termLower.length >= 4 && titleLower.includes(termLower.slice(0, Math.max(4, Math.floor(termLower.length * 0.6))))) return true;
+
+  // Strategy 3: at least one search term word (3+ chars) appears in the product title
+  if (termWords.some(w => titleLower.includes(w))) return true;
+
+  // Strategy 4: product title shares a root with the search term (first 5 chars)
+  if (termLower.length >= 5 && titleLower.replace(/[\s-]/g, '').slice(0, 5) === termLower.slice(0, 5)) return true;
+
+  return false;
 }
 
 interface MenyApiResponse {
@@ -107,7 +144,7 @@ interface MenyApiResponse {
 }
 
 async function searchMeny(term: string, storeId: string): Promise<MenyApiHit[]> {
-  const url = `https://platform-rest-prod.ngdata.no/api/episearch/1300/products?search=${encodeURIComponent(term)}&page_size=5&store_id=${storeId}&full_response=true`;
+  const url = `https://platform-rest-prod.ngdata.no/api/episearch/1300/products?search=${encodeURIComponent(term)}&page_size=10&store_id=${storeId}&full_response=true`;
 
   const res = await fetch(url, {
     headers: {
@@ -182,28 +219,29 @@ export async function POST(request: NextRequest) {
       const orig = ingredientArr[i];
       if (i > 0) await delay(50);
 
-      // Tier 1: try specific searchTerm, in-stock only
+      // Tier 1: search with specific term, filter relevant + in-stock
       let hits = await searchMeny(t.searchTerm, activeStoreId);
-      let inStockHits = hits.filter(h => !h.contentData._source.isOutOfStock);
+      let relevant = hits
+        .filter(h => !h.contentData._source.isOutOfStock)
+        .filter(h => isRelevantProduct(h, t.searchTerm));
 
-      // Tier 2: try fallbackTerm if primary returned nothing in-stock
-      if (inStockHits.length === 0 && t.fallbackTerm && t.fallbackTerm !== t.searchTerm) {
+      // Tier 2: fallback term if no relevant in-stock results
+      if (relevant.length === 0 && t.fallbackTerm && t.fallbackTerm !== t.searchTerm) {
         await delay(50);
         const fallbackHits = await searchMeny(t.fallbackTerm, activeStoreId);
-        const fallbackInStock = fallbackHits.filter(h => !h.contentData._source.isOutOfStock);
-        if (fallbackInStock.length > 0) {
-          inStockHits = fallbackInStock;
-          hits = fallbackHits;
-        } else {
-          // merge both hit sets for out-of-stock fallback below
-          hits = [...hits, ...fallbackHits].filter(
-            (h, idx, arr) => arr.findIndex(x => x.contentId === h.contentId) === idx
-          );
-        }
+        relevant = fallbackHits
+          .filter(h => !h.contentData._source.isOutOfStock)
+          .filter(h => isRelevantProduct(h, t.fallbackTerm));
+
+        // merge all hits for tier 3 out-of-stock fallback
+        hits = [...hits, ...fallbackHits].filter(
+          (h, idx, arr) => arr.findIndex(x => x.contentId === h.contentId) === idx
+        );
       }
 
-      if (inStockHits.length > 0) {
-        const products = inStockHits.map(mapHitToProduct);
+      if (relevant.length > 0) {
+        // Sort: prefer API relevance (first result) but pick cheapest among top relevant hits
+        const products = relevant.map(mapHitToProduct);
         const sorted = [...products].sort((a, b) => a.price - b.price);
         matches.push({
           ingredient: t.ingredient,
@@ -216,15 +254,17 @@ export async function POST(request: NextRequest) {
           pantryStaple: t.pantryStaple || false,
         });
       } else {
-        // Tier 3: if truly nothing in-stock, use best out-of-stock result
-        const outOfStockHits = hits.filter(h => h.contentData._source.isOutOfStock);
-        if (outOfStockHits.length > 0) {
-          const products = outOfStockHits.map(mapHitToProduct);
-          const sorted = [...products].sort((a, b) => a.price - b.price);
+        // Tier 3: out-of-stock but relevant
+        const outOfStockRelevant = hits
+          .filter(h => h.contentData._source.isOutOfStock)
+          .filter(h => isRelevantProduct(h, t.searchTerm) || (t.fallbackTerm && isRelevantProduct(h, t.fallbackTerm)));
+
+        if (outOfStockRelevant.length > 0) {
+          const products = outOfStockRelevant.map(mapHitToProduct);
           matches.push({
             ingredient: t.ingredient,
             searchTerm: t.searchTerm,
-            product: sorted[0],
+            product: products[0],
             alternatives: [],
             matched: true,
             outOfStock: true,
