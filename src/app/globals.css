@@ -240,22 +240,6 @@ body {
   cursor: pointer;
 }
 
-/* Card index — editorial watermark */
-.card-index {
-  position: absolute;
-  top: 10px;
-  right: 16px;
-  font-size: 54px;
-  font-weight: 800;
-  color: var(--text-primary);
-  opacity: 0.035;
-  line-height: 1;
-  letter-spacing: -3px;
-  pointer-events: none;
-  z-index: 0;
-  font-variant-numeric: tabular-nums;
-}
-
 .food-card:hover {
   transform: translateY(-4px);
   box-shadow:
@@ -518,35 +502,21 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-top: 6px;
+  padding-top: 8px;
 }
 
 .card-header {
-  text-align: left;
+  text-align: center;
   margin-bottom: 4px;
 }
 
 .canteen-name {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1.4px;
+  letter-spacing: 1.2px;
   color: var(--accent-orange);
-  margin-bottom: 5px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.canteen-name::before {
-  content: '';
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent-orange);
-  opacity: 0.5;
-  flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
 .week-label {
@@ -558,15 +528,15 @@ body {
 }
 
 .dish-name {
-  font-size: clamp(15px, 3.5vw, 17.5px);
-  font-weight: 750;
+  font-size: clamp(14px, 3.5vw, 16.5px);
+  font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: 1.35;
   display: flex;
   align-items: flex-start;
-  justify-content: flex-start;
-  text-align: left;
-  letter-spacing: -0.2px;
+  justify-content: center;
+  text-align: center;
+  letter-spacing: -0.15px;
 }
 
 
@@ -574,7 +544,7 @@ body {
 /* Dish Meta Row */
 .dish-meta-row {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
@@ -586,8 +556,8 @@ body {
 /* Allergens row */
 .allergens-row {
   display: flex;
-  justify-content: flex-start;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -634,64 +604,52 @@ body {
   font-weight: 400;
   color: var(--text-secondary);
   line-height: 1.5;
-  text-align: left;
+  text-align: center;
   margin: 2px 0 4px;
-  padding: 0;
+  padding: 0 4px;
+  font-style: italic;
   letter-spacing: 0.1px;
   max-width: 300px;
-  opacity: 0.7;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0.75;
 }
 
 /* Bottom Section */
 .card-bottom {
   margin-top: auto;
-  padding-top: 14px;
-  position: relative;
-}
-
-.card-bottom::before {
-  content: '';
-  display: block;
-  width: 28px;
-  height: 2px;
-  background: var(--accent-orange);
-  opacity: 0.18;
-  border-radius: 1px;
-  margin-bottom: 12px;
+  padding-top: 12px;
 }
 
 .side-dishes-title {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   color: var(--text-muted);
   margin-bottom: 8px;
-  opacity: 0.7;
+  padding-left: 2px;
 }
 
 .side-dish-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  flex-direction: column;
+  gap: 0;
 }
 
 .side-dish-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  font-size: 12.5px;
   color: var(--text-secondary);
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(0, 0, 0, 0.03);
-  line-height: 1.3;
-  border: none;
-  transition: background 0.15s ease;
+  padding: 6px 2px;
+  border-top: 1px solid var(--border-light);
+  line-height: 1.35;
 }
 
 .side-dish-item:last-child {
-  padding-bottom: 4px;
+  padding-bottom: 0;
 }
 
 .side-dish-item::before {
@@ -699,16 +657,17 @@ body {
 }
 
 .side-dish-text {
-  line-height: 1.3;
+  flex: 1;
+  line-height: 1.35;
 }
 
 .side-allergens {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-muted);
-  font-weight: 600;
+  padding-left: 8px;
+  font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
-  opacity: 0.6;
 }
 
 /* ─── Lightbox ─── */
@@ -1268,15 +1227,6 @@ body {
     letter-spacing: 1px;
   }
 
-  .canteen-name::before {
-    width: 4px;
-    height: 4px;
-  }
-
-  .card-index {
-    display: none;
-  }
-
   .dish-name {
     font-size: clamp(12px, 1.8dvh, 17px);
     font-weight: 700;
@@ -1388,27 +1338,20 @@ body {
 
   .side-dish-list {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    flex-direction: column;
   }
 
   .side-dish-item {
-    padding: clamp(2px, 0.4dvh, 4px) clamp(6px, 1dvh, 9px);
-    font-size: clamp(8.5px, 1.1dvh, 11px);
-    border-radius: 14px;
+    padding: clamp(3px, 0.5dvh, 6px) 0;
+    font-size: clamp(9px, 1.2dvh, 12px);
+    border-radius: 0;
     min-width: 0;
     min-height: 0;
-    background: rgba(0, 0, 0, 0.025);
+    border-top-color: color-mix(in srgb, var(--border-light) 60%, transparent);
   }
 
   .side-dish-item:last-child {
-    padding-bottom: clamp(2px, 0.4dvh, 4px);
-  }
-
-  .card-bottom::before {
-    width: 20px;
-    height: 1.5px;
-    margin-bottom: clamp(4px, 0.7dvh, 8px);
+    padding-bottom: 0;
   }
 
   /* Day bar */
