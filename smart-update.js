@@ -18,6 +18,7 @@ const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
 const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json');
 
 const EXPECTED_CANTEENS = ['Eat the street', 'Fresh4you', 'Flow'];
+const VALID_SLUGS = new Set(EXPECTED_CANTEENS.map(n => n.toLowerCase().replace(/\s+/g, '_')));
 
 /**
  * Retry a function up to `maxRetries` times with exponential backoff.
@@ -141,6 +142,14 @@ function validateMenu(menu) {
 
         if (dishCount === 0) {
             issues.push(`${name}: Zero dishes across all days`);
+        }
+
+        const daysWithDishes = canteen.menu.filter(dayEntry => {
+            const items = dayEntry?.en?.items || dayEntry?.no?.items || [];
+            return items.some(i => i.isMain);
+        }).length;
+        if (daysWithDishes > 0 && daysWithDishes < 3) {
+            issues.push(`${name}: Only ${daysWithDishes}/5 days have main dishes (expected ≥ 3)`);
         }
     }
 
@@ -482,9 +491,37 @@ async function main() {
         process.exit(1);
     }
 
+    // Carry forward old canteen data for any canteen that failed to scrape
+    if (oldMenu) {
+        for (const expected of EXPECTED_CANTEENS) {
+            if (!newMenu.canteens[expected] && oldMenu.canteens[expected]) {
+                newMenu.canteens[expected] = oldMenu.canteens[expected];
+                console.log(`  ♻️  Carried forward old data for: ${expected}`);
+            }
+        }
+        // Re-save in case we merged old data in
+        fs.writeFileSync(MENU_PATH, JSON.stringify(newMenu, null, 2));
+    }
+
     console.log(`\n📋 New menu: scraped ${newMenu.scrapedAt}`);
     for (const [name, data] of Object.entries(newMenu.canteens)) {
         console.log(`   ${name}: ${data.week}`);
+    }
+
+    // Step 2c: Clean up orphaned images (old slug names like the_hub.png, telenor_expo.png, bygg_b.png)
+    for (const dir of [IMAGES_DIR, IMAGES_NOBG_DIR]) {
+        for (const day of DAY_ORDER) {
+            const dayDir = path.join(dir, day);
+            if (!fs.existsSync(dayDir)) continue;
+            for (const file of fs.readdirSync(dayDir)) {
+                const slug = file.replace(/\.png$/i, '');
+                if (!VALID_SLUGS.has(slug)) {
+                    const orphanPath = path.join(dayDir, file);
+                    fs.unlinkSync(orphanPath);
+                    console.log(`  🗑️  Deleted orphan: ${path.relative(__dirname, orphanPath)}`);
+                }
+            }
+        }
     }
 
     // Step 3: Find changes

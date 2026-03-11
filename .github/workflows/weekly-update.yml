@@ -52,6 +52,9 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update weekly menu and food images $(date +%Y-%m-%d)"
-            git pull --rebase origin main
-            git push
+            for attempt in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "Push attempt $attempt failed, retrying..."
+              sleep 5
+            done
           fi
