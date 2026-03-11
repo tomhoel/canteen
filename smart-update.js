@@ -266,21 +266,25 @@ async function removeBgSingle(canteenName, day) {
         const { width, height, channels } = info;
         const totalPixels = width * height;
 
-        // Flood fill from edges using index-based queue (avoids O(n) shift)
+        // Flood fill from edges — check visited BEFORE enqueuing to prevent
+        // queue overflow (each pixel enqueued at most once → queue stays ≤ totalPixels)
         const visited = new Uint8Array(totalPixels);
         const isBg = new Uint8Array(totalPixels);
         const queue = new Int32Array(totalPixels);
         let qHead = 0, qTail = 0;
 
-        const enqueue = (idx) => { queue[qTail++] = idx; };
+        const enqueue = (idx) => {
+            if (idx >= 0 && idx < totalPixels && !visited[idx]) {
+                visited[idx] = 1;
+                queue[qTail++] = idx;
+            }
+        };
 
         for (let x = 0; x < width; x++) { enqueue(x); enqueue((height - 1) * width + x); }
         for (let y = 1; y < height - 1; y++) { enqueue(y * width); enqueue(y * width + width - 1); }
 
         while (qHead < qTail) {
             const idx = queue[qHead++];
-            if (idx < 0 || idx >= totalPixels || visited[idx]) continue;
-            visited[idx] = 1;
             const pi = idx * channels;
             const r = data[pi], g = data[pi + 1], b = data[pi + 2];
             const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
@@ -315,6 +319,26 @@ async function removeBgSingle(canteenName, day) {
             let largest = 0;
             for (let b = 1; b < blobSizes.length; b++) if (blobSizes[b] > blobSizes[largest]) largest = b;
             for (let i = 0; i < totalPixels; i++) if (!isBg[i] && blobId[i] !== largest) isBg[i] = 1;
+        }
+
+        // Erode gray fringe: expand background mask into adjacent gray-ish pixels
+        // that the flood-fill missed (anti-aliased plate edges, slight gradients)
+        for (let pass = 0; pass < 3; pass++) {
+            const expansion = new Uint8Array(totalPixels);
+            for (let i = 0; i < totalPixels; i++) {
+                if (isBg[i]) continue;
+                const pi = i * channels;
+                const r = data[pi], g = data[pi + 1], b = data[pi + 2];
+                const md = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+                const br = (r + g + b) / 3;
+                if (md >= 40 || br > 160) continue; // not gray-ish, skip
+                const x = i % width, y = Math.floor(i / width);
+                if ((x > 0 && isBg[i - 1]) || (x < width - 1 && isBg[i + 1]) ||
+                    (y > 0 && isBg[i - width]) || (y < height - 1 && isBg[i + width])) {
+                    expansion[i] = 1;
+                }
+            }
+            for (let i = 0; i < totalPixels; i++) if (expansion[i]) isBg[i] = 1;
         }
 
         // Apply transparency
