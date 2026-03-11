@@ -122,5 +122,13 @@
   "Lemon baked chicken tight with whole grain rice": {
     "country": "Greece",
     "code": "gr"
+  },
+  "Buffalo Wings Barbados Grill with fried potatoes and BBQ sauce": {
+    "country": "Barbados",
+    "code": "bb"
+  },
+  "Chickpea-breaded cod with fries and remoulade": {
+    "country": "France",
+    "code": "fr"
   }
 }
