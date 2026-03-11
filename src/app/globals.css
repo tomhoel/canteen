@@ -162,10 +162,6 @@ body {
   box-shadow: 0 3px 16px rgba(200, 116, 26, 0.55);
 }
 
-.cards-container {
-  transition: opacity 0.25s ease;
-}
-
 .cards-container.lang-transitioning {
   opacity: 0.35;
   transition: opacity 0.13s ease;
@@ -229,6 +225,7 @@ body {
   min-height: 0;
   overflow-y: auto;
   width: 100%;
+  transition: opacity 0.25s ease;
 }
 
 /* ─── Food Card ─── */
