@@ -49,6 +49,7 @@ export default function FoodCard({
       style={{ animationDelay: `${cardIdx * 75}ms` }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
     >
+      <span className="card-index">{String(cardIdx + 1).padStart(2, '0')}</span>
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
           <svg className="vote-pip-icon" viewBox="0 0 16 16" fill="currentColor">
