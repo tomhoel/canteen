@@ -1,11 +1,6 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { GoogleGenAI } = require('@google/genai');
-
-// ─── Config ───
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 const CANTEENS = [
     { name: 'The Hub', token: '6e5cc038-e918-4f97-9a59-d2afa0456abf', hours: '11:00 - 13:30', displayName: 'Eat the street' },
@@ -166,34 +161,6 @@ async function scrapeCanteen(url) {
     return { week: rawData.week, menu: Object.values(groupedMenu) };
 }
 
-// ─── Generate food image with Gemini ───
-async function generateFoodImage(dishName, canteenName, dayName) {
-    const prompt = `Professional food photography of "${dishName}", top-down shot on a clean white ceramic plate, soft natural lighting, shallow depth of field, restaurant quality presentation, minimalist Scandinavian style, no text or labels, photorealistic`;
-
-    console.log(`  📸 Generating image for: ${dishName}...`);
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image-preview',
-            contents: prompt,
-            config: {
-                responseModalities: ['Text', 'Image'],
-            },
-        });
-
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-                const buffer = Buffer.from(part.inlineData.data, 'base64');
-                return buffer;
-            }
-        }
-        console.log(`  ⚠️ No image returned for ${dishName}`);
-        return null;
-    } catch (error) {
-        console.error(`  ❌ Image generation failed for ${dishName}:`, error.message);
-        return null;
-    }
-}
-
 // ─── Main ───
 async function main() {
     const today = new Date();
@@ -202,10 +169,6 @@ async function main() {
     const todayKey = todayIndex >= 0 ? DAY_ORDER[todayIndex] : null;
 
     console.log(`📅 Today is ${todayKey || 'weekend'} (index: ${todayIndex})`);
-
-    // Ensure images directory exists
-    const imagesDir = path.join(__dirname, 'public', 'images');
-    if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 
     // Scrape all canteens in parallel
     const allResults = { scrapedAt: new Date().toISOString(), canteens: {} };
@@ -216,45 +179,6 @@ async function main() {
             allResults.canteens[canteen.displayName] = { week: result.week, openingHours: canteen.hours, menu: result.menu };
         } catch (error) { console.error(`Error ${canteen.name}:`, error); }
     }));
-
-    // Generate images for today's main dishes (only on weekdays)
-    if (todayKey) {
-        console.log(`\n🎨 Generating images for ${todayKey}...`);
-        const dayImagesDir = path.join(imagesDir, todayKey);
-        if (!fs.existsSync(dayImagesDir)) fs.mkdirSync(dayImagesDir, { recursive: true });
-
-        await Promise.all(CANTEENS.map(async (canteen) => {
-            const canteenData = allResults.canteens[canteen.displayName];
-            if (!canteenData) return;
-
-            const dayEntry = canteenData.menu.find(d => d.day.toLowerCase() === todayKey);
-            if (!dayEntry) return;
-
-            // Use English dish name for better image generation
-            const items = dayEntry.en?.items || dayEntry.no?.items;
-            if (!items) return;
-
-            const mainDish = items.find(i => i.isMain);
-            if (!mainDish) return;
-
-            const filename = canteen.name.toLowerCase().replace(/\s+/g, '_') + '.png'; // Use old name for image files
-            const filepath = path.join(dayImagesDir, filename);
-
-            // Skip if image already exists
-            if (fs.existsSync(filepath)) {
-                console.log(`  ✅ Image already exists: ${filepath}`);
-                return;
-            }
-
-            const imageBuffer = await generateFoodImage(mainDish.dish, canteen.name, todayKey);
-            if (imageBuffer) {
-                fs.writeFileSync(filepath, imageBuffer);
-                console.log(`  ✅ Saved: ${filepath}`);
-            }
-        }));
-    } else {
-        console.log('\n📸 Weekend — skipping image generation');
-    }
 
     // Save menu data
     const outputPath = path.join(__dirname, 'public', 'menu.json');
