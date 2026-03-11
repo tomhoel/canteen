@@ -14,6 +14,7 @@ import MenyView from "@/components/MenyView";
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
   const [lang, setLang] = useState<"no" | "en">("no");
+  const [langChanging, setLangChanging] = useState(false);
   const [selectedDay, setSelectedDay] = useState(0);
   const [todayIndex, setTodayIndex] = useState(-1);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -101,6 +102,17 @@ export default function Home() {
       return i;
     });
   }, []);
+
+  const handleLangSwitch = useCallback((newLang: "no" | "en") => {
+    if (newLang === lang) return;
+    setLangChanging(true);
+    setTimeout(() => {
+      setLang(newLang);
+      // Double rAF defers class removal to a separate paint cycle, ensuring
+      // the browser commits the new language content before the fade-in fires.
+      requestAnimationFrame(() => requestAnimationFrame(() => setLangChanging(false)));
+    }, 160); // 160ms > 130ms CSS fade-out duration
+  }, [lang]);
 
   const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
     const cacheKey = `recipe_v4_${lang}_${dishName}`;
@@ -542,14 +554,14 @@ export default function Home() {
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.2"/><path d="M8 7v4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4.75" r="0.65" fill="currentColor"/></svg>
           </button>
           <div className="lang-switcher">
-            <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("no")}>NO</button>
-            <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => setLang("en")}>EN</button>
+            <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("no")}>NO</button>
+            <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("en")}>EN</button>
           </div>
         </div>
       </header>
 
       {/* Cards */}
-      <main className="cards-container" ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <main className={`cards-container${langChanging ? " lang-transitioning" : ""}`} ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
           {canteenDayData.map((data, cardIdx) => (
             <FoodCard
