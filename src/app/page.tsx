@@ -475,7 +475,7 @@ export default function Home() {
         ? (noItems && noItems.length > 0 ? noItems : enItems)
         : (enItems && enItems.length > 0 ? enItems : noItems);
       const mainDish = items?.find(i => i.isMain);
-      const displaySideDishes = items?.filter(i => !i.isMain).slice(0, 2) || [];
+      const displaySideDishes = items?.filter(i => !i.isMain).slice(0, 3) || [];
       // Allergens come from Norwegian data as the canonical source — the English
       // widget page sometimes returns different dishes with different allergens.
       const noMainDish = noItems?.find(i => i.isMain);
