@@ -1718,8 +1718,8 @@ body {
 /* ─── Vote Feature ─── */
 .vote-pip {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 10px;
+  right: 10px;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -1767,8 +1767,12 @@ body {
 
 @media (max-width: 768px) {
   .vote-pip {
-    top: 4px;
-    right: 4px;
+    /* top-right of image, aligned with origin-pip's right edge */
+    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + 4px);
+    right: auto;
+    left: calc(16px - 22px + clamp(125px, 19dvh, 210px) - 4px);
+    transform: translateX(-100%);
+    z-index: 11;
     font-size: 10px;
     padding: 3px 9px 3px 7px;
     gap: 2px;
