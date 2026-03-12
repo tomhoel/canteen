@@ -11,6 +11,7 @@ const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   india: { no: "indisk", en: "Indian" },
   thailand: { no: "thailandsk", en: "Thai" },
   usa: { no: "amerikansk", en: "American" },
+  "united states": { no: "amerikansk", en: "American" },
   france: { no: "fransk", en: "French" },
   spain: { no: "spansk", en: "Spanish" },
   greece: { no: "gresk", en: "Greek" },
@@ -22,6 +23,7 @@ const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   sweden: { no: "svensk", en: "Swedish" },
   norway: { no: "norsk", en: "Norwegian" },
   denmark: { no: "dansk", en: "Danish" },
+  "united kingdom": { no: "britisk", en: "British" },
   uk: { no: "britisk", en: "British" },
   lebanon: { no: "libanesisk", en: "Lebanese" },
   indonesia: { no: "indonesisk", en: "Indonesian" },
@@ -34,6 +36,9 @@ const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   colombia: { no: "kolombiansk", en: "Colombian" },
   malaysia: { no: "malaysisk", en: "Malaysian" },
   pakistan: { no: "pakistansk", en: "Pakistani" },
+  hungary: { no: "ungarsk", en: "Hungarian" },
+  austria: { no: "østerriksk", en: "Austrian" },
+  barbados: { no: "barbadisk", en: "Barbadian" },
 };
 
 function getCountryAdjective(country: string, lang: "no" | "en"): string {
