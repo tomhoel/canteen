@@ -1938,7 +1938,7 @@ body {
 
 @media (max-width: 768px) {
   .origin-pip {
-    top: clamp(8px, 1.2dvh, 14px);
+    top: calc(clamp(14px, 3dvh, 24px) + 6px);
     bottom: auto;
     right: 4px;
     font-size: 10px;
