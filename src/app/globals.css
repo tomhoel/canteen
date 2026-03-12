@@ -1761,17 +1761,17 @@ body {
 }
 
 @keyframes votePipInMobile {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 768px) {
   .vote-pip {
-    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + clamp(125px, 19dvh, 210px) * 0.75);
+    top: auto;
+    bottom: 4px;
     right: auto;
-    left: calc(16px - 22px + clamp(125px, 19dvh, 210px) / 2);
-    transform: translateX(-50%);
-    z-index: 11;
+    left: 4px;
+    transform: none;
     font-size: 10px;
     padding: 3px 9px 3px 7px;
     gap: 2px;
