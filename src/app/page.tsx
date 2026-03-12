@@ -591,10 +591,8 @@ export default function Home() {
       {/* #4 — Day Selector with ahead-canteen awareness */}
       <DaySelector
         fullDayLabels={fullDayLabels}
-        dayLabelsData={dayLabelsData}
         selectedDay={selectedDay}
         todayIndex={todayIndex}
-        lang={lang}
         hasAheadCanteens={hasAheadCanteens}
         onDaySelect={handleDaySelect}
       />
