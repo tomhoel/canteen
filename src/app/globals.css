@@ -1767,8 +1767,8 @@ body {
 
 @media (max-width: 768px) {
   .vote-pip {
-    /* card-relative, floats at 70% of image height on the left side */
-    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + clamp(125px, 19dvh, 210px) * 0.7);
+    /* card-relative, matches origin-pip bottom:4px position on image wrapper */
+    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + clamp(125px, 19dvh, 210px) - 21px);
     right: auto;
     left: 16px;
     transform: none;
