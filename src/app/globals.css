@@ -1936,6 +1936,17 @@ body {
   pointer-events: none;
 }
 
+/* Hide emoji flag on desktop, show image flag */
+.emoji-flag {
+  display: none;
+}
+.image-flag {
+  display: inline-block;
+  width: 20px;
+  height: 15px;
+  object-fit: contain;
+}
+
 @media (max-width: 768px) {
   .origin-pip {
     top: clamp(14px, 3dvh, 24px);
@@ -1944,6 +1955,14 @@ body {
     font-size: 10px;
     padding: 3px 7px 3px 5px;
     gap: 2px;
+  }
+  /* Show emoji flag on mobile, hide image flag */
+  .emoji-flag {
+    display: inline-block;
+    font-size: 14px;
+  }
+  .image-flag {
+    display: none;
   }
   .origin-pip-name {
     display: none;
