@@ -74,16 +74,6 @@ export default function FoodCard({
           </div>
         )}
         <span className="click-hint">{lang === "no" ? "Klikk for st\u00F8rre" : "Click to enlarge"}</span>
-        {origin && (
-          <div className="origin-stamp" data-country={origin.country}>
-            <img
-              className="origin-flag"
-              src={`https://flagcdn.com/w40/${origin.code}.png`}
-              srcSet={`https://flagcdn.com/w80/${origin.code}.png 2x`}
-              alt={origin.country}
-            />
-          </div>
-        )}
         {isVoteable && voteCount > 0 && (
           <div className={`vote-pip${isLeader ? " leader" : ""}`}>
             <svg className="vote-pip-icon" viewBox="0 0 16 16" fill="currentColor">
@@ -105,6 +95,12 @@ export default function FoodCard({
             )}
           </div>
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+          {origin && mainDish && (
+            <div className="origin-tag">
+              <span>{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
+              <span>{origin.country}</span>
+            </div>
+          )}
         </div>
 
         {mainAllergens.length > 0 && (
