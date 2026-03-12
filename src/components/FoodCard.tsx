@@ -49,6 +49,15 @@ export default function FoodCard({
       style={{ animationDelay: `${cardIdx * 75}ms` }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
     >
+      {isVoteable && voteCount > 0 && (
+        <div className={`vote-pip${isLeader ? " leader" : ""}`}>
+          <svg className="vote-pip-icon" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="8" cy="5" r="3" />
+            <path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+          </svg>
+          <span>{voteCount}</span>
+        </div>
+      )}
       <div
         className="card-image-wrapper"
         onClick={e => { e.stopPropagation(); mainDish && onImageClick(data); }}
@@ -74,13 +83,10 @@ export default function FoodCard({
           </div>
         )}
         <span className="click-hint">{lang === "no" ? "Klikk for st\u00F8rre" : "Click to enlarge"}</span>
-        {isVoteable && voteCount > 0 && (
-          <div className={`vote-pip${isLeader ? " leader" : ""}`}>
-            <svg className="vote-pip-icon" viewBox="0 0 16 16" fill="currentColor">
-              <circle cx="8" cy="5" r="3" />
-              <path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-            </svg>
-            <span>{voteCount}</span>
+        {origin && mainDish && (
+          <div className="origin-pip">
+            <span>{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
+            <span className="origin-pip-name">{origin.country}</span>
           </div>
         )}
       </div>
@@ -95,12 +101,6 @@ export default function FoodCard({
             )}
           </div>
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
-          {origin && mainDish && (
-            <div className="origin-tag">
-              <span>{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
-              <span>{origin.country}</span>
-            </div>
-          )}
         </div>
 
         {mainAllergens.length > 0 && (
