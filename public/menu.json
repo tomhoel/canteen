@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-03-12T06:48:29.797Z",
+  "scrapedAt": "2026-03-12T09:41:18.685Z",
   "canteens": {
     "Eat the street": {
       "week": "UKE/WEEK 11",
@@ -116,7 +116,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza med biff og tomat",
+                "dish": "Pizza med biff og bearnaise saus",
                 "allergens": [
                   {
                     "id": "3",
@@ -159,7 +159,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza with beef and tomato",
+                "dish": "Pizza with beef and bearnaise sauce",
                 "allergens": [
                   {
                     "id": "3",
@@ -181,23 +181,23 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Kylling Chop Suey med ris",
+                "dish": "Fransk biffgryte med poteter",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Ratatouille suppe",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Korma med kikerter og blomkål",
+                "dish": "Grønn ertesuppe med vårløk",
                 "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
                   }
                 ],
+                "isMain": false
+              },
+              {
+                "dish": "Jamaicansk-inspirert søtpotet curry",
+                "allergens": [],
                 "isMain": false
               },
               {
@@ -220,23 +220,23 @@
             "label": "WEDNESDAY",
             "items": [
               {
-                "dish": "Chicken Chop Suey with rice",
+                "dish": "French beef stew with potatoes",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Ratatouille soup",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Korma with chickpeas and cauliflower",
+                "dish": "Green pea soup with onion",
                 "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
                   }
                 ],
+                "isMain": false
+              },
+              {
+                "dish": "Jamaican-inspired sweet potato curry",
+                "allergens": [],
                 "isMain": false
               },
               {
@@ -388,7 +388,7 @@
                 "isMain": false
               },
               {
-                "dish": "Bondeomelett med grønnsaker",
+                "dish": "Omelett med grønnsaker",
                 "allergens": [
                   {
                     "id": "1",
@@ -402,7 +402,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza med salami og ruccola",
+                "dish": "Tex Mex biff pizza",
                 "allergens": [
                   {
                     "id": "3",
@@ -444,7 +444,7 @@
                 "isMain": false
               },
               {
-                "dish": "Farmer's omelette with vegetables",
+                "dish": "Omelette with vegetables",
                 "allergens": [
                   {
                     "id": "1",
@@ -458,7 +458,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza with salami and ruccola",
+                "dish": "Tex Mex beef pizza",
                 "allergens": [
                   {
                     "id": "3",

@@ -134,5 +134,9 @@
   "Black pepper and soya Marinated pork rib with rice and very strong Asian salad": {
     "country": "Thailand",
     "code": "th"
+  },
+  "French beef stew with potatoes": {
+    "country": "France",
+    "code": "fr"
   }
 }
