@@ -1230,11 +1230,6 @@ body {
   .card-header {
     text-align: left;
     margin-bottom: 2px;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: 6px;
   }
 
   .canteen-name {
@@ -1243,9 +1238,7 @@ body {
     letter-spacing: 1px;
   }
 
-  /* dish-name breaks to its own row, origin-tag sits next to canteen-name */
   .dish-name {
-    flex-basis: 100%;
     font-size: clamp(12px, 1.8dvh, 17px);
     font-weight: 700;
     line-height: 1.3;
@@ -1774,11 +1767,12 @@ body {
 
 @media (max-width: 768px) {
   .vote-pip {
-    top: auto;
-    bottom: 4px;
+    /* card-relative, floats at 70% of image height on the left side */
+    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + clamp(125px, 19dvh, 210px) * 0.7);
     right: auto;
-    left: 22px;
+    left: 16px;
     transform: none;
+    z-index: 11;
     font-size: 10px;
     padding: 3px 9px 3px 7px;
     gap: 2px;
@@ -1915,26 +1909,41 @@ body {
 }
 
 
-/* ─── Dish Origin ─── */
-.origin-tag {
-  display: inline-flex;
+/* ─── Dish Origin Pip ─── */
+.origin-pip {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--text-muted);
-  margin-top: 4px;
-  letter-spacing: 0.15px;
+  padding: 4px 8px 4px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  z-index: 12;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  animation: votePipIn 0.4s ease both;
+  animation-delay: 0.15s;
+  pointer-events: none;
 }
 
 @media (max-width: 768px) {
-  .origin-tag {
-    font-size: clamp(9px, 1.2dvh, 10.5px);
-    margin-top: 0;
-    /* sits next to canteen-name on the same row, no added height */
+  .origin-pip {
+    bottom: 4px;
+    right: 4px;
+    font-size: 10px;
+    padding: 3px 7px 3px 5px;
+    gap: 2px;
   }
-  /* hide country name on mobile — just the flag emoji */
-  .origin-tag span:last-child {
+  .origin-pip-name {
     display: none;
   }
 }
