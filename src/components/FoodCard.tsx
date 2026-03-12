@@ -2,6 +2,45 @@ import { useState } from "react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 
+const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
+  turkey: { no: "tyrkisk", en: "Turkish" },
+  italy: { no: "italiensk", en: "Italian" },
+  mexico: { no: "meksikansk", en: "Mexican" },
+  japan: { no: "japansk", en: "Japanese" },
+  china: { no: "kinesisk", en: "Chinese" },
+  india: { no: "indisk", en: "Indian" },
+  thailand: { no: "thailandsk", en: "Thai" },
+  usa: { no: "amerikansk", en: "American" },
+  france: { no: "fransk", en: "French" },
+  spain: { no: "spansk", en: "Spanish" },
+  greece: { no: "gresk", en: "Greek" },
+  vietnam: { no: "vietnamesisk", en: "Vietnamese" },
+  korea: { no: "koreansk", en: "Korean" },
+  morocco: { no: "marokkansk", en: "Moroccan" },
+  brazil: { no: "brasiliansk", en: "Brazilian" },
+  peru: { no: "peruansk", en: "Peruvian" },
+  sweden: { no: "svensk", en: "Swedish" },
+  norway: { no: "norsk", en: "Norwegian" },
+  denmark: { no: "dansk", en: "Danish" },
+  uk: { no: "britisk", en: "British" },
+  lebanon: { no: "libanesisk", en: "Lebanese" },
+  indonesia: { no: "indonesisk", en: "Indonesian" },
+  philippines: { no: "filippinsk", en: "Filipino" },
+  portugal: { no: "portugisisk", en: "Portuguese" },
+  poland: { no: "polsk", en: "Polish" },
+  germany: { no: "tysk", en: "German" },
+  netherlands: { no: "nederlandsk", en: "Dutch" },
+  argentina: { no: "argentinsk", en: "Argentine" },
+  colombia: { no: "kolombiansk", en: "Colombian" },
+  malaysia: { no: "malaysisk", en: "Malaysian" },
+  pakistan: { no: "pakistansk", en: "Pakistani" },
+};
+
+function getCountryAdjective(country: string, lang: "no" | "en"): string {
+  const key = country.toLowerCase().trim();
+  return COUNTRY_ADJECTIVES[key]?.[lang] || country;
+}
+
 interface FoodCardProps {
   data: CanteenDayItem;
   cardIdx: number;
@@ -87,7 +126,7 @@ export default function FoodCard({
           <div className="origin-pip">
             <span className="emoji-flag">{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
             <img className="image-flag" src={`https://flagcdn.com/w20/${origin.code.toLowerCase()}.png`} alt={origin.country} />
-            <span className="origin-pip-name">{origin.country}</span>
+            <span className="origin-pip-name">{getCountryAdjective(origin.country, lang)}</span>
           </div>
         )}
       </div>
