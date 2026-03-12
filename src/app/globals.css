@@ -1767,8 +1767,8 @@ body {
 
 @media (max-width: 768px) {
   .vote-pip {
-    /* top-right of image, aligned with origin-pip's right edge */
-    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + 4px);
+    /* top-right of image, inside card border with padding matching card rhythm */
+    top: clamp(8px, 1.2dvh, 14px);
     right: auto;
     left: calc(16px - 22px + clamp(125px, 19dvh, 210px) - 4px);
     transform: translateX(-100%);
