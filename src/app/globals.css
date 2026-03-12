@@ -1767,8 +1767,8 @@ body {
 
 @media (max-width: 768px) {
   .vote-pip {
-    /* top-right of image, inside card border with padding matching card rhythm */
-    top: clamp(8px, 1.2dvh, 14px);
+    /* bottom-right of image, matching origin-pip position (swapped) */
+    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + clamp(125px, 19dvh, 210px) - 21px);
     right: auto;
     left: calc(16px - 22px + clamp(125px, 19dvh, 210px) - 4px);
     transform: translateX(-100%);
@@ -1914,6 +1914,7 @@ body {
   position: absolute;
   bottom: 14px;
   right: 14px;
+  top: auto;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1937,7 +1938,8 @@ body {
 
 @media (max-width: 768px) {
   .origin-pip {
-    bottom: 4px;
+    top: 4px;
+    bottom: auto;
     right: 4px;
     font-size: 10px;
     padding: 3px 7px 3px 5px;
