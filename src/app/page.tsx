@@ -599,6 +599,7 @@ export default function Home() {
         lang={lang}
         hasAheadCanteens={hasAheadCanteens}
         onDaySelect={handleDaySelect}
+        cardsRef={scrollRef}
       />
 
       {/* Info Modal */}
