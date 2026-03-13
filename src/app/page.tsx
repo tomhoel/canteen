@@ -103,13 +103,16 @@ export default function Home() {
     });
   }, []);
 
+  const langAnimBusy = useRef(false);
   const handleLangSwitch = useCallback((newLang: "no" | "en") => {
-    if (newLang === lang || langAnim) return;
+    if (newLang === lang || langAnimBusy.current) return;
+    langAnimBusy.current = true;
     // Single continuous animation — swap content mid-animation when cards are invisible
     setLangAnim(`lang-cascade-${newLang}`);
     setTimeout(() => setLang(newLang), 320);
-    setTimeout(() => setLangAnim(""), 770);
-  }, [lang, langAnim]);
+    // Swap to lang-done (suppresses cardReveal replay) instead of clearing
+    setTimeout(() => { setLangAnim("lang-done"); langAnimBusy.current = false; }, 770);
+  }, [lang]);
 
   const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
     const cacheKey = `recipe_v4_${lang}_${dishName}`;
