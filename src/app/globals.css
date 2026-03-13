@@ -166,14 +166,14 @@ body {
 /* ─── Language switch cascade ─── */
 @keyframes langCascadeToEn {
   0%   { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-  28%  { opacity: 0; transform: translateX(-20px) scale(0.96) rotate(-1deg); }
-  58%  { opacity: 0; transform: translateX(35px) scale(0.96) rotate(1.5deg); }
+  22%  { opacity: 0; transform: translateX(-20px) scale(0.96) rotate(-1deg); }
+  65%  { opacity: 0; transform: translateX(35px) scale(0.96) rotate(1.5deg); }
   100% { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
 }
 @keyframes langCascadeToNo {
   0%   { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-  28%  { opacity: 0; transform: translateX(20px) scale(0.96) rotate(1deg); }
-  58%  { opacity: 0; transform: translateX(-35px) scale(0.96) rotate(-1.5deg); }
+  22%  { opacity: 0; transform: translateX(20px) scale(0.96) rotate(1deg); }
+  65%  { opacity: 0; transform: translateX(-35px) scale(0.96) rotate(-1.5deg); }
   100% { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
 }
 
@@ -183,11 +183,14 @@ body {
 .cards-container[class*="lang-"] .food-card:nth-child(3) { --i: 2; }
 
 /* Single continuous animation — no class swap, no flash */
+/* !important on delay overrides the inline animationDelay from cardReveal stagger */
 .cards-container.lang-cascade-en .food-card {
-  animation: langCascadeToEn 650ms ease-in-out calc(var(--i) * 50ms) both;
+  animation: langCascadeToEn 650ms ease-in-out both;
+  animation-delay: calc(var(--i) * 50ms) !important;
 }
 .cards-container.lang-cascade-no .food-card {
-  animation: langCascadeToNo 650ms ease-in-out calc(var(--i) * 50ms) both;
+  animation: langCascadeToNo 650ms ease-in-out both;
+  animation-delay: calc(var(--i) * 50ms) !important;
 }
 
 /* Suppress base cardReveal from replaying after cascade completes */

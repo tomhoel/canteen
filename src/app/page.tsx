@@ -107,11 +107,13 @@ export default function Home() {
   const handleLangSwitch = useCallback((newLang: "no" | "en") => {
     if (newLang === lang || langAnimBusy.current) return;
     langAnimBusy.current = true;
-    // Single continuous animation — swap content mid-animation when cards are invisible
+    // Single continuous animation — swap content mid-animation when all cards are in the
+    // invisible zone (22%–65% of keyframes).  350ms guarantees card 3 (100ms delay) has
+    // reached opacity 0 before React re-renders with new language content.
     setLangAnim(`lang-cascade-${newLang}`);
-    setTimeout(() => setLang(newLang), 320);
+    setTimeout(() => setLang(newLang), 350);
     // Swap to lang-done (suppresses cardReveal replay) instead of clearing
-    setTimeout(() => { setLangAnim("lang-done"); langAnimBusy.current = false; }, 770);
+    setTimeout(() => { setLangAnim("lang-done"); langAnimBusy.current = false; }, 780);
   }, [lang]);
 
   const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
