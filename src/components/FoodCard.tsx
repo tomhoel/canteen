@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
+import { Wrapper3D } from "@/components/ui/3d-wrapper";
 
 const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   turkey: { no: "Tyrkisk", en: "Turkish" },
@@ -88,6 +89,7 @@ export default function FoodCard({
   const isLeader = voteCount > 0 && voteCount === maxVotes;
 
   return (
+    <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
       className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
       style={{ animationDelay: `${cardIdx * 75}ms` }}
@@ -204,5 +206,6 @@ export default function FoodCard({
         </div>
       </div>
     </article>
+    </Wrapper3D>
   );
 }
