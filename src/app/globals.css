@@ -189,6 +189,11 @@ body {
   animation: langCascadeToNo 650ms ease-in-out calc(var(--i) * 50ms) both;
 }
 
+/* Suppress base cardReveal from replaying after cascade completes */
+.cards-container.lang-done .food-card {
+  animation: none;
+}
+
 /* ─── Hero (inline with header) ─── */
 .hero-inline {
   display: flex;
