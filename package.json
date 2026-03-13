@@ -14,14 +14,12 @@
     "@google/genai": "^1.41.0",
     "@upstash/redis": "^1.36.2",
     "@vercel/analytics": "^1.6.1",
-    "canvas-confetti": "^1.9.4",
     "next": "16.1.6",
     "playwright": "^1.58.2",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
