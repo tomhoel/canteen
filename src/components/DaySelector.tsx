@@ -2,16 +2,20 @@ import { useRef, useEffect, useState, useCallback } from "react";
 
 interface DaySelectorProps {
   fullDayLabels: string[];
+  dayLabelsData: string[];
   selectedDay: number;
   todayIndex: number;
+  lang: "no" | "en";
   hasAheadCanteens: boolean;
   onDaySelect: (i: number) => void;
 }
 
 export default function DaySelector({
   fullDayLabels,
+  dayLabelsData,
   selectedDay,
   todayIndex,
+  lang,
   hasAheadCanteens,
   onDaySelect,
 }: DaySelectorProps) {
@@ -36,13 +40,11 @@ export default function DaySelector({
 
   useEffect(() => {
     updatePill();
-
     if (!animated) {
       requestAnimationFrame(() => setAnimated(true));
     }
   }, [selectedDay, fullDayLabels.length, animated, updatePill]);
 
-  // Recalculate pill on resize
   useEffect(() => {
     window.addEventListener("resize", updatePill);
     return () => window.removeEventListener("resize", updatePill);
@@ -75,6 +77,9 @@ export default function DaySelector({
             onClick={() => onDaySelect(i)}
           >
             <span className="day-label-name">{dayName}</span>
+            <span className="day-label-date">
+              {dayLabelsData[i]}
+            </span>
           </button>
         ))}
       </div>

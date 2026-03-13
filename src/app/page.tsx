@@ -409,7 +409,7 @@ export default function Home() {
     };
   }, [mounted, menuData, selectedDay]);
 
-  const fullDayLabels = lang === "no" ? DAYS_NO : DAYS_EN;
+  const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
   const dayKey = DAY_KEYS[selectedDay];
   const activeDayIndex = todayIndex >= 0 ? todayIndex : 4;
 
@@ -591,8 +591,10 @@ export default function Home() {
       {/* #4 — Day Selector with ahead-canteen awareness */}
       <DaySelector
         fullDayLabels={fullDayLabels}
+        dayLabelsData={dayLabelsData}
         selectedDay={selectedDay}
         todayIndex={todayIndex}
+        lang={lang}
         hasAheadCanteens={hasAheadCanteens}
         onDaySelect={handleDaySelect}
       />
