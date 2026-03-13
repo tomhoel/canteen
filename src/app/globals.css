@@ -193,6 +193,12 @@ body {
   animation-delay: calc(var(--i) * 50ms) !important;
 }
 
+/* Outdated cards skip the cascade — opacity transition makes grayscale flicker */
+.cards-container[class*="lang-"] .food-card.outdated,
+.cards-container[class*="lang-"] .food-card.ahead {
+  animation: none !important;
+}
+
 /* Suppress base cardReveal from replaying after cascade completes */
 .cards-container.lang-done .food-card {
   animation: none;
