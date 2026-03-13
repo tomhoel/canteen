@@ -1325,6 +1325,10 @@ body {
     border-color: rgba(236, 228, 216, 0.5);
   }
 
+  .food-card-3d-wrapper {
+    width: 100%;
+  }
+
   .food-card:hover {
     transform: none;
   }
