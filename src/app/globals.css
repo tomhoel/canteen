@@ -924,7 +924,7 @@ body {
   border-top-color: rgba(255, 255, 255, 0.6);
   padding: 6px;
   z-index: 100;
-  border-radius: 20px;
+  border-radius: 22px;
   box-shadow:
     0 8px 32px rgba(60, 30, 0, 0.10),
     0 2px 8px rgba(60, 30, 0, 0.06),
@@ -939,13 +939,13 @@ body {
   position: relative;
 }
 
-/* ─ Sliding glass pill (desktop) ─ */
+/* ─ Sliding glass pill ─ */
 .day-pill {
   position: absolute;
   top: 0;
   left: 0;
   height: 100%;
-  border-radius: 14px;
+  border-radius: 15px;
   background: linear-gradient(
     145deg,
     rgba(210, 140, 20, 0.72) 0%,
@@ -967,96 +967,83 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .day-pill-animated {
-    transition: none;
-  }
-
-  .day-btn {
-    transition: none;
-  }
+  .day-pill-animated { transition: none; }
+  .day-btn { transition: none; }
 }
 
 .day-btn {
   flex: 1;
   border: 1px solid transparent;
   background: transparent;
-  padding: 8px 12px;
-  border-radius: 15px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--text-secondary);
+  padding: 10px 22px;
+  border-radius: 16px;
   cursor: pointer;
   transition:
-    background 0.3s ease,
-    color 0.25s ease,
-    transform 0.35s var(--spring),
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
+    background 0.25s ease,
+    color 0.2s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   position: relative;
   z-index: 1;
 }
 
 .day-btn:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.4);
   color: var(--text-primary);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .day-btn:active {
-  transform: scale(0.95);
+  opacity: 0.75;
 }
 
 .day-btn.active {
   background: transparent;
   border-color: transparent;
   color: white;
-  text-shadow: 0 1px 3px rgba(120, 60, 0, 0.2);
+  text-shadow: 0 1px 4px rgba(110, 50, 0, 0.22);
   box-shadow: none;
 }
 
-/* Today — warm glass tint + heavier weight */
+/* Today — warm glass tint */
 .day-btn.today:not(.active) {
-  background: rgba(200, 116, 26, 0.10);
-  border-color: rgba(200, 116, 26, 0.12);
+  background: rgba(200, 116, 26, 0.09);
+  border-color: rgba(200, 116, 26, 0.13);
   color: var(--text-primary);
-  font-weight: 800;
 }
 
 .day-btn.today:not(.active):hover {
-  background: rgba(200, 116, 26, 0.16);
-  border-color: rgba(200, 116, 26, 0.18);
-}
-
-.day-btn.today.active {
-  font-weight: 800;
+  background: rgba(200, 116, 26, 0.15);
+  border-color: rgba(200, 116, 26, 0.2);
 }
 
 .day-label-name {
   font-size: 13px;
-  font-weight: inherit;
+  font-weight: 600;
   letter-spacing: 0.01em;
+  color: inherit;
 }
 
 .day-label-date {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  opacity: 0.6;
+  opacity: 0.55;
   letter-spacing: 0.02em;
+  color: inherit;
 }
 
 .day-btn.active .day-label-date {
-  opacity: 0.85;
+  opacity: 0.82;
 }
 
 .day-btn.today:not(.active) .day-label-date {
-  opacity: 0.75;
+  opacity: 0.8;
   color: var(--accent-orange);
 }
 
