@@ -333,10 +333,22 @@ body {
 }
 
 /* ─── Food Card ─── */
+.food-card-3d-wrapper {
+  width: 380px;
+}
+
+/* Disable 3D tilt on touch devices */
+@media (hover: none) {
+  .food-card-3d-wrapper {
+    transform: none !important;
+    will-change: auto !important;
+  }
+}
+
 .food-card {
   background: linear-gradient(180deg, #fffcf8 0%, var(--card-white) 40%);
   border-radius: 24px;
-  width: 380px;
+  width: 100%;
   min-height: 520px;
   padding: 0 26px 24px;
   box-shadow:
