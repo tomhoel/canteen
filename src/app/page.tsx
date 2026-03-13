@@ -14,7 +14,7 @@ import MenyView from "@/components/MenyView";
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
   const [lang, setLang] = useState<"no" | "en">("no");
-  const [langChanging, setLangChanging] = useState(false);
+  const [langAnim, setLangAnim] = useState("");
   const [selectedDay, setSelectedDay] = useState(0);
   const [todayIndex, setTodayIndex] = useState(-1);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -104,15 +104,18 @@ export default function Home() {
   }, []);
 
   const handleLangSwitch = useCallback((newLang: "no" | "en") => {
-    if (newLang === lang) return;
-    setLangChanging(true);
+    if (newLang === lang || langAnim) return;
+    // Phase 1: cards cascade out toward the new language direction
+    setLangAnim(`lang-exit-${newLang}`);
     setTimeout(() => {
       setLang(newLang);
-      // Double rAF defers class removal to a separate paint cycle, ensuring
-      // the browser commits the new language content before the fade-in fires.
-      requestAnimationFrame(() => requestAnimationFrame(() => setLangChanging(false)));
-    }, 160); // 160ms > 130ms CSS fade-out duration
-  }, [lang]);
+      // Phase 2: cards cascade in from the new language direction (spring)
+      setLangAnim(`lang-enter-${newLang}`);
+      setTimeout(() => {
+        setLangAnim("");
+      }, 440);
+    }, 260);
+  }, [lang, langAnim]);
 
   const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
     const cacheKey = `recipe_v4_${lang}_${dishName}`;
@@ -569,7 +572,7 @@ export default function Home() {
       </header>
 
       {/* Cards */}
-      <main className={`cards-container${langChanging ? " lang-transitioning" : ""}`} ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <main className={`cards-container${langAnim ? ` ${langAnim}` : ""}`} ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
           {canteenDayData.map((data, cardIdx) => (
             <FoodCard
