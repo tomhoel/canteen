@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
+import { DAYS_NO, DAYS_EN, FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
 import type { MenuData, CanteenData, Recipe, DealsResponse, MenyResponse, ProductOffer } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import DaySelector from "@/components/DaySelector";
@@ -409,7 +409,7 @@ export default function Home() {
     };
   }, [mounted, menuData, selectedDay]);
 
-  const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
+  const fullDayLabels = lang === "no" ? DAYS_NO : DAYS_EN;
   const dayKey = DAY_KEYS[selectedDay];
   const activeDayIndex = todayIndex >= 0 ? todayIndex : 4;
 
