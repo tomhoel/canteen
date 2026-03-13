@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
+import confetti from "canvas-confetti"
 
 interface SwipeButtonProps {
   onSwipeComplete: () => void
@@ -44,6 +45,7 @@ export function SwipeButton({ onSwipeComplete, label = "Swipe to vote", disabled
     dragging.current = false
     setOffset(getMax())
     setDone(true)
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
     onSwipeComplete()
   }
 
