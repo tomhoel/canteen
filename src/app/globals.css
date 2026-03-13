@@ -996,6 +996,7 @@ body {
 .day-btn {
   flex: 1;
   border: 1px solid transparent;
+  outline: none;
   background: transparent;
   padding: 10px 22px;
   border-radius: 16px;
