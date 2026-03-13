@@ -105,16 +105,10 @@ export default function Home() {
 
   const handleLangSwitch = useCallback((newLang: "no" | "en") => {
     if (newLang === lang || langAnim) return;
-    // Phase 1: cards cascade out toward the new language direction
-    setLangAnim(`lang-exit-${newLang}`);
-    setTimeout(() => {
-      setLang(newLang);
-      // Phase 2: cards cascade in from the new language direction (spring)
-      setLangAnim(`lang-enter-${newLang}`);
-      setTimeout(() => {
-        setLangAnim("");
-      }, 440);
-    }, 260);
+    // Single continuous animation — swap content mid-animation when cards are invisible
+    setLangAnim(`lang-cascade-${newLang}`);
+    setTimeout(() => setLang(newLang), 320);
+    setTimeout(() => setLangAnim(""), 770);
   }, [lang, langAnim]);
 
   const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
