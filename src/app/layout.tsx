@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
+import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
 import "./globals.css";
 
 const outfit = Outfit({ subsets: ["latin"], weight: ["400", "600", "700", "800"] });
@@ -56,6 +57,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body suppressHydrationWarning className={outfit.className}>
+        <AnimatedGradient />
         {children}
         <Analytics />
       </body>
