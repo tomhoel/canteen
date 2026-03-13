@@ -141,6 +141,7 @@ body {
 
 .lang-btn {
   border: none;
+  outline: none;
   background: transparent;
   padding: 8px 20px;
   font-size: clamp(12px, 2.5vw, 14px);
