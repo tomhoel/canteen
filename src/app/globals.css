@@ -1037,8 +1037,9 @@ body {
 }
 
 .day-label-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: inherit;
+  letter-spacing: 0.04em;
 }
 
 /* ─── Tablet ─── */
@@ -1466,7 +1467,8 @@ body {
   }
 
   .day-label-name {
-    font-size: clamp(11px, 1.5dvh, 14px);
+    font-size: clamp(12px, 1.8dvh, 14px);
+    letter-spacing: 0.04em;
   }
 
   .decorative-leaf {
