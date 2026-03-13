@@ -162,9 +162,43 @@ body {
   box-shadow: 0 3px 16px rgba(200, 116, 26, 0.55);
 }
 
-.cards-container.lang-transitioning {
-  opacity: 0.35;
-  transition: opacity 0.13s ease;
+/* ─── Language switch cascade ─── */
+@keyframes langExitLeft {
+  from { opacity: 1; transform: translateX(0) scale(1) rotate(0deg); }
+  to   { opacity: 0; transform: translateX(-20px) scale(0.96) rotate(-1deg); }
+}
+@keyframes langExitRight {
+  from { opacity: 1; transform: translateX(0) scale(1) rotate(0deg); }
+  to   { opacity: 0; transform: translateX(20px) scale(0.96) rotate(1deg); }
+}
+@keyframes langEnterLeft {
+  from { opacity: 0; transform: translateX(-35px) scale(0.96) rotate(-1.5deg); }
+  to   { opacity: 1; transform: translateX(0) scale(1) rotate(0deg); }
+}
+@keyframes langEnterRight {
+  from { opacity: 0; transform: translateX(35px) scale(0.96) rotate(1.5deg); }
+  to   { opacity: 1; transform: translateX(0) scale(1) rotate(0deg); }
+}
+
+/* Stagger index per card */
+.cards-container[class*="lang-"] .food-card { --i: 0; }
+.cards-container[class*="lang-"] .food-card:nth-child(2) { --i: 1; }
+.cards-container[class*="lang-"] .food-card:nth-child(3) { --i: 2; }
+
+/* Exit: slide toward new language (fast, ease-out) */
+.cards-container.lang-exit-en .food-card {
+  animation: langExitLeft 150ms ease-out calc(var(--i) * 50ms) both;
+}
+.cards-container.lang-exit-no .food-card {
+  animation: langExitRight 150ms ease-out calc(var(--i) * 50ms) both;
+}
+
+/* Enter: spring in from new language direction */
+.cards-container.lang-enter-en .food-card {
+  animation: langEnterRight 320ms var(--spring) calc(var(--i) * 50ms) both;
+}
+.cards-container.lang-enter-no .food-card {
+  animation: langEnterLeft 320ms var(--spring) calc(var(--i) * 50ms) both;
 }
 
 /* ─── Hero (inline with header) ─── */
