@@ -1310,7 +1310,7 @@ body {
     justify-content: center;
     align-items: stretch;
     gap: clamp(6px, 1dvh, 14px);
-    padding: calc(64px + env(safe-area-inset-top)) 10px calc(clamp(74px, 10dvh, 90px) + env(safe-area-inset-bottom));
+    padding: calc(64px + env(safe-area-inset-top)) 10px max(calc(clamp(74px, 10dvh, 90px) + env(safe-area-inset-bottom)), calc(5dvh + 69px));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1549,7 +1549,7 @@ body {
   /* Day bar — liquid glass floating pill for mobile */
   .day-bar {
     position: fixed;
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    bottom: max(calc(10px + env(safe-area-inset-bottom)), 5dvh);
     left: 16px;
     right: 16px;
     transform: none;
