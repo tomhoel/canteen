@@ -47,7 +47,7 @@ export default function DaySelector({
     if (!animated) {
       requestAnimationFrame(() => setAnimated(true));
     }
-  }, [selectedDay, fullDayLabels.length, animated, updatePill]);
+  }, [selectedDay, fullDayLabels.length, lang, animated, updatePill]);
 
   useEffect(() => {
     window.addEventListener("resize", updatePill);
