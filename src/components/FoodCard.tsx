@@ -97,72 +97,68 @@ export default function FoodCard({
           className="food-card no-menu"
           style={{ animationDelay: `${cardIdx * 75}ms` }}
         >
-          {/* Illustration circle — same position/size as food image */}
-          <div className="card-image-wrapper" style={{ cursor: "default" }}>
-            <div className="card-image-circle">
-              <div className="no-menu-illustration">
-                {/* Warm gradient blob behind cloche */}
-                <svg className="no-menu-svg" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Glow blob */}
-                  <ellipse cx="80" cy="82" rx="62" ry="58" fill="url(#blobGrad)" opacity="0.55" />
-                  {/* Plate shadow */}
-                  <ellipse cx="80" cy="126" rx="50" ry="7" fill="#c8741a" opacity="0.12" />
-                  {/* Plate rim */}
-                  <ellipse cx="80" cy="122" rx="52" ry="8.5" fill="#eddbbf" stroke="#d4a96a" strokeWidth="1.2" />
-                  {/* Cloche dome */}
-                  <path d="M28 122 C28 122 26 76 80 58 C134 76 132 122 132 122 Z" fill="#fdf0d8" stroke="#c8741a" strokeWidth="1.8" strokeLinejoin="round" />
-                  {/* Dome sheen */}
-                  <path d="M48 95 C50 80 60 68 75 63" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.55" />
-                  {/* Handle stem */}
-                  <rect x="76.5" y="46" width="7" height="14" rx="3.5" fill="#c8741a" opacity="0.8" />
-                  {/* Handle knob */}
-                  <circle cx="80" cy="43" r="8" fill="#c8741a" opacity="0.85" />
-                  <circle cx="80" cy="43" r="4.5" fill="#e8a020" opacity="0.7" />
-                  {/* Fork left */}
-                  <g opacity="0.35" transform="translate(22,78) rotate(-22)">
-                    <rect x="4" y="0" width="2" height="22" rx="1" fill="#c8741a"/>
-                    <rect x="1" y="0" width="1.5" height="10" rx="0.75" fill="#c8741a"/>
-                    <rect x="6.5" y="0" width="1.5" height="10" rx="0.75" fill="#c8741a"/>
-                  </g>
-                  {/* Knife right */}
-                  <g opacity="0.35" transform="translate(132,78) rotate(22) scale(-1,1) translate(-10,0)">
-                    <rect x="4" y="0" width="2" height="22" rx="1" fill="#c8741a"/>
-                    <path d="M6 0 Q10 5 6 10 Z" fill="#c8741a"/>
-                  </g>
-                  <defs>
-                    <radialGradient id="blobGrad" cx="40%" cy="35%" r="60%">
-                      <stop offset="0%" stopColor="#fde8b8" />
-                      <stop offset="100%" stopColor="#f0c87a" />
-                    </radialGradient>
-                  </defs>
-                </svg>
-              </div>
+          {/* Hero zone — warm gradient with centered illustration */}
+          <div className="no-menu-hero">
+            {/* Decorative concentric rings */}
+            <svg className="no-menu-rings" viewBox="0 0 328 220" fill="none" aria-hidden="true">
+              <ellipse cx="164" cy="150" rx="150" ry="95" stroke="#c8741a" strokeWidth="1" strokeDasharray="3 9" opacity="0.18" />
+              <ellipse cx="164" cy="150" rx="115" ry="72" stroke="#c8741a" strokeWidth="1" strokeDasharray="3 9" opacity="0.22" />
+              <ellipse cx="164" cy="150" rx="80" ry="50" stroke="#c8741a" strokeWidth="1" strokeDasharray="3 9" opacity="0.28" />
+            </svg>
+
+            {/* Cloche SVG */}
+            <div className="no-menu-cloche-wrap">
+              <svg className="no-menu-cloche-svg" viewBox="0 0 190 158" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Ground shadow */}
+                <ellipse cx="95" cy="150" rx="68" ry="7.5" fill="#c8741a" opacity="0.14" />
+                {/* Plate */}
+                <ellipse cx="95" cy="141" rx="72" ry="11" fill="#f5e0b5" stroke="#d4a870" strokeWidth="1.5" />
+                {/* Plate inner groove */}
+                <ellipse cx="95" cy="141" rx="54" ry="7.5" fill="none" stroke="#d4a870" strokeWidth="0.8" opacity="0.5" />
+                {/* Dome */}
+                <path d="M23 141 C23 141 20 76 95 52 C170 76 167 141 167 141 Z" fill="url(#domeGrad)" />
+                {/* Dome outline */}
+                <path d="M23 141 C23 141 20 76 95 52 C170 76 167 141 167 141" stroke="#c8741a" strokeWidth="2" strokeLinejoin="round" fill="none" />
+                {/* Primary sheen */}
+                <path d="M44 108 C49 86 63 70 82 62" stroke="white" strokeWidth="3.5" strokeLinecap="round" opacity="0.48" />
+                {/* Secondary sheen */}
+                <path d="M54 128 C56 118 60 112 66 108" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.28" />
+                {/* Handle stem */}
+                <rect x="90.5" y="38" width="9" height="17" rx="4.5" fill="#c8741a" />
+                {/* Handle base ring */}
+                <circle cx="95" cy="35" r="12" fill="#c8741a" />
+                {/* Handle gem */}
+                <circle cx="95" cy="35" r="6.5" fill="#e8a020" />
+                {/* Handle gem highlight */}
+                <circle cx="92" cy="32" r="2" fill="white" opacity="0.4" />
+                <defs>
+                  <linearGradient id="domeGrad" x1="95" y1="52" x2="95" y2="141" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#fef6e4" />
+                    <stop offset="100%" stopColor="#f6e4bc" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
           </div>
 
-          {/* Card content — same structure as normal card */}
-          <div className="card-content">
-            <div className="card-header">
-              <div className="canteen-name">{canteenName}</div>
-              <h3 className="dish-name no-menu-title">
-                {lang === "no" ? "Ingen servering" : "Not serving today"}
-              </h3>
-            </div>
-            <p className="no-menu-subtitle">
-              {lang === "no"
-                ? "Kantinen holder stengt i dag"
-                : "The canteen is closed today"}
+          {/* Centered text block */}
+          <div className="no-menu-body">
+            <span className="no-menu-canteen-label">{canteenName}</span>
+            <h3 className="no-menu-heading">
+              {lang === "no" ? "Ingen servering" : "Not serving"}
+            </h3>
+            <p className="no-menu-sub">
+              {lang === "no" ? "Kantinen holder stengt i dag" : "The canteen is closed today"}
             </p>
           </div>
 
-          {/* Bottom — opening hours instead of side dishes */}
-          <div className="card-bottom no-menu-bottom">
-            <div className="no-menu-hours-row">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.5 }}>
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
+          {/* Hours pill */}
+          <div className="no-menu-footer">
+            <div className="no-menu-pill">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
               </svg>
-              <span className="no-menu-hours-text">
+              <span>
                 {lang === "no" ? "Vanligvis åpen" : "Usually open"}{" "}
                 <strong>{data.canteen.openingHours}</strong>
               </span>
