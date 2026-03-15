@@ -445,68 +445,120 @@ body {
 }
 
 .food-card.no-menu {
-  background: linear-gradient(180deg, #fdf8f0 0%, #faf5ed 40%);
-  border-color: rgba(200, 116, 26, 0.10);
+  background: #fffdf8;
+  border-color: rgba(200, 116, 26, 0.12);
   box-shadow:
     0 1px 2px rgba(60, 30, 0, 0.03),
     0 4px 12px rgba(60, 30, 0, 0.04),
     0 12px 32px rgba(60, 30, 0, 0.04);
+  padding: 0;
+  overflow: hidden;
+  justify-content: space-between;
 }
 
 .food-card.no-menu:hover {
   transform: translateY(-2px);
 }
 
-/* Illustration fills the same circle as the food image */
-.no-menu-illustration {
+/* Hero zone — warm gradient top */
+.no-menu-hero {
   width: 100%;
-  height: 100%;
+  height: 260px;
+  background: linear-gradient(170deg, #fde8a8 0%, #f8d888 45%, #f0cd80 100%);
+  border-radius: 22px 22px 0 0;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Concentric dashed rings — decorative background */
+.no-menu-rings {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Cloche wrapper — float animation */
+.no-menu-cloche-wrap {
+  position: relative;
+  z-index: 1;
   animation: gentleFloat 7s ease-in-out infinite;
+  filter: drop-shadow(0 14px 28px rgba(120, 60, 0, 0.2))
+          drop-shadow(0 4px 8px rgba(120, 60, 0, 0.12));
 }
 
-.no-menu-svg {
-  width: 86%;
-  height: 86%;
-  filter: drop-shadow(0 8px 18px rgba(140, 80, 0, 0.12));
+.no-menu-cloche-svg {
+  width: 200px;
+  height: 168px;
 }
 
-/* Dish name override */
-.food-card.no-menu .no-menu-title {
-  color: var(--text-secondary);
-}
-
-/* Subtitle line */
-.no-menu-subtitle {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin: 4px 0 0;
-  line-height: 1.4;
-}
-
-/* Bottom section — opening hours */
-.no-menu-bottom {
-  border-top: 1px solid var(--border-light);
-  padding-top: 14px;
-}
-
-.no-menu-hours-row {
+/* Centered text block below hero */
+.no-menu-body {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 7px;
-  color: var(--text-secondary);
+  justify-content: center;
+  text-align: center;
+  padding: 18px 28px 10px;
+  gap: 5px;
 }
 
-.no-menu-hours-text {
-  font-size: 12px;
+.no-menu-canteen-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--accent-orange);
+}
+
+.no-menu-heading {
+  font-size: clamp(17px, 4vw, 20px);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.no-menu-sub {
+  font-size: 12.5px;
   color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
 }
 
-.no-menu-hours-text strong {
+/* Hours pill footer */
+.no-menu-footer {
+  padding: 14px 28px 22px;
+  display: flex;
+  justify-content: center;
+}
+
+.no-menu-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200, 116, 26, 0.08);
+  border: 1px solid rgba(200, 116, 26, 0.18);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
   color: var(--text-secondary);
+}
+
+.no-menu-pill svg {
+  color: var(--accent-orange);
+  flex-shrink: 0;
+}
+
+.no-menu-pill strong {
   font-weight: 600;
+  color: var(--accent-orange);
 }
 
 /* Small pill badge overlaid on the image */
@@ -1553,6 +1605,35 @@ body {
   .food-card.outdated .card-bottom {
     opacity: 0;
     pointer-events: none;
+  }
+
+  /* No-menu card — reset mobile row layout back to column */
+  .food-card.no-menu {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding: 0;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .no-menu-hero {
+    height: clamp(140px, 30dvh, 220px);
+    border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
+  }
+
+  .no-menu-cloche-svg {
+    width: 150px;
+    height: 126px;
+  }
+
+  .no-menu-body {
+    padding: 12px 20px 8px;
+    gap: 3px;
+  }
+
+  .no-menu-footer {
+    padding: 10px 20px 16px;
   }
 
   .stale-banner-icon {
