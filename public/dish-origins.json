@@ -138,5 +138,25 @@
   "French beef stew with potatoes": {
     "country": "France",
     "code": "fr"
+  },
+  "Fish gratin with raw salad, melted butter and parsley potatoes": {
+    "country": "France",
+    "code": "fr"
+  },
+  "Swedish meat gratin with garlic potatoes and grated mozzarella": {
+    "country": "Sweden",
+    "code": "se"
+  },
+  "Breaded cod with new cabbage, dill potatoes and sour cream": {
+    "country": "Sweden",
+    "code": "se"
+  },
+  "Lemon pork schnitzel with cream sauce and green peas": {
+    "country": "Germany",
+    "code": "de"
+  },
+  "Classical Danish Bøfsandwich roasted onion and gravy": {
+    "country": "Denmark",
+    "code": "dk"
   }
 }
