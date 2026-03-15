@@ -75,6 +75,7 @@ export default function FoodCard({
   const {
     canteenName,
     mainDish,
+    items,
     sideDishes,
     mainAllergens,
     imagePath,
@@ -87,6 +88,29 @@ export default function FoodCard({
 
   const isVoteable = selectedDay === activeDayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
+  const isClosed = !mainDish && (!items || items.length === 0);
+
+  if (isClosed) {
+    return (
+      <Wrapper3D maxRotation={0} translateZ={0} className="food-card-3d-wrapper closed-card-wrapper">
+        <article
+          className="closed-card"
+          style={{ animationDelay: `${cardIdx * 75}ms` }}
+        >
+          <div className="closed-card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M8 12h8" />
+            </svg>
+          </div>
+          <div className="closed-card-text">
+            <span className="closed-card-name">{canteenName}</span>
+            <span className="closed-card-label">{lang === "no" ? "Ingen servering i dag" : "Not serving today"}</span>
+          </div>
+        </article>
+      </Wrapper3D>
+    );
+  }
 
   return (
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
