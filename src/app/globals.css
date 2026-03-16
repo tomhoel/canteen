@@ -1607,33 +1607,51 @@ body {
     pointer-events: none;
   }
 
-  /* No-menu card — reset mobile row layout back to column */
+  /* No-menu card — compact horizontal strip on mobile */
   .food-card.no-menu {
-    flex-direction: column;
+    flex-direction: row;
     flex-wrap: nowrap;
-    padding: 0;
-    align-items: stretch;
+    padding: 0 20px;
+    align-items: center;
+    flex: 0 0 auto;
     min-height: 0;
+    gap: 16px;
   }
 
   .no-menu-hero {
-    height: clamp(140px, 30dvh, 220px);
-    border-radius: 16px 16px 0 0;
+    width: 52px;
+    height: 52px;
+    min-height: unset;
+    border-radius: 50%;
     flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .no-menu-rings {
+    display: none;
+  }
+
+  .no-menu-cloche-wrap {
+    animation: none;
+    filter: drop-shadow(0 3px 6px rgba(120, 60, 0, 0.18));
   }
 
   .no-menu-cloche-svg {
-    width: 150px;
-    height: 126px;
+    width: 56px;
+    height: 47px;
   }
 
   .no-menu-body {
-    padding: 12px 20px 8px;
-    gap: 3px;
+    flex: 1;
+    text-align: left;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+    gap: 1px;
   }
 
   .no-menu-footer {
-    padding: 10px 20px 16px;
+    display: none;
   }
 
   .stale-banner-icon {
