@@ -59,7 +59,7 @@ export default function RootLayout({
       <body suppressHydrationWarning className={outfit.className}>
         <AnimatedGradient
           color1="#f0d090"
-          color2="#a8c49a"
+          color2="#d4a090"
           color3="#f0bfa0"
           color4="#e8d8c4"
         />
