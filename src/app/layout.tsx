@@ -57,7 +57,12 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body suppressHydrationWarning className={outfit.className}>
-        <AnimatedGradient />
+        <AnimatedGradient
+          color1="#f0d090"
+          color2="#a8c49a"
+          color3="#f0bfa0"
+          color4="#e8d8c4"
+        />
         {children}
         <Analytics />
       </body>

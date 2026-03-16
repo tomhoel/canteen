@@ -11,6 +11,7 @@
   --accent-yellow: #e8a020;
   --accent-coral: #d9604a;
   --accent-green: #4a9e55;
+  --accent-sage: #a8c49a;
   --border-light: #ece4d8;
   --shadow-soft: rgba(60, 30, 0, 0.05);
   --shadow-medium: rgba(60, 30, 0, 0.10);
@@ -63,8 +64,8 @@ body {
 .animated-gradient-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.75;
+  filter: blur(45px);
+  opacity: 0.82;
   will-change: transform;
 }
 
