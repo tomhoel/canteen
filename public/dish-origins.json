@@ -190,5 +190,17 @@
   "Tandoori chicken tight with rice": {
     "country": "India",
     "code": "in"
+  },
+  "Pasta carbonara": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Glazed chicken leg with rice, vegetables and gravy": {
+    "country": "United Kingdom",
+    "code": "gb"
+  },
+  "Korean beef bulgogi in steam buns": {
+    "country": "South Korea",
+    "code": "kr"
   }
 }
