@@ -29,16 +29,15 @@ function parseItem(text, isMain = false) {
     let dish = text;
     let allergens = [];
 
-    // Pattern 1: Numbers in parentheses like "(1,3,4)"
-    const parenRegex = /\s*\(([^)]*\d[^)]*)\)\s*$/;
-    const parenMatch = dish.match(parenRegex);
-    if (parenMatch) {
-        const nums = parenMatch[1].split(/[,\s]+/).map(n => n.trim()).filter(n => ALLERGEN_MAP[n]);
+    // Pattern 1: All parenthetical groups — extract allergen numbers, strip everything else
+    // Handles "(1,3,4) (Svin)", "(Biff)", "(3)", mid-string allergens, etc.
+    dish = dish.replace(/\s*\(([^)]+)\)\s*/g, (_match, inner) => {
+        const nums = inner.trim().split(/[,\s]+/).map(n => n.trim()).filter(n => ALLERGEN_MAP[n]);
         nums.forEach(n => {
             if (!allergens.find(a => a.id === n)) allergens.push({ id: n, name: ALLERGEN_MAP[n] });
         });
-        dish = dish.replace(parenRegex, '').trim();
-    }
+        return ' ';
+    });
 
     // Pattern 2: Trailing numbers with space separator
     const spaceRegex = /[\s,]+([\d,\s]+)$/;
@@ -190,4 +189,4 @@ if (require.main === module) {
     main();
 }
 
-module.exports = { mergeItems };
+module.exports = { mergeItems, parseItem };

@@ -14,7 +14,7 @@ Module._load = function (request, parent, isMain) {
     return originalLoad.apply(this, arguments);
 };
 
-const { mergeItems } = require('./scraper.js');
+const { mergeItems, parseItem } = require('./scraper.js');
 
 test('mergeItems - basic merging with preposition', () => {
     const input = [
@@ -92,4 +92,42 @@ test('mergeItems - Norwegian characters', () => {
     ];
     const expected = ['Laks på eng av grønnsaker'];
     assert.deepStrictEqual(mergeItems(input), expected);
+});
+
+// ─── parseItem tests ───
+
+test('parseItem - strips allergen numbers in parens', () => {
+    const result = parseItem('Fiskesuppe med brød (2,3,4)');
+    assert.strictEqual(result.dish, 'Fiskesuppe med brød');
+    assert.deepStrictEqual(result.allergens.map(a => a.id), ['2', '3', '4']);
+});
+
+test('parseItem - strips meat tag AND extracts allergens from multiple parens', () => {
+    const result = parseItem('Pasta carbonara (1,3,4) (Svin)');
+    assert.strictEqual(result.dish, 'Pasta carbonara');
+    assert.deepStrictEqual(result.allergens.map(a => a.id), ['1', '3', '4']);
+});
+
+test('parseItem - strips standalone meat tag (Biff)', () => {
+    const result = parseItem('Kebab med brød og dressing (Biff)');
+    assert.strictEqual(result.dish, 'Kebab med brød og dressing');
+    assert.strictEqual(result.allergens.length, 0);
+});
+
+test('parseItem - strips mid-string allergen paren', () => {
+    const result = parseItem('Vegetable spaghetti (3) with mushrooms');
+    assert.strictEqual(result.dish, 'Vegetable spaghetti with mushrooms');
+    assert.deepStrictEqual(result.allergens.map(a => a.id), ['3']);
+});
+
+test('parseItem - no parens, plain dish name', () => {
+    const result = parseItem('Grillet kylling med ris');
+    assert.strictEqual(result.dish, 'Grillet kylling med ris');
+    assert.strictEqual(result.allergens.length, 0);
+});
+
+test('parseItem - trailing bare numbers still extracted', () => {
+    const result = parseItem('Pasta med parmesan 1,3');
+    assert.strictEqual(result.dish, 'Pasta med parmesan');
+    assert.deepStrictEqual(result.allergens.map(a => a.id), ['1', '3']);
 });
