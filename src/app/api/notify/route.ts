@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
-  const { canteens, dishes, date, lang } = await request.json() as {
-    canteens: Record<string, number>;
-    dishes: Record<string, string>;
-    date: string;
-    lang: "no" | "en";
-  };
-
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
     return NextResponse.json({ skipped: true });
+  }
+
+  let canteens: Record<string, number>;
+  let dishes: Record<string, string>;
+  let date: string;
+  let lang: "no" | "en";
+
+  try {
+    const body = await request.json();
+    if (!body || typeof body.canteens !== 'object' || !body.date) {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    }
+    canteens = body.canteens;
+    dishes = body.dishes || {};
+    date = body.date;
+    lang = body.lang === 'no' ? 'no' : 'en';
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
   const sorted = Object.entries(canteens).sort(([, a], [, b]) => b - a);
