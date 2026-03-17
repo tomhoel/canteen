@@ -71,6 +71,7 @@ export default function FoodCard({
   onCardClick,
 }: FoodCardProps) {
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const {
     canteenName,
@@ -195,13 +196,17 @@ export default function FoodCard({
               {canteenName.charAt(0)}
             </div>
           ) : (
-            <img
-              src={imagePath}
-              alt={mainDish?.dish || "Matrett"}
-              className="food-image"
-              loading="lazy"
-              onError={() => setImgError(true)}
-            />
+            <>
+              {!imgLoaded && <div className="image-shimmer" />}
+              <img
+                src={imagePath}
+                alt={mainDish?.dish || "Matrett"}
+                className={`food-image${imgLoaded ? " loaded" : ""}`}
+                loading="lazy"
+                onLoad={() => setImgLoaded(true)}
+                onError={() => setImgError(true)}
+              />
+            </>
           )}
         </div>
         {isOutdated && (
