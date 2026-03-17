@@ -223,59 +223,46 @@ export default function FoodCard({
           </div>
         )}
       </div>
-      {/* ─── Info column: groups header, perforation, details ─── */}
-      <div className="card-info-column">
-        <div className="card-content">
-          <div className="card-header">
-            <div className="canteen-name">
-              {canteenName}
-              {isAhead && (
-                <span className="ahead-tag">
-                  {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} &#x2728;
-                </span>
-              )}
-            </div>
-            <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+      <div className="card-content">
+        <div className="card-header">
+          <div className="canteen-name">
+            {canteenName}
+            {isAhead && (
+              <span className="ahead-tag">
+                {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} &#x2728;
+              </span>
+            )}
           </div>
+          <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
         </div>
 
-        {/* ─── Perforation separator — ticket tear line ─── */}
-        <div className="card-perforation" aria-hidden="true">
-          <span className="perf-notch" />
-          <span className="perf-line" />
-          <span className="perf-notch" />
-        </div>
-
-        {/* ─── Part 2: Details zone — allergens, description ─── */}
-        <div className="card-details-zone">
-          {mainAllergens.length > 0 && (
-            <div className="dish-meta-row">
-              <div className="allergens-row">
-                {mainAllergens.map((a, aIdx) => {
-                  const displayName = lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name;
-                  return (
-                  <span
-                    key={a.id}
-                    className="allergen-chip"
-                    style={{
-                      color: ALLERGEN_COLORS[a.name] || "#8E8E93",
-                      background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
-                      borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
-                      animationDelay: `${aIdx * 50}ms`,
-                    }}
-                  >
-                    {displayName}
-                  </span>
-                  );
-                })}
-              </div>
+        {mainAllergens.length > 0 && (
+          <div className="dish-meta-row">
+            <div className="allergens-row">
+              {mainAllergens.map((a, aIdx) => {
+                const displayName = lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name;
+                return (
+                <span
+                  key={a.id}
+                  className="allergen-chip"
+                  style={{
+                    color: ALLERGEN_COLORS[a.name] || "#8E8E93",
+                    background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
+                    borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
+                    animationDelay: `${aIdx * 50}ms`,
+                  }}
+                >
+                  {displayName}
+                </span>
+                );
+              })}
             </div>
-          )}
+          </div>
+        )}
 
-          {description && (
-            <p className="dish-description">{description}</p>
-          )}
-        </div>
+        {description && (
+          <p className="dish-description">{description}</p>
+        )}
       </div>
 
       {isOutdated && (
