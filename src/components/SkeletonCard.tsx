@@ -20,7 +20,7 @@ export function SkeletonCard({ delay = 0 }: { delay?: number }) {
 
 export default function SkeletonCards() {
   return (
-    <div className="cards-container" aria-label="Loading menus…">
+    <div className="cards-container" role="status" aria-label="Loading menus…">
       <div className="cards-animated-wrapper">
         <SkeletonCard delay={0} />
         <SkeletonCard delay={75} />
