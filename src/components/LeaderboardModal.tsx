@@ -24,12 +24,14 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
 
   useEffect(() => {
     if (!isOpen) return;
+    const controller = new AbortController();
     setIsLoading(true);
     setEntries([]);
-    fetch('/api/attendance/history')
+    fetch('/api/attendance/history', { signal: controller.signal })
       .then(r => r.json())
       .then(data => { setEntries(data.entries || []); setIsLoading(false); })
-      .catch(() => setIsLoading(false));
+      .catch(err => { if (err.name !== 'AbortError') setIsLoading(false); });
+    return () => controller.abort();
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -53,11 +55,11 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
   });
 
   return (
-    <div className="leaderboard-overlay" onClick={onClose}>
-      <div className="leaderboard-modal" onClick={e => e.stopPropagation()}>
+    <div className="leaderboard-overlay" role="presentation" onClick={onClose}>
+      <div className="leaderboard-modal" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title-id" onClick={e => e.stopPropagation()}>
         <button className="info-close" onClick={onClose} aria-label="Close">&times;</button>
 
-        <h2 className="leaderboard-title">
+        <h2 id="leaderboard-title-id" className="leaderboard-title">
           {lang === "no" ? "Kantineseiere — siste 2 uker" : "Canteen wins — last 2 weeks"}
         </h2>
 
@@ -97,7 +99,7 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
               <div className="leaderboard-dots-section">
                 {CANTEEN_ORDER.map(name => (
                   <div key={name} className="leaderboard-dots-row">
-                    <span className="leaderboard-dots-label">{name.split(" ")[0]}</span>
+                    <span className="leaderboard-dots-label">{name.split(" ").slice(0, 2).join(" ")}</span>
                     <div className="leaderboard-dots">
                       {dotData.map(({ date, winners }) => (
                         <span
