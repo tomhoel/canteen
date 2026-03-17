@@ -12,6 +12,7 @@ import Lightbox from "@/components/Lightbox";
 import DealsView from "@/components/DealsView";
 import MenyView from "@/components/MenyView";
 import LeaderboardModal from "@/components/LeaderboardModal";
+import WeekOverview from "@/components/WeekOverview";
 
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
@@ -36,6 +37,7 @@ export default function Home() {
   const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; isStreaming: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
   const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const [shareState, setShareState] = useState<"idle" | "loading" | "sent">("idle");
@@ -344,6 +346,8 @@ export default function Home() {
           setMenyView({ isOpen: false, data: null, isLoading: false, error: null });
         } else if (dealsView.isOpen) {
           setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
+        } else if (weekOverviewOpen) {
+          setWeekOverviewOpen(false);
         } else if (leaderboardOpen) {
           setLeaderboardOpen(false);
         } else {
@@ -364,7 +368,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, leaderboardOpen, handleDaySelect]);
+  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect]);
 
   // #11 — Only preload current day + adjacent days (not all 5)
   useEffect(() => {
@@ -622,6 +626,18 @@ export default function Home() {
               <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>
             </svg>
           </button>
+          <button
+            className="info-btn"
+            onClick={() => setWeekOverviewOpen(true)}
+            aria-label={lang === "no" ? "Ukeoversikt" : "Week overview"}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+          </button>
           <div className="lang-switcher">
             <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("no")}>NO</button>
             <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("en")}>EN</button>
@@ -754,6 +770,19 @@ export default function Home() {
         lang={lang}
         onClose={() => setLeaderboardOpen(false)}
       />
+
+      {weekOverviewOpen && (
+        <WeekOverview
+          allDaysData={allDaysData}
+          selectedDay={selectedDay}
+          todayIndex={activeDayIndex}
+          dayLabelsData={dayLabelsData}
+          fullDayLabels={fullDayLabels}
+          lang={lang}
+          onDaySelect={(i) => { handleDaySelect(i); setWeekOverviewOpen(false); }}
+          onClose={() => setWeekOverviewOpen(false)}
+        />
+      )}
 
       {/* Vote Modal */}
       <VoteModal
