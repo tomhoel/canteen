@@ -341,7 +341,7 @@ body {
 }
 
 .food-card {
-  background: linear-gradient(180deg, #fffcf8 0%, var(--card-white) 40%);
+  background: linear-gradient(180deg, #fffaf0 0%, #fef3e2 38%, var(--card-white) 52%);
   border-radius: 24px;
   width: 100%;
   min-height: 520px;
@@ -377,7 +377,7 @@ body {
 
 /* ─── Active / voteable card — the hero treatment ─── */
 .food-card.voteable {
-  background: linear-gradient(180deg, #fffbf5 0%, var(--card-white) 45%);
+  background: linear-gradient(180deg, #fffaf0 0%, #fef2dc 38%, var(--card-white) 52%);
   border-color: rgba(200, 150, 60, 0.14);
   box-shadow:
     0 1px 3px rgba(200, 116, 26, 0.05),
