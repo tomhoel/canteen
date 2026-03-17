@@ -402,10 +402,6 @@ body {
     saturate(1.08);
 }
 
-.food-card.voteable .perf-line {
-  border-color: rgba(200, 116, 26, 0.30);
-}
-
 /* Featured card style */
 .food-card.featured {
   background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
@@ -824,7 +820,6 @@ body {
 .perf-line {
   flex: 1;
   height: 0;
-  border-top: 1.5px dashed rgba(200, 116, 26, 0.18);
   margin: 0 6px;
 }
 
@@ -1562,18 +1557,10 @@ body {
       0 6px 16px rgba(60, 30, 0, 0.06);
   }
 
-  .food-card.voteable .card-info-column {
-    border-left-color: rgba(200, 116, 26, 0.25);
-  }
-
   .food-card.outdated {
     background: #f7f5f2;
     border-color: rgba(0, 0, 0, 0.04);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
-  }
-
-  .food-card.outdated .card-info-column {
-    border-left-color: rgba(0, 0, 0, 0.06);
   }
 
   .food-card.outdated:hover,
@@ -1619,7 +1606,6 @@ body {
     flex-direction: column;
     justify-content: center;
     text-align: left;
-    border-left: 1.5px dashed rgba(200, 116, 26, 0.15);
     margin-left: 6px;
     padding-left: 10px;
     align-self: center;
@@ -1796,11 +1782,6 @@ body {
     flex-basis: 100%;
     margin: clamp(4px, 0.6dvh, 8px) 0 0;
     padding: clamp(4px, 0.6dvh, 8px) 0 0;
-    border-top: 1.5px dashed rgba(200, 116, 26, 0.12);
-  }
-
-  .food-card.outdated .card-bottom {
-    border-top-color: rgba(0, 0, 0, 0.04);
   }
 
   .side-dishes-title {
