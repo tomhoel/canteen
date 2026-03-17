@@ -40,14 +40,22 @@ async function saveAttendanceData(data: AttendanceData) {
 export async function GET() {
   const data = await getAttendanceData();
   const today = getTodayKey();
-  
+
   // Reset if it's a new day
   if (data.date !== today) {
+    // Archive the day's votes before resetting
+    if (Object.values(data.canteens).some(v => v > 0)) {
+      try {
+        await redis.set(`attendance:${data.date}`, data);
+      } catch (err) {
+        console.error('Error archiving attendance:', err);
+      }
+    }
     const newData = { date: today, canteens: {} };
     await saveAttendanceData(newData);
     return NextResponse.json(newData);
   }
-  
+
   return NextResponse.json(data);
 }
 
@@ -60,9 +68,17 @@ export async function POST(request: NextRequest) {
   
   const data = await getAttendanceData();
   const today = getTodayKey();
-  
+
   // Reset if it's a new day
   if (data.date !== today) {
+    // Archive the day's votes before resetting
+    if (Object.values(data.canteens).some(v => v > 0)) {
+      try {
+        await redis.set(`attendance:${data.date}`, data);
+      } catch (err) {
+        console.error('Error archiving attendance:', err);
+      }
+    }
     data.date = today;
     data.canteens = {};
   }

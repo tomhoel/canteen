@@ -13,6 +13,7 @@ const { execSync } = require('child_process');
 const MENU_PATH = path.join(__dirname, 'public', 'menu.json');
 const IMAGES_DIR = path.join(__dirname, 'public', 'images');
 const IMAGES_NOBG_DIR = path.join(__dirname, 'public', 'images_nobg');
+const HISTORY_DIR = path.join(__dirname, 'public', 'history');
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
 const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json');
@@ -437,6 +438,58 @@ async function generateDishDescription(dishName) {
     }
 }
 
+/**
+ * Archive the current week's data before the new week overwrites it.
+ * Receives oldMenu from memory — do not re-read disk (scraper already overwrote it).
+ * Non-fatal: logs a warning and continues if anything fails.
+ */
+async function archiveCurrentWeek(oldMenu) {
+    // Derive ISO week year from scrapedAt timestamp
+    const d = new Date(oldMenu.scrapedAt);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    const weekKey = `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+    const archiveDir = path.join(HISTORY_DIR, weekKey);
+
+    if (fs.existsSync(archiveDir)) {
+        console.log(`  ⏭️  Archive already exists for ${weekKey} — skipping`);
+        return;
+    }
+
+    try {
+        fs.mkdirSync(archiveDir, { recursive: true });
+
+        // menu.json from in-memory oldMenu (disk was already overwritten by scraper)
+        fs.writeFileSync(path.join(archiveDir, 'menu.json'), JSON.stringify(oldMenu, null, 2));
+
+        // dish-descriptions.json and dish-origins.json
+        for (const file of ['dish-descriptions.json', 'dish-origins.json']) {
+            const src = path.join(__dirname, 'public', file);
+            if (fs.existsSync(src)) fs.copyFileSync(src, path.join(archiveDir, file));
+        }
+
+        // images and images_nobg — day subdirectories only (monday–friday)
+        for (const imagesDir of [IMAGES_DIR, IMAGES_NOBG_DIR]) {
+            const dirName = path.basename(imagesDir);
+            for (const day of DAY_ORDER) {
+                const srcDay = path.join(imagesDir, day);
+                if (!fs.existsSync(srcDay)) continue;
+                const destDay = path.join(archiveDir, dirName, day);
+                fs.mkdirSync(destDay, { recursive: true });
+                for (const file of fs.readdirSync(srcDay)) {
+                    fs.copyFileSync(path.join(srcDay, file), path.join(destDay, file));
+                }
+            }
+        }
+
+        console.log(`  📦 Archived ${weekKey} → public/history/${weekKey}/`);
+    } catch (err) {
+        console.warn(`  ⚠️  Archive failed for ${weekKey}: ${err.message} — continuing`);
+    }
+}
+
 async function main() {
     console.log('╔══════════════════════════════════════════════════════════╗');
     console.log('║  SMART WEEKLY UPDATE                                    ║');
@@ -521,6 +574,16 @@ async function main() {
                     console.log(`  🗑️  Deleted orphan: ${path.relative(__dirname, orphanPath)}`);
                 }
             }
+        }
+    }
+
+    // Step 2d: Archive previous week if the week number changed
+    if (oldMenu) {
+        const oldWeekStr = Object.values(oldMenu.canteens)[0]?.week || '';
+        const newWeekStr = Object.values(newMenu.canteens)[0]?.week || '';
+        if (oldWeekStr !== newWeekStr) {
+            console.log(`\n📦 Week changed (${oldWeekStr} → ${newWeekStr}) — archiving previous week...`);
+            await archiveCurrentWeek(oldMenu);
         }
     }
 
