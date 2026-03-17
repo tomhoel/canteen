@@ -4799,7 +4799,7 @@ a.deals-card-link {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 500;
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4816,7 +4816,6 @@ a.deals-card-link {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  position: relative;
   box-shadow:
     0 8px 40px rgba(60, 30, 0, 0.14),
     0 2px 8px rgba(60, 30, 0, 0.07);
