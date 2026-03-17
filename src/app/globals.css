@@ -4795,62 +4795,46 @@ a.deals-card-link {
 }
 /* === Week Overview === */
 
-@keyframes weekOverlayIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes weekPanelSlideIn {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
-}
-
-@keyframes weekPanelSlideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
 .week-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 10, 0, 0.32);
-  z-index: 200;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  animation: weekOverlayIn 220ms ease-out;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  animation: fadeIn 0.2s ease;
 }
 
-.week-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 420px;
-  height: 100dvh;
-  z-index: 201;
-  background: #fffdf8;
+.week-modal {
+  background: var(--card-white);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 620px;
+  max-height: calc(100dvh - 40px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: -1px 0 0 rgba(200, 116, 26, 0.15), -6px 0 48px rgba(60, 30, 0, 0.18);
-}
-
-.week-panel.open {
-  animation: weekPanelSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  box-shadow:
+    0 8px 40px rgba(60, 30, 0, 0.14),
+    0 2px 8px rgba(60, 30, 0, 0.07);
+  animation: slideUp 0.28s var(--smooth);
 }
 
 /* Header */
-.week-panel-header {
+.week-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 22px 24px 18px;
   flex-shrink: 0;
-  background: linear-gradient(155deg, #fff9ee 0%, #fffdf8 100%);
   border-bottom: 1px solid var(--border-light);
 }
 
-.week-panel-title {
-  font-size: 15px;
+.week-modal-title {
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.01em;
@@ -4859,7 +4843,7 @@ a.deals-card-link {
   gap: 10px;
 }
 
-.week-panel-title::before {
+.week-modal-title::before {
   content: "";
   display: inline-block;
   width: 3px;
@@ -4869,47 +4853,24 @@ a.deals-card-link {
   flex-shrink: 0;
 }
 
-.week-close-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  color: var(--text-muted);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-  line-height: 1;
-}
-
-.week-close-btn:hover {
-  background: rgba(200, 116, 26, 0.1);
-  border-color: rgba(200, 116, 26, 0.25);
-  color: #c8741a;
-}
-
-/* Desktop grid */
-.week-grid-desktop {
-  padding: 18px 20px 20px;
+/* Grid layout (wider screens) */
+.week-grid {
+  padding: 16px 20px 20px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  flex: 1;
   overflow-y: auto;
 }
 
 .week-col-headers {
   display: grid;
-  grid-template-columns: 76px repeat(5, 1fr);
+  grid-template-columns: 100px repeat(5, 1fr);
   gap: 3px;
   margin-bottom: 2px;
 }
 
 .week-canteen-label-header {
-  /* empty spacer */
+  /* spacer */
 }
 
 .week-col-header {
@@ -4917,7 +4878,7 @@ a.deals-card-link {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 7px 4px 10px;
+  padding: 6px 4px 10px;
   border-radius: 8px 8px 0 0;
 }
 
@@ -4956,18 +4917,18 @@ a.deals-card-link {
   height: 2.5px;
   background: #c8741a;
   border-radius: 2px;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .week-row {
   display: grid;
-  grid-template-columns: 76px repeat(5, 1fr);
+  grid-template-columns: 100px repeat(5, 1fr);
   gap: 3px;
   align-items: stretch;
 }
 
 .week-row + .week-row {
-  border-top: 1px solid rgba(0, 0, 0, 0.045);
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .week-canteen-label {
@@ -5027,11 +4988,10 @@ a.deals-card-link {
   font-weight: 500;
 }
 
-/* Mobile layout */
+/* Narrow phone layout */
 .week-mobile {
   display: flex;
   flex-direction: column;
-  flex: 1;
   overflow: hidden;
 }
 
@@ -5081,9 +5041,8 @@ a.deals-card-link {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  flex: 1;
-  padding: 10px 16px 20px;
-  gap: 7px;
+  padding: 10px 16px 16px;
+  gap: 6px;
 }
 
 .week-day-item {
@@ -5091,7 +5050,7 @@ a.deals-card-link {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 13px 16px;
+  padding: 12px 14px;
   cursor: pointer;
   border-left: 3px solid transparent;
   border-radius: 10px;
@@ -5175,46 +5134,8 @@ a.deals-card-link {
   font-weight: 500;
 }
 
-/* Mobile: panel slides up from bottom */
-@media (max-width: 768px) {
-  .week-panel {
-    top: auto;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    max-height: 85dvh;
-    border-radius: 20px 20px 0 0;
-    box-shadow: 0 -4px 36px rgba(60, 30, 0, 0.2);
-  }
-
-  .week-panel.open {
-    animation: weekPanelSlideUp 320ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .week-grid-desktop {
-    display: none;
-  }
-
-  .week-panel .action-sheet-handle {
-    display: block;
-  }
-}
-
-/* Desktop: hide handle, hide mobile layout */
-@media (min-width: 769px) {
-  .week-panel .action-sheet-handle {
-    display: none;
-  }
-
-  .week-mobile {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .week-panel.open,
+  .week-modal,
   .week-overlay {
     animation-duration: 0.01ms;
   }

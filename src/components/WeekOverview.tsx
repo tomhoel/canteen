@@ -32,12 +32,12 @@ export default function WeekOverview({
   onClose,
 }: WeekOverviewProps) {
   const [activeCanteenTab, setActiveCanteenTab] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 769px)");
-    setIsDesktop(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    const mq = window.matchMedia("(max-width: 520px)");
+    setIsNarrow(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
@@ -65,23 +65,20 @@ export default function WeekOverview({
       {/* Scrim */}
       <div className="week-overlay" onClick={onClose} aria-hidden="true" />
 
-      {/* Panel */}
+      {/* Modal card */}
       <div
-        className="week-panel open"
+        className="week-modal"
         role="dialog"
         aria-modal="true"
         aria-label={lang === "no" ? "Ukeoversikt" : "Week overview"}
       >
-        {/* Handle (mobile only, via CSS) */}
-        <div className="action-sheet-handle" />
-
         {/* Header */}
-        <div className="week-panel-header">
-          <span className="week-panel-title">
+        <div className="week-modal-header">
+          <span className="week-modal-title">
             {lang === "no" ? "Ukeoversikt" : "Week overview"}
           </span>
           <button
-            className="week-close-btn"
+            className="info-close"
             onClick={onClose}
             aria-label={lang === "no" ? "Lukk" : "Close"}
           >
@@ -89,55 +86,9 @@ export default function WeekOverview({
           </button>
         </div>
 
-        {isDesktop ? (
-          /* ── Desktop grid ── */
-          <div className="week-grid-desktop">
-            {/* Column headers */}
-            <div className="week-col-headers">
-              {/* Empty top-left cell for canteen labels column */}
-              <div className="week-canteen-label-header" />
-              {dayLabelsData.map((dateLabel, di) => (
-                <div
-                  key={di}
-                  className={`week-col-header${di === todayIndex ? " today" : ""}`}
-                >
-                  <span className="week-col-header-abbr">{daysAbbr[di]}</span>
-                  <span className="week-col-header-date">{dateLabel}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* One row per canteen */}
-            {canteenNames.map((canteenName, ci) => (
-              <div key={canteenName} className="week-row">
-                <div className="week-canteen-label">{canteenName}</div>
-                {allDaysData.map((dayItems, di) => {
-                  const item = dayItems[ci];
-                  if (!item) return <div key={di} className="week-cell closed" />;
-                  const closed = isClosed(item);
-                  const outdated = item.isOutdated || item.isAhead || closed;
-                  return (
-                    <div
-                      key={di}
-                      className={`week-cell${di === todayIndex ? " today" : ""}${outdated ? " closed" : ""}`}
-                      onClick={() => handleCellClick(di)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") handleCellClick(di); }}
-                    >
-                      <div className="week-cell-dish">
-                        {item.mainDish?.dish || (closed ? (lang === "no" ? "Stengt" : "Closed") : "")}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* ── Mobile layout ── */
+        {isNarrow ? (
+          /* ── Narrow phones: canteen tabs + day list ── */
           <div className="week-mobile">
-            {/* Canteen tabs */}
             <div className="week-tabs">
               {canteenNames.map((name, ci) => (
                 <button
@@ -149,8 +100,6 @@ export default function WeekOverview({
                 </button>
               ))}
             </div>
-
-            {/* Day list */}
             <div className="week-day-list">
               {allDaysData.map((dayItems, di) => {
                 const item = dayItems[activeCanteenTab];
@@ -182,6 +131,47 @@ export default function WeekOverview({
                 );
               })}
             </div>
+          </div>
+        ) : (
+          /* ── Wider screens: 5-column grid ── */
+          <div className="week-grid">
+            <div className="week-col-headers">
+              <div className="week-canteen-label-header" />
+              {dayLabelsData.map((dateLabel, di) => (
+                <div
+                  key={di}
+                  className={`week-col-header${di === todayIndex ? " today" : ""}`}
+                >
+                  <span className="week-col-header-abbr">{daysAbbr[di]}</span>
+                  <span className="week-col-header-date">{dateLabel}</span>
+                </div>
+              ))}
+            </div>
+            {canteenNames.map((canteenName, ci) => (
+              <div key={canteenName} className="week-row">
+                <div className="week-canteen-label">{canteenName}</div>
+                {allDaysData.map((dayItems, di) => {
+                  const item = dayItems[ci];
+                  if (!item) return <div key={di} className="week-cell closed" />;
+                  const closed = isClosed(item);
+                  const outdated = item.isOutdated || item.isAhead || closed;
+                  return (
+                    <div
+                      key={di}
+                      className={`week-cell${di === todayIndex ? " today" : ""}${outdated ? " closed" : ""}`}
+                      onClick={() => handleCellClick(di)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") handleCellClick(di); }}
+                    >
+                      <div className="week-cell-dish">
+                        {item.mainDish?.dish || (closed ? (lang === "no" ? "Stengt" : "Closed") : "")}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         )}
       </div>
