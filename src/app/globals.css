@@ -4734,7 +4734,7 @@ a.deals-card-link {
 .leaderboard-dots-label {
   font-size: 11px;
   color: var(--text-muted);
-  width: 50px;
+  width: 70px;
   flex-shrink: 0;
 }
 
