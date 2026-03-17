@@ -42,6 +42,7 @@ export default function Home() {
 
   const scrollRef = useRef<HTMLElement>(null);
   const votesLoadedRef = useRef(false);
+  const shareInFlightRef = useRef(false);
 
   // #9 — Touch tracking via refs instead of state (no re-renders on every pixel)
   const touchStartRef = useRef<number | null>(null);
@@ -561,29 +562,33 @@ export default function Home() {
   }, []);
 
   const handleShareSlack = useCallback(async () => {
-    if (shareState === "loading") return;
+    if (shareInFlightRef.current) return;
     const todayKey = new Date().toISOString().split("T")[0];
     const alreadyShared = !!localStorage.getItem(`slack_shared_${todayKey}`);
     if (alreadyShared) return;
 
+    shareInFlightRef.current = true;
     setShareState("loading");
     const dishes = Object.fromEntries(
       canteenDayData.map(c => [c.canteenName, c.mainDish?.dish ?? ""])
     );
 
     try {
-      await fetch("/api/notify", {
+      const res = await fetch("/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ canteens: votes, dishes, date: todayKey, lang }),
       });
+      if (!res.ok) throw new Error(`notify failed: ${res.status}`);
       localStorage.setItem(`slack_shared_${todayKey}`, "1");
       setShareState("sent");
       setTimeout(() => setShareState("idle"), 2000);
     } catch {
       setShareState("idle");
+    } finally {
+      shareInFlightRef.current = false;
     }
-  }, [canteenDayData, votes, lang, shareState]);
+  }, [canteenDayData, votes, lang]);
 
   if (!menuData || !mounted) {
     return (
@@ -768,7 +773,7 @@ export default function Home() {
 
       {/* Action Sheet */}
       {actionSheet.isOpen && (() => {
-        const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); setVoteSuccess(false); };
+        const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); setVoteSuccess(false); setShareState("idle"); };
         const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
         const canVote = selectedDay === activeDayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
         return (
