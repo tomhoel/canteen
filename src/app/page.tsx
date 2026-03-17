@@ -38,6 +38,7 @@ export default function Home() {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "loading" | "sent">("idle");
 
   const scrollRef = useRef<HTMLElement>(null);
   const votesLoadedRef = useRef(false);
@@ -559,6 +560,31 @@ export default function Home() {
     setVoteSuccess(true);
   }, []);
 
+  const handleShareSlack = useCallback(async () => {
+    if (shareState === "loading") return;
+    const todayKey = new Date().toISOString().split("T")[0];
+    const alreadyShared = !!localStorage.getItem(`slack_shared_${todayKey}`);
+    if (alreadyShared) return;
+
+    setShareState("loading");
+    const dishes = Object.fromEntries(
+      canteenDayData.map(c => [c.canteenName, c.mainDish?.dish ?? ""])
+    );
+
+    try {
+      await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ canteens: votes, dishes, date: todayKey, lang }),
+      });
+      localStorage.setItem(`slack_shared_${todayKey}`, "1");
+      setShareState("sent");
+      setTimeout(() => setShareState("idle"), 2000);
+    } catch {
+      setShareState("idle");
+    }
+  }, [canteenDayData, votes, lang, shareState]);
+
   if (!menuData || !mounted) {
     return (
       <div className="app-wrapper">
@@ -779,6 +805,33 @@ export default function Home() {
                 <div className="vote-success-check">&#x2714;</div>
                 <span className="vote-success-text">{lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}</span>
                 <span className="vote-success-sub">{actionSheet.canteenName}</span>
+                {(() => {
+                  const todayKey = new Date().toISOString().split("T")[0];
+                  const alreadyShared = !!localStorage.getItem(`slack_shared_${todayKey}`);
+                  return (
+                    <button
+                      className={`share-btn${alreadyShared ? " disabled" : ""}${shareState === "sent" ? " sent" : ""}`}
+                      disabled={alreadyShared || shareState === "loading"}
+                      onClick={handleShareSlack}
+                      title={alreadyShared ? (lang === "no" ? "Allerede delt i dag" : "Already shared today") : undefined}
+                    >
+                      {shareState === "sent"
+                        ? (lang === "no" ? "Sendt! ✓" : "Sent! ✓")
+                        : shareState === "loading"
+                        ? "..."
+                        : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                            </svg>
+                            {lang === "no" ? "Del resultater" : "Share results"}
+                          </>
+                        )
+                      }
+                    </button>
+                  );
+                })()}
               </div>
             ) : (
             <div className="action-sheet-actions">
@@ -788,7 +841,10 @@ export default function Home() {
                 disabled={hasVoted || isVoting}
                 onClick={async () => {
                   await handleVote(actionSheet.canteenName);
-                  setTimeout(closeSheet, 1500);
+                  if (!canVote) {
+                    setTimeout(closeSheet, 1500);
+                  }
+                  // When canVote is true, keep sheet open so user can share results
                 }}
               >
                 <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
@@ -822,6 +878,33 @@ export default function Home() {
                 </div>
                 <span className="action-sheet-btn-arrow">&#x203A;</span>
               </button>
+              {canVote && (() => {
+                const todayKey = new Date().toISOString().split("T")[0];
+                const alreadyShared = !!localStorage.getItem(`slack_shared_${todayKey}`);
+                return (
+                  <button
+                    className={`share-btn${alreadyShared ? " disabled" : ""}${shareState === "sent" ? " sent" : ""}`}
+                    disabled={alreadyShared || shareState === "loading"}
+                    onClick={handleShareSlack}
+                    title={alreadyShared ? (lang === "no" ? "Allerede delt i dag" : "Already shared today") : undefined}
+                  >
+                    {shareState === "sent"
+                      ? (lang === "no" ? "Sendt! ✓" : "Sent! ✓")
+                      : shareState === "loading"
+                      ? "..."
+                      : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                          </svg>
+                          {lang === "no" ? "Del resultater" : "Share results"}
+                        </>
+                      )
+                    }
+                  </button>
+                );
+              })()}
             </div>
             )}
           </div>
