@@ -4759,3 +4759,37 @@ a.deals-card-link {
   text-align: center;
   margin: 0;
 }
+
+/* ─── Share Results Button ─── */
+.share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 12px auto 0;
+  padding: 10px 20px;
+  border-radius: 50px;
+  border: 1.5px solid rgba(200, 116, 26, 0.3);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.share-btn:hover:not(.disabled) {
+  border-color: rgba(200, 116, 26, 0.6);
+  color: var(--text-primary);
+  background: rgba(200, 116, 26, 0.06);
+}
+
+.share-btn.sent {
+  border-color: #34c759;
+  color: #34c759;
+  background: rgba(52, 199, 89, 0.08);
+}
+
+.share-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
