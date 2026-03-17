@@ -21,6 +21,27 @@ function isClosed(item: CanteenDayItem): boolean {
   return !item.mainDish && (!item.items || item.items.length === 0);
 }
 
+function getDishEmoji(dish: string | undefined): string {
+  if (!dish) return "🍽️";
+  const d = dish.toLowerCase();
+  if (/pasta|spagetti|spaghetti|tagliatelle|lasagne|penne|linguine|cannelloni|fettucine/.test(d)) return "🍝";
+  if (/fisk|laks|torsk|sei|ørret|sild|reke|kveite|cod|salmon|fish|tuna|tunfisk|sjømat/.test(d)) return "🐟";
+  if (/suppe|soup|bisque|chowder/.test(d)) return "🍲";
+  if (/salat|salad/.test(d)) return "🥗";
+  if (/burger|hamburger/.test(d)) return "🍔";
+  if (/pizza/.test(d)) return "🍕";
+  if (/kylling|chicken|kalkun|turkey|fjærkre/.test(d)) return "🍗";
+  if (/biff|kjøtt|stek|beef|steak|lam|lamb|svin|pork|ribbe|schnitzel|kjøttkake/.test(d)) return "🥩";
+  if (/veg|grønn|vegetar|tofu/.test(d)) return "🥦";
+  if (/ris|rice/.test(d)) return "🍚";
+  if (/wrap|taco/.test(d)) return "🌮";
+  if (/wok|nudl|noodle/.test(d)) return "🥢";
+  if (/curry/.test(d)) return "🍛";
+  if (/egg/.test(d)) return "🍳";
+  if (/sandwich|smørbrød|bagel/.test(d)) return "🥪";
+  return "🍽️";
+}
+
 export default function WeekOverview({
   allDaysData,
   selectedDay,
@@ -62,7 +83,6 @@ export default function WeekOverview({
 
   return (
     <div className="week-overlay" role="presentation" onClick={onClose}>
-      {/* Modal card — stopPropagation so clicks inside don't close */}
       <div
         className="week-modal"
         role="dialog"
@@ -104,10 +124,13 @@ export default function WeekOverview({
                 if (!item) return null;
                 const closed = isClosed(item);
                 const outdated = item.isOutdated || item.isAhead || closed;
+                const isToday = di === todayIndex;
+                const isSelected = di === selectedDay && !isToday;
                 return (
                   <div
                     key={di}
-                    className={`week-day-item${di === todayIndex ? " today" : ""}${outdated ? " closed" : ""}`}
+                    style={{ "--day-idx": di } as React.CSSProperties}
+                    className={`week-day-item${isToday ? " today" : ""}${isSelected ? " selected" : ""}${outdated ? " closed" : ""}`}
                     onClick={() => handleCellClick(di)}
                     role="button"
                     tabIndex={0}
@@ -116,13 +139,21 @@ export default function WeekOverview({
                     <div className="week-day-item-label">
                       <span className="week-day-item-name">
                         {fullDayLabels[di]}
-                        {di === todayIndex && (
+                        {isToday && (
                           <span className="week-today-badge">{lang === "no" ? "I dag" : "Today"}</span>
+                        )}
+                        {isSelected && (
+                          <span className="week-viewing-badge">{lang === "no" ? "Viser" : "Viewing"}</span>
                         )}
                       </span>
                       <span className="week-day-item-date">{dayLabelsData[di]}</span>
                     </div>
                     <div className="week-day-item-dish">
+                      {!outdated && item.mainDish?.dish && (
+                        <span className="week-day-emoji" aria-hidden="true">
+                          {getDishEmoji(item.mainDish.dish)}
+                        </span>
+                      )}
                       {item.mainDish?.dish || (closed ? (lang === "no" ? "Stengt" : "Closed") : "")}
                     </div>
                   </div>
@@ -138,7 +169,7 @@ export default function WeekOverview({
               {dayLabelsData.map((dateLabel, di) => (
                 <div
                   key={di}
-                  className={`week-col-header${di === todayIndex ? " today" : ""}`}
+                  className={`week-col-header${di === todayIndex ? " today" : ""}${di === selectedDay && di !== todayIndex ? " selected" : ""}`}
                 >
                   <span className="week-col-header-abbr">{daysAbbr[di]}</span>
                   <span className="week-col-header-date">{dateLabel}</span>
@@ -146,25 +177,48 @@ export default function WeekOverview({
               ))}
             </div>
             {canteenNames.map((canteenName, ci) => (
-              <div key={canteenName} className="week-row">
+              <div
+                key={canteenName}
+                className="week-row"
+                style={{ "--row-idx": ci } as React.CSSProperties}
+              >
                 <div className="week-canteen-label">{canteenName}</div>
                 {allDaysData.map((dayItems, di) => {
                   const item = dayItems[ci];
-                  if (!item) return <div key={di} className="week-cell closed" />;
+                  if (!item) return (
+                    <div
+                      key={di}
+                      className="week-cell closed"
+                      style={{ "--col-idx": di } as React.CSSProperties}
+                    />
+                  );
                   const closed = isClosed(item);
                   const outdated = item.isOutdated || item.isAhead || closed;
+                  const isToday = di === todayIndex;
+                  const isSelected = di === selectedDay && !isToday;
                   return (
                     <div
                       key={di}
-                      className={`week-cell${di === todayIndex ? " today" : ""}${outdated ? " closed" : ""}`}
+                      style={{ "--col-idx": di } as React.CSSProperties}
+                      className={`week-cell${isToday ? " today" : ""}${isSelected ? " selected" : ""}${outdated ? " closed" : ""}`}
                       onClick={() => handleCellClick(di)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") handleCellClick(di); }}
                     >
+                      {!outdated && item.mainDish?.dish && (
+                        <div className="week-cell-emoji" aria-hidden="true">
+                          {getDishEmoji(item.mainDish.dish)}
+                        </div>
+                      )}
                       <div className="week-cell-dish">
                         {item.mainDish?.dish || (closed ? (lang === "no" ? "Stengt" : "Closed") : "")}
                       </div>
+                      {!outdated && item.sideDishes.length > 0 && (
+                        <div className="week-cell-extras">
+                          +{item.sideDishes.length}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
