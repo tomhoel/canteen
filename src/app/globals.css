@@ -4574,6 +4574,37 @@ a.deals-card-link {
 .skeleton-side       { height: 12px; width: 180px; align-self: flex-start; }
 .skeleton-side-short { width: 120px; }
 
+/* ─── Swipe Gesture Hint ─── */
+.swipe-hint-left,
+.swipe-hint-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(200, 116, 26, 0.55);
+  pointer-events: none;
+  z-index: 10;
+  animation: swipeHintPulse 2.5s ease-out forwards;
+}
+
+.swipe-hint-left  { left: 12px; }
+.swipe-hint-right { right: 12px; }
+
+@keyframes swipeHintPulse {
+  0%   { opacity: 0; transform: translateY(-50%) scale(0.8); }
+  20%  { opacity: 1; transform: translateY(-50%) scale(1.0); }
+  50%  { opacity: 1; transform: translateY(-50%) scale(1.15); }
+  70%  { opacity: 1; transform: translateY(-50%) scale(1.0); }
+  100% { opacity: 0; transform: translateY(-50%) scale(0.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe-hint-left,
+  .swipe-hint-right {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   * {

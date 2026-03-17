@@ -35,6 +35,7 @@ export default function Home() {
   const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; isStreaming: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
   const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
   const [infoOpen, setInfoOpen] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
 
   const scrollRef = useRef<HTMLElement>(null);
   const votesLoadedRef = useRef(false);
@@ -71,9 +72,10 @@ export default function Home() {
 
   // #9 — Touch handlers use refs
   const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (showSwipeHint) setShowSwipeHint(false);
     touchEndRef.current = null;
     touchStartRef.current = e.targetTouches[0].clientX;
-  }, []);
+  }, [showSwipeHint]);
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
     touchEndRef.current = e.targetTouches[0].clientX;
@@ -257,6 +259,14 @@ export default function Home() {
   }, [lang]);
 
   useEffect(() => {
+    const swipeHintSeen = localStorage.getItem("swipe_hint_seen");
+    let swipeHintTimer: ReturnType<typeof setTimeout> | null = null;
+    if (!swipeHintSeen) {
+      setShowSwipeHint(true);
+      localStorage.setItem("swipe_hint_seen", "1");
+      swipeHintTimer = setTimeout(() => setShowSwipeHint(false), 2500);
+    }
+
     const jsDay = new Date().getDay();
     const isWeekday = jsDay >= 1 && jsDay <= 5;
     const idx = isWeekday ? jsDay - 1 : -1;
@@ -317,6 +327,7 @@ export default function Home() {
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      if (swipeHintTimer) clearTimeout(swipeHintTimer);
       stopPolling();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
@@ -573,6 +584,20 @@ export default function Home() {
 
       {/* Cards */}
       <main className={`cards-container${langAnim ? ` ${langAnim}` : ""}`} ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        {showSwipeHint && (
+          <>
+            <span className="swipe-hint-left" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </span>
+            <span className="swipe-hint-right" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </span>
+          </>
+        )}
         <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
           {canteenDayData.map((data, cardIdx) => (
             <FoodCard
