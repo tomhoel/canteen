@@ -61,16 +61,14 @@ export default function WeekOverview({
   }
 
   return (
-    <>
-      {/* Scrim */}
-      <div className="week-overlay" onClick={onClose} aria-hidden="true" />
-
-      {/* Modal card */}
+    <div className="week-overlay" role="presentation" onClick={onClose}>
+      {/* Modal card — stopPropagation so clicks inside don't close */}
       <div
         className="week-modal"
         role="dialog"
         aria-modal="true"
         aria-label={lang === "no" ? "Ukeoversikt" : "Week overview"}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="week-modal-header">
@@ -175,6 +173,6 @@ export default function WeekOverview({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
