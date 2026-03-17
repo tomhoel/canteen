@@ -167,7 +167,12 @@ export default function WeekOverview({
                     onKeyDown={e => { if (e.key === "Enter" || e.key === " ") handleCellClick(di); }}
                   >
                     <div className="week-day-item-label">
-                      <span className="week-day-item-name">{fullDayLabels[di]}</span>
+                      <span className="week-day-item-name">
+                        {fullDayLabels[di]}
+                        {di === todayIndex && (
+                          <span className="week-today-badge">{lang === "no" ? "I dag" : "Today"}</span>
+                        )}
+                      </span>
                       <span className="week-day-item-date">{dayLabelsData[di]}</span>
                     </div>
                     <div className="week-day-item-dish">
