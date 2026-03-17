@@ -4855,16 +4855,16 @@ a.deals-card-link {
 /* Grid layout (wider screens) */
 .week-grid {
   padding: 16px 20px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  display: grid;
+  grid-template-columns: 100px repeat(5, 1fr);
+  column-gap: 3px;
   overflow-y: auto;
 }
 
 .week-col-headers {
   display: grid;
-  grid-template-columns: 100px repeat(5, 1fr);
-  gap: 3px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   margin-bottom: 2px;
 }
 
@@ -4921,8 +4921,8 @@ a.deals-card-link {
 
 .week-row {
   display: grid;
-  grid-template-columns: 100px repeat(5, 1fr);
-  gap: 3px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: stretch;
 }
 
