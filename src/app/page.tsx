@@ -11,6 +11,7 @@ import VoteModal from "@/components/VoteModal";
 import Lightbox from "@/components/Lightbox";
 import DealsView from "@/components/DealsView";
 import MenyView from "@/components/MenyView";
+import LeaderboardModal from "@/components/LeaderboardModal";
 
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
@@ -34,6 +35,7 @@ export default function Home() {
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
   const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; isStreaming: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
   const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
 
@@ -340,6 +342,8 @@ export default function Home() {
           setMenyView({ isOpen: false, data: null, isLoading: false, error: null });
         } else if (dealsView.isOpen) {
           setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
+        } else if (leaderboardOpen) {
+          setLeaderboardOpen(false);
         } else {
           setLightboxIndex(-1);
           setVoteModal({ isOpen: false, canteenName: "" });
@@ -358,7 +362,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, handleDaySelect]);
+  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, leaderboardOpen, handleDaySelect]);
 
   // #11 — Only preload current day + adjacent days (not all 5)
   useEffect(() => {
@@ -575,6 +579,19 @@ export default function Home() {
           <button className="info-btn" onClick={() => setInfoOpen(true)} title={lang === "no" ? "Om appen" : "About"}>
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.2"/><path d="M8 7v4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4.75" r="0.65" fill="currentColor"/></svg>
           </button>
+          <button
+            className="info-btn"
+            onClick={() => setLeaderboardOpen(true)}
+            title={lang === "no" ? "Kantineseiere" : "Canteen wins"}
+            aria-label={lang === "no" ? "Kantineseiere" : "Canteen wins"}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+              <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+              <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>
+            </svg>
+          </button>
           <div className="lang-switcher">
             <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("no")}>NO</button>
             <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("en")}>EN</button>
@@ -701,6 +718,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <LeaderboardModal
+        isOpen={leaderboardOpen}
+        lang={lang}
+        onClose={() => setLeaderboardOpen(false)}
+      />
 
       {/* Vote Modal */}
       <VoteModal
