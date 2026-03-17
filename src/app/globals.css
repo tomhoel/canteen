@@ -4793,28 +4793,11 @@ a.deals-card-link {
   opacity: 0.4;
   cursor: not-allowed;
 }
-
 /* === Week Overview === */
 
-.week-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.25);
-  z-index: 200;
-}
-
-.week-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 380px;
-  height: 100dvh;
-  z-index: 201;
-  background: #fffef9;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+@keyframes weekOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes weekPanelSlideIn {
@@ -4827,61 +4810,102 @@ a.deals-card-link {
   to   { transform: translateY(0); }
 }
 
-.week-panel.open {
-  animation: weekPanelSlideIn 300ms ease-out;
+.week-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 10, 0, 0.32);
+  z-index: 200;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: weekOverlayIn 220ms ease-out;
 }
 
+.week-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  height: 100dvh;
+  z-index: 201;
+  background: #fffdf8;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -1px 0 0 rgba(200, 116, 26, 0.15), -6px 0 48px rgba(60, 30, 0, 0.18);
+}
+
+.week-panel.open {
+  animation: weekPanelSlideIn 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Header */
 .week-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 22px 24px 18px;
   flex-shrink: 0;
+  background: linear-gradient(155deg, #fff9ee 0%, #fffdf8 100%);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .week-panel-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.week-panel-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 18px;
+  background: linear-gradient(180deg, #e8a020 0%, #c8741a 100%);
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .week-close-btn {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
-  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.07);
   color: var(--text-muted);
-  font-size: 17px;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
   line-height: 1;
 }
 
 .week-close-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(200, 116, 26, 0.1);
+  border-color: rgba(200, 116, 26, 0.25);
+  color: #c8741a;
 }
 
 /* Desktop grid */
 .week-grid-desktop {
-  padding: 16px;
+  padding: 18px 20px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   flex: 1;
   overflow-y: auto;
 }
 
 .week-col-headers {
   display: grid;
-  grid-template-columns: 90px repeat(5, 1fr);
-  gap: 4px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-light);
+  grid-template-columns: 76px repeat(5, 1fr);
+  gap: 3px;
+  margin-bottom: 2px;
 }
 
 .week-canteen-label-header {
@@ -4892,75 +4916,115 @@ a.deals-card-link {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 4px 2px;
+  gap: 1px;
+  padding: 7px 4px 10px;
+  border-radius: 8px 8px 0 0;
 }
 
 .week-col-header.today {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  background: rgba(200, 116, 26, 0.07);
 }
 
 .week-col-header-abbr {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.week-col-header.today .week-col-header-abbr {
+  color: #c8741a;
+  font-weight: 800;
 }
 
 .week-col-header-date {
-  font-size: 10px;
-  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-col-header.today .week-col-header-date {
+  color: #c8741a;
+}
+
+.week-col-header.today::after {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 2.5px;
+  background: #c8741a;
+  border-radius: 2px;
+  margin-top: 4px;
 }
 
 .week-row {
   display: grid;
-  grid-template-columns: 90px repeat(5, 1fr);
-  gap: 4px;
-  align-items: start;
+  grid-template-columns: 76px repeat(5, 1fr);
+  gap: 3px;
+  align-items: stretch;
+}
+
+.week-row + .week-row {
+  border-top: 1px solid rgba(0, 0, 0, 0.045);
 }
 
 .week-canteen-label {
-  font-size: 8px;
+  font-size: 9px;
   text-transform: uppercase;
   color: var(--text-muted);
-  letter-spacing: 0.06em;
-  padding: 8px 4px 0 0;
-  font-weight: 600;
+  letter-spacing: 0.07em;
+  padding: 12px 6px 10px 0;
+  font-weight: 700;
   line-height: 1.3;
   word-break: break-word;
 }
 
 .week-cell {
-  padding: 8px 6px;
+  padding: 10px 5px 10px 7px;
   cursor: pointer;
   border-left: 2px solid transparent;
-  min-height: 52px;
-  border-radius: 4px;
-  transition: background 0.15s ease;
+  min-height: 60px;
+  transition: background 0.14s ease, transform 0.12s ease;
 }
 
 .week-cell:hover {
-  background: rgba(200, 116, 26, 0.06);
+  background: rgba(200, 116, 26, 0.07);
+  transform: translateY(-1px);
+}
+
+.week-cell:active {
+  transform: translateY(0);
 }
 
 .week-cell.today {
+  background: rgba(200, 116, 26, 0.055);
   border-left-color: #c8741a;
 }
 
+.week-cell.today:hover {
+  background: rgba(200, 116, 26, 0.1);
+}
+
 .week-cell.closed {
-  opacity: 0.5;
-  font-style: italic;
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .week-cell-dish {
-  font-size: 13px;
-  color: var(--text-primary);
+  font-size: 12px;
+  color: var(--text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.week-cell.today .week-cell-dish {
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 /* Mobile layout */
@@ -4973,39 +5037,44 @@ a.deals-card-link {
 
 .week-tabs {
   display: flex;
-  gap: 6px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-light);
+  gap: 7px;
+  padding: 14px 20px 12px;
   flex-shrink: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.week-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .week-tab {
   flex-shrink: 0;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 20px;
-  border: 1px solid transparent;
-  background: rgba(0, 0, 0, 0.04);
+  border: 1.5px solid var(--border-light);
+  background: transparent;
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.16s ease;
   white-space: nowrap;
 }
 
 .week-tab:hover {
-  background: rgba(200, 116, 26, 0.08);
-  border-color: rgba(200, 116, 26, 0.15);
+  border-color: rgba(200, 116, 26, 0.3);
   color: var(--text-primary);
 }
 
 .week-tab.active {
-  background: rgba(200, 116, 26, 0.12);
-  border-color: rgba(200, 116, 26, 0.25);
-  color: var(--text-primary);
+  background: #c8741a;
+  border-color: #c8741a;
+  color: #fff;
   font-weight: 600;
+  box-shadow: 0 2px 10px rgba(200, 116, 26, 0.35);
 }
 
 .week-day-list {
@@ -5013,7 +5082,8 @@ a.deals-card-link {
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
-  padding: 8px 0;
+  padding: 10px 16px 20px;
+  gap: 7px;
 }
 
 .week-day-item {
@@ -5021,23 +5091,33 @@ a.deals-card-link {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 20px;
+  padding: 13px 16px;
   cursor: pointer;
   border-left: 3px solid transparent;
-  transition: background 0.15s ease;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.025);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
 }
 
 .week-day-item:hover {
-  background: rgba(200, 116, 26, 0.05);
+  background: rgba(200, 116, 26, 0.06);
+  box-shadow: 0 0 0 1px rgba(200, 116, 26, 0.15);
 }
 
 .week-day-item.today {
+  background: linear-gradient(135deg, rgba(200, 116, 26, 0.09) 0%, rgba(200, 116, 26, 0.04) 100%);
   border-left-color: #c8741a;
+  box-shadow: 0 0 0 1px rgba(200, 116, 26, 0.2);
+}
+
+.week-day-item.today:hover {
+  background: linear-gradient(135deg, rgba(200, 116, 26, 0.14) 0%, rgba(200, 116, 26, 0.07) 100%);
 }
 
 .week-day-item.closed {
-  opacity: 0.5;
-  font-style: italic;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .week-day-item-label {
@@ -5045,18 +5125,38 @@ a.deals-card-link {
   flex-direction: column;
   gap: 2px;
   flex-shrink: 0;
-  min-width: 80px;
+  min-width: 78px;
 }
 
 .week-day-item-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.week-day-item.today .week-day-item-name {
+  color: #c8741a;
+}
+
+.week-today-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #c8741a;
+  background: rgba(200, 116, 26, 0.12);
+  padding: 1px 6px;
+  border-radius: 10px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 .week-day-item-date {
   font-size: 11px;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .week-day-item-dish {
@@ -5066,7 +5166,13 @@ a.deals-card-link {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  max-width: 55%;
+  max-width: 58%;
+  line-height: 1.3;
+}
+
+.week-day-item.today .week-day-item-dish {
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 /* Mobile: panel slides up from bottom */
@@ -5080,18 +5186,17 @@ a.deals-card-link {
     height: auto;
     max-height: 85dvh;
     border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 36px rgba(60, 30, 0, 0.2);
   }
 
   .week-panel.open {
-    animation: weekPanelSlideUp 300ms ease-out;
+    animation: weekPanelSlideUp 320ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Hide desktop grid on mobile */
   .week-grid-desktop {
     display: none;
   }
 
-  /* Show handle on mobile */
   .week-panel .action-sheet-handle {
     display: block;
   }
@@ -5109,7 +5214,8 @@ a.deals-card-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .week-panel.open {
+  .week-panel.open,
+  .week-overlay {
     animation-duration: 0.01ms;
   }
 }
