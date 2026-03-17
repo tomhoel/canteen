@@ -4852,6 +4852,20 @@ a.deals-card-link {
   flex-shrink: 0;
 }
 
+/* Entrance animations */
+@keyframes weekCellIn {
+  from { opacity: 0; transform: scale(0.95) translateY(4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+@keyframes weekRowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+@keyframes weekDayItemIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
 /* Grid layout (wider screens) */
 .week-grid {
   padding: 16px 20px 20px;
@@ -4866,6 +4880,8 @@ a.deals-card-link {
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   margin-bottom: 2px;
+  animation: weekRowIn 0.28s var(--smooth) both;
+  animation-delay: 40ms;
 }
 
 .week-canteen-label-header {
@@ -4919,11 +4935,20 @@ a.deals-card-link {
   margin-top: 3px;
 }
 
+.week-col-header.selected {
+  background: rgba(200, 116, 26, 0.04);
+}
+.week-col-header.selected .week-col-header-abbr {
+  color: var(--text-secondary);
+}
+
 .week-row {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   align-items: stretch;
+  animation: weekRowIn 0.28s var(--smooth) both;
+  animation-delay: calc(var(--row-idx, 0) * 65ms + 90ms);
 }
 
 .week-row + .week-row {
@@ -4947,6 +4972,8 @@ a.deals-card-link {
   border-left: 2px solid transparent;
   min-height: 60px;
   transition: background 0.14s ease, transform 0.12s ease;
+  animation: weekCellIn 0.26s var(--smooth) both;
+  animation-delay: calc(var(--col-idx, 0) * 38ms + var(--row-idx, 0) * 62ms + 70ms);
 }
 
 .week-cell:hover {
@@ -4970,6 +4997,28 @@ a.deals-card-link {
 .week-cell.closed {
   opacity: 0.4;
   pointer-events: none;
+}
+
+.week-cell.selected {
+  outline: 1.5px dashed rgba(200, 116, 26, 0.45);
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+
+.week-cell-emoji {
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 3px;
+  display: block;
+  opacity: 0.85;
+}
+
+.week-cell-extras {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .week-cell-dish {
@@ -5056,6 +5105,8 @@ a.deals-card-link {
   background: rgba(0, 0, 0, 0.025);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
   transition: all 0.15s ease;
+  animation: weekDayItemIn 0.24s var(--smooth) both;
+  animation-delay: calc(var(--day-idx, 0) * 55ms + 80ms);
 }
 
 .week-day-item:hover {
@@ -5111,6 +5162,29 @@ a.deals-card-link {
   flex-shrink: 0;
 }
 
+.week-viewing-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 6px;
+  border-radius: 10px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.week-day-item.selected {
+  outline: 1.5px dashed rgba(200, 116, 26, 0.4);
+  outline-offset: -1px;
+}
+
+.week-day-emoji {
+  font-size: 14px;
+  margin-right: 4px;
+  display: inline-block;
+  vertical-align: -1px;
+}
+
 .week-day-item-date {
   font-size: 11px;
   color: var(--text-muted);
@@ -5135,7 +5209,11 @@ a.deals-card-link {
 
 @media (prefers-reduced-motion: reduce) {
   .week-modal,
-  .week-overlay {
+  .week-overlay,
+  .week-col-headers,
+  .week-row,
+  .week-cell,
+  .week-day-item {
     animation-duration: 0.01ms;
   }
 }
