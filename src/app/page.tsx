@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { DAYS_NO, DAYS_EN, FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
-import type { MenuData, CanteenData, Recipe, DealsResponse, MenyResponse, ProductOffer } from "@/lib/types";
+import type { MenuData, CanteenData, CanteenDayItem, Recipe, DealsResponse, MenyResponse, ProductOffer } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import SkeletonCards from "@/components/SkeletonCard";
 import DaySelector from "@/components/DaySelector";
@@ -430,7 +430,6 @@ export default function Home() {
   }, [mounted, menuData, selectedDay]);
 
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
-  const dayKey = DAY_KEYS[selectedDay];
   const activeDayIndex = todayIndex >= 0 ? todayIndex : 4;
 
   const sortedCanteens = useMemo(() => {
@@ -486,46 +485,46 @@ export default function Home() {
     return { dateStr: dStr, dayLabelsData: labels };
   }, [selectedDay, lang, fullDayLabels, hasAheadCanteens]);
 
-  const canteenDayData = useMemo(() => {
-    return sortedCanteens.map(([canteenName, canteen]) => {
-      const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
-      const noItems = dayEntry?.no?.items;
-      const enItems = dayEntry?.en?.items;
-      const items = lang === "no"
-        ? (noItems && noItems.length > 0 ? noItems : enItems)
-        : (enItems && enItems.length > 0 ? enItems : noItems);
-      const mainDish = items?.find(i => i.isMain);
-      const displaySideDishes = items?.filter(i => !i.isMain).slice(0, 3) || [];
-      // Allergens come from Norwegian data as the canonical source — the English
-      // widget page sometimes returns different dishes with different allergens.
-      const noMainDish = noItems?.find(i => i.isMain);
-      const noSideDishes = noItems?.filter(i => !i.isMain) || [];
-      const mainAllergens = noMainDish?.allergens || mainDish?.allergens || [];
-      const sideDishes = displaySideDishes.map((item, idx) => ({
-        ...item,
-        allergens: noSideDishes[idx]?.allergens || item.allergens,
-      }));
-      const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
-      const imagePath = `/images_nobg/${dayKey}/${imageSlug}.png`;
-      const highResImagePath = `/images/${dayKey}/${imageSlug}.png`;
-      const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
-      const isOutdated = canteenWeekNum < currentWeek;
-      const isAhead = canteenWeekNum > currentWeek;
-
-      const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
-      const origin = dishOrigins[enMainDish?.dish || ""] ?? null;
-      const descEntry = dishDescriptions[enMainDish?.dish || ""];
-      const description = descEntry
-        ? (typeof descEntry === "string" ? descEntry : descEntry[lang] || descEntry["en"] || null)
-        : null;
-
-      return {
-        canteenName, canteen, dayEntry, items, mainDish, sideDishes,
-        mainAllergens, imageSlug, imagePath, highResImagePath,
-        isOutdated, isAhead, canteenWeekNum, origin, description,
-      };
+  const allDaysData = useMemo((): CanteenDayItem[][] => {
+    return DAY_KEYS.map(dk => {
+      return sortedCanteens.map(([canteenName, canteen]) => {
+        const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dk);
+        const noItems = dayEntry?.no?.items;
+        const enItems = dayEntry?.en?.items;
+        const items = lang === "no"
+          ? (noItems && noItems.length > 0 ? noItems : enItems)
+          : (enItems && enItems.length > 0 ? enItems : noItems);
+        const mainDish = items?.find(i => i.isMain);
+        const displaySideDishes = items?.filter(i => !i.isMain).slice(0, 3) || [];
+        const noMainDish = noItems?.find(i => i.isMain);
+        const noSideDishes = noItems?.filter(i => !i.isMain) || [];
+        const mainAllergens = noMainDish?.allergens || mainDish?.allergens || [];
+        const sideDishes = displaySideDishes.map((item, idx) => ({
+          ...item,
+          allergens: noSideDishes[idx]?.allergens || item.allergens,
+        }));
+        const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
+        const imagePath = `/images_nobg/${dk}/${imageSlug}.png`;
+        const highResImagePath = `/images/${dk}/${imageSlug}.png`;
+        const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
+        const isOutdated = canteenWeekNum < currentWeek;
+        const isAhead = canteenWeekNum > currentWeek;
+        const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
+        const origin = dishOrigins[enMainDish?.dish || ""] ?? null;
+        const descEntry = dishDescriptions[enMainDish?.dish || ""];
+        const description = descEntry
+          ? (typeof descEntry === "string" ? descEntry : descEntry[lang] || descEntry["en"] || null)
+          : null;
+        return {
+          canteenName, canteen, dayEntry, items, mainDish, sideDishes,
+          mainAllergens, imageSlug, imagePath, highResImagePath,
+          isOutdated, isAhead, canteenWeekNum, origin, description,
+        };
+      });
     });
-  }, [sortedCanteens, dayKey, lang, dishOrigins, dishDescriptions, currentWeek]);
+  }, [sortedCanteens, lang, dishOrigins, dishDescriptions, currentWeek]);
+
+  const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
 
   // #6 — Lightbox image click handler using canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
