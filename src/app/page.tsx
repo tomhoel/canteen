@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { DAYS_NO, DAYS_EN, FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
 import type { MenuData, CanteenData, Recipe, DealsResponse, MenyResponse, ProductOffer } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
+import SkeletonCards from "@/components/SkeletonCard";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
@@ -545,8 +546,8 @@ export default function Home() {
 
   if (!menuData || !mounted) {
     return (
-      <div className="app-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
-        <span style={{ color: "#999" }}>Loading...</span>
+      <div className="app-wrapper">
+        <SkeletonCards />
       </div>
     );
   }
