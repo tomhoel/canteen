@@ -4612,3 +4612,150 @@ a.deals-card-link {
     transition: none !important;
   }
 }
+
+/* ─── Vote Leaderboard Modal ─── */
+.leaderboard-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.leaderboard-modal {
+  background: var(--card-white);
+  border-radius: 24px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  box-shadow:
+    0 8px 32px rgba(60, 30, 0, 0.12),
+    0 2px 8px rgba(60, 30, 0, 0.06);
+  animation: slideUp 0.25s var(--smooth);
+}
+
+.leaderboard-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 20px;
+  padding-right: 24px;
+}
+
+.leaderboard-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.leaderboard-skeleton-row {
+  display: flex;
+  align-items: center;
+}
+
+.leaderboard-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0;
+  font-size: 14px;
+}
+
+.leaderboard-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.leaderboard-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.leaderboard-canteen-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  width: 110px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-bar-track {
+  flex: 1;
+  height: 28px;
+  background: rgba(200, 116, 26, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.leaderboard-bar {
+  height: 100%;
+  min-width: 4px;
+  background: #c8741a;
+  opacity: 0.7;
+  border-radius: 8px;
+  transition: width 0.6s var(--smooth);
+}
+
+.leaderboard-bar-row:hover .leaderboard-bar { opacity: 1; }
+
+.leaderboard-win-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  width: 60px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.leaderboard-dots-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  margin-bottom: 14px;
+  border-top: 1px solid rgba(200, 150, 60, 0.12);
+}
+
+.leaderboard-dots-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaderboard-dots-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.leaderboard-dots {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.leaderboard-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.leaderboard-dot.won  { background: #34c759; }
+.leaderboard-dot.lost { background: rgba(0, 0, 0, 0.1); }
+
+.leaderboard-footer {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
