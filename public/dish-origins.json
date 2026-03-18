@@ -202,5 +202,17 @@
   "Korean beef bulgogi in steam buns": {
     "country": "South Korea",
     "code": "kr"
+  },
+  "Tandoori chicken legs with rice and sauce": {
+    "country": "India",
+    "code": "in"
+  },
+  "Chimichurri cod fillet with ratatouille": {
+    "country": "Argentina",
+    "code": "ar"
+  },
+  "French beef stew with skin potatoes": {
+    "country": "France",
+    "code": "fr"
   }
 }
