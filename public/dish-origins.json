@@ -214,5 +214,9 @@
   "French beef stew with skin potatoes": {
     "country": "France",
     "code": "fr"
+  },
+  "Chicken taco with chunky salsa": {
+    "country": "Mexico",
+    "code": "mx"
   }
 }
