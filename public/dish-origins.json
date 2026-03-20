@@ -222,5 +222,17 @@
   "Ginger fried minced meat with chili and noodles": {
     "country": "China",
     "code": "cn"
+  },
+  "Catfish patties with baked carrots, remoulade and parsley potatoes": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Beef patties with cabbage stew, lingonberries, gravy and potatoes": {
+    "country": "Sweden",
+    "code": "se"
+  },
+  "Pasta with small sausage, meatballs, Tomato sauce and grated cheese": {
+    "country": "Italy",
+    "code": "it"
   }
 }
