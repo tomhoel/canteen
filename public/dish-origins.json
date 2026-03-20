@@ -218,5 +218,9 @@
   "Chicken taco with chunky salsa": {
     "country": "Mexico",
     "code": "mx"
+  },
+  "Ginger fried minced meat with chili and noodles": {
+    "country": "China",
+    "code": "cn"
   }
 }
