@@ -17,6 +17,7 @@ const HISTORY_DIR = path.join(__dirname, 'public', 'history');
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
 const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json');
+const NEXT_MENU_PATH = path.join(__dirname, 'public', 'menu-next.json');
 
 const EXPECTED_CANTEENS = ['Eat the street', 'Fresh4you', 'Flow'];
 const VALID_SLUGS = new Set(EXPECTED_CANTEENS.map(n => n.toLowerCase().replace(/\s+/g, '_')));
@@ -590,7 +591,11 @@ async function main() {
         const minScrapedWeek = Math.min(...scrapedWeekNums);
         if (minScrapedWeek > currentISOWeek) {
             console.log(`\n⏳ Scraped menu is for week ${minScrapedWeek}, but current week is ${currentISOWeek}.`);
-            console.log('   Canteen published next week\'s menu early — holding until the new week starts.');
+            console.log('   Canteen published next week\'s menu early — saving as preview, holding live menu.');
+            // Save next-week data as a preview for the frontend card stack
+            fs.writeFileSync(NEXT_MENU_PATH, JSON.stringify(newMenu, null, 2));
+            console.log('   Saved menu-next.json for card stack preview.');
+            // Restore current week as the live menu
             if (oldMenu) {
                 fs.writeFileSync(MENU_PATH, JSON.stringify(oldMenu, null, 2));
                 console.log('   Restored previous menu.json — no changes committed.');
@@ -615,7 +620,13 @@ async function main() {
         }
     }
 
-    // Step 2e: Archive previous week if the week number changed
+    // Step 2e: Clean up menu-next.json now that the new week has arrived
+    if (fs.existsSync(NEXT_MENU_PATH)) {
+        fs.unlinkSync(NEXT_MENU_PATH);
+        console.log('\n🗑️  Deleted menu-next.json (new week has started — preview no longer needed)');
+    }
+
+    // Step 2f: Archive previous week if the week number changed
     if (oldMenu) {
         const oldWeekStr = Object.values(oldMenu.canteens)[0]?.week || '';
         const newWeekStr = Object.values(newMenu.canteens)[0]?.week || '';
