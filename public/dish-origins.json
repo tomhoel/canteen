@@ -234,5 +234,33 @@
   "Pasta with small sausage, meatballs, Tomato sauce and grated cheese": {
     "country": "Italy",
     "code": "it"
+  },
+  "Balsamico baked chicken thighs with toamto, served rice": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Pork loin with plum sauce with baked onions and potato": {
+    "country": "Germany",
+    "code": "de"
+  },
+  "Green curyy cod with sofrito rice": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "Turkey fricasse with rice": {
+    "country": "France",
+    "code": "fr"
+  },
+  "Mexican xasserole with rice and tortilla chips": {
+    "country": "Mexico",
+    "code": "mx"
+  },
+  "BBQ pork rib med coleslaw and roasted potatoes": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Beef Szechuan with rice": {
+    "country": "China",
+    "code": "cn"
   }
 }
