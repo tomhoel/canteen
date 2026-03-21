@@ -277,7 +277,7 @@ export default function Home() {
     const isWeekday = jsDay >= 1 && jsDay <= 5;
     const idx = isWeekday ? jsDay - 1 : -1;
     setTodayIndex(idx);
-    setSelectedDay(isWeekday ? jsDay - 1 : 4);
+    setSelectedDay(isWeekday ? jsDay - 1 : 0);
 
     fetch("/menu.json")
       .then(r => r.json())
@@ -434,7 +434,7 @@ export default function Home() {
   }, [mounted, menuData, selectedDay]);
 
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
-  const activeDayIndex = todayIndex >= 0 ? todayIndex : 4;
+  const activeDayIndex = todayIndex >= 0 ? todayIndex : 0;
 
   const sortedCanteens = useMemo(() => {
     if (!menuData) return [];
