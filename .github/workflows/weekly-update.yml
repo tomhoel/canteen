@@ -47,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/menu.json public/images/ public/images_nobg/ public/dish-origins.json public/dish-descriptions.json public/history/
+          git add public/menu.json public/menu-next.json public/images/ public/images_nobg/ public/dish-origins.json public/dish-descriptions.json public/history/
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
