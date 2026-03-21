@@ -106,6 +106,26 @@ function findChanges(oldMenu, newMenu) {
 }
 
 /**
+ * Returns the current ISO week number (1-53).
+ */
+function getCurrentISOWeek() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+/**
+ * Parse week number from strings like "UKE/WEEK 13", "Week 13", "Uke 13", etc.
+ * Returns null if no number found.
+ */
+function parseMenuWeekNumber(weekStr) {
+    const match = weekStr && weekStr.match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+}
+
+/**
  * Validate scraped menu data before overwriting.
  * Returns { valid: boolean, issues: string[] }
  */
@@ -561,7 +581,25 @@ async function main() {
         console.log(`   ${name}: ${data.week}`);
     }
 
-    // Step 2c: Clean up orphaned images (old slug names like the_hub.png, telenor_expo.png, bygg_b.png)
+    // Step 2c: Hold next-week menus until the new week actually starts
+    const currentISOWeek = getCurrentISOWeek();
+    const scrapedWeekNums = Object.values(newMenu.canteens)
+        .map(c => parseMenuWeekNumber(c.week))
+        .filter(n => n !== null);
+    if (scrapedWeekNums.length > 0) {
+        const minScrapedWeek = Math.min(...scrapedWeekNums);
+        if (minScrapedWeek > currentISOWeek) {
+            console.log(`\n⏳ Scraped menu is for week ${minScrapedWeek}, but current week is ${currentISOWeek}.`);
+            console.log('   Canteen published next week\'s menu early — holding until the new week starts.');
+            if (oldMenu) {
+                fs.writeFileSync(MENU_PATH, JSON.stringify(oldMenu, null, 2));
+                console.log('   Restored previous menu.json — no changes committed.');
+            }
+            process.exit(0);
+        }
+    }
+
+    // Step 2d: Clean up orphaned images (old slug names like the_hub.png, telenor_expo.png, bygg_b.png)
     for (const dir of [IMAGES_DIR, IMAGES_NOBG_DIR]) {
         for (const day of DAY_ORDER) {
             const dayDir = path.join(dir, day);
@@ -577,7 +615,7 @@ async function main() {
         }
     }
 
-    // Step 2d: Archive previous week if the week number changed
+    // Step 2e: Archive previous week if the week number changed
     if (oldMenu) {
         const oldWeekStr = Object.values(oldMenu.canteens)[0]?.week || '';
         const newWeekStr = Object.values(newMenu.canteens)[0]?.week || '';
