@@ -7,7 +7,6 @@ import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientIm
 import SkeletonCards from "@/components/SkeletonCard";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
-import FoodCardStack, { type NextWeekPreview } from "@/components/FoodCardStack";
 import VoteModal from "@/components/VoteModal";
 import Lightbox from "@/components/Lightbox";
 import DealsView from "@/components/DealsView";
@@ -39,7 +38,6 @@ export default function Home() {
   const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
-  const [nextWeekMenu, setNextWeekMenu] = useState<MenuData | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const [shareState, setShareState] = useState<"idle" | "loading" | "sent">("idle");
@@ -295,11 +293,6 @@ export default function Home() {
       .then(data => setDishDescriptions(data || {}))
       .catch(() => {});
 
-    fetch("/menu-next.json")
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setNextWeekMenu(data); })
-      .catch(() => {});
-
     fetch("/api/attendance")
       .then(r => r.json())
       .then(data => {
@@ -537,26 +530,6 @@ export default function Home() {
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
 
-  const nextWeekPreviews = useMemo((): Record<string, Record<string, NextWeekPreview>> | null => {
-    if (!nextWeekMenu) return null;
-    const result: Record<string, Record<string, NextWeekPreview>> = {};
-    for (const [canteenName, canteen] of Object.entries(nextWeekMenu.canteens)) {
-      result[canteenName] = {};
-      const weekNum = parseInt(canteen.week.match(/\d+/)?.[0] ?? "0");
-      for (const dayKey of DAY_KEYS) {
-        const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dayKey);
-        if (!dayEntry) continue;
-        const items = dayEntry.en?.items ?? dayEntry.no?.items ?? [];
-        const main = items.find(i => i.isMain);
-        const sides = items.filter(i => !i.isMain).map(i => i.dish);
-        if (main?.dish) {
-          result[canteenName][dayKey] = { weekNum, mainDish: main.dish, sideDishes: sides };
-        }
-      }
-    }
-    return result;
-  }, [nextWeekMenu]);
-
   // #6 — Lightbox image click handler using canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
     const idx = canteenDayData.findIndex(c => c.canteenName === data.canteenName);
@@ -690,7 +663,7 @@ export default function Home() {
         )}
         <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
           {canteenDayData.map((data, cardIdx) => (
-            <FoodCardStack
+            <FoodCard
               key={data.canteenName}
               data={data}
               cardIdx={cardIdx}
@@ -701,7 +674,6 @@ export default function Home() {
               maxVotes={maxVotes}
               onImageClick={handleImageClick}
               onCardClick={handleCardClick}
-              nextWeek={nextWeekPreviews?.[data.canteenName]?.[DAY_KEYS[selectedDay]] ?? null}
             />
           ))}
         </div>
