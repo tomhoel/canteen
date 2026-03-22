@@ -733,10 +733,10 @@ body {
 }
 
 /* ─── Image floating hologram effect ─── */
-/* Image counter-parallaxes against the card tilt — appears to float on a separate Z-plane */
 .food-card-3d-wrapper .card-image-circle {
-  transition: transform 0.12s ease-out;
+  transition: transform 0.1s ease-out;
   will-change: transform;
+  position: relative;
 }
 
 .food-card-3d-wrapper.card-returning .card-image-circle {
@@ -745,17 +745,43 @@ body {
 
 .food-card-3d-wrapper:hover .card-image-circle {
   transform:
-    translateX(calc(var(--card-mx, 0) * -22px))
-    translateY(calc(var(--card-my, 0) * -18px))
-    scale(1.09);
+    translateX(calc(var(--card-mx, 0) * -28px))
+    translateY(calc(var(--card-my, 0) * -22px))
+    rotateZ(calc(var(--card-mx, 0) * -5deg))
+    scale(1.14);
+}
+
+/* Moving light reflection — follows cursor like sunlight on food */
+.food-card-3d-wrapper .card-image-circle::after {
+  content: '';
+  position: absolute;
+  inset: -5%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at
+      calc(50% + var(--card-mx, 0) * 80px)
+      calc(50% + var(--card-my, 0) * 80px),
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 220, 140, 0.08) 35%,
+    transparent 65%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 2;
+}
+
+.food-card-3d-wrapper:hover .card-image-circle::after {
+  opacity: 1;
 }
 
 .food-card-3d-wrapper:hover .food-image.loaded {
   filter:
-    drop-shadow(0 28px 56px rgba(80, 40, 0, 0.32))
-    drop-shadow(0 8px 20px rgba(80, 40, 0, 0.20))
-    saturate(1.12)
-    brightness(1.04);
+    drop-shadow(0 0 22px rgba(255, 160, 60, 0.28))
+    drop-shadow(0 32px 64px rgba(80, 40, 0, 0.36))
+    drop-shadow(0 10px 24px rgba(80, 40, 0, 0.22))
+    saturate(1.18)
+    brightness(1.06);
   transition: filter 0.25s ease;
 }
 
