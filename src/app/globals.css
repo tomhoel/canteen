@@ -732,6 +732,33 @@ body {
   animation-play-state: paused;
 }
 
+/* ─── Image floating hologram effect ─── */
+/* Image counter-parallaxes against the card tilt — appears to float on a separate Z-plane */
+.food-card-3d-wrapper .card-image-circle {
+  transition: transform 0.12s ease-out;
+  will-change: transform;
+}
+
+.food-card-3d-wrapper.card-returning .card-image-circle {
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.food-card-3d-wrapper:hover .card-image-circle {
+  transform:
+    translateX(calc(var(--card-mx, 0) * -22px))
+    translateY(calc(var(--card-my, 0) * -18px))
+    scale(1.09);
+}
+
+.food-card-3d-wrapper:hover .food-image.loaded {
+  filter:
+    drop-shadow(0 28px 56px rgba(80, 40, 0, 0.32))
+    drop-shadow(0 8px 20px rgba(80, 40, 0, 0.20))
+    saturate(1.12)
+    brightness(1.04);
+  transition: filter 0.25s ease;
+}
+
 /* #8 — Image placeholder / error fallback */
 .image-placeholder {
   width: 100%;
@@ -1612,6 +1639,12 @@ body {
   /* Disable float animation on mobile (touch interactions conflict) */
   .food-image {
     animation: none;
+  }
+
+  /* Disable image counter-parallax on touch devices */
+  .food-card-3d-wrapper .card-image-circle {
+    transition: none;
+    will-change: auto;
   }
 
   /* Stale banner — absolutely positioned overlay at card bottom, no height impact */
