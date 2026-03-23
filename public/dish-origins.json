@@ -262,5 +262,13 @@
   "Beef Szechuan with rice": {
     "country": "China",
     "code": "cn"
+  },
+  "Pork loin with plum sauce with baked potato": {
+    "country": "Germany",
+    "code": "de"
+  },
+  "Balsamico baked chicken thighs with tomato, served with rice": {
+    "country": "Italy",
+    "code": "it"
   }
 }
