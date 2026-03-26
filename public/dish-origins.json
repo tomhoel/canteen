@@ -270,5 +270,17 @@
   "Balsamico baked chicken thighs with tomato, served with rice": {
     "country": "Italy",
     "code": "it"
+  },
+  "Closed": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Breaded plaice fillet with fried potatoes and remoulade": {
+    "country": "Denmark",
+    "code": "dk"
+  },
+  "Fusilli pasta with meat sauce and grated cheese": {
+    "country": "Italy",
+    "code": "it"
   }
 }
