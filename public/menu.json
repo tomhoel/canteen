@@ -1,6 +1,318 @@
 {
-  "scrapedAt": "2026-03-26T10:00:29.523Z",
+  "scrapedAt": "2026-03-27T07:01:35.006Z",
   "canteens": {
+    "Fresh4you": {
+      "week": "UKE/WEEK 13",
+      "openingHours": "11:00 - 13:30",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "Stenbitkaker med bakte gulrøtter, hjemmelaget remulade og persillepoteter",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Stekt ris med karri og grønnsaker",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Kremet soppsuppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "Catfish patties with baked carrots, remoulade and parsley potatoes",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Fried rice with curry and vegetables",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Creamy mushroom soup",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": [
+              {
+                "dish": "Grove oksekjøttkaker med kålstuing, tyttebær, brun saus og potet",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan karbonade med kålstuing og potet",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Norsk grønnsaksuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THUESDAY",
+            "items": [
+              {
+                "dish": "Beef patties with cabbage stew, lingonberries, gravy and potatoes",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan patties with stew and potatoes",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Norwegian Vegetable soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": [
+              {
+                "dish": "Pasta med småpølser, kjøttboller og tomatsaus og revet ost",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan Bolognese",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Norsk kremet fiskesuppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": [
+              {
+                "dish": "Pasta with small sausage, meatballs, Tomato sauce and grated cheese",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan Bolognese",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Norwegian creamy fish soup",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": [
+              {
+                "dish": "Marinerte kyllinglår med karrisaus, ovnsbakte grønnsaker og ris",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Falafel med salat og ris",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Løksuppe med søtpotet og krydderis",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": [
+              {
+                "dish": "Game sausage with mashed root vegetables sprout/carrot",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Falafel with salad and rice",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Onion soup with sweet potato",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": [
+              {
+                "dish": "BBQ svineribbe med coleslaw og stekte småpoteter",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan burger med stekte poteter",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Tomatsuppe med kjøttboller og små pølser",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": [
+              {
+                "dish": "BBQ pork rib with coleslaw and roasted potatoes",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan burger with roasted potatoes",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Tomato soup with meatballs and sausage",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          }
+        }
+      ]
+    },
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 13",
       "openingHours": "11:00 - 13:00",
@@ -586,7 +898,17 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Ingefær stekt kjøttdeig med chili og nudler",
+                "dish": "Kylling tikka masala med ris",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Gulrotsuppe med linser",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Hoisin wok med nudler og grønnsaker",
                 "allergens": [
                   {
                     "id": "1",
@@ -597,25 +919,10 @@
                     "name": "Gluten"
                   }
                 ],
-                "isMain": true
-              },
-              {
-                "dish": "Linsesuppe med paprika",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
                 "isMain": false
               },
               {
-                "dish": "Chili sin carne med tortilla chips",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Pizza med tomat og pesto",
+                "dish": "Pizza med skinke og ost",
                 "allergens": [
                   {
                     "id": "3",
@@ -634,36 +941,22 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Ginger fried minced meat with chili and noodles",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
+                "dish": "Chicken tikka masala with rice",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Lentil soup with peppers",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Chili sin carne with tortilla chips",
+                "dish": "Carrot soup with lentils",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Pizza with tomato and pesto",
+                "dish": "Hoisin wok with noodles and vegetables",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Pizza with ham and cheese",
                 "allergens": [
                   {
                     "id": "3",
@@ -691,16 +984,26 @@
               },
               {
                 "dish": "Tom Kha soppsuppe",
-                "allergens": [],
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
-                "dish": "Ovnsbakte grønnsaker med kikerter",
-                "allergens": [],
+                "dish": "Falafel med dressing",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
-                "dish": "Pulled vegetar BBQ pizza",
+                "dish": "Tex Mex biff og kylling pizza",
                 "allergens": [
                   {
                     "id": "3",
@@ -725,16 +1028,26 @@
               },
               {
                 "dish": "Tom Kha mushroom soup",
-                "allergens": [],
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
-                "dish": "Oven.baked vegetables with chickpeas",
-                "allergens": [],
+                "dish": "Falafel with dressing",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
-                "dish": "Pulled vegetarian BBQ pizza",
+                "dish": "Tex Mex beef and chicken pizza",
                 "allergens": [
                   {
                     "id": "3",
@@ -745,308 +1058,6 @@
                     "name": "Milk"
                   }
                 ],
-                "isMain": false
-              }
-            ]
-          }
-        }
-      ]
-    },
-    "Fresh4you": {
-      "week": "UKE/WEEK 13",
-      "openingHours": "11:00 - 13:30",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "Stenbitkaker med bakte gulrøtter, hjemmelaget remulade og persillepoteter",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Stekt ris med karri og grønnsaker",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Kremet soppsuppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "Catfish patties with baked carrots, remoulade and parsley potatoes",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Fried rice with curry and vegetables",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Creamy mushroom soup",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": [
-              {
-                "dish": "Grove oksekjøttkaker med kålstuing, tyttebær, brun saus og potet",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan karbonade med kålstuing og potet",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Norsk grønnsaksuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THUESDAY",
-            "items": [
-              {
-                "dish": "Beef patties with cabbage stew, lingonberries, gravy and potatoes",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan patties with stew and potatoes",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Norwegian Vegetable soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": [
-              {
-                "dish": "Pasta med småpølser, kjøttboller og tomatsaus og revet ost",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan Bolognese",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Norsk kremet fiskesuppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": [
-              {
-                "dish": "Pasta with small sausage, meatballs, Tomato sauce and grated cheese",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan Bolognese",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Norwegian creamy fish soup",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": [
-              {
-                "dish": "Marinerte kyllinglår med karrisaus, ovnsbakte grønnsaker og ris",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Falafel med salat og ris",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Løksuppe med søtpotet og krydderis",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": [
-              {
-                "dish": "Game sausage with mashed root vegetables sprout/carrot",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Falafel with salad and rice",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Onion soup with sweet potato",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": [
-              {
-                "dish": "BBQ svineribbe med coleslaw og stekte småpoteter",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan burger med stekte poteter",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": [
-              {
-                "dish": "BBQ pork rib med coleslaw and roasted potatoes",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan burger with roasted potatoes",
-                "allergens": [],
                 "isMain": false
               }
             ]
