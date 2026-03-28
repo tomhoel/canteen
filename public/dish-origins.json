@@ -290,5 +290,13 @@
   "Chicken tikka masala with rice": {
     "country": "United Kingdom",
     "code": "gb"
+  },
+  "Thai beef stew with glass noodles": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "CLOSED FOR EASTER": {
+    "country": "Italy",
+    "code": "it"
   }
 }
