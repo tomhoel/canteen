@@ -246,5 +246,13 @@
   "Chicken tikka masala with rice": {
     "en": "Savor succulent chicken tikka in a rich, creamy tomato sauce, perfectly paired with fluffy rice. Pure comfort!",
     "no": "Nyt saftig kylling tikka i en rik, kremet tomatsaus, perfekt servert med luftig ris. Ren nytelse!"
+  },
+  "Thai beef stew with glass noodles": {
+    "en": "Tender beef slow-cooked in a rich Thai broth with slippery glass noodles – a warm hug in a bowl!",
+    "no": "Mørt oksekjøtt i en fyldig, aromatisk thai-buljong med glatte glassnudler – en varmende smaksreise!"
+  },
+  "CLOSED FOR EASTER": {
+    "en": "Embrace a warm Easter pause; rich family joy and sweet tranquility await, until we reopen.",
+    "no": "Omfavn en varm påskepause; rik familiegleder og søt ro venter, til vi gjenåpner."
   }
 }
