@@ -1,354 +1,6 @@
 {
-  "scrapedAt": "2026-03-29T02:01:12.600Z",
+  "scrapedAt": "2026-03-29T06:58:40.439Z",
   "canteens": {
-    "Flow": {
-      "week": "BYGG / BUILDING B - UKE/WEEK 13",
-      "openingHours": "11:00 - 13:00",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "Svine loin med plommesaus, serveres med bakte poteter",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Tandoori blomkål",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Linsesuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "Pork loin with plum sauce with baked potato",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Tandoori cauliflower",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Lentil soup soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": [
-              {
-                "dish": "Balsamico bakt kyllingoverlår med tomater, serveres med ris",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Pasta med erte pesto",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Ertesuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "TUESDAY",
-            "items": [
-              {
-                "dish": "Balsamico baked chicken thighs with tomato, served with rice",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Pasta med green pes pesto",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Green pea soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": [
-              {
-                "dish": "Grønnkarri lysning med sofritto ris",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Stekt ris med egg",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "11",
-                    "name": "Soya"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Thai kyllingsuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": [
-              {
-                "dish": "Green curyy cod with sofrito rice",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Stekt ris med egg",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "11",
-                    "name": "Soya"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Thai chicken soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": [
-              {
-                "dish": "Kalkun frikasse med ris",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Marokkansk ratatouille",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Fikesuppe",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": [
-              {
-                "dish": "Turkey fricasse with rice",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Moroccan ratatouille",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Fish soup",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": [
-              {
-                "dish": "Meksikansk gryte med ris og tortilla chips",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetar taco",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Meksikansk mais suppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": [
-              {
-                "dish": "Mexican xasserole with rice and tortilla chips",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarian taco",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Mexican corn soup",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        }
-      ]
-    },
     "Fresh4you": {
       "week": "UKE/WEEK15",
       "openingHours": "11:00 - 13:30",
@@ -822,6 +474,354 @@
                     "id": "3",
                     "name": "Gluten"
                   },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Flow": {
+      "week": "BYGG / BUILDING B - UKE/WEEK 13",
+      "openingHours": "11:00 - 13:00",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "Svine loin med plommesaus, serveres med bakte poteter",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Tandoori blomkål",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Linsesuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "Pork loin with plum sauce with baked potato",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Tandoori cauliflower",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Lentil soup soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": [
+              {
+                "dish": "Balsamico bakt kyllingoverlår med tomater, serveres med ris",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Pasta med erte pesto",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Ertesuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "TUESDAY",
+            "items": [
+              {
+                "dish": "Balsamico baked chicken thighs with tomato, served with rice",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Pasta med green pes pesto",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Green pea soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": [
+              {
+                "dish": "Grønnkarri lysning med sofritto ris",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Stekt ris med egg",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "11",
+                    "name": "Soya"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Thai kyllingsuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": [
+              {
+                "dish": "Green curyy cod with sofrito rice",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Stekt ris med egg",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "11",
+                    "name": "Soya"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Thai chicken soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": [
+              {
+                "dish": "Kalkun frikasse med ris",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Marokkansk ratatouille",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Fikesuppe",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": [
+              {
+                "dish": "Turkey fricasse with rice",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Moroccan ratatouille",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Fish soup",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": [
+              {
+                "dish": "Meksikansk gryte med ris og tortilla chips",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetar taco",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Meksikansk mais suppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": [
+              {
+                "dish": "Mexican xasserole with rice and tortilla chips",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetarian taco",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Mexican corn soup",
+                "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
