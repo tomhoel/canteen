@@ -298,5 +298,17 @@
   "CLOSED FOR EASTER": {
     "country": "Italy",
     "code": "it"
+  },
+  "Lam leg with plum sauce with baked potato and peas": {
+    "country": "United Kingdom",
+    "code": "gb"
+  },
+  "Mustard & honney baked pork loin with potato and vegetables": {
+    "country": "Germany",
+    "code": "de"
+  },
+  "Stengt": {
+    "country": "Norway",
+    "code": "no"
   }
 }
