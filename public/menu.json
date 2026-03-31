@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-03-30T10:16:11.994Z",
+  "scrapedAt": "2026-03-31T07:07:27.935Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 14",
@@ -74,27 +74,36 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Koreansk kryddret kylliing overlår med fullkornris med grønnsaker",
+                "dish": "Kyllingoverlår tanddoori med fullkornris",
                 "allergens": [
                   {
-                    "id": "9",
-                    "name": "Sesame seeds"
-                  },
-                  {
-                    "id": "10",
-                    "name": "Shellfish"
+                    "id": "4",
+                    "name": "Milk"
                   }
                 ],
                 "isMain": true
               },
               {
-                "dish": "Vegetar falafel med ris",
-                "allergens": [],
+                "dish": "Vegetar vårrull med fullkorn ris",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
                 "isMain": false
               },
               {
-                "dish": "Rød suppe",
+                "dish": "Fiske suppe",
                 "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
                   {
                     "id": "7",
                     "name": "Celery"
@@ -125,7 +134,7 @@
                 "isMain": true
               },
               {
-                "dish": "Stekt ris med egg og vegetar vårrull",
+                "dish": "Vegetar vårrull",
                 "allergens": [
                   {
                     "id": "1",
@@ -139,7 +148,7 @@
                 "isMain": false
               },
               {
-                "dish": "Grønn suppe",
+                "dish": "Kyllingsuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -164,7 +173,7 @@
                 "isMain": true
               },
               {
-                "dish": "fried rice with and vegetarian spring rolls",
+                "dish": "Vegetarian spring rolls",
                 "allergens": [
                   {
                     "id": "1",
@@ -178,7 +187,7 @@
                 "isMain": false
               },
               {
-                "dish": "Green soup",
+                "dish": "Chicken soup",
                 "allergens": [
                   {
                     "id": "7",
@@ -254,79 +263,6 @@
                 "isMain": false
               }
             ]
-          }
-        }
-      ]
-    },
-    "Fresh4you": {
-      "week": "UKE/WEEK15",
-      "openingHours": "11:00 - 13:30",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "STENGT FOR PÅSKE",
-                "allergens": [],
-                "isMain": true
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "CLOSED FOR EASTER",
-                "allergens": [],
-                "isMain": true
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": []
-          },
-          "en": {
-            "label": "THUESDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": []
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": []
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": []
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": []
           }
         }
       ]
@@ -739,6 +675,79 @@
                 "isMain": false
               }
             ]
+          }
+        }
+      ]
+    },
+    "Fresh4you": {
+      "week": "UKE/WEEK15",
+      "openingHours": "11:00 - 13:30",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "STENGT FOR PÅSKE",
+                "allergens": [],
+                "isMain": true
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "CLOSED FOR EASTER",
+                "allergens": [],
+                "isMain": true
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": []
+          },
+          "en": {
+            "label": "THUESDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": []
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": []
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": []
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": []
           }
         }
       ]
