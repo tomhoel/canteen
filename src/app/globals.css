@@ -1677,6 +1677,7 @@ body {
   .food-card-3d-wrapper:has(.food-card.no-menu) {
     display: flex;
     flex-direction: column;
+    flex: 1 1 0;
   }
 
   .food-card.no-menu {
@@ -1718,6 +1719,7 @@ body {
   .no-menu-cloche-wrap {
     animation: none;
     filter: drop-shadow(0 3px 8px rgba(120, 60, 0, 0.15));
+    transform: translateY(-6%);
   }
 
   .no-menu-cloche-svg {
