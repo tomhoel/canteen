@@ -91,7 +91,7 @@ export default function FoodCard({
   const isLeader = voteCount > 0 && voteCount === maxVotes;
   const hasStengtDish = mainDish?.dish.toLowerCase().includes("stengt") ||
     items?.some((item) => item.dish.toLowerCase().includes("stengt"));
-  const isClosed = hasStengtDish || (!mainDish && (!items || items.length === 0));
+  const isClosed = isAhead || hasStengtDish || (!mainDish && (!items || items.length === 0));
 
   if (isClosed) {
     return (
