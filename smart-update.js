@@ -76,10 +76,19 @@ function getMainDishes(canteenData) {
 /**
  * Compare old and new menus. Returns list of canteens + days that need regeneration.
  */
+/** Check if a canteen's menu is ahead of the current week (not serving this week). */
+function isCanteenAhead(canteen) {
+    const weekNum = parseMenuWeekNumber(canteen.week);
+    return weekNum !== null && weekNum > getCurrentISOWeek();
+}
+
 function findChanges(oldMenu, newMenu) {
     const changes = []; // { canteenName, day, oldDish, newDish }
 
     for (const [canteenName, newCanteen] of Object.entries(newMenu.canteens)) {
+        // Skip ahead-of-week canteens — they're effectively closed, Step 4b handles images
+        if (isCanteenAhead(newCanteen)) continue;
+
         const oldCanteen = oldMenu?.canteens?.[canteenName];
 
         if (!oldCanteen) {
@@ -797,8 +806,9 @@ async function main() {
             const items = getDayItems(entry);
             const main = items.find(i => i.isMain);
 
-            // Check if canteen is actually serving food (not just a "Stengt"/"Closed" placeholder)
-            if (main && !isDishClosed(main.dish)) continue; // has real food — skip
+            // Check if canteen is actually serving real food this week
+            const canteenIsAhead = isCanteenAhead(canteen);
+            if (!canteenIsAhead && main && !isDishClosed(main.dish)) continue; // has real food this week — skip
 
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
             const nobgPath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
