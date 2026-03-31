@@ -845,9 +845,9 @@ async function main() {
     const allDishNames = new Set();
     for (const canteen of Object.values(newMenu.canteens)) {
         for (const dayEntry of canteen.menu) {
-            const enItems = dayEntry?.en?.items || [];
-            const main = enItems.find(i => i.isMain);
-            if (main?.dish) allDishNames.add(main.dish);
+            const items = getDayItems(dayEntry);
+            const main = items.find(i => i.isMain);
+            if (main?.dish && !isDishClosed(main.dish)) allDishNames.add(main.dish);
         }
     }
 
