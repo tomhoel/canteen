@@ -513,9 +513,11 @@ export default function Home() {
         const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
         const isOutdated = canteenWeekNum < currentWeek;
         const isAhead = canteenWeekNum > currentWeek;
-        const enMainDish = (dayEntry?.en?.items || []).find(i => i.isMain);
-        const origin = dishOrigins[enMainDish?.dish || ""] ?? null;
-        const descEntry = dishDescriptions[enMainDish?.dish || ""];
+        const enLookup = dayEntry?.en?.items || [];
+        const noLookup = dayEntry?.no?.items || [];
+        const lookupMainDish = (enLookup.length > 0 ? enLookup : noLookup).find(i => i.isMain);
+        const origin = dishOrigins[lookupMainDish?.dish || ""] ?? null;
+        const descEntry = dishDescriptions[lookupMainDish?.dish || ""];
         const description = descEntry
           ? (typeof descEntry === "string" ? descEntry : descEntry[lang] || descEntry["en"] || null)
           : null;
