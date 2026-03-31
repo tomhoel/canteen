@@ -1631,9 +1631,18 @@ body {
   }
 
   /* No-menu card — same layout as regular food cards on mobile */
+  .food-card-3d-wrapper:has(.food-card.no-menu) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    overflow: visible;
+  }
+
   .food-card.no-menu {
+    flex: 1;
     padding: clamp(8px, 1.2dvh, 14px) 16px;
     overflow: visible;
+    align-content: center;
     background: linear-gradient(135deg, #fffdf8 0%, #fdf5eb 100%);
     border-color: rgba(200, 116, 26, 0.10);
     box-shadow:
