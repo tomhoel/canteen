@@ -20,6 +20,14 @@ const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json
 
 const EXPECTED_CANTEENS = ['Eat the street', 'Fresh4you', 'Flow'];
 const VALID_SLUGS = new Set(EXPECTED_CANTEENS.map(n => n.toLowerCase().replace(/\s+/g, '_')));
+const CLOSED_KEYWORDS = ['stengt', 'closed', 'lukket'];
+
+/** Returns true if a dish name is a "closed" placeholder, not real food. */
+function isDishClosed(dishName) {
+    if (!dishName) return true;
+    const lower = dishName.toLowerCase();
+    return CLOSED_KEYWORDS.some(kw => lower.includes(kw));
+}
 
 /**
  * Retry a function up to `maxRetries` times with exponential backoff.
@@ -44,11 +52,21 @@ async function withRetry(fn, label, maxRetries = 2) {
  * Extract main dish names per day for a canteen.
  * Returns { monday: "Chicken jalfrezi...", tuesday: "Cod with...", ... }
  */
+/**
+ * Pick the best items array for a day entry — prefer English, fall back to Norwegian.
+ * Empty arrays are treated as "no items" ([] is truthy in JS but has no content).
+ */
+function getDayItems(entry) {
+    const en = entry?.en?.items || [];
+    const no = entry?.no?.items || [];
+    return en.length > 0 ? en : no;
+}
+
 function getMainDishes(canteenData) {
     const dishes = {};
     for (const day of DAY_ORDER) {
         const entry = canteenData.menu.find(d => d.day.toLowerCase() === day);
-        const items = entry?.en?.items || entry?.no?.items || [];
+        const items = getDayItems(entry);
         const main = items.find(i => i.isMain);
         dishes[day] = main?.dish || null;
     }
@@ -68,9 +86,9 @@ function findChanges(oldMenu, newMenu) {
             // Entirely new canteen — regenerate all days
             for (const day of DAY_ORDER) {
                 const entry = newCanteen.menu.find(d => d.day.toLowerCase() === day);
-                const items = entry?.en?.items || [];
+                const items = getDayItems(entry);
                 const main = items.find(i => i.isMain);
-                if (main) {
+                if (main && !isDishClosed(main.dish)) {
                     changes.push({ canteenName, day, oldDish: null, newDish: main.dish });
                 }
             }
@@ -90,6 +108,9 @@ function findChanges(oldMenu, newMenu) {
             const newDish = newDishes[day];
 
             if (!newDish) continue;
+
+            // Skip closed-keyword dishes — Step 4b handles those
+            if (isDishClosed(newDish)) continue;
 
             // Regenerate if: dish changed, week changed, or image doesn't exist
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
@@ -778,18 +799,15 @@ async function main() {
 
     // Step 4b: Generate "closed plate" images for canteens/days with no menu
     console.log('\n🍽️  Checking for closed canteen days...');
-    const CLOSED_KEYWORDS = ['stengt', 'closed', 'lukket'];
     let closedGenerated = 0, closedSkipped = 0;
     for (const [canteenName, canteen] of Object.entries(newMenu.canteens)) {
         for (const day of DAY_ORDER) {
             const entry = canteen.menu.find(d => d.day.toLowerCase() === day);
-            const items = entry?.en?.items || entry?.no?.items || [];
+            const items = getDayItems(entry);
             const main = items.find(i => i.isMain);
 
             // Check if canteen is actually serving food (not just a "Stengt"/"Closed" placeholder)
-            const dishName = main?.dish?.toLowerCase() || '';
-            const isClosed = !main || CLOSED_KEYWORDS.some(kw => dishName.includes(kw));
-            if (!isClosed) continue; // has real food — skip
+            if (main && !isDishClosed(main.dish)) continue; // has real food — skip
 
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
             const nobgPath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
