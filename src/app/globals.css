@@ -1673,22 +1673,22 @@ body {
     pointer-events: none;
   }
 
-  /* No-menu card — compact horizontal strip on mobile */
+  /* No-menu card — keep vertical card layout on mobile, matching regular cards */
   .food-card.no-menu {
-    flex-direction: row;
+    flex-direction: column;
     flex-wrap: nowrap;
-    padding: 0 20px;
-    align-items: center;
-    flex: 0 0 auto;
-    min-height: 0;
-    gap: 16px;
+    padding: 0;
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    gap: 0;
   }
 
   .no-menu-hero {
-    width: 52px;
-    height: 52px;
+    width: 100%;
+    height: clamp(100px, 16dvh, 160px);
     min-height: unset;
-    border-radius: 50%;
+    border-radius: 18px 18px 0 0;
     flex-shrink: 0;
     overflow: hidden;
   }
@@ -1699,25 +1699,27 @@ body {
 
   .no-menu-cloche-wrap {
     animation: none;
-    filter: drop-shadow(0 3px 6px rgba(120, 60, 0, 0.18));
+    filter: drop-shadow(0 6px 14px rgba(120, 60, 0, 0.18));
   }
 
   .no-menu-cloche-svg {
-    width: 56px;
-    height: 47px;
+    width: clamp(80px, 12dvh, 120px);
+    height: auto;
   }
 
   .no-menu-body {
     flex: 1;
-    text-align: left;
-    align-items: flex-start;
+    text-align: center;
+    align-items: center;
     justify-content: center;
-    padding: 0;
-    gap: 1px;
+    padding: 12px 16px 14px;
+    gap: 3px;
   }
 
   .no-menu-footer {
-    display: none;
+    display: flex;
+    padding: 0 16px 14px;
+    justify-content: center;
   }
 
   .stale-banner-icon {
