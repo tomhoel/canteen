@@ -778,6 +778,7 @@ async function main() {
 
     // Step 4b: Generate "closed plate" images for canteens/days with no menu
     console.log('\n🍽️  Checking for closed canteen days...');
+    const CLOSED_KEYWORDS = ['stengt', 'closed', 'lukket'];
     let closedGenerated = 0, closedSkipped = 0;
     for (const [canteenName, canteen] of Object.entries(newMenu.canteens)) {
         for (const day of DAY_ORDER) {
@@ -785,7 +786,10 @@ async function main() {
             const items = entry?.en?.items || entry?.no?.items || [];
             const main = items.find(i => i.isMain);
 
-            if (main) continue; // has food — skip
+            // Check if canteen is actually serving food (not just a "Stengt"/"Closed" placeholder)
+            const dishName = main?.dish?.toLowerCase() || '';
+            const isClosed = !main || CLOSED_KEYWORDS.some(kw => dishName.includes(kw));
+            if (!isClosed) continue; // has real food — skip
 
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
             const nobgPath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
