@@ -687,21 +687,12 @@ async function main() {
         console.log(`   ${name}: ${data.week}`);
     }
 
-    // Step 2c: Hold next-week menus until the new week actually starts
+    // Step 2c: Log week status per canteen (ahead canteens get isAhead flag in the frontend)
     const currentISOWeek = getCurrentISOWeek();
-    const scrapedWeekNums = Object.values(newMenu.canteens)
-        .map(c => parseMenuWeekNumber(c.week))
-        .filter(n => n !== null);
-    if (scrapedWeekNums.length > 0) {
-        const minScrapedWeek = Math.min(...scrapedWeekNums);
-        if (minScrapedWeek > currentISOWeek) {
-            console.log(`\n⏳ Scraped menu is for week ${minScrapedWeek}, but current week is ${currentISOWeek}.`);
-            console.log('   Canteen published next week\'s menu early — holding until the new week starts.');
-            if (oldMenu) {
-                fs.writeFileSync(MENU_PATH, JSON.stringify(oldMenu, null, 2));
-                console.log('   Restored previous menu.json — no changes committed.');
-            }
-            process.exit(0);
+    for (const [canteenName, canteen] of Object.entries(newMenu.canteens)) {
+        const weekNum = parseMenuWeekNumber(canteen.week);
+        if (weekNum !== null && weekNum > currentISOWeek) {
+            console.log(`  ℹ️  ${canteenName}: week ${weekNum} (ahead of current ${currentISOWeek}) — shown with "ahead" badge`);
         }
     }
 
