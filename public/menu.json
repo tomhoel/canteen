@@ -1,79 +1,6 @@
 {
-  "scrapedAt": "2026-03-31T19:11:57.776Z",
+  "scrapedAt": "2026-03-31T19:09:38.907Z",
   "canteens": {
-    "Fresh4you": {
-      "week": "UKE/WEEK15",
-      "openingHours": "11:00 - 13:30",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "STENGT FOR PÅSKE",
-                "allergens": [],
-                "isMain": true
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "CLOSED FOR EASTER",
-                "allergens": [],
-                "isMain": true
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": []
-          },
-          "en": {
-            "label": "THUESDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": []
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": []
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": []
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": []
-          }
-        }
-      ]
-    },
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 14",
       "openingHours": "11:00 - 13:00",
@@ -748,6 +675,79 @@
                 "isMain": false
               }
             ]
+          }
+        }
+      ]
+    },
+    "Fresh4you": {
+      "week": "UKE/WEEK15",
+      "openingHours": "11:00 - 13:30",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "STENGT FOR PÅSKE",
+                "allergens": [],
+                "isMain": true
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "CLOSED FOR EASTER",
+                "allergens": [],
+                "isMain": true
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": []
+          },
+          "en": {
+            "label": "THUESDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": []
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": []
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": []
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": []
           }
         }
       ]
