@@ -144,7 +144,7 @@ export default function FoodCard({
             </div>
           </div>
 
-          {/* Centered text block */}
+          {/* Text block + hours */}
           <div className="no-menu-body">
             <span className="no-menu-canteen-label">{canteenName}</span>
             <h3 className="no-menu-heading">
@@ -153,11 +153,7 @@ export default function FoodCard({
             <p className="no-menu-sub">
               {lang === "no" ? "Kantinen holder stengt i dag" : "The canteen is closed today"}
             </p>
-          </div>
-
-          {/* Hours pill */}
-          <div className="no-menu-footer">
-            <div className="no-menu-pill">
+            <div className="no-menu-hours">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
               </svg>

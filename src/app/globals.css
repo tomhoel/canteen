@@ -533,14 +533,9 @@ body {
   margin: 0;
 }
 
-/* Hours pill footer */
-.no-menu-footer {
-  padding: 14px 28px 22px;
-  display: flex;
-  justify-content: center;
-}
-
-.no-menu-pill {
+/* Hours pill — inside body, pushed to bottom on desktop */
+.no-menu-hours {
+  margin-top: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -552,12 +547,12 @@ body {
   color: var(--text-secondary);
 }
 
-.no-menu-pill svg {
+.no-menu-hours svg {
   color: var(--accent-orange);
   flex-shrink: 0;
 }
 
-.no-menu-pill strong {
+.no-menu-hours strong {
   font-weight: 600;
   color: var(--accent-orange);
 }
@@ -1682,17 +1677,16 @@ body {
 
   .food-card.no-menu {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    align-content: center;
     padding: clamp(8px, 1.2dvh, 14px) 16px;
     gap: 0;
     overflow: visible;
-    background: linear-gradient(135deg, #fffdf8 0%, #fdf8f0 100%);
-    border-color: rgba(212, 160, 144, 0.18);
+    background: linear-gradient(135deg, #fffdf8 0%, #fdf5eb 100%);
+    border-color: rgba(200, 116, 26, 0.10);
     box-shadow:
-      0 1px 2px rgba(60, 30, 0, 0.02),
-      0 4px 12px rgba(60, 30, 0, 0.03);
+      0 1px 3px rgba(60, 30, 0, 0.03),
+      0 4px 14px rgba(60, 30, 0, 0.05);
   }
 
   .no-menu-hero {
@@ -1741,40 +1735,33 @@ body {
     padding: 0 2px 0 12px;
     min-width: 0;
     align-self: center;
-    gap: 2px;
+    gap: clamp(2px, 0.3dvh, 4px);
   }
 
   .no-menu-canteen-label {
     font-size: clamp(9px, 1.2dvh, 12px);
     letter-spacing: 1px;
+    margin-bottom: 1px;
   }
 
   .no-menu-heading {
-    font-size: clamp(12px, 1.8dvh, 17px);
-    line-height: 1.3;
-    color: var(--text-secondary);
+    font-size: clamp(13px, 1.9dvh, 18px);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text-primary);
   }
 
   .no-menu-sub {
-    font-size: clamp(9.5px, 1.3dvh, 13px);
+    font-size: clamp(10px, 1.3dvh, 13px);
     line-height: 1.4;
     color: var(--text-muted);
   }
 
-  .no-menu-footer {
-    display: flex;
-    flex-basis: 100%;
-    padding: clamp(6px, 0.8dvh, 10px) 0 0;
+  .no-menu-hours {
     margin-top: clamp(4px, 0.6dvh, 8px);
-    border-top: 1px solid rgba(212, 160, 144, 0.10);
-    justify-content: flex-start;
-  }
-
-  .no-menu-pill {
-    background: rgba(212, 160, 144, 0.08);
-    border-color: rgba(212, 160, 144, 0.14);
-    font-size: clamp(9px, 1.1dvh, 11px);
-    padding: 3px 10px;
+    font-size: clamp(10px, 1.3dvh, 13px);
+    padding: clamp(3px, 0.4dvh, 5px) 10px;
+    border-radius: 14px;
   }
 
   .stale-banner-icon {
