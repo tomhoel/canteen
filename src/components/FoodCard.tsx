@@ -89,8 +89,8 @@ export default function FoodCard({
 
   const isVoteable = selectedDay === activeDayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
-  const hasStengtDish = mainDish?.toLowerCase().includes("stengt") ||
-    items?.some((item) => item.toLowerCase().includes("stengt"));
+  const hasStengtDish = mainDish?.dish.toLowerCase().includes("stengt") ||
+    items?.some((item) => item.dish.toLowerCase().includes("stengt"));
   const isClosed = hasStengtDish || (!mainDish && (!items || items.length === 0));
 
   if (isClosed) {
