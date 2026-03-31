@@ -100,48 +100,46 @@ export default function FoodCard({
           className="food-card no-menu"
           style={{ animationDelay: `${cardIdx * 75}ms` }}
         >
-          {/* Hero zone — warm gradient with centered illustration */}
+          {/* Hero zone — plate with resting cutlery */}
           <div className="no-menu-hero">
-            {/* Decorative concentric rings */}
-            <svg className="no-menu-rings" viewBox="0 0 328 220" fill="none" aria-hidden="true">
-              <ellipse cx="164" cy="150" rx="150" ry="95" stroke="#c8741a" strokeWidth="1" strokeDasharray="3 9" opacity="0.18" />
-              <ellipse cx="164" cy="150" rx="115" ry="72" stroke="#c8741a" strokeWidth="1" strokeDasharray="3 9" opacity="0.22" />
-              <ellipse cx="164" cy="150" rx="80" ry="50" stroke="#c8741a" strokeWidth="1" strokeDasharray="3 9" opacity="0.28" />
-            </svg>
+            <svg className="no-menu-plate-svg" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+              {/* Plate shadow */}
+              <ellipse cx="102" cy="106" rx="78" ry="78" fill="rgba(100,60,10,0.07)" />
+              {/* Plate rim */}
+              <circle cx="100" cy="100" r="82" fill="#d8c49e" />
+              <circle cx="100" cy="100" r="81" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.2" />
+              <circle cx="100" cy="100" r="76" fill="none" stroke="#c4ad85" strokeWidth="0.6" opacity="0.4" />
+              {/* Inner plate */}
+              <circle cx="100" cy="100" r="64" fill="url(#plateFill)" />
+              <circle cx="100" cy="100" r="64" fill="none" stroke="#c4ad85" strokeWidth="0.5" opacity="0.3" />
+              {/* Plate highlight */}
+              <ellipse cx="82" cy="82" rx="28" ry="22" fill="white" opacity="0.06" />
 
-            {/* Cloche SVG */}
-            <div className="no-menu-cloche-wrap">
-              <svg className="no-menu-cloche-svg" viewBox="0 0 190 158" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Ground shadow */}
-                <ellipse cx="95" cy="150" rx="68" ry="7.5" fill="#c8741a" opacity="0.14" />
-                {/* Plate */}
-                <ellipse cx="95" cy="141" rx="72" ry="11" fill="#f5e0b5" stroke="#d4a870" strokeWidth="1.5" />
-                {/* Plate inner groove */}
-                <ellipse cx="95" cy="141" rx="54" ry="7.5" fill="none" stroke="#d4a870" strokeWidth="0.8" opacity="0.5" />
-                {/* Dome */}
-                <path d="M23 141 C23 141 20 76 95 52 C170 76 167 141 167 141 Z" fill="url(#domeGrad)" />
-                {/* Dome outline */}
-                <path d="M23 141 C23 141 20 76 95 52 C170 76 167 141 167 141" stroke="#c8741a" strokeWidth="2" strokeLinejoin="round" fill="none" />
-                {/* Primary sheen */}
-                <path d="M44 108 C49 86 63 70 82 62" stroke="white" strokeWidth="3.5" strokeLinecap="round" opacity="0.48" />
-                {/* Secondary sheen */}
-                <path d="M54 128 C56 118 60 112 66 108" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.28" />
-                {/* Handle stem */}
-                <rect x="90.5" y="38" width="9" height="17" rx="4.5" fill="#c8741a" />
-                {/* Handle base ring */}
-                <circle cx="95" cy="35" r="12" fill="#c8741a" />
-                {/* Handle gem */}
-                <circle cx="95" cy="35" r="6.5" fill="#e8a020" />
-                {/* Handle gem highlight */}
-                <circle cx="92" cy="32" r="2" fill="white" opacity="0.4" />
-                <defs>
-                  <linearGradient id="domeGrad" x1="95" y1="52" x2="95" y2="141" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#fef6e4" />
-                    <stop offset="100%" stopColor="#f6e4bc" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
+              {/* Fork — left, angled */}
+              <g transform="rotate(-28 72 100)" opacity="0.42">
+                <line x1="66" y1="42" x2="66" y2="68" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
+                <line x1="70" y1="40" x2="70" y2="70" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
+                <line x1="74" y1="40" x2="74" y2="70" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
+                <line x1="78" y1="42" x2="78" y2="68" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
+                <path d="M66 68 Q72 76 78 68" stroke="#a08050" strokeWidth="2" fill="none" />
+                <line x1="72" y1="74" x2="72" y2="150" stroke="#a08050" strokeWidth="3" strokeLinecap="round" />
+                <ellipse cx="72" cy="150" rx="5" ry="3" fill="#a08050" opacity="0.5" />
+              </g>
+
+              {/* Knife — right, angled */}
+              <g transform="rotate(28 128 100)" opacity="0.42">
+                <line x1="128" y1="38" x2="128" y2="150" stroke="#a08050" strokeWidth="3" strokeLinecap="round" />
+                <path d="M128 38 C138 46 137 78 128 86" stroke="#a08050" strokeWidth="1.8" fill="#a08050" fillOpacity="0.1" strokeLinecap="round" />
+                <ellipse cx="128" cy="150" rx="5" ry="3" fill="#a08050" opacity="0.5" />
+              </g>
+
+              <defs>
+                <radialGradient id="plateFill" cx="45%" cy="42%">
+                  <stop offset="0%" stopColor="#e6d8ba" />
+                  <stop offset="100%" stopColor="#dac8a4" />
+                </radialGradient>
+              </defs>
+            </svg>
           </div>
 
           {/* Text block + hours */}
