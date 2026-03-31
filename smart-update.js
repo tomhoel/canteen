@@ -277,6 +277,91 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
 }
 
 /**
+ * Generate a "closed / not serving" plate image for a canteen with no menu.
+ * Uses the same plate reference and Gemini pipeline as regular food images,
+ * but prompts for an empty plate with creative table-setting elements.
+ */
+async function generateClosedPlateImage(canteenName, day) {
+    const { GoogleGenAI } = require('@google/genai');
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+    const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
+
+    const promptText = `Professional overhead food photography of an EMPTY plate — the canteen is closed today.
+
+STRICT TECHNICAL SPECIFICATIONS:
+Camera & Composition:
+- Angle: Overhead shot, camera at 90° directly above plate
+- Framing: Plate perfectly centered, complete rim visible with margin
+- Format: Square 1:1 ratio
+
+Plate (CRITICAL - MUST FOLLOW EXACTLY):
+${hasMasterPlate ? '- REFERENCE IMAGE PROVIDED: Use the EXACT same plate from the reference image — identical shape, color, texture, and rim style. Do not deviate in any way.' : '- Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)'}
+- Plate color: Warm sandy beige (#E8D5B7) — NOT white, NOT grey
+- Plate MUST have a clearly visible raised rim/edge all the way around
+- EVERY image must show the COMPLETE plate with full rim visible — never cropped
+
+Scene — "Canteen is closed" (CREATIVE):
+- The plate is EMPTY — absolutely NO food on it
+- Place a neatly folded linen napkin on the plate (warm cream or natural linen color)
+- A single fork and knife resting on the plate in a casual "resting" position
+- The arrangement should feel warm, intentional, and inviting — like a place setting awaiting tomorrow
+- Optionally: a tiny sprig of dried herb or a small decorative element for warmth
+- The mood is peaceful and clean, not sad or abandoned
+
+Background (CRITICAL):
+- Background: Solid DARK GREY (#707070) seamless studio backdrop
+- Must be clearly DARKER than the beige plate (high contrast between plate edge and background)
+- MUST be perfectly uniform grey — no gradients, no textures
+- ABSOLUTELY NO SHADOWS anywhere
+
+Strict Exclusions:
+- NO food on the plate
+- NO white plates — use warm beige/sandy stoneware ONLY
+- NO light grey backgrounds — must be dark grey (#707070)
+- NO SHADOWS of any kind
+- NO table surfaces, wood, marble, or cloth
+- NO hands, people, or text
+- NO angled views — strictly 90° overhead only
+
+Style: Minimalist Scandinavian food photography, flat-lit product shot, clean and professional.`;
+
+    const parts = [{ text: promptText }];
+    if (hasMasterPlate) {
+        const plateData = fs.readFileSync(MASTER_PLATE_REF_PATH).toString('base64');
+        parts.push({ inlineData: { mimeType: 'image/png', data: plateData } });
+        console.log('  🎨 Using master plate reference for closed plate');
+    }
+
+    try {
+        const response = await withRetry(() => ai.models.generateContent({
+            model: 'gemini-3.1-flash-image-preview',
+            contents: { parts },
+            config: { responseModalities: ['Text', 'Image'], imageConfig: { imageSize: '512px' } },
+        }), `closed-plate: ${canteenName}/${day}`);
+
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                const sharp = require('sharp');
+                const raw = Buffer.from(part.inlineData.data, 'base64');
+                const pngBuffer = await sharp(raw).png().toBuffer();
+                const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
+                const dayDir = path.join(IMAGES_DIR, day);
+                if (!fs.existsSync(dayDir)) fs.mkdirSync(dayDir, { recursive: true });
+                fs.writeFileSync(path.join(dayDir, `${slug}.png`), pngBuffer);
+                return true;
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error(`  ❌ Closed plate generation failed: ${error.message}`);
+        return false;
+    }
+}
+
+/**
  * Remove background for a single image using Sharp.
  * Uses flood-fill from edges with an index-based queue for performance.
  */
@@ -689,6 +774,48 @@ async function main() {
         if (failed > 0) console.log(`❌ Failed:      ${failed} images`);
         console.log(`💰 API calls saved: ${skipped} (vs full regeneration)`);
         console.log('═'.repeat(60));
+    }
+
+    // Step 4b: Generate "closed plate" images for canteens/days with no menu
+    console.log('\n🍽️  Checking for closed canteen days...');
+    let closedGenerated = 0, closedSkipped = 0;
+    for (const [canteenName, canteen] of Object.entries(newMenu.canteens)) {
+        for (const day of DAY_ORDER) {
+            const entry = canteen.menu.find(d => d.day.toLowerCase() === day);
+            const items = entry?.en?.items || entry?.no?.items || [];
+            const main = items.find(i => i.isMain);
+
+            if (main) continue; // has food — skip
+
+            const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
+            const nobgPath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
+
+            // Only generate if the no-bg image is missing (avoids regenerating every run)
+            if (fs.existsSync(nobgPath)) {
+                closedSkipped++;
+                continue;
+            }
+
+            console.log(`  🍽️  ${canteenName} / ${day}: closed — generating empty plate...`);
+            const ok = await generateClosedPlateImage(canteenName, day);
+            if (ok) {
+                const bgOk = await removeBgSingle(canteenName, day);
+                if (bgOk) {
+                    console.log('  ✅ Closed plate generated + processed');
+                    closedGenerated++;
+                } else {
+                    console.log('  ❌ Background removal failed');
+                }
+            } else {
+                console.log('  ❌ Closed plate generation failed');
+            }
+            await new Promise(r => setTimeout(r, 1500));
+        }
+    }
+    if (closedGenerated > 0 || closedSkipped > 0) {
+        console.log(`  📊 Closed plates: ${closedGenerated} generated, ${closedSkipped} already exist`);
+    } else {
+        console.log('  ✓ No closed canteen days found');
     }
 
     // Step 5: Detect origins for all dishes in the new menu

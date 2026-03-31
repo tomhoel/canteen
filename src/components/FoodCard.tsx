@@ -100,46 +100,27 @@ export default function FoodCard({
           className="food-card no-menu"
           style={{ animationDelay: `${cardIdx * 75}ms` }}
         >
-          {/* Hero zone — plate with resting cutlery */}
-          <div className="no-menu-hero">
-            <svg className="no-menu-plate-svg" viewBox="0 0 200 200" fill="none" aria-hidden="true">
-              {/* Plate shadow */}
-              <ellipse cx="102" cy="106" rx="78" ry="78" fill="rgba(100,60,10,0.07)" />
-              {/* Plate rim */}
-              <circle cx="100" cy="100" r="82" fill="#d8c49e" />
-              <circle cx="100" cy="100" r="81" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.2" />
-              <circle cx="100" cy="100" r="76" fill="none" stroke="#c4ad85" strokeWidth="0.6" opacity="0.4" />
-              {/* Inner plate */}
-              <circle cx="100" cy="100" r="64" fill="url(#plateFill)" />
-              <circle cx="100" cy="100" r="64" fill="none" stroke="#c4ad85" strokeWidth="0.5" opacity="0.3" />
-              {/* Plate highlight */}
-              <ellipse cx="82" cy="82" rx="28" ry="22" fill="white" opacity="0.06" />
-
-              {/* Fork — left, angled */}
-              <g transform="rotate(-28 72 100)" opacity="0.42">
-                <line x1="66" y1="42" x2="66" y2="68" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
-                <line x1="70" y1="40" x2="70" y2="70" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
-                <line x1="74" y1="40" x2="74" y2="70" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
-                <line x1="78" y1="42" x2="78" y2="68" stroke="#a08050" strokeWidth="2" strokeLinecap="round" />
-                <path d="M66 68 Q72 76 78 68" stroke="#a08050" strokeWidth="2" fill="none" />
-                <line x1="72" y1="74" x2="72" y2="150" stroke="#a08050" strokeWidth="3" strokeLinecap="round" />
-                <ellipse cx="72" cy="150" rx="5" ry="3" fill="#a08050" opacity="0.5" />
-              </g>
-
-              {/* Knife — right, angled */}
-              <g transform="rotate(28 128 100)" opacity="0.42">
-                <line x1="128" y1="38" x2="128" y2="150" stroke="#a08050" strokeWidth="3" strokeLinecap="round" />
-                <path d="M128 38 C138 46 137 78 128 86" stroke="#a08050" strokeWidth="1.8" fill="#a08050" fillOpacity="0.1" strokeLinecap="round" />
-                <ellipse cx="128" cy="150" rx="5" ry="3" fill="#a08050" opacity="0.5" />
-              </g>
-
-              <defs>
-                <radialGradient id="plateFill" cx="45%" cy="42%">
-                  <stop offset="0%" stopColor="#e6d8ba" />
-                  <stop offset="100%" stopColor="#dac8a4" />
-                </radialGradient>
-              </defs>
-            </svg>
+          {/* Closed plate image — same layout as regular food card image */}
+          <div className="card-image-wrapper">
+            <div className="card-image-circle">
+              {imgError ? (
+                <div className="image-placeholder">
+                  {canteenName.charAt(0)}
+                </div>
+              ) : (
+                <>
+                  {!imgLoaded && <div className="image-shimmer" />}
+                  <img
+                    src={imagePath}
+                    alt={lang === "no" ? "Stengt" : "Closed"}
+                    className={`food-image${imgLoaded ? " loaded" : ""}`}
+                    loading="lazy"
+                    onLoad={() => setImgLoaded(true)}
+                    onError={() => setImgError(true)}
+                  />
+                </>
+              )}
+            </div>
           </div>
 
           {/* Text block + hours */}
