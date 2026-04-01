@@ -441,18 +441,16 @@ body {
 }
 
 /* ─── Closed canteens pill ─── */
-/* Closed canteens pill — centered overlay in header, no layout impact */
-.closed-pill-wrapper {
+/* ─── Closed canteens pill (desktop) ─── */
+.closed-pill-desktop {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   z-index: 10;
 }
 
 .closed-pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -464,7 +462,7 @@ body {
   font-family: inherit;
   font-weight: 500;
   color: var(--text-secondary);
-  cursor: pointer;
+  cursor: default;
   transition: background 0.2s var(--smooth), border-color 0.2s var(--smooth);
 }
 
@@ -478,48 +476,71 @@ body {
   flex-shrink: 0;
 }
 
-.closed-pill-chevron {
-  transition: transform 0.25s var(--smooth);
+/* Tooltip on hover — desktop only */
+.closed-pill-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(252, 248, 242, 0.97);
+  border: 1px solid rgba(200, 116, 26, 0.14);
+  border-radius: 12px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 16px rgba(60, 30, 0, 0.08);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--smooth), transform 0.2s var(--smooth);
+  transform: translateX(-50%) translateY(4px);
 }
 
-.closed-pill-chevron.open {
-  transform: rotate(180deg);
+.closed-pill:hover .closed-pill-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
 }
 
-.closed-pill-dropdown {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s var(--smooth), padding 0.3s var(--smooth);
-  width: 100%;
-  max-width: 340px;
-  padding: 0 16px;
-}
-
-.closed-pill-dropdown.open {
-  max-height: 160px;
-  padding: 8px 16px;
-}
-
-.closed-pill-row {
+.closed-pill-tooltip-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  font-size: 12px;
+  gap: 20px;
+  padding: 3px 0;
+  font-size: 11.5px;
   color: var(--text-muted);
 }
 
-.closed-pill-row + .closed-pill-row {
-  border-top: 1px solid rgba(200, 116, 26, 0.06);
-}
-
-.closed-pill-name {
+.closed-pill-tooltip-row span:first-child {
   font-weight: 600;
   color: var(--text-secondary);
 }
 
-.closed-pill-hours {
+/* ─── Closed canteens text (mobile — below day bar) ─── */
+.closed-canteens-text {
+  position: fixed;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  text-align: center;
   font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+  padding: 0 20px;
+  z-index: 999;
+  pointer-events: none;
+}
+
+/* Hide desktop pill on mobile, hide mobile text on desktop */
+.closed-pill-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .closed-pill-desktop {
+    display: none;
+  }
+  .closed-pill-mobile {
+    display: block;
+  }
 }
 
 /* ─── All-closed card ─── */
@@ -1745,33 +1766,9 @@ body {
     font-size: clamp(16px, 2.4dvh, 22px);
   }
 
-  /* Closed pill mobile — fixed overlay below header */
-  .closed-pill-wrapper {
-    position: fixed;
-    top: calc(52px + env(safe-area-inset-top));
-    left: 0;
-    right: 0;
-    padding: 6px 16px;
-    z-index: 999;
-    pointer-events: none;
-  }
-
-  .closed-pill-wrapper .closed-pill,
-  .closed-pill-wrapper .closed-pill-dropdown {
-    pointer-events: auto;
-  }
-
-  .closed-pill {
-    font-size: clamp(10px, 1.3dvh, 12px);
-    padding: 5px 12px;
-  }
-
-  .closed-pill-dropdown {
-    background: rgba(252, 248, 242, 0.97);
-    border-radius: 0 0 14px 14px;
-    border: 1px solid rgba(200, 116, 26, 0.10);
-    border-top: none;
-    box-shadow: 0 4px 12px rgba(60, 30, 0, 0.06);
+  /* Closed canteens mobile text — adjust position above day bar */
+  .closed-canteens-text {
+    font-size: clamp(10px, 1.2dvh, 12px);
   }
 
   .stale-banner-icon {
