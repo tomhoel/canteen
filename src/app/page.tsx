@@ -650,12 +650,11 @@ export default function Home() {
             <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("en")}>EN</button>
           </div>
         </div>
+        {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
+        {closedCanteens.length > 0 && openCanteens.length > 0 && (
+          <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+        )}
       </header>
-
-      {/* Closed canteens banner — sits above cards, outside scroll area */}
-      {closedCanteens.length > 0 && openCanteens.length > 0 && (
-        <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
-      )}
 
       {/* Cards */}
       <main className={`cards-container${langAnim ? ` ${langAnim}` : ""}`} ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
