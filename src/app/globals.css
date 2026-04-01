@@ -441,9 +441,24 @@ body {
 }
 
 /* ─── Closed canteens pill ─── */
+/* When pill is present, switch animated wrapper to column so pill sits above cards */
+.cards-animated-wrapper.has-closed {
+  flex-direction: column;
+  align-items: center;
+}
+
+.open-cards-row {
+  display: flex;
+  justify-content: center;
+  gap: inherit;
+  width: 100%;
+  flex: 1;
+  flex-wrap: wrap;
+  align-content: center;
+}
+
 .closed-pill-wrapper {
   flex-shrink: 0;
-  flex-basis: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1551,6 +1566,14 @@ body {
     min-height: 0;
     flex: 1;
     align-items: stretch;
+  }
+
+  .open-cards-row {
+    flex-direction: column;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+    gap: clamp(6px, 1dvh, 14px);
   }
 
   /* Card layout - horizontal, grows to fill viewport */
