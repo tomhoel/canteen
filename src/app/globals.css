@@ -1766,81 +1766,9 @@ body {
     font-size: clamp(16px, 2.4dvh, 22px);
   }
 
-  /* Closed canteens mobile text — below day bar */
+  /* Closed canteens mobile text — adjust position above day bar */
   .closed-canteens-text {
-    bottom: calc(env(safe-area-inset-bottom));
-    font-size: clamp(9px, 1.1dvh, 11px);
-    padding: 4px 20px;
-    opacity: 0.7;
-  }
-
-  /* ─── Few cards: centered vertical layout on mobile ─── */
-  .few-cards .food-card {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: center;
-    align-content: center;
-    text-align: center;
-    padding: clamp(16px, 2.5dvh, 28px) 20px;
-    gap: clamp(4px, 0.6dvh, 8px);
-  }
-
-  .few-cards .card-image-wrapper {
-    position: relative;
-    width: clamp(140px, 22dvh, 220px);
-    height: clamp(140px, 22dvh, 220px);
-    margin: 0 0 clamp(4px, 0.8dvh, 10px) 0;
-    flex-shrink: 0;
-  }
-
-  .few-cards .card-content {
-    text-align: center;
-    padding: 0;
-    align-self: center;
-  }
-
-  .few-cards .card-header {
-    text-align: center;
-  }
-
-  .few-cards .canteen-name {
-    justify-content: center;
-  }
-
-  .few-cards .dish-name {
-    text-align: center;
-    justify-content: center;
-  }
-
-  .few-cards .dish-description {
-    text-align: center;
-    max-width: 280px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .few-cards .allergens-row {
-    justify-content: center;
-  }
-
-  .few-cards .dish-meta-row {
-    justify-content: center;
-  }
-
-  .few-cards .card-bottom {
-    flex-basis: auto;
-    width: 100%;
-    max-width: 300px;
-  }
-
-  .few-cards .side-dishes-title {
-    text-align: center;
-  }
-
-  .few-cards .origin-pip {
-    left: 50%;
-    transform: translateX(-50%);
-    right: auto;
+    font-size: clamp(10px, 1.2dvh, 12px);
   }
 
   .stale-banner-icon {
