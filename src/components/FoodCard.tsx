@@ -89,63 +89,6 @@ export default function FoodCard({
 
   const isVoteable = selectedDay === activeDayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
-  const hasStengtDish = mainDish?.dish.toLowerCase().includes("stengt") ||
-    items?.some((item) => item.dish.toLowerCase().includes("stengt"));
-  const isClosed = isAhead || hasStengtDish || (!mainDish && (!items || items.length === 0));
-
-  if (isClosed) {
-    return (
-      <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
-        <article
-          className="food-card no-menu"
-          style={{ animationDelay: `${cardIdx * 75}ms` }}
-        >
-          {/* Closed plate image — same layout as regular food card image */}
-          <div className="card-image-wrapper">
-            <div className="card-image-circle">
-              {imgError ? (
-                <div className="image-placeholder">
-                  {canteenName.charAt(0)}
-                </div>
-              ) : (
-                <>
-                  {!imgLoaded && <div className="image-shimmer" />}
-                  <img
-                    src={imagePath}
-                    alt={lang === "no" ? "Stengt" : "Closed"}
-                    className={`food-image${imgLoaded ? " loaded" : ""}`}
-                    loading="lazy"
-                    onLoad={() => setImgLoaded(true)}
-                    onError={() => setImgError(true)}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Text block + hours */}
-          <div className="no-menu-body">
-            <span className="no-menu-canteen-label">{canteenName}</span>
-            <h3 className="no-menu-heading">
-              {lang === "no" ? "Ingen servering" : "Not serving"}
-            </h3>
-            <p className="no-menu-sub">
-              {lang === "no" ? "Kantinen holder stengt i dag" : "The canteen is closed today"}
-            </p>
-            <div className="no-menu-hours">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>
-                {lang === "no" ? "Vanligvis åpen" : "Usually open"}{" "}
-                <strong>{data.canteen.openingHours}</strong>
-              </span>
-            </div>
-          </div>
-        </article>
-      </Wrapper3D>
-    );
-  }
 
   return (
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
