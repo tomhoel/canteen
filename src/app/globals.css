@@ -441,23 +441,11 @@ body {
 }
 
 /* ─── Closed canteens pill ─── */
-/* Closed canteens pill — fixed overlay below header, no layout impact */
+/* Closed canteens pill — inline in header on desktop */
 .closed-pill-wrapper {
-  position: fixed;
-  top: 60px;
-  left: 0;
-  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 16px 0;
-  z-index: 900;
-  pointer-events: none;
-}
-
-.closed-pill,
-.closed-pill-dropdown {
-  pointer-events: auto;
 }
 
 .closed-pill {
@@ -1737,8 +1725,9 @@ body {
 
   /* All-closed card mobile */
   .all-closed-card {
+    width: 100%;
+    max-width: 100%;
     padding: 24px 20px;
-    max-width: none;
     justify-content: center;
   }
 
@@ -1752,10 +1741,20 @@ body {
     font-size: clamp(16px, 2.4dvh, 22px);
   }
 
-  /* Closed pill mobile — adjust for fixed header height */
+  /* Closed pill mobile — fixed overlay below header */
   .closed-pill-wrapper {
+    position: fixed;
     top: calc(52px + env(safe-area-inset-top));
+    left: 0;
+    right: 0;
     padding: 6px 16px;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .closed-pill-wrapper .closed-pill,
+  .closed-pill-wrapper .closed-pill-dropdown {
+    pointer-events: auto;
   }
 
   .closed-pill {
