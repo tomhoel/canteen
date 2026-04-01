@@ -652,6 +652,11 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Closed canteens banner — sits above cards, outside scroll area */}
+      {closedCanteens.length > 0 && openCanteens.length > 0 && (
+        <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+      )}
+
       {/* Cards */}
       <main className={`cards-container${langAnim ? ` ${langAnim}` : ""}`} ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         {showSwipeHint && (
@@ -668,31 +673,24 @@ export default function Home() {
             </span>
           </>
         )}
-        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}${closedCanteens.length > 0 ? " has-closed" : ""}`}>
+        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
           {openCanteens.length === 0 ? (
             <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
           ) : (
-            <>
-              {closedCanteens.length > 0 && (
-                <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
-              )}
-              <div className="open-cards-row">
-                {openCanteens.map((data, cardIdx) => (
-                  <FoodCard
-                    key={data.canteenName}
-                    data={data}
-                    cardIdx={cardIdx}
-                    lang={lang}
-                    selectedDay={selectedDay}
-                    activeDayIndex={activeDayIndex}
-                    voteCount={votes[data.canteenName] ?? 0}
-                    maxVotes={maxVotes}
-                    onImageClick={handleImageClick}
-                    onCardClick={handleCardClick}
-                  />
-                ))}
-              </div>
-            </>
+            openCanteens.map((data, cardIdx) => (
+              <FoodCard
+                key={data.canteenName}
+                data={data}
+                cardIdx={cardIdx}
+                lang={lang}
+                selectedDay={selectedDay}
+                activeDayIndex={activeDayIndex}
+                voteCount={votes[data.canteenName] ?? 0}
+                maxVotes={maxVotes}
+                onImageClick={handleImageClick}
+                onCardClick={handleCardClick}
+              />
+            ))
           )}
         </div>
       </main>
