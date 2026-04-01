@@ -440,53 +440,124 @@ body {
   color: var(--text-secondary);
 }
 
-/* ─── No-menu / closed card — full-size creative empty state ─── */
-.food-card-3d-wrapper:has(.food-card.no-menu) {
-  opacity: 0.82;
+/* ─── Closed canteens pill ─── */
+.closed-pill-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
-.food-card.no-menu {
-  background: #fffdf8;
-  border-color: rgba(200, 116, 26, 0.12);
+.closed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200, 116, 26, 0.07);
+  border: 1px solid rgba(200, 116, 26, 0.14);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.2s var(--smooth), border-color 0.2s var(--smooth);
+}
+
+.closed-pill:hover {
+  background: rgba(200, 116, 26, 0.12);
+  border-color: rgba(200, 116, 26, 0.22);
+}
+
+.closed-pill svg {
+  color: var(--accent-orange);
+  flex-shrink: 0;
+}
+
+.closed-pill-chevron {
+  transition: transform 0.25s var(--smooth);
+}
+
+.closed-pill-chevron.open {
+  transform: rotate(180deg);
+}
+
+.closed-pill-dropdown {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s var(--smooth), padding 0.3s var(--smooth);
+  width: 100%;
+  max-width: 340px;
+  padding: 0 16px;
+}
+
+.closed-pill-dropdown.open {
+  max-height: 160px;
+  padding: 8px 16px;
+}
+
+.closed-pill-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.closed-pill-row + .closed-pill-row {
+  border-top: 1px solid rgba(200, 116, 26, 0.06);
+}
+
+.closed-pill-name {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.closed-pill-hours {
+  font-size: 11px;
+}
+
+/* ─── All-closed card ─── */
+.all-closed-card {
+  background: linear-gradient(180deg, #fffcf8 0%, var(--card-white) 40%);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 36px 32px;
   box-shadow:
-    0 1px 2px rgba(60, 30, 0, 0.03),
-    0 4px 12px rgba(60, 30, 0, 0.04),
-    0 12px 32px rgba(60, 30, 0, 0.04);
+    0 1px 2px rgba(60, 30, 0, 0.04),
+    0 4px 12px rgba(60, 30, 0, 0.05),
+    0 12px 32px rgba(60, 30, 0, 0.06);
+  border: 1px solid rgba(236, 228, 216, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  flex: 1;
+  animation: cardReveal 0.5s var(--smooth) both;
 }
 
-.food-card.no-menu .food-image.loaded {
+.all-closed-image {
+  width: 180px;
+  height: 180px;
+  margin-bottom: 8px;
+}
+
+.all-closed-image .card-image-circle {
+  border-radius: 50%;
+}
+
+.all-closed-image .food-image.loaded {
   filter: saturate(0.35) sepia(0.12) brightness(1.06)
     drop-shadow(0 8px 20px rgba(80, 40, 0, 0.12));
 }
 
-.food-card.no-menu:hover {
-  transform: translateY(-2px);
-}
-
-/* No-menu card reuses .card-image-wrapper for the generated closed-plate image */
-
-/* Centered text block below hero */
-.no-menu-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 18px 28px 10px;
-  gap: 5px;
-}
-
-.no-menu-canteen-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.4px;
-  color: var(--accent-orange);
-}
-
-.no-menu-heading {
-  font-size: clamp(17px, 4vw, 20px);
+.all-closed-heading {
+  font-size: clamp(18px, 4vw, 22px);
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.2px;
@@ -494,33 +565,51 @@ body {
   margin: 0;
 }
 
-.no-menu-sub {
-  font-size: 12.5px;
+.all-closed-sub {
+  font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.45;
   margin: 0;
 }
 
-/* Hours pill — inside body, pushed to bottom on desktop */
-.no-menu-hours {
-  margin-top: auto;
-  display: inline-flex;
+.all-closed-hours {
+  width: 100%;
+  max-width: 280px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.all-closed-row {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 6px;
-  background: rgba(200, 116, 26, 0.08);
-  border: 1px solid rgba(200, 116, 26, 0.18);
-  border-radius: 20px;
-  padding: 6px 14px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(200, 116, 26, 0.05);
+  border: 1px solid rgba(200, 116, 26, 0.08);
+}
+
+.all-closed-name {
   font-size: 12px;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
-.no-menu-hours svg {
+.all-closed-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.all-closed-time svg {
   color: var(--accent-orange);
   flex-shrink: 0;
 }
 
-.no-menu-hours strong {
+.all-closed-time strong {
   font-weight: 600;
   color: var(--accent-orange);
 }
@@ -1635,61 +1724,27 @@ body {
     pointer-events: none;
   }
 
-  /* No-menu card — same layout as regular food cards on mobile */
-  .food-card-3d-wrapper:has(.food-card.no-menu) {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    overflow: visible;
-  }
-
-  .food-card.no-menu {
-    flex: 1;
-    padding: clamp(8px, 1.2dvh, 14px) 16px;
-    overflow: visible;
-    align-content: center;
-    background: linear-gradient(135deg, #fffdf8 0%, #fdf5eb 100%);
-    border-color: rgba(200, 116, 26, 0.10);
-    box-shadow:
-      0 1px 3px rgba(60, 30, 0, 0.03),
-      0 4px 14px rgba(60, 30, 0, 0.05);
-  }
-
-  .no-menu-body {
-    flex: 1;
-    text-align: left;
-    align-items: flex-start;
+  /* All-closed card mobile */
+  .all-closed-card {
+    padding: 24px 20px;
+    max-width: none;
     justify-content: center;
-    padding: 0 2px 0 12px;
-    min-width: 0;
-    align-self: center;
-    gap: clamp(2px, 0.3dvh, 4px);
   }
 
-  .no-menu-canteen-label {
-    font-size: clamp(9px, 1.2dvh, 12px);
-    letter-spacing: 1px;
-    margin-bottom: 1px;
+  .all-closed-image {
+    width: clamp(100px, 16dvh, 160px);
+    height: clamp(100px, 16dvh, 160px);
+    margin-bottom: 4px;
   }
 
-  .no-menu-heading {
-    font-size: clamp(13px, 1.9dvh, 18px);
-    font-weight: 700;
-    line-height: 1.25;
-    color: var(--text-primary);
+  .all-closed-heading {
+    font-size: clamp(16px, 2.4dvh, 22px);
   }
 
-  .no-menu-sub {
-    font-size: clamp(10px, 1.3dvh, 13px);
-    line-height: 1.4;
-    color: var(--text-muted);
-  }
-
-  .no-menu-hours {
-    margin-top: clamp(4px, 0.6dvh, 8px);
-    font-size: clamp(10px, 1.3dvh, 13px);
-    padding: clamp(3px, 0.4dvh, 5px) 10px;
-    border-radius: 14px;
+  /* Closed pill mobile */
+  .closed-pill {
+    font-size: clamp(10px, 1.3dvh, 12px);
+    padding: 5px 12px;
   }
 
   .stale-banner-icon {

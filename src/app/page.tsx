@@ -13,6 +13,9 @@ import DealsView from "@/components/DealsView";
 import MenyView from "@/components/MenyView";
 import LeaderboardModal from "@/components/LeaderboardModal";
 import WeekOverview from "@/components/WeekOverview";
+import ClosedCanteensPill from "@/components/ClosedCanteensPill";
+import AllClosedCard from "@/components/AllClosedCard";
+import { isCanteenClosed } from "@/lib/canteen-utils";
 
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
@@ -531,12 +534,14 @@ export default function Home() {
   }, [sortedCanteens, lang, dishOrigins, dishDescriptions, currentWeek]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
+  const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
+  const closedCanteens = useMemo(() => canteenDayData.filter(c => isCanteenClosed(c)), [canteenDayData]);
 
-  // #6 — Lightbox image click handler using canteen index
+  // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
-    const idx = canteenDayData.findIndex(c => c.canteenName === data.canteenName);
+    const idx = openCanteens.findIndex(c => c.canteenName === data.canteenName);
     setLightboxIndex(idx >= 0 ? idx : 0);
-  }, [canteenDayData]);
+  }, [openCanteens]);
 
   const handleCardClick = useCallback((canteenName: string) => {
     const data = canteenDayData.find(c => c.canteenName === canteenName);
@@ -664,20 +669,29 @@ export default function Home() {
           </>
         )}
         <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
-          {canteenDayData.map((data, cardIdx) => (
-            <FoodCard
-              key={data.canteenName}
-              data={data}
-              cardIdx={cardIdx}
-              lang={lang}
-              selectedDay={selectedDay}
-              activeDayIndex={activeDayIndex}
-              voteCount={votes[data.canteenName] ?? 0}
-              maxVotes={maxVotes}
-              onImageClick={handleImageClick}
-              onCardClick={handleCardClick}
-            />
-          ))}
+          {openCanteens.length === 0 ? (
+            <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
+          ) : (
+            <>
+              {closedCanteens.length > 0 && (
+                <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+              )}
+              {openCanteens.map((data, cardIdx) => (
+                <FoodCard
+                  key={data.canteenName}
+                  data={data}
+                  cardIdx={cardIdx}
+                  lang={lang}
+                  selectedDay={selectedDay}
+                  activeDayIndex={activeDayIndex}
+                  voteCount={votes[data.canteenName] ?? 0}
+                  maxVotes={maxVotes}
+                  onImageClick={handleImageClick}
+                  onCardClick={handleCardClick}
+                />
+              ))}
+            </>
+          )}
         </div>
       </main>
 
@@ -792,7 +806,7 @@ export default function Home() {
         canteenName={voteModal.canteenName}
         hasVoted={hasVoted}
         votedCanteen={votedCanteen}
-        canteenNames={canteenDayData.filter(c => !c.isOutdated && !c.isAhead).map(c => c.canteenName)}
+        canteenNames={openCanteens.filter(c => !c.isOutdated).map(c => c.canteenName)}
         votes={votes}
         maxVotes={maxVotes}
         lang={lang}
@@ -951,7 +965,7 @@ export default function Home() {
       <Lightbox
         isOpen={lightboxIndex >= 0}
         currentIndex={lightboxIndex}
-        canteenDayData={canteenDayData}
+        canteenDayData={openCanteens}
         onClose={() => setLightboxIndex(-1)}
         onNavigate={setLightboxIndex}
       />

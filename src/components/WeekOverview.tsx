@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { CanteenDayItem } from "@/lib/types";
+import { isCanteenClosed } from "@/lib/canteen-utils";
 
 const DAYS_ABBR_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
 const DAYS_ABBR_EN = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -17,9 +18,7 @@ interface WeekOverviewProps {
   onClose: () => void;
 }
 
-function isClosed(item: CanteenDayItem): boolean {
-  return !item.mainDish && (!item.items || item.items.length === 0);
-}
+const isClosed = isCanteenClosed;
 
 export default function WeekOverview({
   allDaysData,
