@@ -454,6 +454,11 @@ body {
     0 12px 32px rgba(60, 30, 0, 0.04);
 }
 
+.food-card.no-menu .food-image.loaded {
+  filter: saturate(0.35) sepia(0.12) brightness(1.06)
+    drop-shadow(0 8px 20px rgba(80, 40, 0, 0.12));
+}
+
 .food-card.no-menu:hover {
   transform: translateY(-2px);
 }
