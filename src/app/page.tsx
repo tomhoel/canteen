@@ -676,7 +676,13 @@ export default function Home() {
           {openCanteens.length === 0 ? (
             <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
           ) : (
-            openCanteens.map((data, cardIdx) => (
+            <>
+            {closedCanteens.length > 0 && (
+              <div className="closed-pill-mobile">
+                <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+              </div>
+            )}
+            {openCanteens.map((data, cardIdx) => (
               <FoodCard
                 key={data.canteenName}
                 data={data}
@@ -689,7 +695,8 @@ export default function Home() {
                 onImageClick={handleImageClick}
                 onCardClick={handleCardClick}
               />
-            ))
+            ))}
+            </>
           )}
         </div>
       </main>
