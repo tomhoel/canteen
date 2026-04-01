@@ -672,7 +672,7 @@ export default function Home() {
             </span>
           </>
         )}
-        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}${openCanteens.length > 0 && openCanteens.length < 3 ? " few-cards" : ""}`}>
+        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
           {openCanteens.length === 0 ? (
             <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
           ) : (
