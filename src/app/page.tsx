@@ -694,7 +694,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* #4 — Day Selector with ahead-canteen awareness */}
+      {/* #4 — Day Selector + closed canteens text below */}
       <DaySelector
         fullDayLabels={fullDayLabels}
         dayLabelsData={dayLabelsData}
