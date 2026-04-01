@@ -668,7 +668,7 @@ export default function Home() {
             </span>
           </>
         )}
-        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
+        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}${closedCanteens.length > 0 ? " has-closed" : ""}`}>
           {openCanteens.length === 0 ? (
             <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
           ) : (
@@ -676,20 +676,22 @@ export default function Home() {
               {closedCanteens.length > 0 && (
                 <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
               )}
-              {openCanteens.map((data, cardIdx) => (
-                <FoodCard
-                  key={data.canteenName}
-                  data={data}
-                  cardIdx={cardIdx}
-                  lang={lang}
-                  selectedDay={selectedDay}
-                  activeDayIndex={activeDayIndex}
-                  voteCount={votes[data.canteenName] ?? 0}
-                  maxVotes={maxVotes}
-                  onImageClick={handleImageClick}
-                  onCardClick={handleCardClick}
-                />
-              ))}
+              <div className="open-cards-row">
+                {openCanteens.map((data, cardIdx) => (
+                  <FoodCard
+                    key={data.canteenName}
+                    data={data}
+                    cardIdx={cardIdx}
+                    lang={lang}
+                    selectedDay={selectedDay}
+                    activeDayIndex={activeDayIndex}
+                    voteCount={votes[data.canteenName] ?? 0}
+                    maxVotes={maxVotes}
+                    onImageClick={handleImageClick}
+                    onCardClick={handleCardClick}
+                  />
+                ))}
+              </div>
             </>
           )}
         </div>
