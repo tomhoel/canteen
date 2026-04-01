@@ -1,272 +1,6 @@
 {
-  "scrapedAt": "2026-03-31T22:52:28.692Z",
+  "scrapedAt": "2026-04-01T07:14:32.868Z",
   "canteens": {
-    "Flow": {
-      "week": "BYGG / BUILDING B - UKE/WEEK 14",
-      "openingHours": "11:00 - 13:00",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "Lammebog med plommesaus, serveres med bakte poteter og erter ved siden",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Italiensk vegetar gryte",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Gul suppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "Lam leg with plum sauce with baked potato and peas",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Italian vegetarian casserole",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Yellow soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": [
-              {
-                "dish": "Kyllingoverlår tanddoori med fullkornris",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetar vårrull med fullkorn ris",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Fiske suppe",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "TUESDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": [
-              {
-                "dish": "Sennep honning bakt svinekam med poteter og grønnsaker",
-                "allergens": [
-                  {
-                    "id": "8",
-                    "name": "Mustard"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetar vårrull",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Kyllingsuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": [
-              {
-                "dish": "Mustard & honney baked pork loin with potato and vegetables",
-                "allergens": [
-                  {
-                    "id": "8",
-                    "name": "Mustard"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarian spring rolls",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Chicken soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": [
-              {
-                "dish": "Stengt",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Closed",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": [
-              {
-                "dish": "Stengt",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Closed",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": [
-              {
-                "dish": "Stengt",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Closed",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": [
-              {
-                "dish": "Stengt",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Closed",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          }
-        }
-      ]
-    },
     "Eat the street": {
       "week": "UKE/WEEK 15",
       "openingHours": "11:00 - 13:30",
@@ -672,6 +406,272 @@
                     "name": "Milk"
                   }
                 ],
+                "isMain": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Flow": {
+      "week": "BYGG / BUILDING B - UKE/WEEK 14",
+      "openingHours": "11:00 - 13:00",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "Lammebog med plommesaus, serveres med bakte poteter og erter ved siden",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Italiensk vegetar gryte",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Gul suppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "Lam leg with plum sauce with baked potato and peas",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Italian vegetarian casserole",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Yellow soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": [
+              {
+                "dish": "Kyllingoverlår tanddoori med fullkornris",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetar vårrull med fullkorn ris",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Fiske suppe",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "TUESDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": [
+              {
+                "dish": "Sennep honning bakt svinekam med poteter og grønnsaker",
+                "allergens": [
+                  {
+                    "id": "8",
+                    "name": "Mustard"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetar vårrull",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Kyllingsuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": [
+              {
+                "dish": "Mustard & honney baked pork loin with potato and vegetables",
+                "allergens": [
+                  {
+                    "id": "8",
+                    "name": "Mustard"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetarian spring rolls",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Chicken soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": [
+              {
+                "dish": "Stengt",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Closed",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": [
+              {
+                "dish": "Stengt",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Closed",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": [
+              {
+                "dish": "Stengt",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Closed",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": [
+              {
+                "dish": "Stengt",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Closed",
+                "allergens": [],
                 "isMain": false
               }
             ]
