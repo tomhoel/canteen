@@ -314,5 +314,21 @@
   "Kyllingoverlår tanddoori med fullkornris": {
     "country": "India",
     "code": "in"
+  },
+  "Kyllingoverlår med karri saus og grønnris": {
+    "country": "Norway",
+    "code": "no"
+  },
+  "Spicy salmon on lemon potato, ruccula and aivar dressing": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Ppork stew with apple, rosmarin, mustard and potato": {
+    "country": "Germany",
+    "code": "de"
+  },
+  "Quesadilla con carne mechada": {
+    "country": "Mexico",
+    "code": "mx"
   }
 }
