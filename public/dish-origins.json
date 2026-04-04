@@ -330,5 +330,21 @@
   "Quesadilla con carne mechada": {
     "country": "Mexico",
     "code": "mx"
+  },
+  "Grilled chicken with Bbq homemade coleslaw and rice": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Grilled chicken wings with Bbq coleslaw og ris": {
+    "country": "United States",
+    "code": "us"
+  },
+  "THE MEDITERRANEAN SEA": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Swedish meat gratin with garlic potatoes and mozzarella": {
+    "country": "Sweden",
+    "code": "se"
   }
 }
