@@ -342,5 +342,9 @@
   "Swedish meat gratin with garlic potatoes and mozzarella": {
     "country": "Sweden",
     "code": "se"
+  },
+  "Stracotta-Italian Long cooked meat stew with mashed potatoes": {
+    "country": "Italy",
+    "code": "it"
   }
 }

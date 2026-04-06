@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-06T11:52:56.048Z",
+  "scrapedAt": "2026-04-06T13:57:36.389Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 15",
@@ -464,11 +464,6 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "MIDDELHAVET",
-                "allergens": [],
-                "isMain": true
-              },
-              {
                 "dish": "Stracotta-Italiensk langtidskokt kjøttgryte med potetmos",
                 "allergens": [
                   {
@@ -476,7 +471,7 @@
                     "name": "Milk"
                   }
                 ],
-                "isMain": false
+                "isMain": true
               },
               {
                 "dish": "Vegan Stracotta med potetmos",
@@ -512,11 +507,6 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "THE MEDITERRANEAN SEA",
-                "allergens": [],
-                "isMain": true
-              },
-              {
                 "dish": "Stracotta-Italian Long cooked meat stew with mashed potatoes",
                 "allergens": [
                   {
@@ -524,7 +514,7 @@
                     "name": "Milk"
                   }
                 ],
-                "isMain": false
+                "isMain": true
               },
               {
                 "dish": "Vegetarian Stracotta with potatoes",
