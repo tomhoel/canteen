@@ -82,8 +82,27 @@ function isCanteenAhead(canteen) {
     return weekNum !== null && weekNum > getCurrentISOWeek();
 }
 
+/**
+ * Returns the ISO week number for an arbitrary date string.
+ */
+function getISOWeekFromDate(dateStr) {
+    const d = new Date(dateStr);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
 function findChanges(oldMenu, newMenu) {
     const changes = []; // { canteenName, day, oldDish, newDish }
+
+    // Detect week-boundary crossing: old menu scraped in a previous ISO week.
+    // When canteens publish next week's menu early ("ahead"), closed-plate images
+    // are placed. Once the actual week arrives we must regenerate real food images
+    // even if the dish text hasn't changed.
+    const oldScrapedWeek = oldMenu?.scrapedAt ? getISOWeekFromDate(oldMenu.scrapedAt) : null;
+    const currentWeek = getCurrentISOWeek();
+    const crossedWeekBoundary = oldScrapedWeek !== null && oldScrapedWeek < currentWeek;
 
     for (const [canteenName, newCanteen] of Object.entries(newMenu.canteens)) {
         // Skip ahead-of-week canteens — they're effectively closed, Step 4b handles images
@@ -112,6 +131,11 @@ function findChanges(oldMenu, newMenu) {
         const newWeek = newCanteen.week || '';
         const weekChanged = oldWeek !== newWeek;
 
+        // Force regeneration if we crossed a week boundary and this canteen's
+        // menu is for the current week (was likely "ahead" before, now current)
+        const canteenWeek = parseMenuWeekNumber(newCanteen.week);
+        const forceRegenerate = crossedWeekBoundary && canteenWeek === currentWeek;
+
         for (const day of DAY_ORDER) {
             const oldDish = oldDishes[day];
             const newDish = newDishes[day];
@@ -121,13 +145,17 @@ function findChanges(oldMenu, newMenu) {
             // Skip closed-keyword dishes — Step 4b handles those
             if (isDishClosed(newDish)) continue;
 
-            // Regenerate if: dish changed, week changed, or image doesn't exist
+            // Regenerate if: dish changed, week changed, image missing, or week transition
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
             const imagePath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
             const imageExists = fs.existsSync(imagePath);
 
-            if (oldDish !== newDish || weekChanged || !imageExists) {
-                changes.push({ canteenName, day, oldDish, newDish, reason: !imageExists ? 'missing image' : weekChanged ? `week: ${oldWeek} → ${newWeek}` : 'dish changed' });
+            if (oldDish !== newDish || weekChanged || !imageExists || forceRegenerate) {
+                const reason = forceRegenerate ? 'week transition (replacing closed plate)'
+                    : !imageExists ? 'missing image'
+                    : weekChanged ? `week: ${oldWeek} → ${newWeek}`
+                    : 'dish changed';
+                changes.push({ canteenName, day, oldDish, newDish, reason });
             }
         }
     }
@@ -302,91 +330,6 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
         return false;
     } catch (error) {
         console.error(`  ❌ Generation failed: ${error.message}`);
-        return false;
-    }
-}
-
-/**
- * Generate a "closed / not serving" plate image for a canteen with no menu.
- * Uses the same plate reference and Gemini pipeline as regular food images,
- * but prompts for an empty plate with creative table-setting elements.
- */
-async function generateClosedPlateImage(canteenName, day) {
-    const { GoogleGenAI } = require('@google/genai');
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-    const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
-
-    const promptText = `Professional overhead food photography of an EMPTY plate — the canteen is closed today.
-
-STRICT TECHNICAL SPECIFICATIONS:
-Camera & Composition:
-- Angle: Overhead shot, camera at 90° directly above plate
-- Framing: Plate perfectly centered, complete rim visible with margin
-- Format: Square 1:1 ratio
-
-Plate (CRITICAL - MUST FOLLOW EXACTLY):
-${hasMasterPlate ? '- REFERENCE IMAGE PROVIDED: Use the EXACT same plate from the reference image — identical shape, color, texture, and rim style. Do not deviate in any way.' : '- Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)'}
-- Plate color: Warm sandy beige (#E8D5B7) — NOT white, NOT grey
-- Plate MUST have a clearly visible raised rim/edge all the way around
-- EVERY image must show the COMPLETE plate with full rim visible — never cropped
-
-Scene — "Canteen is closed" (CREATIVE):
-- The plate is EMPTY — absolutely NO food on it
-- Place a neatly folded linen napkin on the plate (warm cream or natural linen color)
-- A single fork and knife resting on the plate in a casual "resting" position
-- The arrangement should feel warm, intentional, and inviting — like a place setting awaiting tomorrow
-- Optionally: a tiny sprig of dried herb or a small decorative element for warmth
-- The mood is peaceful and clean, not sad or abandoned
-
-Background (CRITICAL):
-- Background: Solid DARK GREY (#707070) seamless studio backdrop
-- Must be clearly DARKER than the beige plate (high contrast between plate edge and background)
-- MUST be perfectly uniform grey — no gradients, no textures
-- ABSOLUTELY NO SHADOWS anywhere
-
-Strict Exclusions:
-- NO food on the plate
-- NO white plates — use warm beige/sandy stoneware ONLY
-- NO light grey backgrounds — must be dark grey (#707070)
-- NO SHADOWS of any kind
-- NO table surfaces, wood, marble, or cloth
-- NO hands, people, or text
-- NO angled views — strictly 90° overhead only
-
-Style: Minimalist Scandinavian food photography, flat-lit product shot, clean and professional.`;
-
-    const parts = [{ text: promptText }];
-    if (hasMasterPlate) {
-        const plateData = fs.readFileSync(MASTER_PLATE_REF_PATH).toString('base64');
-        parts.push({ inlineData: { mimeType: 'image/png', data: plateData } });
-        console.log('  🎨 Using master plate reference for closed plate');
-    }
-
-    try {
-        const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-3.1-flash-image-preview',
-            contents: { parts },
-            config: { responseModalities: ['Text', 'Image'], imageConfig: { imageSize: '512px' } },
-        }), `closed-plate: ${canteenName}/${day}`);
-
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-                const sharp = require('sharp');
-                const raw = Buffer.from(part.inlineData.data, 'base64');
-                const pngBuffer = await sharp(raw).png().toBuffer();
-                const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
-                const dayDir = path.join(IMAGES_DIR, day);
-                if (!fs.existsSync(dayDir)) fs.mkdirSync(dayDir, { recursive: true });
-                fs.writeFileSync(path.join(dayDir, `${slug}.png`), pngBuffer);
-                return true;
-            }
-        }
-        return false;
-    } catch (error) {
-        console.error(`  ❌ Closed plate generation failed: ${error.message}`);
         return false;
     }
 }
@@ -722,11 +665,13 @@ async function main() {
     }
 
     // Step 2e: Archive previous week if the week number changed
+    // Compare parsed week numbers (not raw strings) to avoid false triggers
+    // from unstable Object.entries() ordering across canteens
     if (oldMenu) {
-        const oldWeekStr = Object.values(oldMenu.canteens)[0]?.week || '';
-        const newWeekStr = Object.values(newMenu.canteens)[0]?.week || '';
-        if (oldWeekStr !== newWeekStr) {
-            console.log(`\n📦 Week changed (${oldWeekStr} → ${newWeekStr}) — archiving previous week...`);
+        const oldWeekNum = parseMenuWeekNumber(Object.values(oldMenu.canteens)[0]?.week);
+        const newWeekNum = parseMenuWeekNumber(Object.values(newMenu.canteens)[0]?.week);
+        if (oldWeekNum !== null && newWeekNum !== null && oldWeekNum !== newWeekNum) {
+            console.log(`\n📦 Week changed (${oldWeekNum} → ${newWeekNum}) — archiving previous week...`);
             await archiveCurrentWeek(oldMenu);
         }
     }
@@ -797,46 +742,56 @@ async function main() {
         console.log('═'.repeat(60));
     }
 
-    // Step 4b: Generate "closed plate" images for canteens/days with no menu
+    // Step 4b: Place static closed-plate images for canteens/days with no menu.
+    // Uses pre-generated static assets (no Gemini API calls).
+    const CLOSED_PLATES_DIR = path.join(__dirname, 'public', 'images', 'closed-plates');
+    const CLOSED_PLATE_COUNT = 3;
     console.log('\n🍽️  Checking for closed canteen days...');
-    let closedGenerated = 0, closedSkipped = 0;
+    let closedPlaced = 0, closedSkipped = 0;
+    const canteenNames = Object.keys(newMenu.canteens);
     for (const [canteenName, canteen] of Object.entries(newMenu.canteens)) {
         for (const day of DAY_ORDER) {
             const entry = canteen.menu.find(d => d.day.toLowerCase() === day);
             const items = getDayItems(entry);
             const main = items.find(i => i.isMain);
 
-            // Check if canteen is actually serving real food this week
-            const canteenIsAhead = isCanteenAhead(canteen);
-            if (!canteenIsAhead && main && !isDishClosed(main.dish)) continue; // has real food this week — skip
+            // Skip canteens with real food — even if "ahead" (Change 2)
+            if (main && !isDishClosed(main.dish)) continue;
 
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
             const nobgPath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
 
-            // Only generate if the no-bg image is missing (avoids regenerating every run)
+            // Only place if the no-bg image is missing (avoids overwriting every run)
             if (fs.existsSync(nobgPath)) {
                 closedSkipped++;
                 continue;
             }
 
-            console.log(`  🍽️  ${canteenName} / ${day}: closed — generating empty plate...`);
-            const ok = await generateClosedPlateImage(canteenName, day);
-            if (ok) {
-                const bgOk = await removeBgSingle(canteenName, day);
-                if (bgOk) {
-                    console.log('  ✅ Closed plate generated + processed');
-                    closedGenerated++;
-                } else {
-                    console.log('  ❌ Background removal failed');
-                }
-            } else {
-                console.log('  ❌ Closed plate generation failed');
+            // Pick a static closed plate (rotate by canteen index)
+            const canteenIdx = canteenNames.indexOf(canteenName);
+            const plateNum = (canteenIdx % CLOSED_PLATE_COUNT) + 1;
+            const staticSrc = path.join(CLOSED_PLATES_DIR, `closed-plate-${plateNum}.png`);
+
+            if (!fs.existsSync(staticSrc)) {
+                console.log(`  ⚠️  Static closed plate not found: closed-plate-${plateNum}.png — skipping`);
+                continue;
             }
-            await new Promise(r => setTimeout(r, 1500));
+
+            console.log(`  🍽️  ${canteenName} / ${day}: closed — placing static plate ${plateNum}`);
+            const nobgDir = path.join(IMAGES_NOBG_DIR, day);
+            if (!fs.existsSync(nobgDir)) fs.mkdirSync(nobgDir, { recursive: true });
+            fs.copyFileSync(staticSrc, nobgPath);
+
+            // Also place in images/ dir for high-res lightbox
+            const imgDir = path.join(IMAGES_DIR, day);
+            if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+            fs.copyFileSync(staticSrc, path.join(imgDir, `${slug}.png`));
+
+            closedPlaced++;
         }
     }
-    if (closedGenerated > 0 || closedSkipped > 0) {
-        console.log(`  📊 Closed plates: ${closedGenerated} generated, ${closedSkipped} already exist`);
+    if (closedPlaced > 0 || closedSkipped > 0) {
+        console.log(`  📊 Closed plates: ${closedPlaced} placed (static), ${closedSkipped} already exist`);
     } else {
         console.log('  ✓ No closed canteen days found');
     }
