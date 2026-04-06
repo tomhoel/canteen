@@ -88,6 +88,20 @@ function shouldMerge(prevLine, currentLine) {
     return endsWithContinuation || (startsWithLowercase && isShortLine);
 }
 
+/**
+ * Detect theme/category headers that aren't actual dishes.
+ * e.g. "MIDDELHAVET", "THE MEDITERRANEAN SEA", "ASIAN STREET FOOD"
+ * These are all-caps, short, and have no allergen indicators.
+ */
+function isLikelyThemeHeader(rawText) {
+    const cleaned = rawText.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+    if (!cleaned) return false;
+    const isAllCaps = cleaned === cleaned.toUpperCase() && /[A-Z]/.test(cleaned);
+    const isShort = cleaned.split(/\s+/).length <= 5;
+    const hasNoNumbers = !/\d/.test(rawText);
+    return isAllCaps && isShort && hasNoNumbers;
+}
+
 // ─── Merge continuation lines ───
 // e.g. "Fullkorn pasta Bolognese med" + "parmesan 1,3,4" → "Fullkorn pasta Bolognese med parmesan 1,3,4"
 function mergeItems(rawItems) {
@@ -149,11 +163,12 @@ async function scrapeCanteen(url) {
 
         const lang = (sec.header === 'MANDAG' || sec.header === 'TIRSDAG' || sec.header === 'ONSDAG' || sec.header === 'TORSDAG' || sec.header === 'FREDAG') ? 'no' : 'en';
 
-        // Merge continuation lines before parsing
+        // Merge continuation lines, then filter out theme headers before parsing
         const mergedItems = mergeItems(sec.items);
+        const dishItems = mergedItems.filter(item => !isLikelyThemeHeader(item));
         groupedMenu[dayKey][lang] = {
             label: sec.header,
-            items: mergedItems.map((item, idx) => parseItem(item, idx === 0))
+            items: dishItems.map((item, idx) => parseItem(item, idx === 0))
         };
     });
 

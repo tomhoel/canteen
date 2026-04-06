@@ -461,57 +461,46 @@ async function removeBgSingle(canteenName, day) {
 }
 
 /**
- * Detect the country of origin for a dish using Gemini text generation.
- * Returns { country, code } or null on failure.
+ * Analyze a dish in a single API call: detect origin, generate description,
+ * and validate that it's a real dish (not a theme/category header).
+ * Merges what were previously two separate API calls into one.
+ * Returns { origin: {country, code}, description: {en, no} } or null on failure.
  */
-async function detectDishOrigin(dishName) {
+async function analyzeDish(dishName) {
     const { GoogleGenAI } = require('@google/genai');
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) return null;
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-    const promptText = `You are a food history expert. Identify the single country this dish most likely originated from. Always provide a best guess — never refuse, even for generic dishes. Use ingredients, cooking style, or cultural context as clues. If truly uncertain, pick the most plausible country. Dish: "${dishName}". Respond ONLY with raw JSON, no explanation: {"country":"Italy","code":"it"} where "code" is the ISO 3166-1 alpha-2 country code in lowercase.`;
+    const promptText = `Analyze this dish: "${dishName}"
+
+Do ALL of the following in one response:
+
+1. ORIGIN: Identify the single country this dish most likely originated from. Always provide a best guess — never refuse. Use ingredients, cooking style, or cultural context as clues.
+
+2. DESCRIPTION: Write a single short appetizing description (max 20 words). Be warm and inviting, mention a key flavor or texture. Provide in both English and Norwegian.
+
+3. VALIDATION: Is this a real dish name, or is it a category/theme header (like "THE MEDITERRANEAN SEA", "ASIAN STREET FOOD", "COMFORT FOOD")? If it's NOT a real dish, set isValidDish to false.
+
+Respond ONLY with raw JSON:
+{"origin":{"country":"Italy","code":"it"},"description":{"en":"English description","no":"Norwegian description"},"isValidDish":true}
+
+"code" must be an ISO 3166-1 alpha-2 country code in lowercase.`;
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
-        }), `origin: ${dishName}`);
-        const text = response.candidates[0].content.parts[0].text;
-        const parsed = JSON.parse(text);
-        if (parsed.country && parsed.code) return parsed;
-        return null;
-    } catch (error) {
-        console.error(`  ❌ Origin detection failed for "${dishName}": ${error.message}`);
-        return null;
-    }
-}
-
-/**
- * Generate a short, appetizing one-line description of a dish in both EN and NO using Gemini.
- * Returns { en: "...", no: "..." } or null on failure.
- */
-async function generateDishDescription(dishName) {
-    const { GoogleGenAI } = require('@google/genai');
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) return null;
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-    const promptText = `Write a single short appetizing description (max 20 words) for this dish: "${dishName}". Be warm and inviting, mention a key flavor or texture. Provide it in both English and Norwegian. Respond ONLY with raw JSON: {"en":"English description","no":"Norwegian description"}`;
-
-    try {
-        const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: { parts: [{ text: promptText }] },
-            config: { responseMimeType: 'application/json' },
-        }), `description: ${dishName}`);
+        }), `analyze: ${dishName}`);
         const text = response.candidates[0].content.parts[0].text.trim();
         const parsed = JSON.parse(text);
-        if (parsed.en && parsed.no) return parsed;
+        if (parsed.origin?.country && parsed.origin?.code && parsed.description?.en && parsed.description?.no) {
+            return parsed;
+        }
         return null;
     } catch (error) {
-        console.error(`  ❌ Description generation failed for "${dishName}": ${error.message}`);
+        console.error(`  ❌ Dish analysis failed for "${dishName}": ${error.message}`);
         return null;
     }
 }
@@ -796,8 +785,9 @@ async function main() {
         console.log('  ✓ No closed canteen days found');
     }
 
-    // Step 5: Detect origins for all dishes in the new menu
-    console.log('\n🌍 Checking dish origins...');
+    // Step 5: Analyze all dishes — origin + description in a single API call per dish.
+    // Previously this was two separate loops (2 calls per new dish), now merged into one.
+    console.log('\n🔍 Analyzing dishes (origin + description)...');
     const allDishNames = new Set();
     for (const canteen of Object.values(newMenu.canteens)) {
         for (const dayEntry of canteen.menu) {
@@ -807,66 +797,45 @@ async function main() {
         }
     }
 
-    let originsUpdated = false;
-    let originsGenerated = 0, originsFailed = 0;
+    let originsUpdated = false, descriptionsUpdated = false;
+    let analyzed = 0, analysisFailed = 0;
     for (const dishName of allDishNames) {
-        if (origins[dishName]) {
-            console.log(`  ✓ cached: ${dishName}`);
+        const hasOrigin = !!origins[dishName];
+        const hasDescription = !!descriptions[dishName];
+        if (hasOrigin && hasDescription) {
+            console.log(`  ✓ cached: ${dishName.substring(0, 55)}`);
             continue;
         }
-        const result = await detectDishOrigin(dishName);
+        const result = await analyzeDish(dishName);
         if (result) {
-            origins[dishName] = result;
-            originsUpdated = true;
-            originsGenerated++;
-            console.log(`  🌍 ${result.country} (${result.code}) — ${dishName}`);
+            if (result.isValidDish === false) {
+                console.log(`  ⚠️  "${dishName}" flagged as theme header by AI — skipping`);
+                continue;
+            }
+            if (!hasOrigin) {
+                origins[dishName] = result.origin;
+                originsUpdated = true;
+            }
+            if (!hasDescription) {
+                descriptions[dishName] = result.description;
+                descriptionsUpdated = true;
+            }
+            analyzed++;
+            console.log(`  🌍 ${result.origin.country} — "${result.description.en.substring(0, 50)}" — ${dishName.substring(0, 40)}`);
         } else {
-            originsFailed++;
+            analysisFailed++;
             console.log(`  ✗ failed: ${dishName}`);
         }
         await new Promise(r => setTimeout(r, 500));
     }
 
-    if (originsUpdated) {
-        fs.writeFileSync(ORIGINS_PATH, JSON.stringify(origins, null, 2));
-        console.log('  💾 Origins saved');
-    }
-    if (originsGenerated > 0 || originsFailed > 0) {
-        console.log(`  📊 Origins: ${originsGenerated} generated, ${originsFailed} failed, ${allDishNames.size - originsGenerated - originsFailed} cached`);
+    if (originsUpdated) fs.writeFileSync(ORIGINS_PATH, JSON.stringify(origins, null, 2));
+    if (descriptionsUpdated) fs.writeFileSync(DESCRIPTIONS_PATH, JSON.stringify(descriptions, null, 2));
+    if (originsUpdated || descriptionsUpdated) console.log('  💾 Saved');
+    if (analyzed > 0 || analysisFailed > 0) {
+        console.log(`  📊 Analyzed: ${analyzed} new, ${analysisFailed} failed, ${allDishNames.size - analyzed - analysisFailed} cached`);
     } else {
-        console.log('  ✓ All origins already cached');
-    }
-
-    // Step 6: Generate short descriptions for all dishes
-    console.log('\n📝 Checking dish descriptions...');
-    let descriptionsUpdated = false;
-    let descsGenerated = 0, descsFailed = 0;
-    for (const dishName of allDishNames) {
-        if (descriptions[dishName]) {
-            console.log(`  ✓ cached: ${dishName.substring(0, 50)}`);
-            continue;
-        }
-        const desc = await generateDishDescription(dishName);
-        if (desc) {
-            descriptions[dishName] = desc;
-            descriptionsUpdated = true;
-            descsGenerated++;
-            console.log(`  📝 "${desc.en.substring(0, 60)}" — ${dishName.substring(0, 40)}`);
-        } else {
-            descsFailed++;
-            console.log(`  ✗ failed: ${dishName}`);
-        }
-        await new Promise(r => setTimeout(r, 500));
-    }
-
-    if (descriptionsUpdated) {
-        fs.writeFileSync(DESCRIPTIONS_PATH, JSON.stringify(descriptions, null, 2));
-        console.log('  💾 Descriptions saved');
-    }
-    if (descsGenerated > 0 || descsFailed > 0) {
-        console.log(`  📊 Descriptions: ${descsGenerated} generated, ${descsFailed} failed, ${allDishNames.size - descsGenerated - descsFailed} cached`);
-    } else {
-        console.log('  ✓ All descriptions already cached');
+        console.log('  ✓ All dishes already cached');
     }
 
     // Final summary
@@ -875,8 +844,8 @@ async function main() {
     console.log('═'.repeat(60));
     console.log(`   Canteens: ${Object.keys(newMenu.canteens).length}`);
     console.log(`   Dishes:   ${allDishNames.size}`);
-    if (originsFailed > 0 || descsFailed > 0) {
-        console.log(`   ⚠️  Failures: ${originsFailed} origins, ${descsFailed} descriptions`);
+    if (analysisFailed > 0) {
+        console.log(`   ⚠️  Failures: ${analysisFailed} dish analyses`);
     }
     console.log('═'.repeat(60));
 }
