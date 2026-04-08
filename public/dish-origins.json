@@ -346,5 +346,13 @@
   "Stracotta-Italian Long cooked meat stew with mashed potatoes": {
     "country": "Italy",
     "code": "it"
+  },
+  "Danish patties with vegetable stew, onion gravy and potatoes": {
+    "country": "Denmark",
+    "code": "dk"
+  },
+  "Grilled chicken wings with Bbq dressing, green salad and and rice": {
+    "country": "United States",
+    "code": "us"
   }
 }
