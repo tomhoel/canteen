@@ -367,11 +367,16 @@ export default function Home() {
         if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
           handleDaySelect(selectedDay + 1);
         }
+      } else if (e.key === " ") {
+        if (lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen) {
+          e.preventDefault();
+          handleDaySelect(todayIndex >= 0 ? todayIndex : 0);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect]);
+  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect]);
 
   // #11 — Only preload current day + adjacent days (not all 5)
   useEffect(() => {
