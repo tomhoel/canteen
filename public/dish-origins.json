@@ -354,5 +354,17 @@
   "Grilled chicken wings with Bbq dressing, green salad and and rice": {
     "country": "United States",
     "code": "us"
+  },
+  "Thai coconut chicken stew with rice": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "Oven-baked cod fillet with pesto and lentil ragu": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Pasta Bolognese with parmesan": {
+    "country": "Italy",
+    "code": "it"
   }
 }
