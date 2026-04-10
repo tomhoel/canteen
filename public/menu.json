@@ -1,282 +1,6 @@
 {
-  "scrapedAt": "2026-04-09T10:12:31.904Z",
+  "scrapedAt": "2026-04-10T07:21:02.861Z",
   "canteens": {
-    "Fresh4you": {
-      "week": "UKE/WEEK15",
-      "openingHours": "11:00 - 13:30",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "Stengt for påske",
-                "allergens": [],
-                "isMain": true
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "Closed for easter",
-                "allergens": [],
-                "isMain": true
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": [
-              {
-                "dish": "Frikadeller med stuede grønnsaker, løksjy og stekte poteter",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Couscous med grønnsaker",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Grønnsaksuppe med brytebrød",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THUESDAY",
-            "items": [
-              {
-                "dish": "Danish patties with vegetable stew, onion gravy and potatoes",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Barley otto with mushroom and onion",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Yellow pea soup with bacon",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": [
-              {
-                "dish": "Grillede kyllingklubber med Bbq saus, grønn salat og ris",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Byggotto med sopp og løk",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Gul ertesuppe med bacon",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": [
-              {
-                "dish": "Grilled chicken wings with Bbq dressing, green salad and and rice",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Barley otto with mushroom and onion",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Yellow pea soup with bacon",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": [
-              {
-                "dish": "Stracotta-Italiensk langtidskokt kjøttgryte med potetmos",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan Stracotta med potetmos",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Bouillabaisse-Fransk fisk og skalldyrgryte",
-                "allergens": [
-                  {
-                    "id": "10",
-                    "name": "Shellfish"
-                  },
-                  {
-                    "id": "13",
-                    "name": "Molluscs"
-                  },
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": [
-              {
-                "dish": "Stracotta-Italian Long cooked meat stew with mashed potatoes",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarian Stracotta with potatoes",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Bouillabaisse-French fish and shellfish stew",
-                "allergens": [
-                  {
-                    "id": "10",
-                    "name": "Shellfish"
-                  },
-                  {
-                    "id": "13",
-                    "name": "Molluscs"
-                  },
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": []
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": [
-              {
-                "dish": "Swedish meat gratin with garlic potatoes and mozzarella",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarian gratin with mozzarella",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Creamy asparagus soup",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        }
-      ]
-    },
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 15",
       "openingHours": "11:00 - 13:00",
@@ -703,8 +427,13 @@
                 "isMain": true
               },
               {
-                "dish": "Satay kyllingsuppe",
-                "allergens": [],
+                "dish": "Brokkolisuppe med ingefær",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
@@ -722,17 +451,8 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza med biff og bearnaise saus",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Asiatisk kyllingsalat med grønn mix og cherrytomater",
+                "allergens": [],
                 "isMain": false
               }
             ]
@@ -751,8 +471,13 @@
                 "isMain": true
               },
               {
-                "dish": "Satay chicken soup",
-                "allergens": [],
+                "dish": "Broccoli soup with ginger",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
@@ -770,17 +495,8 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza with beef and bearnaise sauce",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Asian chicken salad with mixed greens and cherry tomatoes",
+                "allergens": [],
                 "isMain": false
               }
             ]
@@ -891,22 +607,22 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Kylling tikka masala med ris",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Søtpotetsuppe med linser",
+                "dish": "Kylling kjøttpølse med hjemmelaget potetmos",
                 "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
                   }
                 ],
+                "isMain": true
+              },
+              {
+                "dish": "Hvit bønnesuppe med spinat",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Hoisin wok med nudler og grønnsaker",
+                "dish": "Pasta Alfredo",
                 "allergens": [
                   {
                     "id": "1",
@@ -915,12 +631,16 @@
                   {
                     "id": "3",
                     "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
                   }
                 ],
                 "isMain": false
               },
               {
-                "dish": "Pizza med skinke og ost",
+                "dish": "Sandwich med skinke, ost og ruccola",
                 "allergens": [
                   {
                     "id": "3",
@@ -939,28 +659,27 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Chicken tikka masala with rice",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Sweet potato soup with lentils",
+                "dish": "Chicken meat sausage with homemade mashed potatoes",
                 "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
                   }
                 ],
-                "isMain": false
+                "isMain": true
               },
               {
-                "dish": "Hoisin wok with noodles and vegetables",
+                "dish": "White bean soup with spinach",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Pizza with ham and cheese",
+                "dish": "Pasta Alfredo",
                 "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
                   {
                     "id": "3",
                     "name": "Gluten"
@@ -970,6 +689,11 @@
                     "name": "Milk"
                   }
                 ],
+                "isMain": false
+              },
+              {
+                "dish": "Sandwich with ham, cheese and ruccola",
+                "allergens": [],
                 "isMain": false
               }
             ]
@@ -986,7 +710,7 @@
                 "isMain": true
               },
               {
-                "dish": "Brokkolisuppe med ingefær",
+                "dish": "Kyllingsuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -1006,7 +730,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza med tomat og pesto",
+                "dish": "Pizza med salami og oliven",
                 "allergens": [
                   {
                     "id": "3",
@@ -1030,7 +754,7 @@
                 "isMain": true
               },
               {
-                "dish": "Broccoli soup with ginger",
+                "dish": "Chicken soup",
                 "allergens": [
                   {
                     "id": "4",
@@ -1058,12 +782,288 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza with tomato and pesto",
+                "dish": "Pizza with salami and olives",
                 "allergens": [
                   {
                     "id": "3",
                     "name": "Gluten"
                   },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Fresh4you": {
+      "week": "UKE/WEEK15",
+      "openingHours": "11:00 - 13:30",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "Stengt for påske",
+                "allergens": [],
+                "isMain": true
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "Closed for easter",
+                "allergens": [],
+                "isMain": true
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": [
+              {
+                "dish": "Frikadeller med stuede grønnsaker, løksjy og stekte poteter",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Couscous med grønnsaker",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Grønnsaksuppe med brytebrød",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THUESDAY",
+            "items": [
+              {
+                "dish": "Danish patties with vegetable stew, onion gravy and potatoes",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Barley otto with mushroom and onion",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Yellow pea soup with bacon",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": [
+              {
+                "dish": "Grillede kyllingklubber med Bbq saus, grønn salat og ris",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Byggotto med sopp og løk",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Gul ertesuppe med bacon",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": [
+              {
+                "dish": "Grilled chicken wings with Bbq dressing, green salad and and rice",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Barley otto with mushroom and onion",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Yellow pea soup with bacon",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": [
+              {
+                "dish": "Stracotta-Italiensk langtidskokt kjøttgryte med potetmos",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan Stracotta med potetmos",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Bouillabaisse-Fransk fisk og skalldyrgryte",
+                "allergens": [
+                  {
+                    "id": "10",
+                    "name": "Shellfish"
+                  },
+                  {
+                    "id": "13",
+                    "name": "Molluscs"
+                  },
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": [
+              {
+                "dish": "Stracotta-Italian Long cooked meat stew with mashed potatoes",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetarian Stracotta with potatoes",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Bouillabaisse-French fish and shellfish stew",
+                "allergens": [
+                  {
+                    "id": "10",
+                    "name": "Shellfish"
+                  },
+                  {
+                    "id": "13",
+                    "name": "Molluscs"
+                  },
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": []
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": [
+              {
+                "dish": "Swedish meat gratin with garlic potatoes and mozzarella",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetarian gratin with mozzarella",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Creamy cauliflower soup",
+                "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
