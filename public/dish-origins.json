@@ -370,5 +370,25 @@
   "Chicken meat sausage with homemade mashed potatoes": {
     "country": "United Kingdom",
     "code": "gb"
+  },
+  "Oven baked cod filet with bacon butter, carrots and potatoes": {
+    "country": "Norway",
+    "code": "no"
+  },
+  "Bbq glazed chicken with homemade cabbage salad and rice": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Pork goulash with mashed potatoes": {
+    "country": "Hungary",
+    "code": "hu"
+  },
+  "Oven baked chicken leg with curry and rice": {
+    "country": "India",
+    "code": "in"
+  },
+  "Long cooked pork leg with mashed toot vegetables and potatoes": {
+    "country": "Germany",
+    "code": "de"
   }
 }
