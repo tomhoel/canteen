@@ -390,5 +390,9 @@
   "Long cooked pork leg with mashed toot vegetables and potatoes": {
     "country": "Germany",
     "code": "de"
+  },
+  "Hamburger with fries": {
+    "country": "United States",
+    "code": "us"
   }
 }
