@@ -394,5 +394,25 @@
   "Hamburger with fries": {
     "country": "United States",
     "code": "us"
+  },
+  "Pasta bolognese": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Hjort gryte med poteter og tindeved syltetøy": {
+    "country": "Norway",
+    "code": "no"
+  },
+  "Lemon baked cod with aspargus and potatoes": {
+    "country": "Norway",
+    "code": "no"
+  },
+  "Baked asian pork with vegetables and mashed potatoes": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Warm ceasar chicken thighs with mashed potatoes": {
+    "country": "Italy",
+    "code": "it"
   }
 }

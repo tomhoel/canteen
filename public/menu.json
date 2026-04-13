@@ -1,9 +1,9 @@
 {
-  "scrapedAt": "2026-04-12T18:40:41.626Z",
+  "scrapedAt": "2026-04-13T07:55:58.617Z",
   "canteens": {
-    "Flow": {
-      "week": "BYGG / BUILDING B - UKE/WEEK 15",
-      "openingHours": "11:00 - 13:00",
+    "Fresh4you": {
+      "week": "UKE/WEEK 16",
+      "openingHours": "11:00 - 13:30",
       "menu": [
         {
           "day": "Monday",
@@ -11,9 +11,38 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Stengt",
-                "allergens": [],
+                "dish": "Ovnsbakt torskefilet med baconsmør, smørbakte gulrøtter og poteter",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
                 "isMain": true
+              },
+              {
+                "dish": "Omelett med potet og løk",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Suppe med rotgrønnsaker og viltpølse",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
               }
             ]
           },
@@ -21,9 +50,19 @@
             "label": "MONDAY",
             "items": [
               {
-                "dish": "Closed",
+                "dish": "Oven baked cod filet with bacon butter, carrots and potatoes",
                 "allergens": [],
                 "isMain": true
+              },
+              {
+                "dish": "Omelet with potato and onion",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Soup with root vegetables and sausage",
+                "allergens": [],
+                "isMain": false
               }
             ]
           }
@@ -34,22 +73,17 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Kyllingoverlår med karri saus og grønnris",
+                "dish": "Bbq glasert kylling med hjemmelaget kålsalat og ris",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Kikertgryte ris",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
+                "dish": "Vegan karbonade",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Indisk grønnsakssuppe",
+                "dish": "Grønnsaksuppe med krutonger",
                 "allergens": [
                   {
                     "id": "7",
@@ -61,8 +95,29 @@
             ]
           },
           "en": {
-            "label": "TUESDAY",
-            "items": []
+            "label": "THUESDAY",
+            "items": [
+              {
+                "dish": "Bbq glazed chicken with homemade cabbage salad and rice",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan patties",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Vegetable soup with croutons",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
           }
         },
         {
@@ -71,12 +126,8 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Laks med krydder på sitron potet, rukkula og aivar dressing",
+                "dish": "Svinegulasj med hjemmelaget potetmos",
                 "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
                   {
                     "id": "4",
                     "name": "Milk"
@@ -85,17 +136,17 @@
                 "isMain": true
               },
               {
-                "dish": "Indisk linsegryte",
+                "dish": "Vegan goulash with mashed potatoes",
                 "allergens": [
                   {
-                    "id": "7",
-                    "name": "Celery"
+                    "id": "4",
+                    "name": "Milk"
                   }
                 ],
                 "isMain": false
               },
               {
-                "dish": "Paprika tomat suppe",
+                "dish": "Gul ertesuppe med bacon",
                 "allergens": [
                   {
                     "id": "7",
@@ -110,37 +161,23 @@
             "label": "WEDNESDAY",
             "items": [
               {
-                "dish": "Spicy salmon on lemon potato, ruccula and aivar dressing",
+                "dish": "Pork goulash with mashed potatoes",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegan Goulash with mashed potato",
                 "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
                   {
                     "id": "4",
                     "name": "Milk"
                   }
                 ],
-                "isMain": true
-              },
-              {
-                "dish": "Indian lentil casserole",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
                 "isMain": false
               },
               {
-                "dish": "Bell pepper and tomato soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
+                "dish": "Yellow pea soup with bacon",
+                "allergens": [],
                 "isMain": false
               }
             ]
@@ -152,39 +189,21 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Svinegryte med eple og rosmarin, sennep med potet",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "8",
-                    "name": "Mustard"
-                  }
-                ],
+                "dish": "Ovnsbakte kyllinglår med karrisaus og ris",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Blomkålsgryte med lime og potet",
+                "dish": "Vegan schnitzel med ris",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Potetsuppe med purreløk",
                 "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Fiskesuppe",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
                   }
                 ],
                 "isMain": false
@@ -195,41 +214,18 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Ppork stew with apple, rosmarin, mustard and potato",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "8",
-                    "name": "Mustard"
-                  }
-                ],
+                "dish": "Oven baked chicken leg with curry and rice",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Cauliflower casserole with lime and potato",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Vegan schnitzel with rice",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Fish soup",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
+                "dish": "Potato soup with leek",
+                "allergens": [],
                 "isMain": false
               }
             ]
@@ -241,12 +237,8 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Quesadilla con carne mechada",
+                "dish": "Langtidsstekt svineskank med rotmos og stekte småpoteter",
                 "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
                   {
                     "id": "4",
                     "name": "Milk"
@@ -255,12 +247,18 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetar quesadilla",
+                "dish": "Vegan dumpling med sopp",
                 "allergens": [
                   {
                     "id": "3",
                     "name": "Gluten"
-                  },
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Kremet blomkålsuppe",
+                "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
@@ -269,11 +267,19 @@
                 "isMain": false
               },
               {
-                "dish": "Meksikansk mais suppe",
+                "dish": "Pannekaker med blåbærsyltetøy",
                 "allergens": [
                   {
-                    "id": "7",
-                    "name": "Celery"
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "1",
+                    "name": "Egg"
                   }
                 ],
                 "isMain": false
@@ -284,12 +290,8 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Quesadilla con carne mechada",
+                "dish": "Long cooked pork leg with mashed toot vegetables and potatoes",
                 "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
                   {
                     "id": "4",
                     "name": "Milk"
@@ -298,12 +300,13 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetar quesadilla",
+                "dish": "Vegan dumpling with mushroom",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Creamy Cauliflower soup",
                 "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
                   {
                     "id": "4",
                     "name": "Milk"
@@ -312,11 +315,19 @@
                 "isMain": false
               },
               {
-                "dish": "Mexican corn soup",
+                "dish": "Pan cakes with Blueberry jam",
                 "allergens": [
                   {
-                    "id": "7",
-                    "name": "Celery"
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "1",
+                    "name": "Egg"
                   }
                 ],
                 "isMain": false
@@ -810,9 +821,9 @@
         }
       ]
     },
-    "Fresh4you": {
-      "week": "UKE/WEEK 16",
-      "openingHours": "11:00 - 13:30",
+    "Flow": {
+      "week": "BYGG / BUILDING B - UKE/WEEK 16",
+      "openingHours": "11:00 - 13:00",
       "menu": [
         {
           "day": "Monday",
@@ -820,31 +831,27 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Ovnsbakt torskefilet med baconsmør, smørbakte gulrøtter og poteter",
+                "dish": "Pasta bolognese",
                 "allergens": [
                   {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "2",
-                    "name": "Fish"
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
                 "isMain": true
               },
               {
-                "dish": "Omelett med potet og løk",
+                "dish": "Kremet vegetar paprika pasta med bakte tomater",
                 "allergens": [
                   {
-                    "id": "1",
-                    "name": "Egg"
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
                 "isMain": false
               },
               {
-                "dish": "Suppe med rotgrønnsaker og viltpølse",
+                "dish": "Squash og gresskarsuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -859,18 +866,33 @@
             "label": "MONDAY",
             "items": [
               {
-                "dish": "Oven baked cod filet with bacon butter, carrots and potatoes",
-                "allergens": [],
+                "dish": "Pasta bolognese",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
                 "isMain": true
               },
               {
-                "dish": "Omelet with potato and onion",
-                "allergens": [],
+                "dish": "Creamy vegan bell pepper pasta with baked tomato",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
                 "isMain": false
               },
               {
-                "dish": "Soup with root vegetables and sausage",
-                "allergens": [],
+                "dish": "Squash and butternut pumpkin suppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
                 "isMain": false
               }
             ]
@@ -882,18 +904,27 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Bbq glasert kylling med hjemmelaget kålsalat og ris",
-                "allergens": [],
+                "dish": "Hjort gryte med poteter og tindeved syltetøy",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": true
               },
               {
-                "dish": "Vegan karbonade",
+                "dish": "Kikertgryte med ris",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Grønnsaksuppe med krutonger",
+                "dish": "Kremet sjampignon suppe",
                 "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
                   {
                     "id": "7",
                     "name": "Celery"
@@ -904,29 +935,8 @@
             ]
           },
           "en": {
-            "label": "THUESDAY",
-            "items": [
-              {
-                "dish": "Bbq glazed chicken with homemade cabbage salad and rice",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan patties",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Vegetable soup with croutons",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
+            "label": "TUESDAY",
+            "items": []
           }
         },
         {
@@ -935,18 +945,22 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Svinegulasj med hjemmelaget potetmos",
+                "dish": "Sitron bakt torsk med asparges og poteter",
                 "allergens": [
                   {
-                    "id": "4",
-                    "name": "Milk"
+                    "id": "2",
+                    "name": "Fish"
                   }
                 ],
                 "isMain": true
               },
               {
-                "dish": "Vegan goulash with mashed potatoes",
+                "dish": "Gnocchi med kremet sopp saus",
                 "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
                   {
                     "id": "4",
                     "name": "Milk"
@@ -955,8 +969,12 @@
                 "isMain": false
               },
               {
-                "dish": "Gul ertesuppe med bacon",
+                "dish": "Brokkoli og cheddar suppe",
                 "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
                   {
                     "id": "7",
                     "name": "Celery"
@@ -970,13 +988,22 @@
             "label": "WEDNESDAY",
             "items": [
               {
-                "dish": "Pork goulash with mashed potatoes",
-                "allergens": [],
+                "dish": "Lemon baked cod with aspargus and potatoes",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
                 "isMain": true
               },
               {
-                "dish": "Vegan Goulash with mashed potato",
+                "dish": "Gnocchi with creamy mushroom sauce",
                 "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
                   {
                     "id": "4",
                     "name": "Milk"
@@ -985,8 +1012,17 @@
                 "isMain": false
               },
               {
-                "dish": "Yellow pea soup with bacon",
-                "allergens": [],
+                "dish": "Broccoli and cheddar cheese soup",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
                 "isMain": false
               }
             ]
@@ -998,21 +1034,34 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Ovnsbakte kyllinglår med karrisaus og ris",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegan schnitzel med ris",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Potetsuppe med purreløk",
+                "dish": "Bakt asiatisk svinekam med grønnsaker og potatoes",
                 "allergens": [
                   {
                     "id": "4",
                     "name": "Milk"
+                  },
+                  {
+                    "id": "9",
+                    "name": "Sesame seeds"
+                  },
+                  {
+                    "id": "11",
+                    "name": "Soya"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Kikert karri med spinat og ris",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Kremet vilt ris suppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
                   }
                 ],
                 "isMain": false
@@ -1023,18 +1072,36 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Oven baked chicken leg with curry and rice",
-                "allergens": [],
+                "dish": "Baked asian pork with vegetables and mashed potatoes",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "9",
+                    "name": "Sesame seeds"
+                  },
+                  {
+                    "id": "11",
+                    "name": "Soya"
+                  }
+                ],
                 "isMain": true
               },
               {
-                "dish": "Vegan schnitzel with rice",
+                "dish": "Chickpea curry with spinach and potato",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Potato soup with leek",
-                "allergens": [],
+                "dish": "Creamy wild rice soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
                 "isMain": false
               }
             ]
@@ -1046,7 +1113,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Langtidsstekt svineskank med rotmos og stekte småpoteter",
+                "dish": "Varm cæsar kyllingoverlår med potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -1056,27 +1123,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegan dumpling med sopp",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Kremet blomkålsuppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Pannekaker med blåbærsyltetøy",
+                "dish": "Couscous med tomater, kikkert og feta",
                 "allergens": [
                   {
                     "id": "3",
@@ -1085,10 +1132,16 @@
                   {
                     "id": "4",
                     "name": "Milk"
-                  },
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Tarasca suppe",
+                "allergens": [
                   {
-                    "id": "1",
-                    "name": "Egg"
+                    "id": "7",
+                    "name": "Celery"
                   }
                 ],
                 "isMain": false
@@ -1099,7 +1152,7 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Long cooked pork leg with mashed toot vegetables and potatoes",
+                "dish": "Warm ceasar chicken thighs with mashed potatoes",
                 "allergens": [
                   {
                     "id": "4",
@@ -1109,22 +1162,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegan dumpling with mushroom",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Creamy Cauliflower soup",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Pan cakes with Blueberry jam",
+                "dish": "Couscous with tomato, chickpea and feta",
                 "allergens": [
                   {
                     "id": "3",
@@ -1133,10 +1171,16 @@
                   {
                     "id": "4",
                     "name": "Milk"
-                  },
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Tarasca soup",
+                "allergens": [
                   {
-                    "id": "1",
-                    "name": "Egg"
+                    "id": "7",
+                    "name": "Celery"
                   }
                 ],
                 "isMain": false

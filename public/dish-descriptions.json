@@ -350,5 +350,25 @@
   "Hamburger with fries": {
     "en": "Classic juicy grilled beef patty and golden, crisp fries – the ultimate satisfying comfort meal.",
     "no": "Klassisk saftig grillet biffpatty og gyllen, sprø pommes frites – det ultimate tilfredsstillende komfortmåltidet."
+  },
+  "Pasta bolognese": {
+    "en": "A comforting classic: tender pasta coated in a rich, slow-simmered meat sauce, bursting with savory flavors.",
+    "no": "En trøstende klassiker: mør pasta dekket i en rik, langkokt kjøttsaus, full av smak."
+  },
+  "Hjort gryte med poteter og tindeved syltetøy": {
+    "en": "Robust deer stew with tender potatoes, perfectly balanced by a sweet-tart wild berry jam. A taste of Nordic wilderness.",
+    "no": "Robust hjortegryte med møre poteter, perfekt balansert av et søtsyrlig viltbærsyltetøy. En smak av nordisk villmark."
+  },
+  "Lemon baked cod with aspargus and potatoes": {
+    "en": "Flaky, oven-baked cod brightened with fresh lemon, served alongside tender asparagus and potatoes for a wholesome, flavorful meal.",
+    "no": "Mør, ovnsbakt torsk med frisk sitron, servert med sprø asparges og poteter for et lett og smakfullt måltid."
+  },
+  "Baked asian pork with vegetables and mashed potatoes": {
+    "en": "Succulent Asian-spiced baked pork, tender vegetables, and creamy mashed potatoes create a comforting and flavorful meal.",
+    "no": "Saftig asiatisk-krydret bakt svinekjøtt, møre grønnsaker og kremet potetmos gir et trøstende og smakfullt måltid."
+  },
+  "Warm ceasar chicken thighs with mashed potatoes": {
+    "en": "Succulent chicken thighs coated in tangy Caesar dressing, served warm alongside creamy mashed potatoes for a comforting meal.",
+    "no": "Saftige kyllinglår med frisk cæsardressing, servert varmt med kremet potetmos for en trøstende rett."
   }
 }
