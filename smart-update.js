@@ -506,6 +506,103 @@ Respond ONLY with raw JSON:
 }
 
 /**
+ * Clean dish titles using Gemini — fixes typos, compound words, capitalization.
+ * Sends all unique titles in a single API call for efficiency.
+ * Returns a map of { "original title": "corrected title" } (only entries that changed).
+ */
+async function cleanDishTitles(menu) {
+    const { GoogleGenAI } = require('@google/genai');
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) { console.log('  ⚠️  GEMINI_API_KEY not set — skipping title cleanup'); return {}; }
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+    // Collect all unique dish strings across both languages
+    const allDishes = new Set();
+    for (const canteen of Object.values(menu.canteens)) {
+        for (const dayEntry of canteen.menu) {
+            for (const lang of ['no', 'en']) {
+                for (const item of (dayEntry[lang]?.items || [])) {
+                    if (item.dish && !isDishClosed(item.dish)) {
+                        allDishes.add(item.dish);
+                    }
+                }
+            }
+        }
+    }
+
+    if (allDishes.size === 0) return {};
+
+    const dishList = [...allDishes];
+    const promptText = `You are a proofreader for a Norwegian workplace canteen menu. The titles below were scraped from a website and may contain errors.
+
+Fix ONLY these types of issues:
+- Typos (e.g. "Ppork" → "Pork", "wiith" → "with", "ruccula" → "rucola")
+- Norwegian compound words that must be joined (e.g. "tomat suppe" → "tomatsuppe", "karri saus" → "karrisaus", "sitron potet" → "sitronpotet")
+- Capitalization errors (e.g. "Bbq" → "BBQ", random mid-word capitals)
+- Duplicate words (e.g. "and and rice" → "and rice")
+- Obviously missing small words (e.g. "Kikertgryte ris" → "Kikertgryte med ris")
+
+CRITICAL RULES:
+- Be CONSERVATIVE. Only fix clear, obvious errors.
+- Do NOT rephrase, rewrite, or improve wording.
+- Do NOT translate between Norwegian and English.
+- Do NOT change dish names, cooking terms, or foreign words that are intentional (e.g. keep "Stracotta", "jalfrezi", "Dan Dan" as-is).
+- Do NOT change the overall structure or word order.
+- If a title has no errors, do NOT include it in the output.
+
+Titles to proofread:
+${dishList.map((d, i) => `${i + 1}. "${d}"`).join('\n')}
+
+Respond with ONLY a JSON object containing entries where corrections were made.
+Format: {"original title": "corrected title"}
+If nothing needs fixing, respond with {}`;
+
+    try {
+        const response = await withRetry(() => ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [{ text: promptText }] },
+            config: { responseMimeType: 'application/json' },
+        }), 'title cleanup');
+
+        const text = response.candidates[0].content.parts[0].text.trim();
+        const corrections = JSON.parse(text);
+
+        // Validate: only keep corrections where the key actually exists in our dish list
+        const valid = {};
+        for (const [original, corrected] of Object.entries(corrections)) {
+            if (allDishes.has(original) && typeof corrected === 'string' && corrected !== original && corrected.length > 0) {
+                valid[original] = corrected;
+            }
+        }
+        return valid;
+    } catch (error) {
+        console.error(`  ⚠️  Title cleanup failed: ${error.message} — using raw titles`);
+        return {};
+    }
+}
+
+/**
+ * Apply title corrections to all matching dish entries in the menu.
+ * Returns the number of individual item titles updated.
+ */
+function applyTitleCorrections(menu, corrections) {
+    let count = 0;
+    for (const canteen of Object.values(menu.canteens)) {
+        for (const dayEntry of canteen.menu) {
+            for (const lang of ['no', 'en']) {
+                for (const item of (dayEntry[lang]?.items || [])) {
+                    if (item.dish && corrections[item.dish]) {
+                        item.dish = corrections[item.dish];
+                        count++;
+                    }
+                }
+            }
+        }
+    }
+    return count;
+}
+
+/**
  * Archive the current week's data before the new week overwrites it.
  * Receives oldMenu from memory — do not re-read disk (scraper already overwrote it).
  * Non-fatal: logs a warning and continues if anything fails.
@@ -621,6 +718,23 @@ async function main() {
         }
         // Re-save in case we merged old data in
         fs.writeFileSync(MENU_PATH, JSON.stringify(newMenu, null, 2));
+    }
+
+    // Step 2b½: Clean dish titles (fix typos, compound words, capitalization)
+    // Runs BEFORE diff so that clean titles are compared against previously-clean titles,
+    // and clean titles flow into image generation prompts and cache keys.
+    console.log('\n✏️  Cleaning dish titles...');
+    const corrections = await cleanDishTitles(newMenu);
+    const correctionCount = Object.keys(corrections).length;
+    if (correctionCount > 0) {
+        for (const [original, corrected] of Object.entries(corrections)) {
+            console.log(`  ✏️  "${original}" → "${corrected}"`);
+        }
+        const applied = applyTitleCorrections(newMenu, corrections);
+        fs.writeFileSync(MENU_PATH, JSON.stringify(newMenu, null, 2));
+        console.log(`  💾 Applied ${correctionCount} corrections (${applied} title instances updated)`);
+    } else {
+        console.log('  ✓ All titles look clean');
     }
 
     console.log(`\n📋 New menu: scraped ${newMenu.scrapedAt}`);
