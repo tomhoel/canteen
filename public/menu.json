@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-14T10:14:57.941Z",
+  "scrapedAt": "2026-04-15T07:31:01.983Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 16",
@@ -11,7 +11,7 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Pasta bolognese",
+                "dish": "Pasta Bolognese",
                 "allergens": [
                   {
                     "id": "3",
@@ -21,7 +21,7 @@
                 "isMain": true
               },
               {
-                "dish": "Kremet vegetar paprika pasta med bakte tomater",
+                "dish": "Kremet vegetarpaprikapasta med bakte tomater",
                 "allergens": [
                   {
                     "id": "3",
@@ -46,7 +46,7 @@
             "label": "MONDAY",
             "items": [
               {
-                "dish": "Pasta bolognese",
+                "dish": "Pasta Bolognese",
                 "allergens": [
                   {
                     "id": "3",
@@ -84,7 +84,7 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Hjort gryte med poteter og tindeved syltetøy",
+                "dish": "Hjortegryte med poteter og tindvedsyltetøy",
                 "allergens": [
                   {
                     "id": "4",
@@ -99,7 +99,7 @@
                 "isMain": false
               },
               {
-                "dish": "Kremet sjampignon suppe",
+                "dish": "Kremet sjampinjongsuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -125,7 +125,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Sitron bakt torsk med asparges og poteter",
+                "dish": "Sitronbakt torsk med asparges og poteter",
                 "allergens": [
                   {
                     "id": "2",
@@ -135,7 +135,7 @@
                 "isMain": true
               },
               {
-                "dish": "Gnocchi med kremet sopp saus",
+                "dish": "Gnocchi med kremet soppsaus",
                 "allergens": [
                   {
                     "id": "3",
@@ -149,7 +149,7 @@
                 "isMain": false
               },
               {
-                "dish": "Brokkoli og cheddar suppe",
+                "dish": "Brokkoli og cheddarsuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -168,7 +168,7 @@
             "label": "WEDNESDAY",
             "items": [
               {
-                "dish": "Lemon baked cod with aspargus and potatoes",
+                "dish": "Lemon baked cod with asparagus and potatoes",
                 "allergens": [
                   {
                     "id": "2",
@@ -232,12 +232,12 @@
                 "isMain": true
               },
               {
-                "dish": "Kikert karri med spinat og ris",
+                "dish": "Kikertkarri med spinat og ris",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Kremet vilt ris suppe",
+                "dish": "Kremet viltrisuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -252,7 +252,7 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Baked asian pork with vegetables and mashed potatoes",
+                "dish": "Baked Asian pork with vegetables and mashed potatoes",
                 "allergens": [
                   {
                     "id": "4",
@@ -293,7 +293,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Varm cæsar kyllingoverlår med potetmos",
+                "dish": "Varm Cæsar kyllingoverlår med potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -303,7 +303,7 @@
                 "isMain": true
               },
               {
-                "dish": "Couscous med tomater, kikkert og feta",
+                "dish": "Couscous med tomater, kikert og feta",
                 "allergens": [
                   {
                     "id": "3",
@@ -317,7 +317,7 @@
                 "isMain": false
               },
               {
-                "dish": "Tarasca suppe",
+                "dish": "Tarascasuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -332,7 +332,7 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Warm ceasar chicken thighs with mashed potatoes",
+                "dish": "Warm Caesar chicken thighs with mashed potatoes",
                 "allergens": [
                   {
                     "id": "4",
@@ -380,21 +380,25 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Thai kokos kyllinggryte med ris",
+                "dish": "Chili con carne med ris",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Linsesuppe med soltørket tomat",
+                "dish": "Harirasuppe",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Chana masala med raita",
+                "dish": "Nudler med karamellisert sopp",
                 "allergens": [
                   {
-                    "id": "4",
-                    "name": "Milk"
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
                 "isMain": false
@@ -419,21 +423,25 @@
             "label": "MONDAY",
             "items": [
               {
-                "dish": "Thai coconut chicken stew with rice",
+                "dish": "Chili con carne with rice",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Lentil soup with sun-dried tomato",
+                "dish": "Harira soup",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Chana masala with raita",
+                "dish": "Noodles with caramelized mushrooms",
                 "allergens": [
                   {
-                    "id": "4",
-                    "name": "Milk"
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
                 "isMain": false
@@ -461,45 +469,35 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Ovnsbakt torskefilet med pesto og linseragu",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Brokkolisuppe med ingefær",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Dan Dan nudler med grønnsaker",
+                "dish": "Sesambakt laksefilet med nudler og soyasaus",
                 "allergens": [
                   {
                     "id": "1",
                     "name": "Egg"
                   },
                   {
-                    "id": "3",
-                    "name": "Gluten"
+                    "id": "2",
+                    "name": "Fish"
                   },
                   {
-                    "id": "9",
-                    "name": "Sesame seeds"
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
+                "isMain": true
+              },
+              {
+                "dish": "Paprikasuppe med linser",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Asiatisk kyllingsalat med grønn mix og cherrytomater",
+                "dish": "Stekt ris med grønnsaker",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Asia",
                 "allergens": [],
                 "isMain": false
               }
@@ -509,45 +507,35 @@
             "label": "THUESDAY",
             "items": [
               {
-                "dish": "Oven-baked cod fillet with pesto and lentil ragu",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Broccoli soup with ginger",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Dan Dan noodles with vegetables",
+                "dish": "Sesame-baked salmon fillet with noodles and soy sauce",
                 "allergens": [
                   {
                     "id": "1",
                     "name": "Egg"
                   },
                   {
-                    "id": "3",
-                    "name": "Gluten"
+                    "id": "2",
+                    "name": "Fish"
                   },
                   {
-                    "id": "9",
-                    "name": "Sesame seeds"
+                    "id": "3",
+                    "name": "Gluten"
                   }
                 ],
+                "isMain": true
+              },
+              {
+                "dish": "Bell peppers soup with lentils",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Asian chicken salad with mixed greens and cherry tomatoes",
+                "dish": "Fried rice with vegetables",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Asian",
                 "allergens": [],
                 "isMain": false
               }
@@ -637,7 +625,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza wiith tomato and pesto",
+                "dish": "Pizza with tomato and pesto",
                 "allergens": [
                   {
                     "id": "3",
@@ -659,7 +647,7 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Kylling kjøttpølse med hjemmelaget potetmos",
+                "dish": "Kyllingkjøttpølse med hjemmelaget potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -692,7 +680,7 @@
                 "isMain": false
               },
               {
-                "dish": "Sandwich med skinke, ost og ruccola",
+                "dish": "Schiacciatasandwich med skinke og ost",
                 "allergens": [
                   {
                     "id": "3",
@@ -744,8 +732,17 @@
                 "isMain": false
               },
               {
-                "dish": "Sandwich with ham, cheese and ruccola",
-                "allergens": [],
+                "dish": "Schiacciata sandwich with ham and cheese",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               }
             ]
@@ -791,7 +788,7 @@
                 "isMain": false
               },
               {
-                "dish": "Tex Mex vegetar pizza",
+                "dish": "Tex Mex vegetarpizza",
                 "allergens": [
                   {
                     "id": "3",
@@ -911,7 +908,7 @@
             "label": "MONDAY",
             "items": [
               {
-                "dish": "Oven baked cod filet with bacon butter, carrots and potatoes",
+                "dish": "Oven baked cod fillet with bacon butter, carrots and potatoes",
                 "allergens": [],
                 "isMain": true
               },
@@ -934,7 +931,7 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Bbq glasert kylling med hjemmelaget kålsalat og ris",
+                "dish": "BBQ glasert kylling med hjemmelaget kålsalat og ris",
                 "allergens": [],
                 "isMain": true
               },
@@ -959,7 +956,7 @@
             "label": "THUESDAY",
             "items": [
               {
-                "dish": "Bbq glazed chicken with homemade cabbage salad and rice",
+                "dish": "BBQ glazed chicken with homemade cabbage salad and rice",
                 "allergens": [],
                 "isMain": true
               },
@@ -1027,7 +1024,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegan Goulash with mashed potato",
+                "dish": "Vegan goulash with mashed potato",
                 "allergens": [
                   {
                     "id": "4",
@@ -1151,7 +1148,7 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Long cooked pork leg with mashed toot vegetables and potatoes",
+                "dish": "Long cooked pork leg with mashed root vegetables and potatoes",
                 "allergens": [
                   {
                     "id": "4",
@@ -1166,7 +1163,7 @@
                 "isMain": false
               },
               {
-                "dish": "Creamy Cauliflower soup",
+                "dish": "Creamy cauliflower soup",
                 "allergens": [
                   {
                     "id": "4",
@@ -1176,7 +1173,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pan cakes with Blueberry jam",
+                "dish": "Pancakes with blueberry jam",
                 "allergens": [
                   {
                     "id": "3",

@@ -414,5 +414,37 @@
   "Warm ceasar chicken thighs with mashed potatoes": {
     "country": "Italy",
     "code": "it"
+  },
+  "Pasta Bolognese": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Hjortegryte med poteter og tindvedsyltetøy": {
+    "country": "Norway",
+    "code": "no"
+  },
+  "Lemon baked cod with asparagus and potatoes": {
+    "country": "Norway",
+    "code": "no"
+  },
+  "Baked Asian pork with vegetables and mashed potatoes": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Warm Caesar chicken thighs with mashed potatoes": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Chili con carne with rice": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Oven baked cod fillet with bacon butter, carrots and potatoes": {
+    "country": "United Kingdom",
+    "code": "gb"
+  },
+  "BBQ glazed chicken with homemade cabbage salad and rice": {
+    "country": "United States",
+    "code": "us"
   }
 }
