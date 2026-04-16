@@ -446,5 +446,17 @@
   "BBQ glazed chicken with homemade cabbage salad and rice": {
     "country": "United States",
     "code": "us"
+  },
+  "Sweet chili baked chicken leg with curry sauce, apple chutney and rice": {
+    "country": "United Kingdom",
+    "code": "gb"
+  },
+  "Sesame-baked salmon fillet with noodles and soy sauce": {
+    "country": "Japan",
+    "code": "jp"
+  },
+  "Gnocchi pasta Amatriciana with parmesan": {
+    "country": "Italy",
+    "code": "it"
   }
 }
