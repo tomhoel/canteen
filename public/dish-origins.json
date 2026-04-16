@@ -458,5 +458,9 @@
   "Gnocchi pasta Amatriciana with parmesan": {
     "country": "Italy",
     "code": "it"
+  },
+  "Long cooked pork leg with root vegetables and roasted small potatoes": {
+    "country": "Germany",
+    "code": "de"
   }
 }
