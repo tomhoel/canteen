@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-16T10:14:35.013Z",
+  "scrapedAt": "2026-04-17T07:25:54.231Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 16",
@@ -21,7 +21,7 @@
                 "isMain": true
               },
               {
-                "dish": "Kremet vegetar paprikapasta med bakte tomater",
+                "dish": "Kremet vegetarpaprika pasta med bakte tomater",
                 "allergens": [
                   {
                     "id": "3",
@@ -99,7 +99,7 @@
                 "isMain": false
               },
               {
-                "dish": "Kremet sjampinjonsuppe",
+                "dish": "Kremet sjampinjongsuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -237,7 +237,7 @@
                 "isMain": false
               },
               {
-                "dish": "Kremet Minnesota viltrissuppe",
+                "dish": "Kremet Minnesota villrissuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -301,7 +301,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Varm Cæsar kyllingoverlår med potetmos",
+                "dish": "Varm cæsarkyllingoverlår med potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -311,7 +311,7 @@
                 "isMain": true
               },
               {
-                "dish": "Couscous med tomater, kikkert og feta",
+                "dish": "Bulgur med tomater, kikkert og feta",
                 "allergens": [
                   {
                     "id": "3",
@@ -325,7 +325,7 @@
                 "isMain": false
               },
               {
-                "dish": "Tarascassuppe",
+                "dish": "Tarasca suppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -350,7 +350,7 @@
                 "isMain": true
               },
               {
-                "dish": "Couscous with tomato, chickpea and feta",
+                "dish": "Bulgur with tomato, chickpea and feta",
                 "allergens": [
                   {
                     "id": "3",
@@ -505,7 +505,7 @@
                 "isMain": false
               },
               {
-                "dish": "Schiacciatasandwich med kalkun og ost",
+                "dish": "Schiacciata sandwich med kalkun og ost",
                 "allergens": [
                   {
                     "id": "1",
@@ -582,7 +582,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Gnocchipasta Amatriciana med parmesan",
+                "dish": "Gnocchi pasta Amatriciana med parmesan",
                 "allergens": [
                   {
                     "id": "3",
@@ -606,7 +606,7 @@
                 "isMain": false
               },
               {
-                "dish": "Chili sin carne med tortillachips",
+                "dish": "Chili sin carne med tortilla chips",
                 "allergens": [],
                 "isMain": false
               },
@@ -681,46 +681,23 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Kyllingkjøttpølse med hjemmelaget potetmos",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Gresk lammegryte med skallpoteter",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Fasolade-gresk bønnesuppe",
+                "dish": "Fransk løksuppe",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Spaghetti Alfredo",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Sopprisotto med urter",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Schiacciatasandwich med skinke og ost",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Cæsarsalat med kylling og bacon",
+                "allergens": [],
                 "isMain": false
               }
             ]
@@ -729,46 +706,23 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Chicken meat sausage with homemade mashed potatoes",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Greek lamb stew with skin potatoes",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Fasolade -Greek bean soup",
+                "dish": "French onion soup",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Spaghetti Alfredo",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Mushroom risotto with herbs",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Schiacciata sandwich with ham and cheese",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Caesar salad with chicken and bacon",
+                "allergens": [],
                 "isMain": false
               }
             ]
@@ -795,7 +749,7 @@
                 "isMain": false
               },
               {
-                "dish": "Meksikansk tomatsuppe",
+                "dish": "Fransk kyllingsuppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -848,7 +802,7 @@
                 "isMain": false
               },
               {
-                "dish": "Mexican tomato soup",
+                "dish": "Fransk chicken soup",
                 "allergens": [],
                 "isMain": false
               },
@@ -1073,7 +1027,7 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Sweet chili bakte kyllinglår med karrisaus, eplechutney og ris",
+                "dish": "Sweet chilbakt kyllinglår med karrisaus, eplechutney og ris",
                 "allergens": [],
                 "isMain": true
               },
@@ -1098,7 +1052,7 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Sweet chili baked chicken leg with curry sauce, apple chutney and rice",
+                "dish": "Sweet chili baked chicken legs with curry sauce, apple chutney and rice",
                 "allergens": [],
                 "isMain": true
               },
@@ -1121,13 +1075,8 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Langtidsstekt svineskank med rotgrønnsaker og stekte småpoteter",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "BBQ glasert svineskank med løksjy og saltbakte småpoteter",
+                "allergens": [],
                 "isMain": true
               },
               {
@@ -1174,13 +1123,8 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Long cooked pork leg with root vegetables and roasted small potatoes",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "BBQ glazed pork leg with onion gravy and salt roasted small potatoes",
+                "allergens": [],
                 "isMain": true
               },
               {
