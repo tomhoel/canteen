@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-18T02:23:48.080Z",
+  "scrapedAt": "2026-04-18T07:07:21.767Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 16",
@@ -66,7 +66,7 @@
                 "isMain": false
               },
               {
-                "dish": "Squash and butternutpumpkinsuppe",
+                "dish": "Squash and butternut pumpkinsuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -325,7 +325,7 @@
                 "isMain": false
               },
               {
-                "dish": "Tarascasuppe",
+                "dish": "Tarasca suppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -494,7 +494,7 @@
             "label": "THUESDAY",
             "items": [
               {
-                "dish": "Oven baked chicken gravy, vegetables and ris",
+                "dish": "Oven baked chicken gravy, vegetables and rice",
                 "allergens": [],
                 "isMain": true
               },
@@ -537,7 +537,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegan karbonade med potet",
+                "dish": "Vegankarbonade med potet",
                 "allergens": [],
                 "isMain": false
               },
@@ -773,7 +773,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabbiata",
+                "dish": "Pasta Arrabiata",
                 "allergens": [
                   {
                     "id": "3",
@@ -812,7 +812,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabbiata",
+                "dish": "Pasta Arrabiata",
                 "allergens": [
                   {
                     "id": "3",
@@ -867,7 +867,7 @@
                 "isMain": false
               },
               {
-                "dish": "BBQ marinert maiskolber",
+                "dish": "BBQ marinert maiskolbe",
                 "allergens": [],
                 "isMain": false
               },
@@ -949,7 +949,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Gnocchipasta Amatriciana med parmesan",
+                "dish": "Gnocchi pasta Amatriciana med parmesan",
                 "allergens": [
                   {
                     "id": "3",
@@ -1115,7 +1115,7 @@
                 "isMain": true
               },
               {
-                "dish": "Middelhavs linsesuppe",
+                "dish": "Middelhavslinsesuppe",
                 "allergens": [],
                 "isMain": false
               },
