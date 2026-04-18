@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-17T10:13:24.671Z",
+  "scrapedAt": "2026-04-18T02:23:48.080Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 16",
@@ -21,7 +21,7 @@
                 "isMain": true
               },
               {
-                "dish": "Kremet vegetarpaprika pasta med bakte tomater",
+                "dish": "Kremet vegetarpaprikapasta med bakte tomater",
                 "allergens": [
                   {
                     "id": "3",
@@ -66,7 +66,7 @@
                 "isMain": false
               },
               {
-                "dish": "Squash and butternut pumpkinsuppe",
+                "dish": "Squash and butternutpumpkinsuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -84,7 +84,7 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Hjortegryte med poteter og tindevedsyltetøy",
+                "dish": "Hjortegryte med poteter og tindvedsyltetøy",
                 "allergens": [
                   {
                     "id": "4",
@@ -237,7 +237,7 @@
                 "isMain": false
               },
               {
-                "dish": "Kremet Minnesota villrisuppe",
+                "dish": "Kremet Minnesota viltrisuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -311,7 +311,7 @@
                 "isMain": true
               },
               {
-                "dish": "Bulgur med tomater, kikert og feta",
+                "dish": "Bulgur med tomater, kikerter og feta",
                 "allergens": [
                   {
                     "id": "3",
@@ -369,467 +369,6 @@
                   {
                     "id": "7",
                     "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        }
-      ]
-    },
-    "Eat the street": {
-      "week": "UKE/WEEK 16",
-      "openingHours": "11:00 - 13:30",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "Chili con carne med ris",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Harirasuppe",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Nudler med karamellisert sopp",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Pizza med tomat og pesto",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "Chili con carne with rice",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Harira soup",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Noodles with caramelized mushrooms",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Pizza with tomato and pesto",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": [
-              {
-                "dish": "Sesambakt laksefilet med nudler og soyasaus",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Paprikasuppe med linser",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Stekt ris med grønnsaker",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Schiacciatasandwich med kalkun og ost",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THUESDAY",
-            "items": [
-              {
-                "dish": "Sesame-baked salmon fillet with noodles and soy sauce",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Bell pepper soup with lentils",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Fried rice with vegetables",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Schiacciata sandwich with turkey and cheese",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": [
-              {
-                "dish": "Gnocchipasta Amatriciana med parmesan",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Brokkolisuppe med ingefær",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Chili sin carne med tortillachips",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Pizza med biff og bearnaisesaus",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": [
-              {
-                "dish": "Gnocchi pasta Amatriciana with parmesan",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Broccoli soup with ginger",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Chili sin carne with tortilla chips",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Pizza with beef and bearnaise sauce",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": [
-              {
-                "dish": "Gresk lammegryte med skallpoteter",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Fransk løksuppe",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Sopprisotto med urter",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Cæsarsalat med kylling og bacon",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": [
-              {
-                "dish": "Greek lamb stew with skin potatoes",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "French onion soup",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Mushroom risotto with herbs",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Caesar salad with chicken and bacon",
-                "allergens": [],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": [
-              {
-                "dish": "Hamburger med pommes frites",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Fransk kyllingsuppe",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Bondeomelett med grønnsaker",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "BBQ pulled vegetarpizza med chips",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": [
-              {
-                "dish": "Hamburger with fries",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Fransk chicken soup",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Farmer's omelette with vegetables",
-                "allergens": [
-                  {
-                    "id": "1",
-                    "name": "Egg"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "BBQ pulled vegetarian pizza with chips",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
                   }
                 ],
                 "isMain": false
@@ -955,7 +494,7 @@
             "label": "THUESDAY",
             "items": [
               {
-                "dish": "Oven baked chicken gravy, vegetables and rice",
+                "dish": "Oven baked chicken gravy, vegetables and ris",
                 "allergens": [],
                 "isMain": true
               },
@@ -998,7 +537,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegankarbonade med potet",
+                "dish": "Vegan karbonade med potet",
                 "allergens": [],
                 "isMain": false
               },
@@ -1162,7 +701,7 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Stroganoff with mushrooms, creme fraiche and homemade mashed potato",
+                "dish": "Stroganoff with mushroom, creme fraiche and homemade mashed potato",
                 "allergens": [
                   {
                     "id": "4",
@@ -1198,6 +737,449 @@
                     "id": "1",
                     "name": "Egg"
                   },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Eat the street": {
+      "week": "UKE/WEEK 17",
+      "openingHours": "11:00 - 13:30",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "Chili con carne med ris",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Harirasuppe",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Pasta Arrabbiata",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Pizza med tomat og pesto",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "Chili con carne with rice",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Harira soup",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Pasta Arrabbiata",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Pizza with tomato and pesto",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": [
+              {
+                "dish": "Sesambakt laksefilet med nudler og soyasaus",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Paprikasuppe med linser",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "BBQ marinert maiskolber",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Schiacciatasandwich med kalkun og ost",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THUESDAY",
+            "items": [
+              {
+                "dish": "Sesame-baked salmon fillet with noodles and soy sauce",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Bell pepper soup with lentils",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "BBQ marinated corn on the cob",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Schiacciata sandwich with turkey and cheese",
+                "allergens": [
+                  {
+                    "id": "1",
+                    "name": "Egg"
+                  },
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": [
+              {
+                "dish": "Gnocchipasta Amatriciana med parmesan",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Brokkolisuppe med ingefær",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Chili sin carne med tortilla chips",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Pizza med biff og bearnaisesaus",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": [
+              {
+                "dish": "Gnocchi pasta Amatriciana with parmesan",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Broccoli soup with ginger",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Chili sin carne with tortilla chips",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Pizza with beef and bearnaise sauce",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": [
+              {
+                "dish": "Gresk lammegryte med skallpoteter",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Fransk løksuppe",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Sopprisotto med urter",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Cæsarsalat med kylling og bacon",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": [
+              {
+                "dish": "Greek lamb stew with skin potatoes",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "French onion soup",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Mushroom risotto with herbs",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Caesar salad with chicken and bacon",
+                "allergens": [],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": [
+              {
+                "dish": "Kyllinggyros med fries og tzatziki",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Middelhavs linsesuppe",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Falafel med tzatziki",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Pizza med pepperoni og ananas",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": [
+              {
+                "dish": "Chicken gyros with fries and tzatziki",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Mediterranean lentil soup",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Falafel with tzatziki",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Pizza with pepperoni and pineapple",
+                "allergens": [
                   {
                     "id": "3",
                     "name": "Gluten"
