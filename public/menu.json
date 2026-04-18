@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-18T07:07:21.767Z",
+  "scrapedAt": "2026-04-18T13:01:57.678Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 16",
@@ -237,7 +237,7 @@
                 "isMain": false
               },
               {
-                "dish": "Kremet Minnesota viltrisuppe",
+                "dish": "Kremet Minnesotavillrissuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -301,7 +301,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Varm Cæsar kyllingoverlår med potetmos",
+                "dish": "Varm cæsarkyllingoverlår med potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -325,7 +325,7 @@
                 "isMain": false
               },
               {
-                "dish": "Tarasca suppe",
+                "dish": "Tarascasuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -469,7 +469,7 @@
                 "isMain": true
               },
               {
-                "dish": "Bønne- og grønnsakstuing med ris",
+                "dish": "Bønne og grønnsakstuing med ris",
                 "allergens": [
                   {
                     "id": "11",
@@ -537,7 +537,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegankarbonade med potet",
+                "dish": "Vegan karbonader med potet",
                 "allergens": [],
                 "isMain": false
               },
@@ -731,7 +731,7 @@
                 "isMain": false
               },
               {
-                "dish": "Chocolate cakes with coconut",
+                "dish": "Chocolate cake with coconut",
                 "allergens": [
                   {
                     "id": "1",
@@ -773,7 +773,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabiata",
+                "dish": "Pasta Arrabbiata",
                 "allergens": [
                   {
                     "id": "3",
@@ -812,7 +812,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabiata",
+                "dish": "Pasta Arrabbiata",
                 "allergens": [
                   {
                     "id": "3",
@@ -867,12 +867,12 @@
                 "isMain": false
               },
               {
-                "dish": "BBQ marinert maiskolbe",
+                "dish": "BBQ marinert maiskolber",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Schiacciatasandwich med kalkun og ost",
+                "dish": "Schiacciata sandwich med kalkun og ost",
                 "allergens": [
                   {
                     "id": "1",
@@ -1101,7 +1101,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Kyllinggyros med fries og tzatziki",
+                "dish": "Kylling gyros med fries og tzatziki",
                 "allergens": [
                   {
                     "id": "3",
@@ -1115,7 +1115,7 @@
                 "isMain": true
               },
               {
-                "dish": "Middelhavslinsesuppe",
+                "dish": "Middelhavs linsesuppe",
                 "allergens": [],
                 "isMain": false
               },
