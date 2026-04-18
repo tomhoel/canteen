@@ -74,15 +74,6 @@ function getMainDishes(canteenData) {
 }
 
 /**
- * Compare old and new menus. Returns list of canteens + days that need regeneration.
- */
-/** Check if a canteen's menu is ahead of the current week (not serving this week). */
-function isCanteenAhead(canteen) {
-    const weekNum = parseMenuWeekNumber(canteen.week);
-    return weekNum !== null && weekNum > getCurrentISOWeek();
-}
-
-/**
  * Returns the ISO week number for an arbitrary date string.
  */
 function getISOWeekFromDate(dateStr) {
@@ -105,9 +96,6 @@ function findChanges(oldMenu, newMenu) {
     const crossedWeekBoundary = oldScrapedWeek !== null && oldScrapedWeek < currentWeek;
 
     for (const [canteenName, newCanteen] of Object.entries(newMenu.canteens)) {
-        // Skip ahead-of-week canteens — they're effectively closed, Step 4b handles images
-        if (isCanteenAhead(newCanteen)) continue;
-
         const oldCanteen = oldMenu?.canteens?.[canteenName];
 
         if (!oldCanteen) {

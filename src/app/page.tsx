@@ -471,6 +471,11 @@ export default function Home() {
     });
   }, [sortedCanteens, currentWeek]);
 
+  // The week the UI is currently rendering — shifts forward when any canteen
+  // has published next week's menu, so outdated/ahead flags are computed
+  // relative to what the day-bar is actually showing.
+  const displayWeek = hasAheadCanteens ? currentWeek + 1 : currentWeek;
+
   const { dateStr, dayLabelsData } = useMemo(() => {
     const selectedDate = new Date();
     const currentDayOfWeek = selectedDate.getDay();
@@ -519,8 +524,8 @@ export default function Home() {
         const imagePath = `/images_nobg/${dk}/${imageSlug}.png`;
         const highResImagePath = `/images/${dk}/${imageSlug}.png`;
         const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
-        const isOutdated = canteenWeekNum < currentWeek;
-        const isAhead = canteenWeekNum > currentWeek;
+        const isOutdated = canteenWeekNum < displayWeek;
+        const isAhead = canteenWeekNum > displayWeek;
         const enLookup = dayEntry?.en?.items || [];
         const noLookup = dayEntry?.no?.items || [];
         const lookupMainDish = (enLookup.length > 0 ? enLookup : noLookup).find(i => i.isMain);
@@ -536,7 +541,7 @@ export default function Home() {
         };
       });
     });
-  }, [sortedCanteens, lang, dishOrigins, dishDescriptions, currentWeek]);
+  }, [sortedCanteens, lang, dishOrigins, dishDescriptions, displayWeek]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
