@@ -490,5 +490,17 @@
   "Stroganoff with mushrooms, creme fraiche and homemade mashed potato": {
     "country": "Russia",
     "code": "ru"
+  },
+  "Catfish patties with egg butter, raw salad and potatoes": {
+    "country": "Finland",
+    "code": "fi"
+  },
+  "Stroganoff with mushroom, creme fraiche and homemade mashed potato": {
+    "country": "Russia",
+    "code": "ru"
+  },
+  "Chicken gyros with fries and tzatziki": {
+    "country": "Greece",
+    "code": "gr"
   }
 }
