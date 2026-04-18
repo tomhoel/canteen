@@ -4,8 +4,7 @@ const CLOSED_KEYWORDS = ["stengt", "closed", "lukket"];
 
 /** Returns true if a canteen day item represents a closed / not-serving state. */
 export function isCanteenClosed(item: CanteenDayItem): boolean {
-  const { mainDish, items, isAhead } = item;
-  if (isAhead) return true;
+  const { mainDish, items } = item;
   if (!mainDish && (!items || items.length === 0)) return true;
   const dishName = mainDish?.dish?.toLowerCase() ?? "";
   if (CLOSED_KEYWORDS.some(kw => dishName.includes(kw))) return true;
