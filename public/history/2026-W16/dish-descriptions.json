@@ -1,0 +1,462 @@
+{
+  "Breaded Plaice filet with homemade remoulade, pea stew and roasted small potatoes": {
+    "en": "A classic Nordic dish — crispy golden plaice paired with tangy remoulade and creamy pea stew.",
+    "no": "En nordisk klassiker — sprøstekt rødspette med hjemmelaget remulade og fyldig ertestuing."
+  },
+  "Sesame baked chicken leg with fennel gravy and rice": {
+    "en": "Tender chicken with a nutty sesame crust, drizzled with aromatic fennel-infused gravy.",
+    "no": "Mørt kyllinglår med nøtteaktig sesamtopp og aromatisk fennikelsjy."
+  },
+  "Swedish meatballs with cream sauce, lingonberries and rice": {
+    "en": "The iconic Swedish comfort dish — juicy meatballs in velvety cream sauce with tart lingonberries.",
+    "no": "Den svenske klassikeren — saftige kjøttboller i fløtesaus med syrlige tyttebær."
+  },
+  "Pasta with Tomato, soffritto, meatballs and grated parmesan": {
+    "en": "Hearty Italian-style meatballs in a slow-simmered soffritto tomato sauce over pasta.",
+    "no": "Hjemmelagde kjøttboller i langtidskokt tomatsaus med soffritto og parmesan."
+  },
+  "Pork roast with bearnaise sauce and small potatoes": {
+    "en": "Succulent roast pork crowned with rich béarnaise and golden roasted potatoes.",
+    "no": "Saftig svinestek med fyldig béarnaise og gylne småpoteter."
+  },
+  "Pork cutlet with fennel, rosmarin": {
+    "en": "Herb-crusted pork cutlet with the warm, anise-like notes of fennel and rosemary.",
+    "no": "Urtemarinert svinekotelett med varme smaker av fennikel og rosmarin."
+  },
+  "Turkey steak with barley": {
+    "en": "Lean turkey steak served over nutty pearl barley — wholesome and satisfying.",
+    "no": "Mager kalkunbiff servert med nøtteaktig byggkorn — sunt og mettende."
+  },
+  "Lemon baked dill salmon, serves with potato and leek": {
+    "en": "Bright lemon and fresh dill bring out the best in oven-baked salmon, with potato and leek.",
+    "no": "Ovnsbakt laks med sitron og frisk dill, servert med poteter og purre."
+  },
+  "One pot chicken `nduja": {
+    "en": "A fiery Southern Italian one-pot — chicken simmered with spicy 'nduja sausage paste.",
+    "no": "En spicy søritaliensk gryterett — kylling kokt med krydret 'nduja-pølsepasta."
+  },
+  "Slow-cooked sirloin og beef with cherry, served with barley": {
+    "en": "Melt-in-your-mouth beef sirloin braised low and slow with sweet cherry notes.",
+    "no": "Langtidsbakt oksemørbrad som smelter på tungen, med søte kirsebærtoner."
+  },
+  "Pasta farfalle with beef, spinach and tomato": {
+    "en": "Bow-tie pasta tossed with tender beef strips, fresh spinach, and bright tomato.",
+    "no": "Sløyfepasta med møre biffstrimler, frisk spinat og smaksrik tomat."
+  },
+  "Fish & Chips with pea stew ans tartar sauce": {
+    "en": "The British classic — crispy battered fish, chunky chips, mushy peas, and tangy tartar.",
+    "no": "Den britiske klassikeren — sprøstekt fisk, pommes frites, ertestuing og tartarsaus."
+  },
+  "Chicken Chop Suey with rice": {
+    "en": "A quick-wok stir-fry of chicken and crunchy vegetables in savory sauce over steamed rice.",
+    "no": "Rask wok med kylling og sprø grønnsaker i smakfull saus, servert med ris."
+  },
+  "Kebab with bread and dressing (Beef)": {
+    "en": "Spiced beef kebab wrapped in warm bread with fresh toppings and creamy dressing.",
+    "no": "Krydret biffkebab i varmt brød med friske toppinger og kremet dressing."
+  },
+  "Lasagne": {
+    "en": "Layers of rich meat ragù, silky béchamel, and melted cheese — the ultimate comfort bake.",
+    "no": "Lag på lag med kjøttragù, silkemyk béchamel og smeltet ost — tidløs italiensk kos."
+  },
+  "Goulash with mashed potato": {
+    "en": "A hearty Hungarian stew of slow-braised beef in rich paprika gravy, over creamy mashed potato.",
+    "no": "Kraftig ungarsk gryte med langtidskokt biff i paprikasjy, servert med kremete potetmos."
+  },
+  "Marinated pork loin with plum, baked potato": {
+    "en": "Tender marinated pork loin with sweet plum glaze, paired with oven-baked potato.",
+    "no": "Mørt marinert svineytrefilet med søt plommeglasur og ovnsbakt potet."
+  },
+  "Steam cod with mashed cellery root and leek oil": {
+    "en": "Gently steamed cod fillet on silky celeriac mash, finished with fragrant leek oil.",
+    "no": "Dampet torskefilet på silkemyk sellerirotmos, avsluttet med duftende purreløkolje."
+  },
+  "Turkey with feta, sun dry tomato and baked potato": {
+    "en": "Mediterranean-inspired turkey with salty feta, sweet sun-dried tomato and golden baked potato.",
+    "no": "Middelhavsinspirert kalkun med salt feta, søttørket tomat og gyllen bakt potet."
+  },
+  "Lemon baked chicken tight with whole grain rice": {
+    "en": "Juicy lemon-herb chicken thigh roasted golden, served with wholesome whole grain rice.",
+    "no": "Saftig sitronmarinert kyllinglår stekt gyllent, servert med fullkornsris."
+  },
+  "Buffalo Wings Barbados Grill with fried potatoes and BBQ sauce": {
+    "en": "Savor crispy Barbados Grill buffalo wings with golden fried potatoes and tangy BBQ sauce. Pure comfort!",
+    "no": "Nyt sprø Barbados Grill buffalo wings med gylne stekte poteter og syrlig BBQ-saus. Ren komfort!"
+  },
+  "Chickpea-breaded cod with fries and remoulade": {
+    "en": "Golden, crispy chickpea-breaded cod with perfectly seasoned fries and a zesty remoulade. A delightful classic!",
+    "no": "Gyllen, sprø kikerterpanert torsk med perfekt krydret pommes frites og en frisk remoulade. En herlig klassiker!"
+  },
+  "Black pepper and soya Marinated pork rib with rice and very strong Asian salad": {
+    "en": "Savor succulent black pepper and soy pork ribs, perfectly paired with rice and a bold, zesty Asian salad.",
+    "no": "Nyt saftige, svart pepper- og soyaporkeribber, perfekt servert med ris og en dristig, pikant asiatisk salat."
+  },
+  "French beef stew with potatoes": {
+    "en": "Tender, slow-braised beef in a rich red wine sauce with hearty potatoes. A taste of pure French comfort.",
+    "no": "Mørt, langtidskokt oksekjøtt i en fyldig rødvinssaus med mettende poteter. En smak av ekte fransk hygge."
+  },
+  "Fish gratin with raw salad, melted butter and parsley potatoes": {
+    "en": "Warm, creamy fish gratin paired with crisp salad and buttery parsley potatoes – a comforting delight!",
+    "no": "Varm, kremet fiskegrateng møter frisk salat og smørglinsende persillepoteter – en herlig kombinasjon!"
+  },
+  "Swedish meat gratin with garlic potatoes and grated mozzarella": {
+    "en": "Warm Swedish meat gratin, with savory garlic potatoes and melted mozzarella, for a comforting and flavourful meal.",
+    "no": "Varm svensk kjøttgrateng, med smakfulle hvitløkspoteter og smeltet mozzarella, for et mettende og smakfullt måltid."
+  },
+  "Breaded cod with new cabbage, dill potatoes and sour cream": {
+    "en": "Golden crispy cod, buttery dill potatoes, and tender cabbage, perfectly balanced with cool, tangy sour cream.",
+    "no": "Gyllen, sprø torsk, smørmyke dillpoteter og mør kål, perfekt balansert med kjølig, syrlig rømme."
+  },
+  "Lemon pork schnitzel with cream sauce and green peas": {
+    "en": "Crispy lemon pork schnitzel, tender and flavorful, with a silky cream sauce and sweet green peas. Pure comfort.",
+    "no": "Sprø sitron-schnitzel av svin, mør og smakfull, med fløyelsmyk fløtesaus og søte grønne erter. Ren nytelse."
+  },
+  "Classical Danish Bøfsandwich roasted onion and gravy": {
+    "en": "Indulge in our classic Danish Bøfsandwich: tender beef, sweet roasted onions, and a generous pour of rich, savory gravy.",
+    "no": "Unn deg vår klassiske danske Bøfsandwich: mørt kjøtt, søt stekt løk og rikelig med fyldig, smakfull saus."
+  },
+  "Filled Tortellini with bacon sauce": {
+    "en": "Delicate tortellini smothered in a velvety, smoky bacon sauce. Irresistibly comforting!",
+    "no": "Myk tortellini dynket i en fløyelsmyk, røkt baconsaus. Uimotståelig deilig!"
+  },
+  "Game sausage with mashed root vegetables sprout/carrot": {
+    "en": "Succulent game sausage paired with velvety root vegetable mash, featuring a burst of sweet carrot flavor. A comforting delight!",
+    "no": "Saftig viltpølse servert med fløyelsmyk rotgrønnsakmos, med et friskt innslag av søt gulrot. En varmende nytelse!"
+  },
+  "Glazed chicken leg with rice, vegetables and gravy(Halal (available)": {
+    "en": "Warm and inviting: juicy halal-glazed chicken, rich gravy, soft rice, and vibrant vegetables. Pure comfort.",
+    "no": "Varmt og innbydende: saftig halal-glasert kylling, fyldig saus, myk ris og fargerike grønnsaker. Ren glede."
+  },
+  "Caribbean chicken with coconut rice": {
+    "en": "Experience the tropics with our juicy Caribbean chicken and fragrant, creamy coconut rice. A true island escape!",
+    "no": "Opplev tropene med vår saftige karibiske kylling og duftende, kremete kokosris. En ekte øyflukt!"
+  },
+  "Spanish meatballs in salsa with rice": {
+    "en": "Juicy Spanish meatballs in a vibrant, rich tomato salsa, perfectly paired with fluffy rice. Simply delicious!",
+    "no": "Saftige spanske kjøttboller i en smaksrik tomatsalsa, servert med luftig ris. En varmende, deilig favoritt."
+  },
+  "Pasta carbonara (1,3,4) (Pork)": {
+    "en": "Creamy, rich carbonara with crispy pancetta and a hint of black pepper. Pure comfort!",
+    "no": "Kremet, rik carbonara med sprø pancetta og et hint av sort pepper. Ren komfort!"
+  },
+  "Steam cod with creamy sauce, boil potato and mussels": {
+    "en": "Delicate steamed cod in a rich creamy sauce, perfectly paired with tender potatoes and succulent mussels.",
+    "no": "Delikat dampet torsk i en rik kremet saus, perfekt servert med møre poteter og saftige blåskjell."
+  },
+  "Tandoori chicken tight with rice": {
+    "en": "Juicy, spiced tandoori chicken thigh, infused with smoky flavors, perfectly paired with fluffy rice for a delightful meal.",
+    "no": "Saftig, krydret tandoori kyllinglår, fylt med røykfylte smaker, perfekt servert med luftig ris for et herlig måltid."
+  },
+  "Pasta carbonara": {
+    "en": "Silky pasta coated in a rich, creamy sauce with crispy, smoky pancetta. Pure Italian comfort!",
+    "no": "Silkemyk pasta dekket av en rik, kremet saus med sprø, røkt pancetta. Ren italiensk kos!"
+  },
+  "Glazed chicken leg with rice, vegetables and gravy": {
+    "en": "Tender, sweetly glazed chicken leg with fluffy rice, fresh vegetables, and rich, savory gravy – pure comfort.",
+    "no": "Mørt, søtt glasert kyllinglår med luftig ris, friske grønnsaker og fyldig, smakfull saus – ren nytelse."
+  },
+  "Korean beef bulgogi in steam buns": {
+    "en": "Tender, sweet-savory Korean bulgogi nestled in warm, fluffy steam buns. An irresistible bite of heaven!",
+    "no": "Mør, søt-salt koreansk bulgogi i varme, myke dampede boller. En uimotståelig smaksopplevelse!"
+  },
+  "Tandoori chicken legs with rice and sauce": {
+    "en": "Juicy, smoky tandoori chicken legs, perfectly spiced, served with fluffy rice and a rich, creamy sauce.",
+    "no": "Saftige, røkte tandoori kyllinglår, perfekt krydret, servert med luftig ris og en rik, kremet saus."
+  },
+  "Chimichurri cod fillet with ratatouille": {
+    "en": "Tender, flaky cod with vibrant chimichurri, beautifully paired with a rich, aromatic ratatouille. A delightful Mediterranean escape.",
+    "no": "Mør, flakete torsk med livlig chimichurri, nydelig servert med en fyldig, aromatisk ratatouille. En herlig middelhavsflukt."
+  },
+  "French beef stew with skin potatoes": {
+    "en": "Succulent French beef stew, slow-braised to melt-in-your-mouth perfection, paired with hearty, rustic skin potatoes.",
+    "no": "Saftig fransk biffgryte, langtidsbraisert til smeltende perfeksjon, servert med solide, rustikke poteter med skall."
+  },
+  "Chicken taco with chunky salsa": {
+    "en": "Juicy chicken tacos bursting with vibrant, chunky salsa for a fresh, zesty bite.",
+    "no": "Saftige kyllingtacoer, fulle av frisk og smaksrik, klumpete salsa for en pikant munnfull."
+  },
+  "Ginger fried minced meat with chili and noodles": {
+    "en": "Sizzling ginger-fried minced meat with a fiery chili kick, perfectly tossed with comforting noodles. Pure aromatic bliss!",
+    "no": "Nystekt ingefærkjøttdeig med et hett chilikick, perfekt blandet med deilige nudler. En varm og aromatisk fryd!"
+  },
+  "Catfish patties with baked carrots, remoulade and parsley potatoes": {
+    "en": "Crispy golden catfish patties paired with sweet baked carrots, zesty remoulade, and herbed potatoes. Pure comfort on a plate!",
+    "no": "Sprø gylne steinbitkaker servert med søte bakte gulrøtter, pikant remulade og urtepoteter. Ren hverdagsglede!"
+  },
+  "Beef patties with cabbage stew, lingonberries, gravy and potatoes": {
+    "en": "Warm, succulent beef patties with tender cabbage, tangy lingonberries, rich gravy, and fluffy potatoes. A comforting classic!",
+    "no": "Varme, saftige kjøttkaker med mør kålstuing, syrlige tyttebær, rik saus og poteter. En klassisk, varmende rett!"
+  },
+  "Pasta with small sausage, meatballs, Tomato sauce and grated cheese": {
+    "en": "Warm, comforting pasta with savory sausage, tender meatballs, and rich tomato sauce, generously topped with cheese.",
+    "no": "Hjertevarmende pasta med smakfull pølse, saftige kjøttboller og fyldig tomatsaus, toppet med revet ost."
+  },
+  "Balsamico baked chicken thighs with toamto, served rice": {
+    "en": "Juicy balsamico-baked chicken thighs with sweet tomatoes, served over fluffy rice. A warm, flavorful meal.",
+    "no": "Saftige balsamico-bakte kyllinglår med søte tomater, servert over luftig ris. Et varmt, smakfullt måltid."
+  },
+  "Pork loin with plum sauce with baked onions and potato": {
+    "en": "Juicy pork loin with a sweet, tangy plum sauce, perfectly complemented by tender baked onions and potatoes.",
+    "no": "Saftig svinekam med søt, syrlig plommesaus, perfekt komplementert av møre bakte løk og poteter."
+  },
+  "Green curyy cod with sofrito rice": {
+    "en": "Tender cod in creamy green curry, served alongside rich, flavorful sofrito rice. Pure comfort in every bite.",
+    "no": "Mørk torsk i kremet grønn karri, servert med rik, smaksrik sofritoris. Ren komfort i hver bit."
+  },
+  "Turkey fricasse with rice": {
+    "en": "Warm, succulent turkey fricassée in a rich, herb-infused sauce, perfectly paired with fluffy rice. Pure comfort.",
+    "no": "Varm, saftig kalkunfrikassé i en fyldig urtesaus, perfekt servert med luftig ris. Ren komfort."
+  },
+  "Mexican xasserole with rice and tortilla chips": {
+    "en": "Warm, cheesy Mexican casserole, loaded with savory rice and crunchy tortilla chips. A comforting delight!",
+    "no": "Varm, osteaktig meksikansk gryterett, fylt med smakfull ris og sprø tortillachips. En trøstende glede!"
+  },
+  "BBQ pork rib med coleslaw and roasted potatoes": {
+    "en": "Enjoy tender, smoky BBQ ribs with creamy coleslaw and crispy roasted potatoes. A delicious, heartwarming meal awaits!",
+    "no": "Nyt møre, røkte BBQ-ribbe med kremet coleslaw og sprø ovnsbakte poteter. Et deilig, hjertevarmt måltid venter!"
+  },
+  "Beef Szechuan with rice": {
+    "en": "Experience succulent Szechuan beef, stir-fried to perfection with a vibrant kick, paired with fluffy rice.",
+    "no": "Opplev saftig Szechuan-biff, perfekt wokket med et livlig kick, servert med luftig ris."
+  },
+  "Pork loin with plum sauce with baked potato": {
+    "en": "Tender pork loin, glazed with sweet and tangy plum sauce, perfectly paired with a fluffy baked potato.",
+    "no": "Mør svinekam, glasert med søt og syrlig plommesaus, perfekt servert med en luftig bakt potet."
+  },
+  "Balsamico baked chicken thighs with tomato, served with rice": {
+    "en": "Succulent balsamic-glazed chicken baked with sweet tomatoes, served alongside comforting rice.",
+    "no": "Saftige balsamico-glaserte kyllinglår bakt med søte tomater, servert med varmende ris."
+  },
+  "Closed": {
+    "en": "Experience the magic of 'Closed': a crispy shell protecting a creamy, herb-infused center. A delightful surprise!",
+    "no": "Opplev magien i 'Lukket': et sprøtt skall som omslutter en kremet, urtefylt kjerne. En herlig overraskelse!"
+  },
+  "Breaded plaice fillet with fried potatoes and remoulade": {
+    "en": "Crispy golden plaice fillet, perfectly paired with fluffy fried potatoes and a zesty remoulade. A comforting classic!",
+    "no": "Sprø, gyllen rødspettefilet, servert med luftige stekte poteter og en frisk remulade. En koselig klassiker!"
+  },
+  "Fusilli pasta with meat sauce and grated cheese": {
+    "en": "Twisty fusilli embraced by a rich, savory meat sauce, generously topped with sharp grated cheese. Utterly comforting!",
+    "no": "Kringlete fusilli omfavnet av en fyldig, smaksrik kjøttsaus, rikelig toppet med skarp revet ost. Ren kos!"
+  },
+  "BBQ pork rib with coleslaw and roasted potatoes": {
+    "en": "Indulge in smoky, fall-off-the-bone BBQ pork ribs, perfectly paired with creamy coleslaw and crispy roasted potatoes.",
+    "no": "Nyt røkt, mørt BBQ-svineribbe som faller av beinet, perfekt sammen med kremet coleslaw og sprø ovnsbakte poteter."
+  },
+  "Chicken tikka masala with rice": {
+    "en": "Savor succulent chicken tikka in a rich, creamy tomato sauce, perfectly paired with fluffy rice. Pure comfort!",
+    "no": "Nyt saftig kylling tikka i en rik, kremet tomatsaus, perfekt servert med luftig ris. Ren nytelse!"
+  },
+  "Thai beef stew with glass noodles": {
+    "en": "Tender beef slow-cooked in a rich Thai broth with slippery glass noodles – a warm hug in a bowl!",
+    "no": "Mørt oksekjøtt i en fyldig, aromatisk thai-buljong med glatte glassnudler – en varmende smaksreise!"
+  },
+  "CLOSED FOR EASTER": {
+    "en": "Embrace a warm Easter pause; rich family joy and sweet tranquility await, until we reopen.",
+    "no": "Omfavn en varm påskepause; rik familiegleder og søt ro venter, til vi gjenåpner."
+  },
+  "Lam leg with plum sauce with baked potato and peas": {
+    "en": "Succulent lamb leg glazed with sweet plum sauce, accompanied by a fluffy baked potato and fresh peas.",
+    "no": "Saftig lammelår glasert med søt plommesaus, servert med en luftig bakt potet og ferske erter."
+  },
+  "Mustard & honney baked pork loin with potato and vegetables": {
+    "en": "Tender pork loin slow-baked with a sweet & tangy mustard-honey glaze, served alongside hearty potatoes and fresh vegetables.",
+    "no": "Mør svinekam langtidsbakt med søt og syrlig sennep-honningglasur, servert med mettende poteter og friske grønnsaker."
+  },
+  "Stengt": {
+    "en": "Savor Stengt: a warm, inviting dish with a tender, flavorful filling embraced by a golden, comforting crust.",
+    "no": "Nyt Stengt: en varm, innbydende rett med mørt, smakfullt fyll omfavnet av en gyllen, trøstende skorpe."
+  },
+  "Kyllingoverlår tanddoori med fullkornris": {
+    "en": "Juicy tandoori chicken thighs, marinated in aromatic spices, paired with wholesome wholegrain rice. A warm, flavorful, and comforting meal.",
+    "no": "Saftige tandoorikyllinglår, marinert i aromatiske krydder, servert med sunn fullkornsris. Et varmt, smaksrikt og mettende måltid."
+  },
+  "Kyllingoverlår med karri saus og grønnris": {
+    "en": "Succulent chicken thighs bathed in a rich, aromatic curry sauce, served with vibrant green rice.",
+    "no": "Saftige kyllingoverlår i rik, aromatisk karri saus, servert med frisk grønnris."
+  },
+  "Spicy salmon on lemon potato, ruccula and aivar dressing": {
+    "en": "Flaky, spicy salmon atop zesty lemon potatoes with peppery arugula and a rich aivar dressing. A burst of flavor!",
+    "no": "Saftig, krydret laks på syrlige sitronpoteter med frisk ruccola og fyldig aivardressing. En smaksfest!"
+  },
+  "Ppork stew with apple, rosmarin, mustard and potato": {
+    "en": "Tender pork stew, slow-simmered with sweet apples, fragrant rosemary, and a tangy mustard kick for heartwarming comfort.",
+    "no": "Mør svinestuing, langtidskokt med søte epler, velduftende rosmarin og et snev av syrlig sennep for hjertevarmende kos."
+  },
+  "Quesadilla con carne mechada": {
+    "en": "Golden, crispy quesadilla overflowing with savory, tender shredded beef and rich, melty cheese. Pure comfort!",
+    "no": "Gylden, sprø quesadilla overfylt med smakfullt, mørt revet kjøtt og fyldig, smeltet ost. Ren kosemat!"
+  },
+  "Grilled chicken with Bbq homemade coleslaw and rice": {
+    "en": "Savor tender grilled chicken paired with tangy, smoky BBQ homemade coleslaw and fluffy rice. Pure comfort in every bite!",
+    "no": "Nyt mør grillet kylling med syrlig, røkt BBQ coleslaw og luftig ris. Ren kos i hver bit!"
+  },
+  "Grilled chicken wings with Bbq coleslaw og ris": {
+    "en": "Tender grilled chicken wings, smoky BBQ coleslaw, and fluffy rice. A warm, inviting meal bursting with flavor.",
+    "no": "Møre grillede kyllingvinger, røkt BBQ coleslaw og luftig ris. Et varmt, innbydende måltid fullt av smak."
+  },
+  "Swedish meat gratin with garlic potatoes and mozzarella": {
+    "en": "Warm Swedish meat gratin, layered with fragrant garlic potatoes and gooey, melted mozzarella. A comforting, irresistible dish.",
+    "no": "Varm svensk kjøttgrateng, lagvis med duftende hvitløkspoteter og smeltet mozzarella. En trøstende, uimotståelig rett."
+  },
+  "Stracotta-Italian Long cooked meat stew with mashed potatoes": {
+    "en": "Tender, slow-braised Italian meat stew, rich in savory depth, served atop creamy mashed potatoes for ultimate comfort.",
+    "no": "Mør, langkokt italiensk kjøttgryte, rik på smak, servert med kremet potetmos for den ultimate kos."
+  },
+  "Danish patties with vegetable stew, onion gravy and potatoes": {
+    "en": "Hearty Danish patties, rich in savory flavor, served with a comforting vegetable stew, velvety onion gravy, and tender potatoes.",
+    "no": "Hjertelige danske karbonader, rike på smaksrik umami, servert med en trøstende grønnsaksgryte, fløyelsmyk løksaus og møre poteter."
+  },
+  "Grilled chicken wings with Bbq dressing, green salad and and rice": {
+    "en": "Succulent grilled chicken wings coated in tangy BBQ dressing, served with fresh green salad and fluffy rice – a delightful, smoky meal.",
+    "no": "Saftige grillede kyllingvinger med syrlig BBQ-dressing, servert med frisk grønn salat og luftig ris – et herlig, røkt måltid."
+  },
+  "Thai coconut chicken stew with rice": {
+    "en": "Creamy coconut chicken stew, infused with vibrant Thai flavors, served warmly over fluffy rice.",
+    "no": "Kremet kokoskyllinggryte, fylt med livlige thailandske smaker, servert varmt over luftig ris."
+  },
+  "Oven-baked cod fillet with pesto and lentil ragu": {
+    "en": "Flaky cod meets vibrant pesto and earthy lentil ragu for a delightful, comforting Mediterranean experience.",
+    "no": "Skiver av torsk møter livlig pesto og jordnær linsestuing for en herlig, trøstende middelhavsopplevelse."
+  },
+  "Pasta Bolognese with parmesan": {
+    "en": "Rich, slow-cooked meat sauce coating tender pasta, finished with salty parmesan – a comforting Italian classic.",
+    "no": "Rik, langtidskokt kjøttsaus dekker mør pasta, toppet med salt parmesan – en trøstende italiensk klassiker."
+  },
+  "Chicken meat sausage with homemade mashed potatoes": {
+    "en": "Tender chicken sausage meets fluffy homemade mashed potatoes for a warm, comforting, and utterly satisfying meal.",
+    "no": "Møre kyllingpølser møter luftig hjemmelaget potetmos for et varmt, trøstende og fullt mettende måltid."
+  },
+  "Oven baked cod filet with bacon butter, carrots and potatoes": {
+    "en": "Flaky oven-baked cod bathed in rich bacon butter, served with tender carrots and potatoes for a comforting, savory delight.",
+    "no": "Saftig ovnsbakt torskefilet med rik bacon-smør, servert med møre gulrøtter og poteter for en varmende, smaksrik nytelse."
+  },
+  "Bbq glazed chicken with homemade cabbage salad and rice": {
+    "en": "Succulent BBQ chicken, sweetly glazed, paired with a fresh, crunchy cabbage salad and fluffy rice for a comforting meal.",
+    "no": "Saftig BBQ-kylling, søtt glasert, servert med en frisk, sprø kålsalat og luftig ris for et mettende måltid."
+  },
+  "Pork goulash with mashed potatoes": {
+    "en": "Hearty pork goulash, slow-cooked to perfection, served with creamy mashed potatoes for a comforting and flavorful meal.",
+    "no": "Hjertevarmende svinegulasj, langtidskokt til perfeksjon, servert med kremet potetmos for et trøstende og smakfullt måltid."
+  },
+  "Oven baked chicken leg with curry and rice": {
+    "en": "Tender oven-baked chicken leg infused with aromatic curry spices, served alongside fluffy rice for a comforting, flavorful meal.",
+    "no": "Mør ovnsbakt kyllinglår med aromatiske karrismaker, servert med luftig ris for et trøstende, smakfullt måltid."
+  },
+  "Long cooked pork leg with mashed toot vegetables and potatoes": {
+    "en": "Succulent, long-cooked pork leg, falling off the bone, with a comforting mash of root vegetables and creamy potatoes.",
+    "no": "Saftig, langtidsbraisert svineknoke som faller av beinet, servert med en trøstende mos av rotgrønnsaker og kremete poteter."
+  },
+  "Hamburger with fries": {
+    "en": "Classic juicy grilled beef patty and golden, crisp fries – the ultimate satisfying comfort meal.",
+    "no": "Klassisk saftig grillet biffpatty og gyllen, sprø pommes frites – det ultimate tilfredsstillende komfortmåltidet."
+  },
+  "Pasta bolognese": {
+    "en": "A comforting classic: tender pasta coated in a rich, slow-simmered meat sauce, bursting with savory flavors.",
+    "no": "En trøstende klassiker: mør pasta dekket i en rik, langkokt kjøttsaus, full av smak."
+  },
+  "Hjort gryte med poteter og tindeved syltetøy": {
+    "en": "Robust deer stew with tender potatoes, perfectly balanced by a sweet-tart wild berry jam. A taste of Nordic wilderness.",
+    "no": "Robust hjortegryte med møre poteter, perfekt balansert av et søtsyrlig viltbærsyltetøy. En smak av nordisk villmark."
+  },
+  "Lemon baked cod with aspargus and potatoes": {
+    "en": "Flaky, oven-baked cod brightened with fresh lemon, served alongside tender asparagus and potatoes for a wholesome, flavorful meal.",
+    "no": "Mør, ovnsbakt torsk med frisk sitron, servert med sprø asparges og poteter for et lett og smakfullt måltid."
+  },
+  "Baked asian pork with vegetables and mashed potatoes": {
+    "en": "Succulent Asian-spiced baked pork, tender vegetables, and creamy mashed potatoes create a comforting and flavorful meal.",
+    "no": "Saftig asiatisk-krydret bakt svinekjøtt, møre grønnsaker og kremet potetmos gir et trøstende og smakfullt måltid."
+  },
+  "Warm ceasar chicken thighs with mashed potatoes": {
+    "en": "Succulent chicken thighs coated in tangy Caesar dressing, served warm alongside creamy mashed potatoes for a comforting meal.",
+    "no": "Saftige kyllinglår med frisk cæsardressing, servert varmt med kremet potetmos for en trøstende rett."
+  },
+  "Pasta Bolognese": {
+    "en": "Hearty pasta smothered in a rich, slow-simmered meat sauce, delivering comforting, savory flavors with every bite.",
+    "no": "Hjertelig pasta druknet i en rik, langtidssimret kjøttsaus, som leverer trøstende, smakfulle smaker med hver bit."
+  },
+  "Hjortegryte med poteter og tindvedsyltetøy": {
+    "en": "Hearty deer stew with tender meat and potatoes, brightened by a unique sweet-tart sea buckthorn jam.",
+    "no": "Hjertelig hjortegryte med mørt kjøtt og poteter, lysnet av en unik søt-syrlig tindvedsyltetøy."
+  },
+  "Lemon baked cod with asparagus and potatoes": {
+    "en": "Flaky, tender cod infused with bright lemon, perfectly complemented by earthy asparagus and soft potatoes.",
+    "no": "Mør, flaket torsk fylt med frisk sitron, perfekt supplert med jordnær asparges og myke poteter."
+  },
+  "Baked Asian pork with vegetables and mashed potatoes": {
+    "en": "Tender baked Asian-spiced pork, vibrant vegetables, and creamy mashed potatoes create a comforting, flavorful meal.",
+    "no": "Mørkt bakt asiatisk svinekjøtt, friske grønnsaker og kremet potetmos gir et smakfullt, varmende måltid."
+  },
+  "Warm Caesar chicken thighs with mashed potatoes": {
+    "en": "Succulent Caesar chicken thighs with creamy mashed potatoes offer a warm, garlicky, and comforting meal.",
+    "no": "Saftige Cæsarkyllinglår med kremet potetstappe gir et varmt, hvitløkspreget og mettende måltid."
+  },
+  "Chili con carne with rice": {
+    "en": "Hearty, spiced chili con carne with tender meat and beans, served over fluffy rice; a warming, comforting classic.",
+    "no": "Krydret chili con carne med mørt kjøtt og fyldige bønner, servert på ris; en varmende og mettende klassiker."
+  },
+  "Oven baked cod fillet with bacon butter, carrots and potatoes": {
+    "en": "Flaky cod baked with savory bacon butter, complemented by tender carrots and potatoes. Pure comfort.",
+    "no": "Mør torsk bakt med smaksrikt bacon-smør, komplettert av møre gulrøtter og poteter. Ren komfort."
+  },
+  "BBQ glazed chicken with homemade cabbage salad and rice": {
+    "en": "Succulent BBQ glazed chicken, tangy homemade cabbage salad, and fluffy rice for a comforting and flavorful meal.",
+    "no": "Saftig BBQ-glasert kylling, syrlig hjemmelaget kålsalat og luftig ris for et trøstende og smakfullt måltid."
+  },
+  "Sweet chili baked chicken leg with curry sauce, apple chutney and rice": {
+    "en": "Succulent baked chicken leg infused with sweet chili, complemented by a rich curry sauce, tangy apple chutney, and fluffy rice.",
+    "no": "Saftig bakt kyllinglår med søt chilismak, akkompagnert av fyldig karrisaus, syrlig eplechutney og luftig ris."
+  },
+  "Sesame-baked salmon fillet with noodles and soy sauce": {
+    "en": "Flaky sesame-crusted salmon, tender noodles, and savory soy create a delightful East Asian harmony.",
+    "no": "Sprø sesam-laks, møre nudler og smakfull soyasaus skaper en herlig østasiatisk harmoni."
+  },
+  "Gnocchi pasta Amatriciana with parmesan": {
+    "en": "Pillowy gnocchi bathed in a rich, tangy Amatriciana sauce, finished with savory Parmesan – a true Italian comfort.",
+    "no": "Myke gnocchi i en rik, syrlig Amatriciana-saus, toppet med salt Parmesan – ekte italiensk komfort."
+  },
+  "Long cooked pork leg with root vegetables and roasted small potatoes": {
+    "en": "Succulent, slow-cooked pork leg, tender with earthy root vegetables and crispy roasted potatoes. A comforting, savory delight.",
+    "no": "Mørt, langtidsbraisert svinekjøtt, servert med jordnære rotgrønnsaker og sprø ovnsbakte poteter. En trøstende, smakfull rett."
+  },
+  "Greek lamb stew with skin potatoes": {
+    "en": "Hearty Greek lamb stew, slow-cooked to tender perfection with robust herbs and rustic skin-on potatoes.",
+    "no": "Hjertelig gresk lammestuing, langtidskokt til mør perfeksjon med robuste urter og rustikke poteter med skall."
+  },
+  "Sweet chili baked chicken legs with curry sauce, apple chutney and rice": {
+    "en": "Tender baked chicken legs, glazed with sweet chili, served with aromatic curry sauce, tangy apple chutney, and fluffy rice.",
+    "no": "Møre bakte kyllinglår, glasert med søt chili, servert med aromatisk karrysaus, syrlig eplechutney og luftig ris."
+  },
+  "BBQ glazed pork leg with onion gravy and salt roasted small potatoes": {
+    "en": "Tender BBQ-glazed pork leg, rich onion gravy, and crispy salt-roasted potatoes for a satisfying comfort meal.",
+    "no": "Mørt BBQ-glasert svinelår, fyldig løksaus og sprø saltbakte poteter for et mettende trøstemåltid."
+  },
+  "Hjortegryte med poteter og tindevedsyltetøy": {
+    "en": "Hearty deer stew, slow-cooked to tender perfection, served with fluffy potatoes and tart berry jam.",
+    "no": "Hjertelig hjortegryte, langkokt til mør perfeksjon, servert med luftige poteter og syrlig bær syltetøy."
+  },
+  "Swedish meatballs with cream sauce, lingonberries and potatoes": {
+    "en": "Classic Swedish comfort: tender meatballs in a rich cream sauce, brightened by tart lingonberries and hearty potatoes.",
+    "no": "Klassisk svensk kosemat: møre kjøttboller i en fyldig fløtesaus, lysnet av syrlige tyttebær og mettende poteter."
+  },
+  "Pork schnitzel with caper butter, green peas and roasted potatoes": {
+    "en": "Crispy pork schnitzel with zesty caper butter, perfectly paired with sweet peas and golden roasted potatoes.",
+    "no": "Sprø svineschnitzel med syrlig kaperssmør, perfekt servert med søte erter og gylne ovnsbakte poteter."
+  },
+  "Stroganoff with mushrooms, creme fraiche and homemade mashed potato": {
+    "en": "Creamy, rich Stroganoff with earthy mushrooms, tangy crème fraîche, and fluffy homemade mashed potato.",
+    "no": "Kremet, rik Stroganoff med jordaktige sopp, syrlig creme fraiche og luftig hjemmelaget potetmos."
+  },
+  "Catfish patties with egg butter, raw salad and potatoes": {
+    "en": "Savory catfish patties, enriched with creamy egg butter, served alongside fresh salad and hearty potatoes for a comforting meal.",
+    "no": "Velsmakende steinbitkarbonader, beriket med kremet eggesmør, servert med frisk salat og mettende poteter for et trøstende måltid."
+  },
+  "Stroganoff with mushroom, creme fraiche and homemade mashed potato": {
+    "en": "Rich, creamy Stroganoff with tender mushrooms and fluffy mashed potato, a comforting classic.",
+    "no": "Rik, kremet Stroganoff med møre sopp og luftig potetmos, en trøstende klassiker."
+  },
+  "Chicken gyros with fries and tzatziki": {
+    "en": "Savor tender, seasoned chicken gyros, crispy fries, and creamy, cool tzatziki for an authentic Mediterranean delight.",
+    "no": "Nyt møre, krydret kyllinggyros, sprø pommes frites og kremet, kjølig tzatziki for en autentisk middelhavsopplevelse."
+  }
+}
