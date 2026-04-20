@@ -502,5 +502,25 @@
   "Chicken gyros with fries and tzatziki": {
     "country": "Greece",
     "code": "gr"
+  },
+  "Chicken thighs Bali with rice": {
+    "country": "Indonesia",
+    "code": "id"
+  },
+  "Panengkarri med svin og ris": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "Fresh bacalao with potatoes": {
+    "country": "Spain",
+    "code": "es"
+  },
+  "White turkey chili with pasta": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Chili con carne on nachos": {
+    "country": "United States",
+    "code": "us"
   }
 }
