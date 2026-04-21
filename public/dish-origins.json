@@ -522,5 +522,17 @@
   "Chili con carne on nachos": {
     "country": "United States",
     "code": "us"
+  },
+  "White turkey chilli with pasta": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Chilli con carne on nachos": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Beef patties with onion gravy and oven baked potatoes": {
+    "country": "United Kingdom",
+    "code": "gb"
   }
 }
