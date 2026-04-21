@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-21T07:28:33.401Z",
+  "scrapedAt": "2026-04-21T10:18:23.181Z",
   "canteens": {
     "Eat the street": {
       "week": "UKE/WEEK 17",
@@ -21,7 +21,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabbiata",
+                "dish": "Pasta Arrabiatta",
                 "allergens": [
                   {
                     "id": "3",
@@ -60,7 +60,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabbiata",
+                "dish": "Pasta Arrabiatta",
                 "allergens": [
                   {
                     "id": "3",
@@ -124,7 +124,7 @@
                 "isMain": false
               },
               {
-                "dish": "BBQ marinerte maiskolber",
+                "dish": "BBQ marinert maiskolber",
                 "allergens": [],
                 "isMain": false
               },
@@ -381,7 +381,7 @@
                 "isMain": true
               },
               {
-                "dish": "Middelhavs linsesuppe",
+                "dish": "Middelhavslinsesuppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -521,7 +521,7 @@
                 "isMain": false
               },
               {
-                "dish": "Squash and butternut pumpkin suppe",
+                "dish": "Squash and butternut pumpkin soup",
                 "allergens": [
                   {
                     "id": "4",
@@ -599,7 +599,7 @@
                 "isMain": false
               },
               {
-                "dish": "Krydret gulrot og linsesuppe",
+                "dish": "Krydret gulrot- og linsesuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -685,7 +685,7 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "White turkey chilli with pasta",
+                "dish": "White turkey chili with pasta",
                 "allergens": [
                   {
                     "id": "3",
@@ -745,7 +745,7 @@
                 "isMain": false
               },
               {
-                "dish": "Bakt søtpotet og gulrotsuppe",
+                "dish": "Bakt søtpotet- og gulrotsuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -760,7 +760,7 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Chilli con carne on nachos",
+                "dish": "Chili con carne on nachos",
                 "allergens": [],
                 "isMain": true
               },
@@ -803,7 +803,7 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Steinbitkaker med eggesmør, råkost og persillepoteter",
+                "dish": "Stenbitkaker med eggesmør, råkost og persillepoteter",
                 "allergens": [
                   {
                     "id": "4",
@@ -884,7 +884,7 @@
                 "isMain": true
               },
               {
-                "dish": "Bønne og grønnsakstuing med ris",
+                "dish": "Bønne- og grønnsakstuing med ris",
                 "allergens": [
                   {
                     "id": "11",
