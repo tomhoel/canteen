@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-21T10:18:23.181Z",
+  "scrapedAt": "2026-04-22T07:26:10.545Z",
   "canteens": {
     "Eat the street": {
       "week": "UKE/WEEK 17",
@@ -21,7 +21,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabiatta",
+                "dish": "Pasta Arrabbiata",
                 "allergens": [
                   {
                     "id": "3",
@@ -60,7 +60,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pasta Arrabiatta",
+                "dish": "Pasta Arrabbiata",
                 "allergens": [
                   {
                     "id": "3",
@@ -124,7 +124,7 @@
                 "isMain": false
               },
               {
-                "dish": "BBQ marinert maiskolber",
+                "dish": "BBQ marinerte maiskolber",
                 "allergens": [],
                 "isMain": false
               },
@@ -215,7 +215,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Gnocchi pasta Amatriciana med parmesan",
+                "dish": "Gnocchi pasta Bolognese med parmesan",
                 "allergens": [
                   {
                     "id": "3",
@@ -263,7 +263,7 @@
             "label": "WEDNESDAY",
             "items": [
               {
-                "dish": "Gnocchi pasta Amatriciana with parmesan",
+                "dish": "Gnocchi pasta Bolognese with parmesan",
                 "allergens": [
                   {
                     "id": "3",
@@ -381,7 +381,7 @@
                 "isMain": true
               },
               {
-                "dish": "Middelhavslinsesuppe",
+                "dish": "Middelhavs linsesuppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -482,7 +482,7 @@
                 "isMain": true
               },
               {
-                "dish": "Couscous med sofritto",
+                "dish": "Couscous med sofrito",
                 "allergens": [],
                 "isMain": false
               },
@@ -521,7 +521,7 @@
                 "isMain": false
               },
               {
-                "dish": "Squash and butternut pumpkin soup",
+                "dish": "Squash and butternut pumpkinsuppe",
                 "allergens": [
                   {
                     "id": "4",
@@ -548,7 +548,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarstroganoff",
+                "dish": "Vegetar stroganoff",
                 "allergens": [
                   {
                     "id": "4",
@@ -661,7 +661,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetar a la Italiana",
+                "dish": "Vegetar a la italiana",
                 "allergens": [],
                 "isMain": false
               },
@@ -699,7 +699,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarian a la Italiana",
+                "dish": "Vegetarian a la italiana",
                 "allergens": [],
                 "isMain": false
               },
@@ -884,7 +884,7 @@
                 "isMain": true
               },
               {
-                "dish": "Bønne- og grønnsakstuing med ris",
+                "dish": "Bønne og grønnsakstuing med ris",
                 "allergens": [
                   {
                     "id": "11",
@@ -952,7 +952,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegankarbonade med potet",
+                "dish": "Vegan karbonade med potet",
                 "allergens": [],
                 "isMain": false
               },
@@ -1040,7 +1040,7 @@
                 "isMain": false
               },
               {
-                "dish": "Yellow pea soup with bacon",
+                "dish": "Yellow pea soup with bacon and vegetables",
                 "allergens": [],
                 "isMain": false
               }
