@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-23T07:29:56.290Z",
+  "scrapedAt": "2026-04-23T10:21:11.715Z",
   "canteens": {
     "Eat the street": {
       "week": "UKE/WEEK 17",
@@ -11,7 +11,7 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Butterkylling med ris",
+                "dish": "Butter kylling med ris",
                 "allergens": [
                   {
                     "id": "4",
@@ -21,7 +21,7 @@
                 "isMain": true
               },
               {
-                "dish": "Provencesuppe",
+                "dish": "Provence suppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -88,7 +88,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza with salami and rucola",
+                "dish": "Pizza with salami and ruccola",
                 "allergens": [
                   {
                     "id": "3",
@@ -144,7 +144,7 @@
                 "isMain": false
               },
               {
-                "dish": "Schiacciatasandwich med kylling og ost",
+                "dish": "Schiacciata sandwich med kylling og ost",
                 "allergens": [
                   {
                     "id": "1",
@@ -438,7 +438,7 @@
                 "isMain": true
               },
               {
-                "dish": "Middelhavs linsesuppe",
+                "dish": "Middelhavslinsesuppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -529,7 +529,7 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Stenbitkaker med eggesmør, råkost og persillepoteter",
+                "dish": "Stenbitkaker med eggesmør , råkost og persillepoteter",
                 "allergens": [
                   {
                     "id": "4",
@@ -678,7 +678,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegan karbonade med potet",
+                "dish": "Vegankarbonade med potet",
                 "allergens": [],
                 "isMain": false
               },
@@ -736,7 +736,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegan karbonade med ovnsbakte poteter",
+                "dish": "Vegankarbonade med ovnsbakte poteter",
                 "allergens": [],
                 "isMain": false
               },
@@ -784,7 +784,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Stroganoff med sopp, creme fraiche og hjemmelaget potetmos4 vegetargryte med potetmos",
+                "dish": "Stroganoff med sopp, creme fraiche og hjemmelaget potetmosvegetargryte med potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -899,7 +899,7 @@
                 "isMain": true
               },
               {
-                "dish": "Couscous med sofrito",
+                "dish": "Couscous med sofritto",
                 "allergens": [],
                 "isMain": false
               },
@@ -938,7 +938,7 @@
                 "isMain": false
               },
               {
-                "dish": "Squash and butternut pumpkinsuppe",
+                "dish": "Squash and butternut pumpkin soup",
                 "allergens": [
                   {
                     "id": "4",
@@ -1041,7 +1041,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarian-biryani",
+                "dish": "Vegetarianbiryani",
                 "allergens": [],
                 "isMain": false
               },
@@ -1078,7 +1078,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetar a la italiana",
+                "dish": "Vegetar a la Italiana",
                 "allergens": [],
                 "isMain": false
               },
@@ -1116,7 +1116,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarian a la italiana",
+                "dish": "Vegetarian a la Italiana",
                 "allergens": [],
                 "isMain": false
               },
@@ -1177,7 +1177,7 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Chili con carne on nachos",
+                "dish": "Chilli con carne on nachos",
                 "allergens": [],
                 "isMain": true
               },
