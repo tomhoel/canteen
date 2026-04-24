@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-04-23T10:21:11.715Z",
+  "scrapedAt": "2026-04-24T07:55:43.709Z",
   "canteens": {
     "Eat the street": {
       "week": "UKE/WEEK 17",
@@ -11,7 +11,7 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Butter kylling med ris",
+                "dish": "Butterkylling med ris",
                 "allergens": [
                   {
                     "id": "4",
@@ -21,7 +21,7 @@
                 "isMain": true
               },
               {
-                "dish": "Provence suppe",
+                "dish": "Provencesuppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -40,7 +40,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza med salami og ruccola",
+                "dish": "Pizza med salami og rucola",
                 "allergens": [
                   {
                     "id": "3",
@@ -88,7 +88,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza with salami and ruccola",
+                "dish": "Pizza with salami and rucola",
                 "allergens": [
                   {
                     "id": "3",
@@ -227,7 +227,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Ovnsform med storfekjøttdeig og gratinert poteter",
+                "dish": "Ovnsform med storfe kjøttdeig og gratinert poteter",
                 "allergens": [
                   {
                     "id": "4",
@@ -425,6 +425,11 @@
             "items": [
               {
                 "dish": "Kyllinggyros med fries og tzatziki",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "",
                 "allergens": [
                   {
                     "id": "3",
@@ -435,11 +440,16 @@
                     "name": "Milk"
                   }
                 ],
-                "isMain": true
+                "isMain": false
               },
               {
-                "dish": "Middelhavslinsesuppe",
-                "allergens": [],
+                "dish": "Indisk vegetarsuppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
@@ -473,6 +483,11 @@
             "items": [
               {
                 "dish": "Chicken gyros with fries and tzatziki",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "",
                 "allergens": [
                   {
                     "id": "3",
@@ -483,11 +498,16 @@
                     "name": "Milk"
                   }
                 ],
-                "isMain": true
+                "isMain": false
               },
               {
-                "dish": "Mediterranean lentil soup",
-                "allergens": [],
+                "dish": "Indian vegetarian soup",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
                 "isMain": false
               },
               {
@@ -529,7 +549,7 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Stenbitkaker med eggesmør , råkost og persillepoteter",
+                "dish": "Stenbitkaker med eggesmør, råkost og persillepoteter",
                 "allergens": [
                   {
                     "id": "4",
@@ -784,7 +804,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Stroganoff med sopp, creme fraiche og hjemmelaget potetmosvegetargryte med potetmos",
+                "dish": "Stroganoff av svin med sopp, creme fraiche og hjemmelaget potetmos vegetargryte med potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -1011,7 +1031,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarbiryani",
+                "dish": "Vegetar-biryani",
                 "allergens": [],
                 "isMain": false
               },
@@ -1041,7 +1061,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarianbiryani",
+                "dish": "Vegetarian-biryani",
                 "allergens": [],
                 "isMain": false
               },
