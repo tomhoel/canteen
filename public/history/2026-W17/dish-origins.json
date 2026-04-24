@@ -542,17 +542,5 @@
   "Breaded cod with fried potatoes and tartar sauce": {
     "country": "United Kingdom",
     "code": "gb"
-  },
-  "Oven dish with minced beef and gratin potatoes": {
-    "country": "France",
-    "code": "fr"
-  },
-  "Pasta Amatriciana with parmesan": {
-    "country": "Italy",
-    "code": "it"
-  },
-  "Chickengyros with fries and tzatziki": {
-    "country": "Greece",
-    "code": "gr"
   }
 }

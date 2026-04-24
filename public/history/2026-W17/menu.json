@@ -1,8 +1,8 @@
 {
-  "scrapedAt": "2026-04-24T10:20:00.986Z",
+  "scrapedAt": "2026-04-24T07:55:43.709Z",
   "canteens": {
     "Eat the street": {
-      "week": "UKE/WEEK 18",
+      "week": "UKE/WEEK 17",
       "openingHours": "11:00 - 13:30",
       "menu": [
         {
@@ -40,7 +40,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza med salami og ruccola",
+                "dish": "Pizza med salami og rucola",
                 "allergens": [
                   {
                     "id": "3",
@@ -88,7 +88,7 @@
                 "isMain": false
               },
               {
-                "dish": "Pizza with salami and ruccola",
+                "dish": "Pizza with salami and rucola",
                 "allergens": [
                   {
                     "id": "3",
@@ -144,7 +144,7 @@
                 "isMain": false
               },
               {
-                "dish": "Schiacciatasandwich med kylling og ost",
+                "dish": "Schiacciata sandwich med kylling og ost",
                 "allergens": [
                   {
                     "id": "1",
@@ -201,7 +201,7 @@
                 "isMain": false
               },
               {
-                "dish": "Schiacciatasandwich with chicken and cheese",
+                "dish": "Schiacciata sandwich with chicken and cheese",
                 "allergens": [
                   {
                     "id": "1",
@@ -227,7 +227,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Ovnsform med storfekjøttdeig og gratinert poteter",
+                "dish": "Ovnsform med storfe kjøttdeig og gratinert poteter",
                 "allergens": [
                   {
                     "id": "4",
@@ -336,40 +336,39 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Pasta Amatriciana med parmesan",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Gresk lammegryte med skallpoteter",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Vegetar Thaisuppe",
+                "dish": "Fransk løksuppe",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Vegetartaco med guacamole",
-                "allergens": [
-                  {
-                    "id": "11",
-                    "name": "Soya"
-                  }
-                ],
+                "dish": "Sopprisotto med urter",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Gresk salat med Middelhavsmix",
+                "dish": "Cæsarsalat med kylling og bacon",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "1",
                 "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
                   {
                     "id": "4",
                     "name": "Milk"
+                  },
+                  {
+                    "id": "8",
+                    "name": "Mustard"
                   }
                 ],
                 "isMain": false
@@ -380,40 +379,38 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Pasta Amatriciana with parmesan",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
+                "dish": "Greek lamb stew with skin potatoes",
+                "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Vegetarian Thai soup",
+                "dish": "French onion soup",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Veggie tacos with guacamole",
-                "allergens": [
-                  {
-                    "id": "11",
-                    "name": "Soya"
-                  }
-                ],
+                "dish": "Mushroom risotto with herbs",
+                "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Greek salad with Mediterranean mix",
+                "dish": "Caesar salad with chicken and bacon",
                 "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  },
                   {
                     "id": "4",
                     "name": "Milk"
+                  },
+                  {
+                    "id": "8",
+                    "name": "Mustard"
+                  },
+                  {
+                    "id": "1",
+                    "name": "Egg"
                   }
                 ],
                 "isMain": false
@@ -485,7 +482,7 @@
             "label": "FRIDAY",
             "items": [
               {
-                "dish": "Chickengyros with fries and tzatziki",
+                "dish": "Chicken gyros with fries and tzatziki",
                 "allergens": [],
                 "isMain": true
               },
@@ -633,7 +630,7 @@
                 "isMain": true
               },
               {
-                "dish": "Bønne- og grønnsakstuing med ris",
+                "dish": "Bønne og grønnsakstuing med ris",
                 "allergens": [
                   {
                     "id": "11",
@@ -807,7 +804,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Stroganoff av svin med sopp, creme fraiche og hjemmelaget potetmosvegetargryte med potetmos",
+                "dish": "Stroganoff av svin med sopp, creme fraiche og hjemmelaget potetmos vegetargryte med potetmos",
                 "allergens": [
                   {
                     "id": "4",
@@ -961,7 +958,7 @@
                 "isMain": false
               },
               {
-                "dish": "Squash and butternut pumpkin suppe",
+                "dish": "Squash and butternut pumpkin soup",
                 "allergens": [
                   {
                     "id": "4",
@@ -1039,7 +1036,7 @@
                 "isMain": false
               },
               {
-                "dish": "Krydret gulrot- og linsesuppe",
+                "dish": "Krydret gulrot og linsesuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -1185,7 +1182,7 @@
                 "isMain": false
               },
               {
-                "dish": "Bakt søtpotet- og gulrotsuppe",
+                "dish": "Bakt søtpotet og gulrotsuppe",
                 "allergens": [
                   {
                     "id": "7",
