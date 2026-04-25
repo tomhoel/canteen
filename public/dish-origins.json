@@ -582,5 +582,9 @@
   "Breaded plaice filet with homemade remoulade, pea purée and potatoes": {
     "country": "Denmark",
     "code": "dk"
+  },
+  "Paneng karri med svin og ris": {
+    "country": "Thailand",
+    "code": "th"
   }
 }
