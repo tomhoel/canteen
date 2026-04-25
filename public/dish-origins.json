@@ -554,5 +554,21 @@
   "Chickengyros with fries and tzatziki": {
     "country": "Greece",
     "code": "gr"
+  },
+  "Breaded plaice filet with homemade remoulade, pea puree and potatoes": {
+    "country": "Denmark",
+    "code": "dk"
+  },
+  "Glazed chicken with rice and Asian cabbage salad": {
+    "country": "China",
+    "code": "cn"
+  },
+  "Danish beef hamburger with bread, roasted potatoes and garnish": {
+    "country": "Denmark",
+    "code": "dk"
+  },
+  "Braised chicken leg with bell pepper sauce and rice": {
+    "country": "Spain",
+    "code": "es"
   }
 }
