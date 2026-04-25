@@ -570,5 +570,13 @@
   "Braised chicken leg with bell pepper sauce and rice": {
     "country": "Spain",
     "code": "es"
+  },
+  "Panangkarri med svin og ris": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "Breaded plaice filet with homemade remoulade, pea pure and potatoes": {
+    "country": "Denmark",
+    "code": "dk"
   }
 }

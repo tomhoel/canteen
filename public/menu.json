@@ -1,6 +1,337 @@
 {
-  "scrapedAt": "2026-04-25T02:26:12.677Z",
+  "scrapedAt": "2026-04-25T07:16:00.417Z",
   "canteens": {
+    "Flow": {
+      "week": "BYGG / BUILDING B - UKE/WEEK 17",
+      "openingHours": "11:00 - 13:00",
+      "menu": [
+        {
+          "day": "Monday",
+          "no": {
+            "label": "MANDAG",
+            "items": [
+              {
+                "dish": "Kyllingoverlår Bali med ris",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Couscous med sofritto",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Squash og gresskarsuppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "MONDAY",
+            "items": [
+              {
+                "dish": "Chicken thighs Bali with rice",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Couscous with sofrito",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Squash and butternut pumpkin suppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Tuesday",
+          "no": {
+            "label": "TIRSDAG",
+            "items": [
+              {
+                "dish": "Panangkarri med svin og ris",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetar stroganoff",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Tomatsuppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "TUESDAY",
+            "items": []
+          }
+        },
+        {
+          "day": "Wednesday",
+          "no": {
+            "label": "ONSDAG",
+            "items": [
+              {
+                "dish": "Fersk bacalao med poteter",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetar-biryani",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Krydret gulrot og linsesuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "WEDNESDAY",
+            "items": [
+              {
+                "dish": "Fresh bacalao with potatoes",
+                "allergens": [
+                  {
+                    "id": "2",
+                    "name": "Fish"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetarian-biryani",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Spiced carrot and lentil soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Thursday",
+          "no": {
+            "label": "TORSDAG",
+            "items": [
+              {
+                "dish": "Hvit kalkunchili med pasta",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetar a la Italiana",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Blomkålsuppe",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "THURSDAY",
+            "items": [
+              {
+                "dish": "White turkey chilli with pasta",
+                "allergens": [
+                  {
+                    "id": "3",
+                    "name": "Gluten"
+                  },
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  }
+                ],
+                "isMain": true
+              },
+              {
+                "dish": "Vegetarian a la Italiana",
+                "allergens": [],
+                "isMain": false
+              },
+              {
+                "dish": "Cauliflower soup",
+                "allergens": [
+                  {
+                    "id": "4",
+                    "name": "Milk"
+                  },
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        },
+        {
+          "day": "Friday",
+          "no": {
+            "label": "FREDAG",
+            "items": [
+              {
+                "dish": "Chili con carne på nachos",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Villris med marinert avokado, vannmelon, peanøtt og friske blader",
+                "allergens": [
+                  {
+                    "id": "9",
+                    "name": "Sesame seeds"
+                  },
+                  {
+                    "id": "11",
+                    "name": "Soya"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Bakt søtpotet og gulrotsuppe",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          },
+          "en": {
+            "label": "FRIDAY",
+            "items": [
+              {
+                "dish": "Chilli con carne on nachos",
+                "allergens": [],
+                "isMain": true
+              },
+              {
+                "dish": "Wild rice with marinated avocado, watermelon, peanut and fresh salad",
+                "allergens": [
+                  {
+                    "id": "9",
+                    "name": "Sesame seeds"
+                  },
+                  {
+                    "id": "11",
+                    "name": "Soya"
+                  }
+                ],
+                "isMain": false
+              },
+              {
+                "dish": "Baked sweet potato and carrot soup",
+                "allergens": [
+                  {
+                    "id": "7",
+                    "name": "Celery"
+                  }
+                ],
+                "isMain": false
+              }
+            ]
+          }
+        }
+      ]
+    },
     "Eat the street": {
       "week": "UKE/WEEK 18",
       "openingHours": "11:00 - 13:30",
@@ -11,7 +342,7 @@
             "label": "MANDAG",
             "items": [
               {
-                "dish": "Butter kylling med ris",
+                "dish": "Butterkylling med ris",
                 "allergens": [
                   {
                     "id": "4",
@@ -350,7 +681,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarthaisuppe",
+                "dish": "Vegetar Thaisuppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -409,7 +740,7 @@
                 "isMain": false
               },
               {
-                "dish": "Greek salad with Mediterranean Mix",
+                "dish": "Greek salad with Mediterranean mix",
                 "allergens": [
                   {
                     "id": "4",
@@ -440,337 +771,6 @@
                 "dish": "Closed",
                 "allergens": [],
                 "isMain": true
-              }
-            ]
-          }
-        }
-      ]
-    },
-    "Flow": {
-      "week": "BYGG / BUILDING B - UKE/WEEK 17",
-      "openingHours": "11:00 - 13:00",
-      "menu": [
-        {
-          "day": "Monday",
-          "no": {
-            "label": "MANDAG",
-            "items": [
-              {
-                "dish": "Kyllingoverlår Bali med ris",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Couscous med sofrito",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Squash og gresskarsuppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "MONDAY",
-            "items": [
-              {
-                "dish": "Chicken thighs Bali with rice",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Couscous with sofrito",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Squash and butternutpumpkinsuppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Tuesday",
-          "no": {
-            "label": "TIRSDAG",
-            "items": [
-              {
-                "dish": "Panengkarri med svin og ris",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarstroganoff",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Tomatsuppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "TUESDAY",
-            "items": []
-          }
-        },
-        {
-          "day": "Wednesday",
-          "no": {
-            "label": "ONSDAG",
-            "items": [
-              {
-                "dish": "Fersk bacalao med poteter",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetar-biryani",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Krydret gulrot og linsesuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "WEDNESDAY",
-            "items": [
-              {
-                "dish": "Fresh bacalao with potatoes",
-                "allergens": [
-                  {
-                    "id": "2",
-                    "name": "Fish"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarian-biryani",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Spiced carrot and lentil soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Thursday",
-          "no": {
-            "label": "TORSDAG",
-            "items": [
-              {
-                "dish": "Hvit kalkunchili med pasta",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetar a la Italiana",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Blomkålsuppe",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "THURSDAY",
-            "items": [
-              {
-                "dish": "White turkey chilli with pasta",
-                "allergens": [
-                  {
-                    "id": "3",
-                    "name": "Gluten"
-                  },
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  }
-                ],
-                "isMain": true
-              },
-              {
-                "dish": "Vegetarian a la Italiana",
-                "allergens": [],
-                "isMain": false
-              },
-              {
-                "dish": "Cauliflower soup",
-                "allergens": [
-                  {
-                    "id": "4",
-                    "name": "Milk"
-                  },
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          }
-        },
-        {
-          "day": "Friday",
-          "no": {
-            "label": "FREDAG",
-            "items": [
-              {
-                "dish": "Chili con carne på nachos",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Villris med marinert avokado, vannmelon, peanøtt og friske blader",
-                "allergens": [
-                  {
-                    "id": "9",
-                    "name": "Sesame seeds"
-                  },
-                  {
-                    "id": "11",
-                    "name": "Soya"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Bakt søtpotet og gulrotsuppe",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
-              }
-            ]
-          },
-          "en": {
-            "label": "FRIDAY",
-            "items": [
-              {
-                "dish": "Chilli con carne on nachos",
-                "allergens": [],
-                "isMain": true
-              },
-              {
-                "dish": "Wild rice with marinated avocado, watermelon, peanut and fresh salad",
-                "allergens": [
-                  {
-                    "id": "9",
-                    "name": "Sesame seeds"
-                  },
-                  {
-                    "id": "11",
-                    "name": "Soya"
-                  }
-                ],
-                "isMain": false
-              },
-              {
-                "dish": "Baked sweet potato and carrot soup",
-                "allergens": [
-                  {
-                    "id": "7",
-                    "name": "Celery"
-                  }
-                ],
-                "isMain": false
               }
             ]
           }
@@ -812,7 +812,7 @@
             "label": "MONDAY",
             "items": [
               {
-                "dish": "Breaded plaice filet with homemade remoulade, pea puree and potatoes",
+                "dish": "Breaded plaice filet with homemade remoulade, pea pure and potatoes",
                 "allergens": [
                   {
                     "id": "3",
@@ -905,7 +905,7 @@
                 "isMain": true
               },
               {
-                "dish": "Veganburger med brød og tilbehør",
+                "dish": "Vegan burger med brød og tilbehør",
                 "allergens": [
                   {
                     "id": "9",
@@ -995,7 +995,7 @@
                 "isMain": false
               },
               {
-                "dish": "Kremet blomkål- og broccolisuppe",
+                "dish": "Kremet blomkål og broccolisuppe",
                 "allergens": [
                   {
                     "id": "4",
