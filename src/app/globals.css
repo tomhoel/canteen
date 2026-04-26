@@ -1366,8 +1366,8 @@ body {
   text-transform: uppercase;
   color: var(--accent-orange);
   text-align: center;
-  padding: 4px 14px 6px;
-  margin: 0 4px;
+  padding: 6px 14px 9px;
+  margin: 0 4px 8px;
   border-bottom: 1px dashed rgba(200, 116, 26, 0.22);
   white-space: nowrap;
   overflow: hidden;
@@ -1959,7 +1959,8 @@ body {
   /* Banner — compact on mobile, no nowrap so it can wrap if i18n grows it */
   .day-bar-banner {
     font-size: 9.5px;
-    padding: 2px 8px 4px;
+    padding: 4px 8px 6px;
+    margin: 0 2px 5px;
     letter-spacing: 0.05em;
     white-space: normal;
   }
