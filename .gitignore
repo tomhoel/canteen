@@ -25,6 +25,9 @@
 *.png
 !public/**/*.png
 
+# playwright MCP test artefacts
+/.playwright-mcp/
+
 # logs
 update.log
 

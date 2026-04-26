@@ -97,6 +97,21 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
 
             {dotData.length > 0 && (
               <div className="leaderboard-dots-section">
+                {/* Date header row */}
+                <div className="leaderboard-dots-row leaderboard-dots-header">
+                  <span className="leaderboard-dots-label" />
+                  <div className="leaderboard-dots">
+                    {dotData.map(({ date }) => {
+                      const d = new Date(date + 'T12:00:00');
+                      const label = `${d.getDate()}.${d.getMonth() + 1}`;
+                      return (
+                        <span key={date} className="leaderboard-dot-date" title={date}>
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
                 {CANTEEN_ORDER.map(name => (
                   <div key={name} className="leaderboard-dots-row">
                     <span className="leaderboard-dots-label">{name.split(" ").slice(0, 2).join(" ")}</span>

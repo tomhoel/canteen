@@ -18,6 +18,22 @@ export const ALLERGEN_NAMES_NO: Record<string, string> = {
   Sulphites: "Sulfitter", Molluscs: "Bl\u00F8tdyr", Lupin: "Lupin"
 };
 
+/** Short allergen abbreviations — unique 2-3 letter codes to avoid collisions. */
+export const ALLERGEN_ABBREV: Record<string, string> = {
+  Egg: "Eg", Fish: "Fi", Gluten: "Gl", Milk: "Mi",
+  Nuts: "Nø", Peanuts: "Pn", Celery: "Se", Mustard: "Sn",
+  "Sesame seeds": "Ss", Shellfish: "Sk", Soya: "So",
+  Sulphites: "Su", Molluscs: "Bl", Lupin: "Lu",
+};
+
+/** Norwegian abbreviations for allergens on side dishes. */
+export const ALLERGEN_ABBREV_NO: Record<string, string> = {
+  Egg: "Eg", Fish: "Fi", Gluten: "Gl", Milk: "Me",
+  Nuts: "Nø", Peanuts: "Pn", Celery: "Se", Mustard: "Sn",
+  "Sesame seeds": "Ss", Shellfish: "Sk", Soya: "So",
+  Sulphites: "Su", Molluscs: "Bl", Lupin: "Lu",
+};
+
 export const CANTEEN_ORDER = ["Eat the street", "Fresh4you", "Flow"];
 
 export const CANTEEN_IMAGE_SLUGS: Record<string, string> = {

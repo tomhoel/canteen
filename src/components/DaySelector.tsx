@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import type { DisplayMode } from "@/lib/dateUtils";
 
 interface DaySelectorProps {
   fullDayLabels: string[];
@@ -6,7 +7,7 @@ interface DaySelectorProps {
   selectedDay: number;
   todayIndex: number;
   lang: "no" | "en";
-  hasAheadCanteens: boolean;
+  mode: DisplayMode;
   onDaySelect: (i: number) => void;
   cardsRef?: React.RefObject<HTMLElement | null>;
 }
@@ -17,7 +18,7 @@ export default function DaySelector({
   selectedDay,
   todayIndex,
   lang,
-  hasAheadCanteens,
+  mode,
   onDaySelect,
   cardsRef,
 }: DaySelectorProps) {
@@ -91,10 +92,17 @@ export default function DaySelector({
   return (
     <nav
       ref={barRef}
-      className={`day-bar${hasAheadCanteens ? " has-ahead" : ""}`}
-      aria-label="Day selection"
+      className={`day-bar day-bar-${mode}`}
+      aria-label={lang === "no" ? "Velg dag" : "Day selection"}
       style={dynamicBottom != null ? { bottom: dynamicBottom } : undefined}
     >
+      {mode !== "weekday-current" && (
+        <div className="day-bar-banner" role="status">
+          {mode === "weekend-preview"
+            ? (lang === "no" ? "Forhåndsvisning av neste uke" : "Next week preview")
+            : (lang === "no" ? "Helg — kantinene er stengt" : "Weekend — canteens closed")}
+        </div>
+      )}
       <div className="day-selector" role="tablist" ref={selectorRef}>
         {pill && (
           <div

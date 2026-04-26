@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { Redis } from '@upstash/redis';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { getWeekNumber } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,17 +10,6 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-async function getMenuVersion(): Promise<string> {
-  try {
-    const menuPath = path.join(process.cwd(), 'public', 'menu.json');
-    const raw = await fs.readFile(menuPath, 'utf-8');
-    const menu = JSON.parse(raw);
-    return menu.scrapedAt || 'unknown';
-  } catch {
-    return 'unknown';
-  }
-}
-
 export async function POST(request: NextRequest) {
   const { dishName, lang } = await request.json();
 
@@ -29,9 +17,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  // Check Redis cache first
-  const menuVersion = await getMenuVersion();
-  const cacheKey = `recipe:${menuVersion}:${dishName}:${lang}`;
+  // Cache key uses week number — deterministic and survives filesystem failures
+  const weekNum = getWeekNumber();
+  const cacheKey = `recipe:wk${weekNum}:${dishName}:${lang}`;
 
   try {
     const cached = await redis.get(cacheKey);
@@ -108,9 +96,9 @@ Other guidelines:
 
     const recipe = JSON.parse(text);
 
-    // Cache in Redis for future requests
+    // Cache in Redis with 7-day TTL
     try {
-      await redis.set(cacheKey, recipe);
+      await redis.set(cacheKey, recipe, { ex: 7 * 24 * 60 * 60 });
     } catch (err) {
       console.error('Redis write error:', err);
     }

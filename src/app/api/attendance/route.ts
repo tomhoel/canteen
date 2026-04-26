@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
+import { getLocalDateKey } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,10 +14,6 @@ interface AttendanceData {
   canteens: Record<string, number>;
 }
 
-function getTodayKey(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
 async function getAttendanceData(): Promise<AttendanceData> {
   try {
     const data = await redis.get<AttendanceData>('attendance');
@@ -26,7 +23,7 @@ async function getAttendanceData(): Promise<AttendanceData> {
   } catch (err) {
     console.error('Error reading from Redis:', err);
   }
-  return { date: getTodayKey(), canteens: {} };
+  return { date: getLocalDateKey(), canteens: {} };
 }
 
 async function saveAttendanceData(data: AttendanceData) {
@@ -39,7 +36,7 @@ async function saveAttendanceData(data: AttendanceData) {
 
 export async function GET() {
   const data = await getAttendanceData();
-  const today = getTodayKey();
+  const today = getLocalDateKey();
 
   // Reset if it's a new day
   if (data.date !== today) {
@@ -61,13 +58,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const { canteenName, action } = await request.json();
-  
+
   if (!canteenName || !['add', 'remove'].includes(action)) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
-  
+
   const data = await getAttendanceData();
-  const today = getTodayKey();
+  const today = getLocalDateKey();
 
   // Reset if it's a new day
   if (data.date !== today) {
@@ -82,16 +79,16 @@ export async function POST(request: NextRequest) {
     data.date = today;
     data.canteens = {};
   }
-  
+
   const currentCount = data.canteens[canteenName] || 0;
-  
+
   if (action === 'add') {
     data.canteens[canteenName] = currentCount + 1;
   } else if (action === 'remove') {
     data.canteens[canteenName] = Math.max(0, currentCount - 1);
   }
-  
+
   await saveAttendanceData(data);
-  
+
   return NextResponse.json(data);
 }

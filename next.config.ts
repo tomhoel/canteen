@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig: NextConfig = {
   images: {
-    unoptimized: true,
+    unoptimized: isDev,
   },
-  // Disable caching for images during development
   async headers() {
     return [
       {
@@ -12,7 +13,9 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate',
+            value: isDev
+              ? 'no-store, no-cache, must-revalidate'
+              : 'public, max-age=86400, stale-while-revalidate=604800',
           },
         ],
       },
@@ -21,7 +24,9 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate',
+            value: isDev
+              ? 'no-store, no-cache, must-revalidate'
+              : 'public, max-age=86400, stale-while-revalidate=604800',
           },
         ],
       },

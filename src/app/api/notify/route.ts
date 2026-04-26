@@ -6,6 +6,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ skipped: true });
   }
 
+  // Basic origin check — only allow requests from the same site
+  const origin = request.headers.get('origin');
+  const host = request.headers.get('host');
+  if (origin && host && !origin.includes(host)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   let canteens: Record<string, number>;
   let dishes: Record<string, string>;
   let date: string;
