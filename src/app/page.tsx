@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { DAYS_NO, DAYS_EN, FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
-import type { MenuData, CanteenData, CanteenDayItem, Recipe, DealsResponse, MenyResponse, ProductOffer } from "@/lib/types";
+import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
+import type { MenuData, CanteenData, CanteenDayItem } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
+import { getLocalDateKey, computeDisplayContext, compareWeeks } from "@/lib/dateUtils";
+import { useVoting } from "@/lib/useVoting";
+import { useRecipe } from "@/lib/useRecipe";
+import { useDeals } from "@/lib/useDeals";
+import { useMenySearch } from "@/lib/useMenySearch";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import SkeletonCards from "@/components/SkeletonCard";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
@@ -17,44 +23,79 @@ import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import { isCanteenClosed } from "@/lib/canteen-utils";
 
+/** Purge stale localStorage keys older than 7 days. */
+function cleanupLocalStorage() {
+  const PREFIXES = ["recipe_v4_", "deals_v4_", "meny_v4_"];
+  const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+
+    // Clean old voted_ and slack_shared_ keys (date-keyed)
+    if (key.startsWith("voted_") || key.startsWith("slack_shared_")) {
+      const dateStr = key.split("_").pop();
+      if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const age = now - new Date(dateStr + "T12:00:00").getTime();
+        if (age > MAX_AGE) localStorage.removeItem(key);
+      }
+      continue;
+    }
+
+    // Clean old cached data by checking generatedAt or trying to parse
+    if (PREFIXES.some(p => key.startsWith(p))) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (parsed.generatedAt) {
+          const age = now - new Date(parsed.generatedAt).getTime();
+          if (age > MAX_AGE) localStorage.removeItem(key);
+        }
+      } catch {
+        localStorage.removeItem(key); // corrupt, remove
+      }
+    }
+  }
+}
+
 export default function Home() {
   const [menuData, setMenuData] = useState<MenuData | null>(null);
   const [lang, setLang] = useState<"no" | "en">("no");
   const [langAnim, setLangAnim] = useState("");
   const [selectedDay, setSelectedDay] = useState(0);
-  const [todayIndex, setTodayIndex] = useState(-1);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
-  const [votes, setVotes] = useState<Record<string, number>>({});
+  // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
+  const [dateTick, setDateTick] = useState(0);
   const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: "" });
   const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-  const [hasVoted, setHasVoted] = useState(false);
-  const [votedCanteen, setVotedCanteen] = useState("");
-  const [isVoting, setIsVoting] = useState(false);
-  const [voteSuccess, setVoteSuccess] = useState(false);
   const [dishOrigins, setDishOrigins] = useState<Record<string, { country: string; code: string }>>({});
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, string | { en: string; no: string }>>({});
-  const [recipeModal, setRecipeModal] = useState<{ isOpen: boolean; dishName: string; canteenName: string; recipe: Recipe | null; isLoading: boolean; error: string | null }>({ isOpen: false, dishName: "", canteenName: "", recipe: null, isLoading: false, error: null });
-  const [recipeServings, setRecipeServings] = useState(4);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
-  const [dealsView, setDealsView] = useState<{ isOpen: boolean; deals: DealsResponse | null; isLoading: boolean; isStreaming: boolean; error: string | null }>({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
-  const [menyView, setMenyView] = useState<{ isOpen: boolean; data: MenyResponse | null; isLoading: boolean; error: string | null }>({ isOpen: false, data: null, isLoading: false, error: null });
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
-  const [shareState, setShareState] = useState<"idle" | "loading" | "sent">("idle");
+
+  // Custom hooks — extracted state management
+  const voting = useVoting();
+  const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe(lang);
+  const { dealsView, handleDealsClick, closeDeals } = useDeals(lang);
+  const { menyView, handleMenyClick, closeMeny } = useMenySearch(lang);
 
   const scrollRef = useRef<HTMLElement>(null);
-  const votesLoadedRef = useRef(false);
-  const shareInFlightRef = useRef(false);
 
-  // #9 — Touch tracking via refs instead of state (no re-renders on every pixel)
+  // Touch tracking via refs (no re-renders on every pixel)
   const touchStartRef = useRef<number | null>(null);
   const touchEndRef = useRef<number | null>(null);
 
-  // #14 — Debounced scroll position save
+  // Debounced scroll position save
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track preloaded image URLs to avoid duplicates (#5)
+  const preloadedRef = useRef<Set<string>>(new Set());
 
   // Restore scroll position after mount and data load
   useEffect(() => {
@@ -68,7 +109,7 @@ export default function Home() {
     }
   }, [mounted, menuData]);
 
-  // #14 — Debounced scroll handler (200ms)
+  // Debounced scroll handler (200ms)
   const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
     const top = e.currentTarget.scrollTop;
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
@@ -79,7 +120,6 @@ export default function Home() {
 
   const minSwipeDistance = 50;
 
-  // #9 — Touch handlers use refs
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (showSwipeHint) setShowSwipeHint(false);
     touchEndRef.current = null;
@@ -119,155 +159,15 @@ export default function Home() {
   const handleLangSwitch = useCallback((newLang: "no" | "en") => {
     if (newLang === lang || langAnimBusy.current) return;
     langAnimBusy.current = true;
-    // Single continuous animation — swap content mid-animation when all cards are in the
-    // invisible zone (22%–65% of keyframes).  350ms guarantees card 3 (100ms delay) has
-    // reached opacity 0 before React re-renders with new language content.
     setLangAnim(`lang-cascade-${newLang}`);
     setTimeout(() => setLang(newLang), 350);
-    // Swap to lang-done (suppresses cardReveal replay) instead of clearing
     setTimeout(() => { setLangAnim("lang-done"); langAnimBusy.current = false; }, 780);
   }, [lang]);
 
-  const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
-    const cacheKey = `recipe_v4_${lang}_${dishName}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const recipe = JSON.parse(cached) as Recipe;
-        setRecipeServings(recipe.servings);
-        setRecipeModal({ isOpen: true, dishName, canteenName, recipe, isLoading: false, error: null });
-        return;
-      } catch { /* cache corrupted, refetch */ }
-    }
-    setRecipeModal({ isOpen: true, dishName, canteenName, recipe: null, isLoading: true, error: null });
-    try {
-      const res = await fetch('/api/recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dishName, lang }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      const recipe = await res.json() as Recipe;
-      localStorage.setItem(cacheKey, JSON.stringify(recipe));
-      setRecipeServings(recipe.servings);
-      setRecipeModal(prev => ({ ...prev, recipe, isLoading: false }));
-    } catch {
-      setRecipeModal(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke generere oppskrift' : 'Could not generate recipe' }));
-    }
-  }, [lang]);
-
-  const handleDealsClick = useCallback(async (dishName: string, recipe: Recipe) => {
-    // Check localStorage cache
-    const cacheKey = `deals_v4_${dishName}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached) as DealsResponse;
-        const age = Date.now() - new Date(parsed.generatedAt).getTime();
-        if (age < 24 * 60 * 60 * 1000) {
-          setDealsView({ isOpen: true, deals: parsed, isLoading: false, isStreaming: false, error: null });
-          return;
-        }
-      } catch { /* stale/corrupt cache */ }
-    }
-
-    setDealsView({ isOpen: true, deals: null, isLoading: true, isStreaming: true, error: null });
-    try {
-      const res = await fetch('/api/deals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients: recipe.ingredients, dishName, lang }),
-      });
-      if (!res.ok) throw new Error('Failed');
-
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        // Cached response from Redis — not streaming
-        const deals = await res.json() as DealsResponse;
-        localStorage.setItem(cacheKey, JSON.stringify(deals));
-        setDealsView(prev => ({ ...prev, deals, isLoading: false, isStreaming: false }));
-      } else {
-        // Streaming SSE response
-        const reader = res.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        const accumulated: ProductOffer[] = [];
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split('\n\n');
-          buffer = parts.pop() || '';
-
-          for (const part of parts) {
-            const line = part.trim();
-            if (!line.startsWith('data: ')) continue;
-            const data = JSON.parse(line.slice(6));
-
-            if (data.type === 'ingredient') {
-              accumulated.push(...(data.deals as ProductOffer[]));
-              // Build partial DealsResponse for immediate display
-              const partial: DealsResponse = {
-                recommendation: { store: '', storeColor: '', storeLogo: '', totalPrice: 0, dealCount: 0, keyIngredientsCovered: 0, deals: [] },
-                allStores: [{ store: '_stream', storeColor: '', storeLogo: '', totalPrice: 0, dealCount: accumulated.length, keyIngredientsCovered: 0, deals: [...accumulated] }],
-                searchedIngredients: [data.name],
-                generatedAt: '',
-              };
-              setDealsView(prev => {
-                // Merge searchedIngredients from previous partial
-                const prevSearched = prev.deals?.searchedIngredients || [];
-                partial.searchedIngredients = [...prevSearched, data.name];
-                return { ...prev, deals: partial };
-              });
-            } else if (data.type === 'done') {
-              const { type: _, ...response } = data;
-              const deals = response as DealsResponse;
-              localStorage.setItem(cacheKey, JSON.stringify(deals));
-              setDealsView(prev => ({ ...prev, deals, isLoading: false, isStreaming: false }));
-            } else if (data.type === 'error') {
-              setDealsView(prev => ({ ...prev, isLoading: false, isStreaming: false, error: lang === 'no' ? 'Kunne ikke finne priser' : 'Could not find prices' }));
-            }
-          }
-        }
-      }
-    } catch {
-      setDealsView(prev => ({ ...prev, isLoading: false, isStreaming: false, error: lang === 'no' ? 'Kunne ikke finne priser' : 'Could not find prices' }));
-    }
-  }, [lang]);
-
-  const handleMenyClick = useCallback(async (dishName: string, recipe: Recipe) => {
-    const cacheKey = `meny_v4_${dishName}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached) as MenyResponse;
-        const age = Date.now() - new Date(parsed.generatedAt).getTime();
-        if (age < 24 * 60 * 60 * 1000) {
-          setMenyView({ isOpen: true, data: parsed, isLoading: false, error: null });
-          return;
-        }
-      } catch { /* stale/corrupt cache */ }
-    }
-
-    setMenyView({ isOpen: true, data: null, isLoading: true, error: null });
-    try {
-      const res = await fetch('/api/meny/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients: recipe.ingredients, dishName, lang }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json() as MenyResponse;
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      setMenyView(prev => ({ ...prev, data, isLoading: false }));
-    } catch {
-      setMenyView(prev => ({ ...prev, isLoading: false, error: lang === 'no' ? 'Kunne ikke søke hos Meny' : 'Could not search Meny' }));
-    }
-  }, [lang]);
-
+  // Initial data loading + localStorage cleanup
   useEffect(() => {
+    cleanupLocalStorage();
+
     const swipeHintSeen = localStorage.getItem("swipe_hint_seen");
     let swipeHintTimer: ReturnType<typeof setTimeout> | null = null;
     if (!swipeHintSeen) {
@@ -275,12 +175,6 @@ export default function Home() {
       localStorage.setItem("swipe_hint_seen", "1");
       swipeHintTimer = setTimeout(() => setShowSwipeHint(false), 2500);
     }
-
-    const jsDay = new Date().getDay();
-    const isWeekday = jsDay >= 1 && jsDay <= 5;
-    const idx = isWeekday ? jsDay - 1 : -1;
-    setTodayIndex(idx);
-    setSelectedDay(isWeekday ? jsDay - 1 : 0);
 
     fetch("/menu.json")
       .then(r => r.json())
@@ -296,59 +190,72 @@ export default function Home() {
       .then(data => setDishDescriptions(data || {}))
       .catch(() => {});
 
-    fetch("/api/attendance")
-      .then(r => r.json())
-      .then(data => {
-        setVotes(data.canteens || {});
-        votesLoadedRef.current = true;
-      });
-
     setMounted(true);
-    const todayKey = new Date().toISOString().split("T")[0];
-    const voted = localStorage.getItem(`voted_${todayKey}`);
-    if (voted) { setHasVoted(true); setVotedCanteen(voted); }
-
-    // #10 — Pause polling when tab is hidden
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    const startPolling = () => {
-      if (interval) clearInterval(interval);
-      interval = setInterval(() => {
-        fetch("/api/attendance").then(r => r.json()).then(data => setVotes(data.canteens || {}));
-      }, 60000);
-    };
-
-    const stopPolling = () => {
-      if (interval) { clearInterval(interval); interval = null; }
-    };
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        // Fetch immediately on return, then resume polling
-        fetch("/api/attendance").then(r => r.json()).then(data => setVotes(data.canteens || {}));
-        startPolling();
-      }
-    };
-
-    startPolling();
-    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       if (swipeHintTimer) clearTimeout(swipeHintTimer);
-      stopPolling();
-      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 
+  // Refresh date-derived state on visibility change + every 5 minutes.
+  // Handles the Sun→Mon midnight transition and long-open sessions.
+  useEffect(() => {
+    const bump = () => setDateTick(t => t + 1);
+    const onVisibility = () => {
+      if (!document.hidden) bump();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    const interval = setInterval(bump, 5 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Single source of truth for which week to render and the mode that
+  // drives header copy / banner / vote gating. Lives above the keyboard
+  // effect so its dep array can reference todayIndex.
+  const sortedCanteens = useMemo(() => {
+    if (!menuData) return [];
+    return CANTEEN_ORDER
+      .filter(name => menuData.canteens[name])
+      .map(name => [name, menuData.canteens[name]] as [string, CanteenData]);
+  }, [menuData]);
+
+  const canteenWeekNumbers = useMemo(
+    () => sortedCanteens
+      .map(([, c]) => parseInt(c.week.match(/\d+/)?.[0] || "0", 10))
+      .filter(n => n > 0),
+    [sortedCanteens],
+  );
+
+  // dateTick forces a recompute on visibility/interval so Sun→Mon transitions cleanly.
+  const displayContext = useMemo(
+    () => computeDisplayContext(canteenWeekNumbers),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canteenWeekNumbers, dateTick],
+  );
+
+  const { mode, weekNumber: displayWeek, todayIndex, anchor: displayMonday } = displayContext;
+
+  // Seed selectedDay once menu data is ready, so the user lands on the
+  // mode-appropriate day (today / Monday-preview / Friday-recap).
+  const seededSelectedDayRef = useRef(false);
+  useEffect(() => {
+    if (menuData && !seededSelectedDayRef.current) {
+      setSelectedDay(displayContext.defaultSelectedDay);
+      seededSelectedDayRef.current = true;
+    }
+  }, [menuData, displayContext.defaultSelectedDay]);
+
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (menyView.isOpen) {
-          setMenyView({ isOpen: false, data: null, isLoading: false, error: null });
+          closeMeny();
         } else if (dealsView.isOpen) {
-          setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null });
+          closeDeals();
         } else if (weekOverviewOpen) {
           setWeekOverviewOpen(false);
         } else if (leaderboardOpen) {
@@ -357,7 +264,7 @@ export default function Home() {
           setLightboxIndex(-1);
           setVoteModal({ isOpen: false, canteenName: "" });
           setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-          setRecipeModal(prev => ({ ...prev, isOpen: false }));
+          closeRecipe();
         }
       } else if (e.key === "ArrowLeft") {
         if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
@@ -376,9 +283,9 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect]);
+  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
 
-  // #11 — Only preload current day + adjacent days (not all 5)
+  // Image preloading — tracks loaded URLs to avoid duplicates (#5)
   useEffect(() => {
     if (!menuData) return;
 
@@ -386,29 +293,26 @@ export default function Home() {
     if (selectedDay > 0) daysToPreload.push(selectedDay - 1);
     if (selectedDay < 4) daysToPreload.push(selectedDay + 1);
 
-    // Load selected day immediately
-    const currentDayKey = DAY_KEYS[selectedDay];
-    if (currentDayKey) {
+    const preloadDay = (dayIdx: number) => {
+      const dk = DAY_KEYS[dayIdx];
+      if (!dk) return;
       CANTEEN_ORDER.forEach(name => {
         const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
+        const src = `/images_nobg/${dk}/${slug}.png`;
+        if (preloadedRef.current.has(src)) return;
+        preloadedRef.current.add(src);
         const img = new window.Image();
-        img.src = `/images_nobg/${currentDayKey}/${slug}.png`;
+        img.src = src;
       });
-    }
+    };
+
+    // Load selected day immediately
+    preloadDay(selectedDay);
 
     // Defer adjacent days by 1.5s
     const adjacentDays = daysToPreload.slice(1);
     const timer = setTimeout(() => {
-      adjacentDays.forEach(dayIdx => {
-        const dk = DAY_KEYS[dayIdx];
-        if (dk) {
-          CANTEEN_ORDER.forEach(name => {
-            const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
-            const img = new window.Image();
-            img.src = `/images_nobg/${dk}/${slug}.png`;
-          });
-        }
-      });
+      adjacentDays.forEach(preloadDay);
     }, 1500);
 
     return () => clearTimeout(timer);
@@ -442,53 +346,12 @@ export default function Home() {
   }, [mounted, menuData, selectedDay]);
 
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
-  const activeDayIndex = todayIndex >= 0 ? todayIndex : 0;
 
-  const sortedCanteens = useMemo(() => {
-    if (!menuData) return [];
-    return CANTEEN_ORDER
-      .filter(name => menuData.canteens[name])
-      .map(name => [name, menuData.canteens[name]] as [string, CanteenData]);
-  }, [menuData]);
+  const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => voting.votes[name] ?? 0)), [sortedCanteens, voting.votes]);
 
-  const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => votes[name] ?? 0)), [sortedCanteens, votes]);
-
-  const currentWeek = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-    const yearStart = new Date(d.getFullYear(), 0, 1);
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  }, []);
-
-  const weekLabel = `${lang === "no" ? "Uke" : "Week"} ${currentWeek}`;
-
-  // #4 — Detect ahead canteens and calculate appropriate dates
-  const hasAheadCanteens = useMemo(() => {
-    return sortedCanteens.some(([, canteen]) => {
-      const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
-      return canteenWeekNum > currentWeek;
-    });
-  }, [sortedCanteens, currentWeek]);
-
-  // The week the UI is currently rendering — shifts forward when any canteen
-  // has published next week's menu, so outdated/ahead flags are computed
-  // relative to what the day-bar is actually showing.
-  const displayWeek = hasAheadCanteens ? currentWeek + 1 : currentWeek;
+  const weekLabel = `${lang === "no" ? "Uke" : "Week"} ${displayWeek}`;
 
   const { dateStr, dayLabelsData } = useMemo(() => {
-    const selectedDate = new Date();
-    const currentDayOfWeek = selectedDate.getDay();
-    const mondayOffset = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
-    const m = new Date(selectedDate);
-    m.setDate(selectedDate.getDate() + mondayOffset);
-
-    // #4 — If canteens are ahead, shift dates forward by 7 days
-    const displayMonday = new Date(m);
-    if (hasAheadCanteens) {
-      displayMonday.setDate(displayMonday.getDate() + 7);
-    }
-
     const t = new Date(displayMonday);
     t.setDate(displayMonday.getDate() + selectedDay);
     const dStr = t.toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "long" });
@@ -500,7 +363,7 @@ export default function Home() {
     });
 
     return { dateStr: dStr, dayLabelsData: labels };
-  }, [selectedDay, lang, fullDayLabels, hasAheadCanteens]);
+  }, [selectedDay, lang, fullDayLabels, displayMonday]);
 
   const allDaysData = useMemo((): CanteenDayItem[][] => {
     return DAY_KEYS.map(dk => {
@@ -524,8 +387,9 @@ export default function Home() {
         const imagePath = `/images_nobg/${dk}/${imageSlug}.png`;
         const highResImagePath = `/images/${dk}/${imageSlug}.png`;
         const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
-        const isOutdated = canteenWeekNum < displayWeek;
-        const isAhead = canteenWeekNum > displayWeek;
+        const cmp = canteenWeekNum > 0 ? compareWeeks(canteenWeekNum, displayWeek) : 0;
+        const isOutdated = cmp === -1;
+        const isAhead = cmp === 1;
         const enLookup = dayEntry?.en?.items || [];
         const noLookup = dayEntry?.no?.items || [];
         const lookupMainDish = (enLookup.length > 0 ? enLookup : noLookup).find(i => i.isMain);
@@ -564,51 +428,9 @@ export default function Home() {
     });
   }, [canteenDayData]);
 
-  const handleVote = useCallback(async (canteenName: string) => {
-    setIsVoting(true);
-    const res = await fetch("/api/attendance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ canteenName, action: "add" }),
-    });
-    const data = await res.json();
-    setVotes(data.canteens || {});
-    const todayKey = new Date().toISOString().split("T")[0];
-    localStorage.setItem(`voted_${todayKey}`, canteenName);
-    setVotedCanteen(canteenName);
-    setHasVoted(true);
-    setIsVoting(false);
-    setVoteSuccess(true);
-  }, []);
-
-  const handleShareSlack = useCallback(async () => {
-    if (shareInFlightRef.current) return;
-    const todayKey = new Date().toISOString().split("T")[0];
-    const alreadyShared = !!localStorage.getItem(`slack_shared_${todayKey}`);
-    if (alreadyShared) return;
-
-    shareInFlightRef.current = true;
-    setShareState("loading");
-    const dishes = Object.fromEntries(
-      canteenDayData.map(c => [c.canteenName, c.mainDish?.dish ?? ""])
-    );
-
-    try {
-      const res = await fetch("/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canteens: votes, dishes, date: todayKey, lang }),
-      });
-      if (!res.ok) throw new Error(`notify failed: ${res.status}`);
-      localStorage.setItem(`slack_shared_${todayKey}`, "1");
-      setShareState("sent");
-      setTimeout(() => setShareState("idle"), 2000);
-    } catch {
-      setShareState("idle");
-    } finally {
-      shareInFlightRef.current = false;
-    }
-  }, [canteenDayData, votes, lang]);
+  const handleShareSlackWrapped = useCallback(() => {
+    voting.handleShareSlack(canteenDayData, lang);
+  }, [voting, canteenDayData, lang]);
 
   if (!menuData || !mounted) {
     return (
@@ -618,12 +440,46 @@ export default function Home() {
     );
   }
 
+  const todayKey = getLocalDateKey();
+  const alreadyShared = typeof window !== "undefined" && !!localStorage.getItem(`slack_shared_${todayKey}`);
+
+  const ShareButton = ({ className }: { className?: string }) => (
+    <button
+      className={`share-btn${alreadyShared ? " disabled" : ""}${voting.shareState === "sent" ? " sent" : ""}${className ? ` ${className}` : ""}`}
+      disabled={alreadyShared || voting.shareState === "loading"}
+      onClick={handleShareSlackWrapped}
+      title={alreadyShared ? (lang === "no" ? "Allerede delt i dag" : "Already shared today") : undefined}
+    >
+      {voting.shareState === "sent"
+        ? (lang === "no" ? "Sendt! \u2713" : "Sent! \u2713")
+        : voting.shareState === "loading"
+        ? "..."
+        : (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            {lang === "no" ? "Del resultater" : "Share results"}
+          </>
+        )
+      }
+    </button>
+  );
+
   return (
     <div className="app-wrapper">
       {/* Header */}
       <header className="app-header">
         <div className="hero-inline">
-          <h1 className="hero-title">{lang === "no" ? "Dagens" : "Today's"} <span>{lang === "no" ? "Lunsj" : "Lunch"}</span></h1>
+          <h1 className="hero-title">
+            {mode === "weekday-current"
+              ? (lang === "no" ? "Dagens" : "Today's")
+              : mode === "weekend-preview"
+              ? (lang === "no" ? "Neste ukes" : "Next week's")
+              : (lang === "no" ? "Denne ukens" : "This week's")}{" "}
+            <span>{lang === "no" ? "Lunsj" : "Lunch"}</span>
+          </h1>
           <p className="hero-subtitle">{weekLabel} &bull; {fullDayLabels[selectedDay]} {dateStr}</p>
         </div>
         <div className="header-actions">
@@ -682,43 +538,45 @@ export default function Home() {
             </span>
           </>
         )}
-        <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
-          {openCanteens.length === 0 ? (
-            <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
-          ) : (
-            <>
-            {closedCanteens.length > 0 && (
-              <div className="closed-pill-mobile">
-                <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
-              </div>
+        <ErrorBoundary>
+          <div key={selectedDay} className={`cards-animated-wrapper ${swipeDirection}`}>
+            {openCanteens.length === 0 ? (
+              <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
+            ) : (
+              <>
+                {closedCanteens.length > 0 && (
+                  <div className="closed-pill-mobile">
+                    <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+                  </div>
+                )}
+                {openCanteens.map((data, cardIdx) => (
+                  <FoodCard
+                    key={data.canteenName}
+                    data={data}
+                    cardIdx={cardIdx}
+                    lang={lang}
+                    selectedDay={selectedDay}
+                    todayIndex={todayIndex}
+                    voteCount={voting.votes[data.canteenName] ?? 0}
+                    maxVotes={maxVotes}
+                    onImageClick={handleImageClick}
+                    onCardClick={handleCardClick}
+                  />
+                ))}
+              </>
             )}
-            {openCanteens.map((data, cardIdx) => (
-              <FoodCard
-                key={data.canteenName}
-                data={data}
-                cardIdx={cardIdx}
-                lang={lang}
-                selectedDay={selectedDay}
-                activeDayIndex={activeDayIndex}
-                voteCount={votes[data.canteenName] ?? 0}
-                maxVotes={maxVotes}
-                onImageClick={handleImageClick}
-                onCardClick={handleCardClick}
-              />
-            ))}
-            </>
-          )}
-        </div>
+          </div>
+        </ErrorBoundary>
       </main>
 
-      {/* #4 — Day Selector + closed canteens text below */}
+      {/* Day Selector */}
       <DaySelector
         fullDayLabels={fullDayLabels}
         dayLabelsData={dayLabelsData}
         selectedDay={selectedDay}
         todayIndex={todayIndex}
         lang={lang}
-        hasAheadCanteens={hasAheadCanteens}
+        mode={mode}
         onDaySelect={handleDaySelect}
         cardsRef={scrollRef}
       />
@@ -730,13 +588,13 @@ export default function Home() {
             <button className="info-close" onClick={() => setInfoOpen(false)}>&times;</button>
             <div className="info-header">
               <h2 className="info-title">{lang === "no" ? "Dagens" : "Today's"} <span>{lang === "no" ? "Lunsj" : "Lunch"}</span></h2>
-              <p className="info-tagline">{lang === "no" ? "Din daglige lunsjfølgesvenn på Fornebu" : "Your daily lunch companion at Fornebu"}</p>
+              <p className="info-tagline">{lang === "no" ? "Din daglige lunsjf\u00F8lgesvenn p\u00E5 Fornebu" : "Your daily lunch companion at Fornebu"}</p>
             </div>
             <div className="info-body">
               <p className="info-intro">
                 {lang === "no"
-                  ? "En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."
-                  : "An all-in-one lunch app that scrapes fresh menus from the Telenor Fornebu canteens every week. See what's being served, vote on your favorite lunch, and discover new recipes — all in one place."}
+                  ? "En alt-i-ett lunsjapp som henter ferske menyer fra kantinene p\u00E5 Telenor Fornebu hver uke. Se hva som serveres, stem p\u00E5 favorittlunsjen din, og oppdag nye oppskrifter \u2014 alt p\u00E5 ett sted."
+                  : "An all-in-one lunch app that scrapes fresh menus from the Telenor Fornebu canteens every week. See what's being served, vote on your favorite lunch, and discover new recipes \u2014 all in one place."}
               </p>
               <div className="info-features">
                 <div className="info-feature">
@@ -757,21 +615,21 @@ export default function Home() {
                   <span className="info-feature-icon">&#x1F468;&#x200D;&#x1F373;</span>
                   <div>
                     <strong>{lang === "no" ? "AI-oppskrifter" : "AI recipes"}</strong>
-                    <span>{lang === "no" ? "Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI." : "Love a dish? Get a complete recipe with ingredients, steps, and cooking tips, generated by AI."}</span>
+                    <span>{lang === "no" ? "Liker du retten? F\u00E5 en komplett oppskrift med ingredienser, steg og koketips, laget av AI." : "Love a dish? Get a complete recipe with ingredients, steps, and cooking tips, generated by AI."}</span>
                   </div>
                 </div>
                 <div className="info-feature">
                   <span className="info-feature-icon">&#x1F6D2;</span>
                   <div>
                     <strong>{lang === "no" ? "Handle smart" : "Shop smart"}</strong>
-                    <span>{lang === "no" ? "Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY." : "Find the cheapest ingredients across Norwegian grocery stores, or build a shopping list at MENY."}</span>
+                    <span>{lang === "no" ? "Finn de billigste ingrediensene p\u00E5 tvers av norske dagligvarebutikker, eller bygg en handleliste p\u00E5 MENY." : "Find the cheapest ingredients across Norwegian grocery stores, or build a shopping list at MENY."}</span>
                   </div>
                 </div>
                 <div className="info-feature">
                   <span className="info-feature-icon">&#x1F310;</span>
                   <div>
-                    <strong>{lang === "no" ? "Tospråklig" : "Bilingual"}</strong>
-                    <span>{lang === "no" ? "Full norsk og engelsk støtte — bytt med en knapp." : "Full Norwegian and English support — switch with a tap."}</span>
+                    <strong>{lang === "no" ? "Tospr\u00E5klig" : "Bilingual"}</strong>
+                    <span>{lang === "no" ? "Full norsk og engelsk st\u00F8tte \u2014 bytt med en knapp." : "Full Norwegian and English support \u2014 switch with a tap."}</span>
                   </div>
                 </div>
               </div>
@@ -807,7 +665,7 @@ export default function Home() {
         <WeekOverview
           allDaysData={allDaysData}
           selectedDay={selectedDay}
-          todayIndex={activeDayIndex}
+          todayIndex={todayIndex}
           dayLabelsData={dayLabelsData}
           fullDayLabels={fullDayLabels}
           lang={lang}
@@ -820,22 +678,22 @@ export default function Home() {
       <VoteModal
         isOpen={voteModal.isOpen}
         canteenName={voteModal.canteenName}
-        hasVoted={hasVoted}
-        votedCanteen={votedCanteen}
-        canteenNames={openCanteens.filter(c => !c.isOutdated).map(c => c.canteenName)}
-        votes={votes}
+        hasVoted={voting.hasVoted}
+        votedCanteen={voting.votedCanteen}
+        canteenNames={openCanteens.filter(c => !c.isOutdated && !c.isAhead).map(c => c.canteenName)}
+        votes={voting.votes}
         maxVotes={maxVotes}
         lang={lang}
-        isVoting={isVoting}
-        onVote={handleVote}
+        isVoting={voting.isVoting}
+        onVote={voting.handleVote}
         onClose={() => setVoteModal({ isOpen: false, canteenName: "" })}
       />
 
       {/* Action Sheet */}
       {actionSheet.isOpen && (() => {
-        const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); setVoteSuccess(false); setShareState("idle"); };
+        const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); voting.setVoteSuccess(false); voting.setShareState("idle"); };
         const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
-        const canVote = selectedDay === activeDayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
+        const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
         return (
         <div className="action-sheet-overlay" onClick={closeSheet}>
           <div className="action-sheet" onClick={e => e.stopPropagation()}>
@@ -858,7 +716,7 @@ export default function Home() {
             </div>
 
             {/* Actions */}
-            {voteSuccess ? (
+            {voting.voteSuccess ? (
               <div className="action-sheet-success">
                 <div className="vote-celebration">
                   <span className="celebration-emoji celebration-1">&#x1F389;</span>
@@ -870,66 +728,36 @@ export default function Home() {
                 <div className="vote-success-check">&#x2714;</div>
                 <span className="vote-success-text">{lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}</span>
                 <span className="vote-success-sub">{actionSheet.canteenName}</span>
-                {(() => {
-                  const todayKey = new Date().toISOString().split("T")[0];
-                  const alreadyShared = !!localStorage.getItem(`slack_shared_${todayKey}`);
-                  return (
-                    <button
-                      className={`share-btn${alreadyShared ? " disabled" : ""}${shareState === "sent" ? " sent" : ""}`}
-                      disabled={alreadyShared || shareState === "loading"}
-                      onClick={handleShareSlack}
-                      title={alreadyShared ? (lang === "no" ? "Allerede delt i dag" : "Already shared today") : undefined}
-                    >
-                      {shareState === "sent"
-                        ? (lang === "no" ? "Sendt! ✓" : "Sent! ✓")
-                        : shareState === "loading"
-                        ? "..."
-                        : (
-                          <>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
-                              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                            </svg>
-                            {lang === "no" ? "Del resultater" : "Share results"}
-                          </>
-                        )
-                      }
-                    </button>
-                  );
-                })()}
+                <ShareButton />
               </div>
             ) : (
             <div className="action-sheet-actions">
               {canVote && (
               <button
-                className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}${isVoting ? " voting" : ""}`}
-                disabled={hasVoted || isVoting}
+                className={`action-sheet-btn action-sheet-vote${voting.hasVoted ? " voted" : ""}${voting.isVoting ? " voting" : ""}`}
+                disabled={voting.hasVoted || voting.isVoting}
                 onClick={async () => {
-                  await handleVote(actionSheet.canteenName);
-                  if (!canVote) {
-                    setTimeout(closeSheet, 1500);
-                  }
-                  // When canVote is true, keep sheet open so user can share results
+                  await voting.handleVote(actionSheet.canteenName);
                 }}
               >
                 <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
-                  {isVoting ? "\u23F3" : hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
+                  {voting.isVoting ? "\u23F3" : voting.hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
                 </div>
                 <div className="action-sheet-btn-text">
                   <span className="action-sheet-btn-label">
-                    {isVoting
+                    {voting.isVoting
                       ? (lang === "no" ? "Stemmer..." : "Voting...")
-                      : hasVoted
+                      : voting.hasVoted
                       ? (lang === "no" ? "Allerede stemt" : "Already voted")
                       : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
                   </span>
                   <span className="action-sheet-btn-sub">
-                    {hasVoted
-                      ? (lang === "no" ? `Du stemte p\u00E5 ${votedCanteen}` : `You voted for ${votedCanteen}`)
+                    {voting.hasVoted
+                      ? (lang === "no" ? `Du stemte p\u00E5 ${voting.votedCanteen}` : `You voted for ${voting.votedCanteen}`)
                       : (lang === "no" ? "Vis at du spiser her i dag" : "Show you\u2019re eating here today")}
                   </span>
                 </div>
-                {!hasVoted && !isVoting && <span className="action-sheet-btn-arrow">&#x203A;</span>}
+                {!voting.hasVoted && !voting.isVoting && <span className="action-sheet-btn-arrow">&#x203A;</span>}
               </button>
               )}
               <button
@@ -943,33 +771,7 @@ export default function Home() {
                 </div>
                 <span className="action-sheet-btn-arrow">&#x203A;</span>
               </button>
-              {canVote && (() => {
-                const todayKey = new Date().toISOString().split("T")[0];
-                const alreadyShared = !!localStorage.getItem(`slack_shared_${todayKey}`);
-                return (
-                  <button
-                    className={`share-btn${alreadyShared ? " disabled" : ""}${shareState === "sent" ? " sent" : ""}`}
-                    disabled={alreadyShared || shareState === "loading"}
-                    onClick={handleShareSlack}
-                    title={alreadyShared ? (lang === "no" ? "Allerede delt i dag" : "Already shared today") : undefined}
-                  >
-                    {shareState === "sent"
-                      ? (lang === "no" ? "Sendt! ✓" : "Sent! ✓")
-                      : shareState === "loading"
-                      ? "..."
-                      : (
-                        <>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
-                            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                          </svg>
-                          {lang === "no" ? "Del resultater" : "Share results"}
-                        </>
-                      )
-                    }
-                  </button>
-                );
-              })()}
+              {canVote && <ShareButton />}
             </div>
             )}
           </div>
@@ -977,7 +779,7 @@ export default function Home() {
         );
       })()}
 
-      {/* #6 — Lightbox with canteen swipe */}
+      {/* Lightbox with canteen swipe */}
       <Lightbox
         isOpen={lightboxIndex >= 0}
         currentIndex={lightboxIndex}
@@ -988,9 +790,9 @@ export default function Home() {
 
       {/* Recipe Modal */}
       {recipeModal.isOpen && (
-        <div className="recipe-overlay" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>
+        <div className="recipe-overlay" onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }}>
           <div className="recipe-modal" onClick={e => e.stopPropagation()}>
-            <button className="recipe-close" onClick={() => { setRecipeModal(prev => ({ ...prev, isOpen: false })); setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null }); setMenyView({ isOpen: false, data: null, isLoading: false, error: null }); }}>&#xD7;</button>
+            <button className="recipe-close" onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }}>&#xD7;</button>
 
 {menyView.isOpen ? (
               <>
@@ -1019,7 +821,7 @@ export default function Home() {
                   <MenyView
                     meny={menyView.data}
                     lang={lang}
-                    onBack={() => setMenyView({ isOpen: false, data: null, isLoading: false, error: null })}
+                    onBack={closeMeny}
                   />
                 )}
               </>
@@ -1051,7 +853,7 @@ export default function Home() {
                     deals={dealsView.deals}
                     lang={lang}
                     isStreaming={dealsView.isStreaming}
-                    onBack={() => setDealsView({ isOpen: false, deals: null, isLoading: false, isStreaming: false, error: null })}
+                    onBack={closeDeals}
                   />
                 )}
               </>

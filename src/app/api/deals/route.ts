@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import type { RecipeIngredient, ProductOffer, StoreRecommendation, DealsResponse } from '@/lib/types';
+import { getWeekNumber } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,14 +99,6 @@ function isPantryStaple(name: string): boolean {
 function normalizeStoreName(name: string): string {
   const lower = name.toLowerCase().trim();
   return STORE_NAME_MAP[lower] || name;
-}
-
-function getWeekNumber(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
 async function searchKassalProducts(query: string): Promise<KassalApiProduct[]> {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
+import { getLocalDateKey } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,19 +9,27 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-function getLast14UtcDays(): string[] {
+/** Generate last 14 days using the same Oslo timezone as the main attendance route. */
+function getLast14Days(): string[] {
+  // Start from today's date in Oslo timezone
+  const todayStr = getLocalDateKey(); // YYYY-MM-DD
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const today = new Date(y, m - 1, d);
+
   const dates: string[] = [];
-  const now = new Date();
   for (let i = 1; i <= 14; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().split('T')[0]);
+    const past = new Date(today);
+    past.setDate(today.getDate() - i);
+    const yyyy = past.getFullYear();
+    const mm = String(past.getMonth() + 1).padStart(2, '0');
+    const dd = String(past.getDate()).padStart(2, '0');
+    dates.push(`${yyyy}-${mm}-${dd}`);
   }
   return dates;
 }
 
 export async function GET() {
-  const dates = getLast14UtcDays();
+  const dates = getLast14Days();
   const keys = dates.map(d => `attendance:${d}`);
 
   try {

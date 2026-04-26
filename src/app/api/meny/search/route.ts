@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { Redis } from '@upstash/redis';
 import type { RecipeIngredient, MenyProduct, MenyIngredientMatch, MenyResponse } from '@/lib/types';
+import { getWeekNumber } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,14 +13,6 @@ const redis = new Redis({
 
 const MENY_STORE_ID = process.env.MENY_DEFAULT_STORE_ID || '7080001150488'; // Meny Bryn
 const MENY_STORE_NAME = 'MENY Bryn';
-
-function getWeekNumber(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-}
 
 interface GeminiTranslation {
   ingredient: string;

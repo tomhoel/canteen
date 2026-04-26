@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO } from "@/lib/constants";
+import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 
@@ -52,7 +52,8 @@ interface FoodCardProps {
   cardIdx: number;
   lang: "no" | "en";
   selectedDay: number;
-  activeDayIndex: number;
+  /** -1 on weekends; voteable styling hides automatically. */
+  todayIndex: number;
   voteCount: number;
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
@@ -64,7 +65,7 @@ export default function FoodCard({
   cardIdx,
   lang,
   selectedDay,
-  activeDayIndex,
+  todayIndex,
   voteCount,
   maxVotes,
   onImageClick,
@@ -87,7 +88,7 @@ export default function FoodCard({
     description,
   } = data;
 
-  const isVoteable = selectedDay === activeDayIndex && !isOutdated && !isAhead;
+  const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
 
   return (
@@ -201,7 +202,7 @@ export default function FoodCard({
             <div key={idx} className="side-dish-item">
               <span className="side-dish-text">{item.dish}</span>
               {item.allergens.length > 0 && (
-                <span className="side-allergens">{item.allergens.map(a => (lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name).charAt(0)).join("")}</span>
+                <span className="side-allergens">{item.allergens.map(a => lang === "no" ? (ALLERGEN_ABBREV_NO[a.name] || a.name.slice(0, 2)) : (ALLERGEN_ABBREV[a.name] || a.name.slice(0, 2))).join(" ")}</span>
               )}
             </div>
           )) : (
