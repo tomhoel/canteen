@@ -24,6 +24,11 @@
 # screenshots & debug images
 *.png
 !public/**/*.png
+public/images/*
+!public/images/master-plate-ref.png
+!public/images/closed-plates/
+public/images_nobg/*
+public/history/*
 
 # playwright MCP test artefacts
 /.playwright-mcp/

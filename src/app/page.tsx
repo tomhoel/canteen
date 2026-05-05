@@ -298,7 +298,10 @@ export default function Home() {
       if (!dk) return;
       CANTEEN_ORDER.forEach(name => {
         const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
-        const src = `/images_nobg/${dk}/${slug}.png`;
+        const supabasePath = `${dk}/${slug}.png`;
+        const sbLowRes = getSupabaseImageUrl("images-nobg", supabasePath, { width: 440, format: "webp" });
+        const src = sbLowRes || `/images_nobg/${dk}/${slug}.png`;
+        
         if (preloadedRef.current.has(src)) return;
         preloadedRef.current.add(src);
         const img = new window.Image();
@@ -384,8 +387,14 @@ export default function Home() {
           allergens: noSideDishes[idx]?.allergens || item.allergens,
         }));
         const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
-        const imagePath = `/images_nobg/${dk}/${imageSlug}.png`;
-        const highResImagePath = `/images/${dk}/${imageSlug}.png`;
+        
+        // Supabase Integration: Prefer remote images if available
+        const supabasePath = `${dk}/${imageSlug}.png`;
+        const sbLowRes = getSupabaseImageUrl("images-nobg", supabasePath, { width: 440, format: "webp" });
+        const sbHighRes = getSupabaseImageUrl("images", supabasePath);
+
+        const imagePath = sbLowRes || `/images_nobg/${dk}/${imageSlug}.png`;
+        const highResImagePath = sbHighRes || `/images/${dk}/${imageSlug}.png`;
         const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
         const cmp = canteenWeekNum > 0 ? compareWeeks(canteenWeekNum, displayWeek) : 0;
         const isOutdated = cmp === -1;
