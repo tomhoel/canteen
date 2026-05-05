@@ -41,13 +41,17 @@ jobs:
       - name: Smart update (scrape + compare + regenerate only changes)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node smart-update.js
 
-      - name: Commit and push updated menu & images
+      - name: Commit and push updated menu
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/menu.json public/images/ public/images_nobg/ public/dish-origins.json public/dish-descriptions.json public/history/
+          git add public/menu.json public/dish-origins.json public/dish-descriptions.json
+          # Note: images are now stored in Supabase and ignored by Git
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else

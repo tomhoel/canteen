@@ -9,6 +9,14 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { createClient } = require('@supabase/supabase-js');
+
+// Supabase Configuration
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) 
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) 
+    : null;
 
 const MENU_PATH = path.join(__dirname, 'public', 'menu.json');
 const IMAGES_DIR = path.join(__dirname, 'public', 'images');
@@ -17,6 +25,10 @@ const HISTORY_DIR = path.join(__dirname, 'public', 'history');
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
 const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json');
+
+// High-Res Config
+const IMAGE_SIZE_PX = 1024;
+const PLATE_RESIZE_PX = 880; // 86% of canvas for nice margin
 
 const EXPECTED_CANTEENS = ['Eat the street', 'Fresh4you', 'Flow'];
 const VALID_SLUGS = new Set(EXPECTED_CANTEENS.map(n => n.toLowerCase().replace(/\s+/g, '_')));
@@ -236,6 +248,27 @@ function validateMenu(menu) {
 const MASTER_PLATE_REF_PATH = path.join(__dirname, 'public', 'images', 'master-plate-ref.png');
 
 /**
+ * Upload a file buffer to Supabase Storage.
+ * Replaces existing file if it exists.
+ */
+async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png') {
+    if (!supabase) return false;
+    try {
+        const { error } = await supabase.storage
+            .from(bucket)
+            .upload(path, buffer, {
+                contentType,
+                upsert: true
+            });
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error(`  ❌ Supabase upload failed (${path}): ${err.message}`);
+        return false;
+    }
+}
+
+/**
  * Generate a single image using the V3 generator prompt.
  * If master-plate-ref.png exists, it is passed as a visual reference to Gemini
  * so it can replicate the exact plate style rather than interpreting text alone.
@@ -298,9 +331,12 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-3.1-flash-image-preview',
+            model: 'gemini-1.5-pro', // Using Pro for better 1024px quality if available, or flash-3-preview
             contents: { parts },
-            config: { responseModalities: ['Text', 'Image'], imageConfig: { imageSize: '512px' } },
+            config: { 
+                responseModalities: ['Text', 'Image'], 
+                imageConfig: { imageSize: '1024px' } 
+            },
         }), `image: ${dishName}`);
 
         for (const part of response.candidates[0].content.parts) {
@@ -312,6 +348,10 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
                 const dayDir = path.join(IMAGES_DIR, day);
                 if (!fs.existsSync(dayDir)) fs.mkdirSync(dayDir, { recursive: true });
                 fs.writeFileSync(path.join(dayDir, `${slug}.png`), pngBuffer);
+                
+                // Upload high-res original to Supabase
+                await uploadToSupabase('images', `${day}/${slug}.png`, pngBuffer);
+                
                 return true;
             }
         }
@@ -365,6 +405,7 @@ async function removeBgSingle(canteenName, day) {
             const r = data[pi], g = data[pi + 1], b = data[pi + 2];
             const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
             const brightness = (r + g + b) / 3;
+            // Background is dark grey #707070 (approx 112, 112, 112)
             if (!(maxDiff < 50 && brightness <= 185)) continue;
             isBg[idx] = 1;
             const x = idx % width, y = Math.floor(idx / width);
@@ -422,24 +463,29 @@ async function removeBgSingle(canteenName, day) {
             if (isBg[i]) data[i * channels + 3] = 0;
         }
 
-        // Standardize plate size: trim transparency, scale precisely, and compose onto 512x512 canvas
+        // Standardize plate size: trim transparency, scale precisely, and compose onto high-res canvas
         const trimmedBuffer = await sharp(data, { raw: { width, height, channels } })
             .trim()
-            .resize(440, 440, { fit: 'inside' })
+            .resize(PLATE_RESIZE_PX, PLATE_RESIZE_PX, { fit: 'inside' })
             .png()
             .toBuffer();
 
-        await sharp({
+        const finalBuffer = await sharp({
             create: {
-                width: 512,
-                height: 512,
+                width: IMAGE_SIZE_PX,
+                height: IMAGE_SIZE_PX,
                 channels: 4,
                 background: { r: 0, g: 0, b: 0, alpha: 0 }
             }
         })
         .composite([{ input: trimmedBuffer, gravity: 'center' }])
         .png({ compressionLevel: 9, palette: true })
-        .toFile(outputPath);
+        .toBuffer();
+
+        fs.writeFileSync(outputPath, finalBuffer);
+        
+        // Upload processed image to Supabase
+        await uploadToSupabase('images-nobg', `${day}/${slug}.png`, finalBuffer);
 
         return true;
     } catch (error) {
@@ -606,39 +652,57 @@ async function archiveCurrentWeek(oldMenu) {
     const archiveDir = path.join(HISTORY_DIR, weekKey);
 
     if (fs.existsSync(archiveDir)) {
-        console.log(`  ⏭️  Archive already exists for ${weekKey} — skipping`);
-        return;
-    }
-
-    try {
-        fs.mkdirSync(archiveDir, { recursive: true });
-
-        // menu.json from in-memory oldMenu (disk was already overwritten by scraper)
-        fs.writeFileSync(path.join(archiveDir, 'menu.json'), JSON.stringify(oldMenu, null, 2));
-
-        // dish-descriptions.json and dish-origins.json
-        for (const file of ['dish-descriptions.json', 'dish-origins.json']) {
-            const src = path.join(__dirname, 'public', file);
-            if (fs.existsSync(src)) fs.copyFileSync(src, path.join(archiveDir, file));
-        }
-
-        // images and images_nobg — day subdirectories only (monday–friday)
-        for (const imagesDir of [IMAGES_DIR, IMAGES_NOBG_DIR]) {
-            const dirName = path.basename(imagesDir);
-            for (const day of DAY_ORDER) {
-                const srcDay = path.join(imagesDir, day);
-                if (!fs.existsSync(srcDay)) continue;
-                const destDay = path.join(archiveDir, dirName, day);
-                fs.mkdirSync(destDay, { recursive: true });
-                for (const file of fs.readdirSync(srcDay)) {
-                    fs.copyFileSync(path.join(srcDay, file), path.join(destDay, file));
+        console.log(`  ⏭️  Archive already exists for ${weekKey} — skipping local`);
+    } else {
+        try {
+            fs.mkdirSync(archiveDir, { recursive: true });
+            fs.writeFileSync(path.join(archiveDir, 'menu.json'), JSON.stringify(oldMenu, null, 2));
+            for (const file of ['dish-descriptions.json', 'dish-origins.json']) {
+                const src = path.join(__dirname, 'public', file);
+                if (fs.existsSync(src)) fs.copyFileSync(src, path.join(archiveDir, file));
+            }
+            for (const imagesDir of [IMAGES_DIR, IMAGES_NOBG_DIR]) {
+                const dirName = path.basename(imagesDir);
+                for (const day of DAY_ORDER) {
+                    const srcDay = path.join(imagesDir, day);
+                    if (!fs.existsSync(srcDay)) continue;
+                    const destDay = path.join(archiveDir, dirName, day);
+                    fs.mkdirSync(destDay, { recursive: true });
+                    for (const file of fs.readdirSync(srcDay)) {
+                        fs.copyFileSync(path.join(srcDay, file), path.join(destDay, file));
+                    }
                 }
             }
+            console.log(`  📦 Archived ${weekKey} → public/history/${weekKey}/`);
+        } catch (err) {
+            console.warn(`  ⚠️  Local archive failed for ${weekKey}: ${err.message}`);
         }
+    }
 
-        console.log(`  📦 Archived ${weekKey} → public/history/${weekKey}/`);
-    } catch (err) {
-        console.warn(`  ⚠️  Archive failed for ${weekKey}: ${err.message} — continuing`);
+    // Supabase Archiving
+    if (supabase) {
+        console.log(`  ☁️  Archiving ${weekKey} to Supabase...`);
+        try {
+            // menu.json
+            await uploadToSupabase('history', `${weekKey}/menu.json`, Buffer.from(JSON.stringify(oldMenu, null, 2)), 'application/json');
+            
+            // images and images_nobg
+            for (const day of DAY_ORDER) {
+                for (const bucket of ['images', 'images-nobg']) {
+                    const localDir = bucket === 'images' ? IMAGES_DIR : IMAGES_NOBG_DIR;
+                    const dayDir = path.join(localDir, day);
+                    if (!fs.existsSync(dayDir)) continue;
+                    
+                    for (const file of fs.readdirSync(dayDir)) {
+                        const buffer = fs.readFileSync(path.join(dayDir, file));
+                        await uploadToSupabase('history', `${weekKey}/${bucket}/${day}/${file}`, buffer);
+                    }
+                }
+            }
+            console.log(`  ✅ Supabase archive complete for ${weekKey}`);
+        } catch (err) {
+            console.warn(`  ⚠️  Supabase archive failed for ${weekKey}: ${err.message}`);
+        }
     }
 }
 
@@ -876,7 +940,13 @@ async function main() {
             // Also place in images/ dir for high-res lightbox
             const imgDir = path.join(IMAGES_DIR, day);
             if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
-            fs.copyFileSync(staticSrc, path.join(imgDir, `${slug}.png`));
+            const highResPath = path.join(imgDir, `${slug}.png`);
+            fs.copyFileSync(staticSrc, highResPath);
+
+            // Upload to Supabase
+            const buffer = fs.readFileSync(staticSrc);
+            await uploadToSupabase('images', `${day}/${slug}.png`, buffer);
+            await uploadToSupabase('images-nobg', `${day}/${slug}.png`, buffer);
 
             closedPlaced++;
         }

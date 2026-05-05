@@ -72,7 +72,7 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
         )}
 
         <div className="lightbox-image-container">
-          <img src={current.imagePath} alt={current.mainDish?.dish || ""} className="lightbox-image" />
+          <img src={current.highResImagePath} alt={current.mainDish?.dish || ""} className="lightbox-image" />
         </div>
         <div className="lightbox-info">
           <p className="lightbox-canteen">{current.canteenName}</p>

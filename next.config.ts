@@ -5,6 +5,14 @@ const isDev = process.env.NODE_ENV === 'development';
 const nextConfig: NextConfig = {
   images: {
     unoptimized: isDev,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
   },
   async headers() {
     return [
