@@ -15,7 +15,17 @@ const { createClient } = require('@supabase/supabase-js');
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) 
-    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) 
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: {
+            persistSession: false
+        },
+        // Disable realtime to avoid WebSocket error in Node < 22 environments
+        realtime: {
+            params: {
+                eventsPerSecond: 0
+            }
+        }
+    }) 
     : null;
 
 const MENU_PATH = path.join(__dirname, 'public', 'menu.json');
