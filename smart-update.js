@@ -106,65 +106,27 @@ function getISOWeekFromDate(dateStr) {
     return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
 }
 
-function findChanges(oldMenu, newMenu) {
-    const changes = []; // { canteenName, day, oldDish, newDish }
-
-    const oldScrapedWeek = oldMenu?.scrapedAt ? getISOWeekFromDate(oldMenu.scrapedAt) : null;
-    const currentWeek = getCurrentISOWeek();
-    const crossedWeekBoundary = oldScrapedWeek !== null && oldScrapedWeek < currentWeek;
-
-    const normalize = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-
-    for (const [canteenName, newCanteen] of Object.entries(newMenu.canteens)) {
-        const oldCanteen = oldMenu?.canteens?.[canteenName];
-
-        if (!oldCanteen) {
-            for (const day of DAY_ORDER) {
-                const entry = newCanteen.menu.find(d => d.day.toLowerCase() === day);
-                const items = getDayItems(entry);
-                const main = items.find(i => i.isMain);
-                if (main && !isDishClosed(main.dish)) {
-                    changes.push({ canteenName, day, oldDish: null, newDish: main.dish });
-                }
-            }
-            continue;
-        }
-
-        const oldDishes = getMainDishes(oldCanteen);
-        const newDishes = getMainDishes(newCanteen);
-
-        const oldWeekNum = parseMenuWeekNumber(oldCanteen.week);
-        const newWeekNum = parseMenuWeekNumber(newCanteen.week);
-        // Only trigger week change if we move FORWARD
-        const weekChanged = oldWeekNum !== null && newWeekNum !== null && newWeekNum > oldWeekNum;
-
-        const forceRegenerate = crossedWeekBoundary && newWeekNum === currentWeek;
-
-        for (const day of DAY_ORDER) {
-            const oldDish = oldDishes[day];
-            const newDish = newDishes[day];
-
-            if (!newDish) continue;
-            if (isDishClosed(newDish)) continue;
-
-            const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
-            const imagePath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
-            const imageExists = fs.existsSync(imagePath);
-
-            // Case-insensitive comparison to avoid AI title-cleaning noise
-            const dishChanged = normalize(oldDish) !== normalize(newDish);
-
-            if (dishChanged || weekChanged || !imageExists || forceRegenerate) {
-                const reason = forceRegenerate ? 'week transition (replacing closed plate)'
-                    : !imageExists ? 'missing image'
-                    : weekChanged ? `week: ${oldWeekNum} → ${newWeekNum}`
-                    : 'dish changed';
-                changes.push({ canteenName, day, oldDish, newDish, reason });
-            }
-        }
+/**
+ * Check if a file exists in a Supabase bucket.
+ */
+async function existsInSupabase(bucket, path) {
+    if (!supabase) return false;
+    try {
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .list(path.split('/').slice(0, -1).join('/'), {
+                search: path.split('/').pop()
+            });
+        if (error) throw error;
+        return data && data.length > 0;
+    } catch (err) {
+        return false;
     }
+}
 
-    return changes;
+function findChanges(oldMenu, newMenu) {
+    // This will be handled asynchronously in main() now to allow Supabase checks
+    return []; 
 }
 
 /**
@@ -282,6 +244,7 @@ async function generateSingleImage(dishName, canteenName, day) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const model = ai.getGenerativeModel({ model: 'gemini-3.1-flash-image-preview' });
 
     const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
 
@@ -334,16 +297,14 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
     }
 
     try {
-        const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-3.1-flash-image-preview',
-            contents: { parts },
-            config: { 
-                responseModalities: ['Text', 'Image'], 
-                imageConfig: { imageSize: '1024px' } 
+        const response = await withRetry(() => model.generateContent({
+            contents: [{ role: 'user', parts }],
+            generationConfig: {
+                responseModalities: ["IMAGE"],
             },
         }), `image: ${dishName}`);
 
-        for (const part of response.candidates[0].content.parts) {
+        for (const part of response.response.candidates[0].content.parts) {
             if (part.inlineData) {
                 const sharp = require('sharp');
                 const raw = Buffer.from(part.inlineData.data, 'base64');
@@ -829,14 +790,53 @@ async function main() {
     if (oldMenu) {
         const oldWeekNum = parseMenuWeekNumber(Object.values(oldMenu.canteens)[0]?.week);
         const newWeekNum = parseMenuWeekNumber(Object.values(newMenu.canteens)[0]?.week);
-        if (oldWeekNum !== null && newWeekNum !== null && oldWeekNum !== newWeekNum) {
+        if (oldWeekNum !== null && newWeekNum !== null && newWeekNum > oldWeekNum) {
             console.log(`\n📦 Week changed (${oldWeekNum} → ${newWeekNum}) — archiving previous week...`);
             await archiveCurrentWeek(oldMenu);
         }
     }
 
-    // Step 3: Find changes
-    const changes = findChanges(oldMenu, newMenu);
+    // Step 3: Find changes (Async)
+    console.log('\n🔍 Checking for changes and existing images in Supabase...');
+    const changes = [];
+    const oldScrapedWeek = oldMenu?.scrapedAt ? getISOWeekFromDate(oldMenu.scrapedAt) : null;
+    const currentWeek = getCurrentISOWeek();
+    const crossedWeekBoundary = oldScrapedWeek !== null && oldScrapedWeek < currentWeek;
+    const normalize = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+    for (const [canteenName, newCanteen] of Object.entries(newMenu.canteens)) {
+        const oldCanteen = oldMenu?.canteens?.[canteenName];
+        const newDishes = getMainDishes(newCanteen);
+        const oldDishes = oldCanteen ? getMainDishes(oldCanteen) : {};
+
+        const newWeekNum = parseMenuWeekNumber(newCanteen.week);
+        const forceRegenerate = crossedWeekBoundary && newWeekNum === currentWeek;
+
+        for (const day of DAY_ORDER) {
+            const newDish = newDishes[day];
+            if (!newDish || isDishClosed(newDish)) continue;
+
+            const oldDish = oldDishes[day];
+            const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
+            const supabasePath = `${day}/${slug}.png`;
+            
+            // 1. Check if dish text changed
+            const dishChanged = normalize(oldDish) !== normalize(newDish);
+            
+            // 2. Check if image exists in Supabase (if not changed)
+            let imageExists = false;
+            if (!dishChanged) {
+                imageExists = await existsInSupabase('images-nobg', supabasePath);
+            }
+
+            if (dishChanged || !imageExists || forceRegenerate) {
+                const reason = forceRegenerate ? 'week transition'
+                    : !imageExists ? 'missing in storage'
+                    : 'dish changed';
+                changes.push({ canteenName, day, oldDish, newDish, reason });
+            }
+        }
+    }
 
     if (changes.length === 0) {
         console.log('\n✅ No changes detected — everything is up to date!');
