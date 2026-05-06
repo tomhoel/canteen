@@ -243,7 +243,7 @@ async function generateSingleImage(dishName, canteenName, day) {
     const { GoogleGenAI } = require('@google/genai');
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const ai = new GoogleGenAI(GEMINI_API_KEY);
     const model = ai.getGenerativeModel({ model: 'gemini-3.1-flash-image-preview' });
 
     const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
@@ -469,7 +469,7 @@ async function analyzeDish(dishName) {
     const { GoogleGenAI } = require('@google/genai');
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) return null;
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const ai = new GoogleGenAI(GEMINI_API_KEY);
 
     const promptText = `Analyze this dish: "${dishName}"
 
@@ -513,7 +513,7 @@ async function cleanDishTitles(menu) {
     const { GoogleGenAI } = require('@google/genai');
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) { console.log('  ⚠️  GEMINI_API_KEY not set — skipping title cleanup'); return {}; }
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const ai = new GoogleGenAI(GEMINI_API_KEY);
 
     // Collect all unique dish strings across both languages
     const allDishes = new Set();
