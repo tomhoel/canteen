@@ -341,7 +341,8 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-1.5-pro', // Using Pro for better 1024px quality if available, or flash-3-preview
+            model: 'gemini-1.5-flash',
+ // Using Pro for better 1024px quality if available, or flash-3-preview
             contents: { parts },
             config: { 
                 responseModalities: ['Text', 'Image'], 
@@ -533,7 +534,7 @@ Respond ONLY with raw JSON:
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-1.5-flash',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
         }), `analyze: ${dishName}`);
@@ -603,7 +604,7 @@ If nothing needs fixing, respond with {}`;
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-1.5-flash',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
         }), 'title cleanup');
