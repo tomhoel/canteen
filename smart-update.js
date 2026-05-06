@@ -234,16 +234,12 @@ async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png')
     }
 }
 
-const { GoogleGenAI } = require('@google/genai');
-
-/**
- * Generate a single image using the V3 generator prompt.
- */
 async function generateSingleImage(dishName, canteenName, day) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
-    const ai = new GoogleGenAI(GEMINI_API_KEY);
-    const model = ai.getGenerativeModel({ model: 'gemini-3.1-flash-image-preview' });
+    
+    // SDK v1.x uses an options object and .models.generateContent
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
 
@@ -296,16 +292,19 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
     }
 
     try {
-        const response = await withRetry(() => model.generateContent({
+        const response = await withRetry(() => ai.models.generateContent({
+            model: 'gemini-3.1-flash-image-preview',
             contents: [{ role: 'user', parts }],
-            generationConfig: {
+            config: { 
                 responseModalities: ["IMAGE"],
             },
         }), `image: ${dishName}`);
 
-        // The SDK returns response.response for generateContent
-        const result = response.response || response;
-        for (const part of result.candidates[0].content.parts) {
+        // Handle candidate structure
+        const candidate = response.candidates?.[0];
+        if (!candidate) return false;
+
+        for (const part of candidate.content.parts) {
             if (part.inlineData) {
                 const sharp = require('sharp');
                 const raw = Buffer.from(part.inlineData.data, 'base64');
@@ -329,148 +328,12 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
 }
 
 /**
- * Remove background for a single image using Sharp.
- * Uses flood-fill from edges with an index-based queue for performance.
- */
-async function removeBgSingle(canteenName, day) {
-    const sharp = require('sharp');
-    const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
-    const inputPath = path.join(IMAGES_DIR, day, `${slug}.png`);
-    const outputDir = path.join(IMAGES_NOBG_DIR, day);
-    const outputPath = path.join(outputDir, `${slug}.png`);
-
-    if (!fs.existsSync(inputPath)) return false;
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-
-    try {
-        const { data, info } = await sharp(inputPath)
-            .raw().ensureAlpha().toBuffer({ resolveWithObject: true });
-        const { width, height, channels } = info;
-        const totalPixels = width * height;
-
-        // Flood fill from edges — check visited BEFORE enqueuing to prevent
-        // queue overflow (each pixel enqueued at most once → queue stays ≤ totalPixels)
-        const visited = new Uint8Array(totalPixels);
-        const isBg = new Uint8Array(totalPixels);
-        const queue = new Int32Array(totalPixels);
-        let qHead = 0, qTail = 0;
-
-        const enqueue = (idx) => {
-            if (idx >= 0 && idx < totalPixels && !visited[idx]) {
-                visited[idx] = 1;
-                queue[qTail++] = idx;
-            }
-        };
-
-        for (let x = 0; x < width; x++) { enqueue(x); enqueue((height - 1) * width + x); }
-        for (let y = 1; y < height - 1; y++) { enqueue(y * width); enqueue(y * width + width - 1); }
-
-        while (qHead < qTail) {
-            const idx = queue[qHead++];
-            const pi = idx * channels;
-            const r = data[pi], g = data[pi + 1], b = data[pi + 2];
-            const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
-            const brightness = (r + g + b) / 3;
-            // Background is dark grey #707070 (approx 112, 112, 112)
-            if (!(maxDiff < 50 && brightness <= 185)) continue;
-            isBg[idx] = 1;
-            const x = idx % width, y = Math.floor(idx / width);
-            if (x > 0) enqueue(idx - 1);
-            if (x < width - 1) enqueue(idx + 1);
-            if (y > 0) enqueue(idx - width);
-            if (y < height - 1) enqueue(idx + width);
-        }
-
-        // Keep largest blob
-        const blobId = new Int32Array(totalPixels).fill(-1);
-        const blobSizes = [];
-        let currentBlob = 0;
-        for (let i = 0; i < totalPixels; i++) {
-            if (isBg[i] || blobId[i] >= 0) continue;
-            const q = [i]; let size = 0;
-            while (q.length) {
-                const idx = q.pop();
-                if (idx < 0 || idx >= totalPixels || isBg[idx] || blobId[idx] >= 0) continue;
-                blobId[idx] = currentBlob; size++;
-                const x = idx % width, y = Math.floor(idx / width);
-                if (x > 0) q.push(idx - 1); if (x < width - 1) q.push(idx + 1);
-                if (y > 0) q.push(idx - width); if (y < height - 1) q.push(idx + width);
-            }
-            blobSizes.push(size); currentBlob++;
-        }
-        if (blobSizes.length > 0) {
-            let largest = 0;
-            for (let b = 1; b < blobSizes.length; b++) if (blobSizes[b] > blobSizes[largest]) largest = b;
-            for (let i = 0; i < totalPixels; i++) if (!isBg[i] && blobId[i] !== largest) isBg[i] = 1;
-        }
-
-        // Erode gray fringe: expand background mask into adjacent gray-ish pixels
-        // that the flood-fill missed (anti-aliased plate edges, slight gradients)
-        for (let pass = 0; pass < 3; pass++) {
-            const expansion = new Uint8Array(totalPixels);
-            for (let i = 0; i < totalPixels; i++) {
-                if (isBg[i]) continue;
-                const pi = i * channels;
-                const r = data[pi], g = data[pi + 1], b = data[pi + 2];
-                const md = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
-                const br = (r + g + b) / 3;
-                if (md >= 40 || br > 160) continue; // not gray-ish, skip
-                const x = i % width, y = Math.floor(i / width);
-                if ((x > 0 && isBg[i - 1]) || (x < width - 1 && isBg[i + 1]) ||
-                    (y > 0 && isBg[i - width]) || (y < height - 1 && isBg[i + width])) {
-                    expansion[i] = 1;
-                }
-            }
-            for (let i = 0; i < totalPixels; i++) if (expansion[i]) isBg[i] = 1;
-        }
-
-        // Apply transparency
-        for (let i = 0; i < totalPixels; i++) {
-            if (isBg[i]) data[i * channels + 3] = 0;
-        }
-
-        // Standardize plate size: trim transparency, scale precisely, and compose onto high-res canvas
-        const trimmedBuffer = await sharp(data, { raw: { width, height, channels } })
-            .trim()
-            .resize(PLATE_RESIZE_PX, PLATE_RESIZE_PX, { fit: 'inside' })
-            .png()
-            .toBuffer();
-
-        const finalBuffer = await sharp({
-            create: {
-                width: IMAGE_SIZE_PX,
-                height: IMAGE_SIZE_PX,
-                channels: 4,
-                background: { r: 0, g: 0, b: 0, alpha: 0 }
-            }
-        })
-        .composite([{ input: trimmedBuffer, gravity: 'center' }])
-        .png({ compressionLevel: 9, palette: true })
-        .toBuffer();
-
-        fs.writeFileSync(outputPath, finalBuffer);
-        
-        // Upload processed image to Supabase
-        await uploadToSupabase('images-nobg', `${day}/${slug}.png`, finalBuffer);
-
-        return true;
-    } catch (error) {
-        console.error(`  ❌ BG removal failed: ${error.message}`);
-        return false;
-    }
-}
-
-/**
  * Analyze a dish in a single API call: detect origin, generate description,
- * and validate that it's a real dish (not a theme/category header).
- * Merges what were previously two separate API calls into one.
- * Returns { origin: {country, code}, description: {en, no} } or null on failure.
  */
 async function analyzeDish(dishName) {
-    const { GoogleGenAI } = require('@google/genai');
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) return null;
-    const ai = new GoogleGenAI(GEMINI_API_KEY);
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const promptText = `Analyze this dish: "${dishName}"
 
@@ -490,9 +353,10 @@ Respond ONLY with raw JSON:
     try {
         const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash-lite',
-            contents: { parts: [{ text: promptText }] },
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
             config: { responseMimeType: 'application/json' },
         }), `analyze: ${dishName}`);
+        
         const text = response.candidates[0].content.parts[0].text.trim();
         const parsed = JSON.parse(text);
         if (parsed.origin?.country && parsed.origin?.code && parsed.description?.en && parsed.description?.no) {
@@ -507,14 +371,11 @@ Respond ONLY with raw JSON:
 
 /**
  * Clean dish titles using Gemini — fixes typos, compound words, capitalization.
- * Sends all unique titles in a single API call for efficiency.
- * Returns a map of { "original title": "corrected title" } (only entries that changed).
  */
 async function cleanDishTitles(menu) {
-    const { GoogleGenAI } = require('@google/genai');
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) { console.log('  ⚠️  GEMINI_API_KEY not set — skipping title cleanup'); return {}; }
-    const ai = new GoogleGenAI(GEMINI_API_KEY);
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     // Collect all unique dish strings across both languages
     const allDishes = new Set();
@@ -533,22 +394,11 @@ async function cleanDishTitles(menu) {
     if (allDishes.size === 0) return {};
 
     const dishList = [...allDishes];
-    const promptText = `You are a proofreader for a Norwegian workplace canteen menu. The titles below were scraped from a website and may contain errors.
+    const promptText = `You are a proofreader for a workplace canteen menu.
 
-Fix ONLY these types of issues:
-- Typos (e.g. "Ppork" → "Pork", "wiith" → "with", "ruccula" → "rucola")
-- Norwegian compound words that must be joined (e.g. "tomat suppe" → "tomatsuppe", "karri saus" → "karrisaus", "sitron potet" → "sitronpotet")
-- Capitalization errors (e.g. "Bbq" → "BBQ", random mid-word capitals)
-- Duplicate words (e.g. "and and rice" → "and rice")
-- Obviously missing small words (e.g. "Kikertgryte ris" → "Kikertgryte med ris")
-
-CRITICAL RULES:
-- Be CONSERVATIVE. Only fix clear, obvious errors.
-- Do NOT rephrase, rewrite, or improve wording.
-- Do NOT translate between Norwegian and English.
-- Do NOT change dish names, cooking terms, or foreign words that are intentional (e.g. keep "Stracotta", "jalfrezi", "Dan Dan" as-is).
-- Do NOT change the overall structure or word order.
-- If a title has no errors, do NOT include it in the output.
+Fix ONLY clear typos or joined compound words in Norwegian.
+DO NOT rephrase. DO NOT translate. DO NOT change words that look correct.
+If a title has no obvious typos, do NOT include it.
 
 Titles to proofread:
 ${dishList.map((d, i) => `${i + 1}. "${d}"`).join('\n')}
@@ -560,7 +410,7 @@ If nothing needs fixing, respond with {}`;
     try {
         const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash-lite',
-            contents: { parts: [{ text: promptText }] },
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
             config: { responseMimeType: 'application/json' },
         }), 'title cleanup');
 
