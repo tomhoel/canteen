@@ -533,7 +533,7 @@ Respond ONLY with raw JSON:
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash-lite',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
         }), `analyze: ${dishName}`);
@@ -603,7 +603,7 @@ If nothing needs fixing, respond with {}`;
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash-lite',
             contents: { parts: [{ text: promptText }] },
             config: { responseMimeType: 'application/json' },
         }), 'title cleanup');
