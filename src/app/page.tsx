@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS } from "@/lib/constants";
+import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import { getLocalDateKey, computeDisplayContext, compareWeeks } from "@/lib/dateUtils";
