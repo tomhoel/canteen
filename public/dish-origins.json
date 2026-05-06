@@ -1,0 +1,42 @@
+{
+  "Buffalo Wings Barbados with fried potatoes and BBQ sauce": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Fish & Chips with pea stew and tartar sauce": {
+    "country": "United Kingdom",
+    "code": "gb"
+  },
+  "Chicken Chop Suey with rice": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Homemade lasagne": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Creamy tortellini with fish stew and baked vegetables": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "Meat patties with lingonberries, cabbage stew, gravy and potato": {
+    "country": "Sweden",
+    "code": "se"
+  },
+  "Chicken thighs Bali with rice": {
+    "country": "Indonesia",
+    "code": "id"
+  },
+  "Paneng karri med svin og ris": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "Fresh bacalao with potatoes": {
+    "country": "Portugal",
+    "code": "pt"
+  },
+  "White turkey chilli with pasta": {
+    "country": "United States",
+    "code": "us"
+  }
+}
