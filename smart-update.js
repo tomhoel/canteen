@@ -234,14 +234,20 @@ async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png')
     }
 }
 
+const { GoogleGenAI } = require('@google/genai');
+
+/**
+ * Generate a single image using the V3 generator prompt.
+ */
 async function generateSingleImage(dishName, canteenName, day) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
-    
-    // SDK v1.x uses an options object and .models.generateContent
+
+    // SDK v1.x uses an options object: { apiKey: string }
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
+
 
     const promptText = `Professional overhead food photography of "${dishName}".
 
