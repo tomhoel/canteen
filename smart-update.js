@@ -227,7 +227,7 @@ async function removeBgSingle(canteenName, day) {
             .png({ compressionLevel: 9, palette: true }).toBuffer();
 
         fs.writeFileSync(outputPath, finalBuffer);
-        await uploadToSupabase('images-nobg', `${day}/${slug}.png`, finalBuffer);
+        await uploadToSupabase('images_nobg', `${day}/${slug}.png`, finalBuffer);
         return true;
     } catch (error) {
         console.error(`  ❌ BG removal failed: ${error.message}`);
@@ -336,7 +336,7 @@ async function main() {
             const newDish = newDishes[day];
             if (!newDish || isDishClosed(newDish)) continue;
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
-            const exists = await existsInSupabase('images-nobg', `${day}/${slug}.png`);
+            const exists = await existsInSupabase('images_nobg', `${day}/${slug}.png`);
             if (normalize(oldDishes[day]) !== normalize(newDish) || !exists) {
                 changes.push({ canteenName, day, newDish });
             }
@@ -368,7 +368,7 @@ async function main() {
             if (fs.existsSync(staticSrc)) {
                 const buffer = fs.readFileSync(staticSrc);
                 await uploadToSupabase('images', `${day}/${slug}.png`, buffer);
-                await uploadToSupabase('images-nobg', `${day}/${slug}.png`, buffer);
+                await uploadToSupabase('images_nobg', `${day}/${slug}.png`, buffer);
             }
         }
     }
