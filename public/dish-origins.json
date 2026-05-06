@@ -38,5 +38,37 @@
   "White turkey chilli with pasta": {
     "country": "United States",
     "code": "us"
+  },
+  "Kebab with bread and dressing": {
+    "country": "Turkey",
+    "code": "tr"
+  },
+  "Paneng curry with pork and rice": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "White turkey chili with pasta": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Chili con carne on nachos": {
+    "country": "United States",
+    "code": "us"
+  },
+  "Meat patties with lingonberries, gravy, cabbage stew and potato": {
+    "country": "Sweden",
+    "code": "se"
+  },
+  "Marinated chicken leg with curry sauce, vegetables and rice": {
+    "country": "Thailand",
+    "code": "th"
+  },
+  "Braised chicken leg with bell pepper sauce and rice": {
+    "country": "China",
+    "code": "cn"
+  },
+  "Chicken filet with pepper sauce, roasted potatoes and baked vegetables": {
+    "country": "France",
+    "code": "fr"
   }
 }
