@@ -37,7 +37,7 @@ export const ALLERGEN_ABBREV_NO: Record<string, string> = {
 export const CANTEEN_ORDER = ["Eat the street", "Fresh4you", "Flow"];
 
 export const CANTEEN_IMAGE_SLUGS: Record<string, string> = {
-  \"Eat the street\": \"eat_the_street\", \"Fresh4you\": \"fresh4you\", \"Flow\": \"flow\"
+  "Eat the street": "eat_the_street", "Fresh4you": "fresh4you", "Flow": "flow"
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
