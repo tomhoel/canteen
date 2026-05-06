@@ -30,7 +30,7 @@ const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const ORIGINS_PATH = path.join(__dirname, 'public', 'dish-origins.json');
 const DESCRIPTIONS_PATH = path.join(__dirname, 'public', 'dish-descriptions.json');
 
-// High-Res Config
+// Generation Config
 const IMAGE_SIZE_PX = 1024;
 const PLATE_RESIZE_PX = 880; 
 
@@ -223,7 +223,7 @@ async function removeBgSingle(canteenName, day) {
 
         const finalBuffer = await sharp(data, { raw: { width, height, channels } })
             .trim().resize(PLATE_RESIZE_PX, PLATE_RESIZE_PX, { fit: 'inside' })
-            .extend({ top: (IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2, bottom: (IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2, left: (IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2, right: (IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .extend({ top: Math.floor((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), bottom: Math.ceil((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), left: Math.floor((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), right: Math.ceil((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), background: { r: 0, g: 0, b: 0, alpha: 0 } })
             .png({ compressionLevel: 9, palette: true }).toBuffer();
 
         fs.writeFileSync(outputPath, finalBuffer);
@@ -361,7 +361,8 @@ async function main() {
     for (const [canteenName, canteen] of Object.entries(newMenu.canteens)) {
         for (const day of DAY_ORDER) {
             const entry = canteen.menu.find(d => d.day.toLowerCase() === day);
-            const main = getDayItems(entry).find(i => i.isMain);
+            const items = getDayItems(entry);
+            const main = items.find(i => i.isMain);
             if (main && !isDishClosed(main.dish)) continue;
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
             const staticSrc = path.join(__dirname, 'public', 'images', 'closed-plates', `closed-plate-1.png`);

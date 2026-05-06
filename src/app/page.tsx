@@ -299,7 +299,7 @@ export default function Home() {
       CANTEEN_ORDER.forEach(name => {
         const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
         const supabasePath = `${dk}/${slug}.png`;
-        const sbLowRes = getSupabaseImageUrl("images-nobg", supabasePath, { width: 440, format: "webp" });
+        const sbLowRes = getSupabaseImageUrl("images_nobg", supabasePath, { width: 440, format: "webp" });
         const src = sbLowRes || `/images_nobg/${dk}/${slug}.png`;
         
         if (preloadedRef.current.has(src)) return;
@@ -390,7 +390,7 @@ export default function Home() {
         
         // Supabase Integration: Prefer remote images if available
         const supabasePath = `${dk}/${imageSlug}.png`;
-        const sbLowRes = getSupabaseImageUrl("images-nobg", supabasePath, { width: 440, format: "webp" });
+        const sbLowRes = getSupabaseImageUrl("images_nobg", supabasePath, { width: 440, format: "webp" });
         const sbHighRes = getSupabaseImageUrl("images", supabasePath);
 
         const imagePath = sbLowRes || `/images_nobg/${dk}/${imageSlug}.png`;
