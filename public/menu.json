@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-05-06T11:02:07.280Z",
+  "scrapedAt": "2026-05-06T11:05:27.859Z",
   "canteens": {
     "Flow": {
       "week": "BYGG / BUILDING B - UKE/WEEK 17",
@@ -82,7 +82,7 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Panang curry with pork and rice",
+                "dish": "Panang curry med svin og ris",
                 "allergens": [],
                 "isMain": true
               },
@@ -138,7 +138,7 @@
                 "isMain": false
               },
               {
-                "dish": "Krydret gulrot- og linsesuppe",
+                "dish": "Krydret gulrot og linsesuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -224,7 +224,7 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "White turkey chili with pasta",
+                "dish": "White turkey chilli with pasta",
                 "allergens": [
                   {
                     "id": "3",
@@ -270,7 +270,7 @@
                 "isMain": true
               },
               {
-                "dish": "Villris med marinert avokado, vannmelon, peanøtter og friske blader",
+                "dish": "Vil ris med marinert avokado, vannmelon, peanøtt og friske blader",
                 "allergens": [
                   {
                     "id": "9",
@@ -284,7 +284,7 @@
                 "isMain": false
               },
               {
-                "dish": "Bakt søtpotet- og gulrotsuppe",
+                "dish": "Bakt søtpotet og gulrotsuppe",
                 "allergens": [
                   {
                     "id": "7",
@@ -304,7 +304,7 @@
                 "isMain": true
               },
               {
-                "dish": "Wild rice with marinated avocado, watermelon, peanuts and fresh salad",
+                "dish": "Wild rice with marinated avocado, watermelon, peanut and fresh salad",
                 "allergens": [
                   {
                     "id": "9",
@@ -442,7 +442,7 @@
             "label": "TIRSDAG",
             "items": [
               {
-                "dish": "Kjøttkaker med tyttebær, saus, kålstuing og poteter",
+                "dish": "Kjøttkaker med tyttebær, saus, kålstuing og potet",
                 "allergens": [
                   {
                     "id": "4",
@@ -643,7 +643,7 @@
             "label": "THURSDAY",
             "items": [
               {
-                "dish": "Braised chicken leg with bell pepper sauce and rice",
+                "dish": "Braised chicken leg with Bell pepper sauce and rice",
                 "allergens": [],
                 "isMain": true
               },
@@ -750,7 +750,7 @@
                 "isMain": true
               },
               {
-                "dish": "Vegetarisk indisk suppe",
+                "dish": "Vegetar indisk suppe",
                 "allergens": [],
                 "isMain": false
               },
@@ -830,7 +830,7 @@
                 "isMain": false
               },
               {
-                "dish": "Vegetarisk jambalaya",
+                "dish": "Vegetarian jambalaya",
                 "allergens": [],
                 "isMain": false
               }
@@ -885,7 +885,7 @@
             "label": "ONSDAG",
             "items": [
               {
-                "dish": "Kebab med brød og dressing",
+                "dish": "Kebab with bread and dressing",
                 "allergens": [
                   {
                     "id": "3",
@@ -895,12 +895,12 @@
                 "isMain": true
               },
               {
-                "dish": "Minestronesuppe med bacon",
+                "dish": "Minestrone soup with bacon",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Korma med kikerter og blomkål",
+                "dish": "Korma with chickpeas and cauliflower",
                 "allergens": [],
                 "isMain": false
               }
@@ -938,17 +938,17 @@
             "label": "TORSDAG",
             "items": [
               {
-                "dish": "Kylling Chop Suey med ris",
+                "dish": "Chicken Chop Suey with rice",
                 "allergens": [],
                 "isMain": true
               },
               {
-                "dish": "Ratatouillesuppe",
+                "dish": "Ratatouille soup",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Falafel med tzatziki",
+                "dish": "Falafel with tzatziki",
                 "allergens": [
                   {
                     "id": "4",
@@ -991,7 +991,7 @@
             "label": "FREDAG",
             "items": [
               {
-                "dish": "Hjemmelaget lasagne",
+                "dish": "Homemade lasagne",
                 "allergens": [
                   {
                     "id": "3",
@@ -1005,12 +1005,12 @@
                 "isMain": true
               },
               {
-                "dish": "Meksikansk tomatsuppe",
+                "dish": "Mexican tomato soup",
                 "allergens": [],
                 "isMain": false
               },
               {
-                "dish": "Omelett med grønnsaker",
+                "dish": "Omelette with vegetables",
                 "allergens": [
                   {
                     "id": "1",
