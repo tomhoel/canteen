@@ -109,19 +109,16 @@ function getISOWeekFromDate(dateStr) {
 function findChanges(oldMenu, newMenu) {
     const changes = []; // { canteenName, day, oldDish, newDish }
 
-    // Detect week-boundary crossing: old menu scraped in a previous ISO week.
-    // When canteens publish next week's menu early ("ahead"), closed-plate images
-    // are placed. Once the actual week arrives we must regenerate real food images
-    // even if the dish text hasn't changed.
     const oldScrapedWeek = oldMenu?.scrapedAt ? getISOWeekFromDate(oldMenu.scrapedAt) : null;
     const currentWeek = getCurrentISOWeek();
     const crossedWeekBoundary = oldScrapedWeek !== null && oldScrapedWeek < currentWeek;
+
+    const normalize = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
     for (const [canteenName, newCanteen] of Object.entries(newMenu.canteens)) {
         const oldCanteen = oldMenu?.canteens?.[canteenName];
 
         if (!oldCanteen) {
-            // Entirely new canteen — regenerate all days
             for (const day of DAY_ORDER) {
                 const entry = newCanteen.menu.find(d => d.day.toLowerCase() === day);
                 const items = getDayItems(entry);
@@ -136,34 +133,31 @@ function findChanges(oldMenu, newMenu) {
         const oldDishes = getMainDishes(oldCanteen);
         const newDishes = getMainDishes(newCanteen);
 
-        // Check week change
-        const oldWeek = oldCanteen.week || '';
-        const newWeek = newCanteen.week || '';
-        const weekChanged = oldWeek !== newWeek;
+        const oldWeekNum = parseMenuWeekNumber(oldCanteen.week);
+        const newWeekNum = parseMenuWeekNumber(newCanteen.week);
+        // Only trigger week change if we move FORWARD
+        const weekChanged = oldWeekNum !== null && newWeekNum !== null && newWeekNum > oldWeekNum;
 
-        // Force regeneration if we crossed a week boundary and this canteen's
-        // menu is for the current week (was likely "ahead" before, now current)
-        const canteenWeek = parseMenuWeekNumber(newCanteen.week);
-        const forceRegenerate = crossedWeekBoundary && canteenWeek === currentWeek;
+        const forceRegenerate = crossedWeekBoundary && newWeekNum === currentWeek;
 
         for (const day of DAY_ORDER) {
             const oldDish = oldDishes[day];
             const newDish = newDishes[day];
 
             if (!newDish) continue;
-
-            // Skip closed-keyword dishes — Step 4b handles those
             if (isDishClosed(newDish)) continue;
 
-            // Regenerate if: dish changed, week changed, image missing, or week transition
             const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
             const imagePath = path.join(IMAGES_NOBG_DIR, day, `${slug}.png`);
             const imageExists = fs.existsSync(imagePath);
 
-            if (oldDish !== newDish || weekChanged || !imageExists || forceRegenerate) {
+            // Case-insensitive comparison to avoid AI title-cleaning noise
+            const dishChanged = normalize(oldDish) !== normalize(newDish);
+
+            if (dishChanged || weekChanged || !imageExists || forceRegenerate) {
                 const reason = forceRegenerate ? 'week transition (replacing closed plate)'
                     : !imageExists ? 'missing image'
-                    : weekChanged ? `week: ${oldWeek} → ${newWeek}`
+                    : weekChanged ? `week: ${oldWeekNum} → ${newWeekNum}`
                     : 'dish changed';
                 changes.push({ canteenName, day, oldDish, newDish, reason });
             }
