@@ -234,13 +234,12 @@ async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png')
     }
 }
 
+const { GoogleGenAI } = require('@google/genai');
+
 /**
  * Generate a single image using the V3 generator prompt.
- * If master-plate-ref.png exists, it is passed as a visual reference to Gemini
- * so it can replicate the exact plate style rather than interpreting text alone.
  */
 async function generateSingleImage(dishName, canteenName, day) {
-    const { GoogleGenAI } = require('@google/genai');
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) { console.error('  ❌ GEMINI_API_KEY required'); return false; }
     const ai = new GoogleGenAI(GEMINI_API_KEY);
@@ -304,7 +303,9 @@ Style: Minimalist Scandinavian food photography, flat-lit product shot, clean an
             },
         }), `image: ${dishName}`);
 
-        for (const part of response.response.candidates[0].content.parts) {
+        // The SDK returns response.response for generateContent
+        const result = response.response || response;
+        for (const part of result.candidates[0].content.parts) {
             if (part.inlineData) {
                 const sharp = require('sharp');
                 const raw = Buffer.from(part.inlineData.data, 'base64');
