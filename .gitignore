@@ -64,3 +64,10 @@ next-env.d.ts
 .env*.local
 clear-cache.js
 .superpowers/
+
+# Agent/skill caches (Gemini CLI, superpowers, etc.) — never commit
+.agent/
+.agents/
+.gemini/
+skills/
+skills-lock.json
