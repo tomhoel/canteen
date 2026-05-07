@@ -1325,6 +1325,137 @@ body {
   color: var(--text-primary);
 }
 
+/* ─── YOLO randomiser button — sits beside the day-bar on desktop, FAB on mobile ─── */
+.yolo-wrap {
+  position: fixed;
+  bottom: 120px;
+  left: calc(50% + 200px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 101;
+  animation: dayBarReveal 0.6s var(--spring) 0.45s both;
+}
+
+.yolo-button {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 200, 100, 0.55);
+  background: linear-gradient(145deg, #ffb866, #cc7220);
+  color: white;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow:
+    0 8px 24px rgba(200, 116, 26, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.2s var(--spring), box-shadow 0.2s ease, filter 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.yolo-button:hover:not(:disabled) {
+  transform: scale(1.06);
+  filter: brightness(1.05);
+}
+
+.yolo-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.yolo-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.yolo-button.spinning {
+  animation: yoloPulse 0.45s ease-in-out infinite;
+}
+
+.yolo-label {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+@keyframes yoloPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); filter: brightness(1.1); }
+}
+
+.yolo-sound {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--accent-orange);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.15s ease;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.yolo-sound:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.08);
+}
+
+.yolo-sound.off { opacity: 0.55; }
+
+/* Mobile: tuck the YOLO button into the bottom-right corner as a FAB
+   so it doesn't fight the day bar for horizontal space. */
+@media (max-width: 720px) {
+  .yolo-wrap {
+    left: auto;
+    right: 16px;
+    bottom: 130px;
+    flex-direction: column-reverse; /* sound toggle above the main button */
+    gap: 4px;
+  }
+  .yolo-button {
+    width: 56px;
+    height: 56px;
+    font-size: 12px;
+  }
+  .yolo-sound {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* ─── YOLO highlight states on FoodCard ─── */
+.food-card.yolo-active {
+  transform: scale(1.03);
+  box-shadow:
+    0 0 0 3px rgba(255, 196, 126, 0.85),
+    0 0 28px 6px rgba(255, 196, 126, 0.55),
+    0 12px 40px rgba(0, 0, 0, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  z-index: 5;
+}
+
+.food-card.yolo-winner {
+  box-shadow:
+    0 0 0 4px rgba(255, 180, 60, 1),
+    0 0 40px 14px rgba(255, 196, 126, 0.7),
+    0 16px 48px rgba(0, 0, 0, 0.22);
+  animation: yoloWin 0.7s var(--spring) both;
+  z-index: 5;
+}
+
+@keyframes yoloWin {
+  0%   { transform: scale(1.03); }
+  40%  { transform: scale(1.12); }
+  100% { transform: scale(1.05); }
+}
+
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
 .day-bar {
   position: fixed;

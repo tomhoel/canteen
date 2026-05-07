@@ -58,6 +58,10 @@ interface FoodCardProps {
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
+  /** True while the YOLO spinner has the cycling glow on this card. */
+  yoloHighlighted?: boolean;
+  /** True after YOLO landed and this card is the chosen one. */
+  yoloWinner?: boolean;
 }
 
 export default function FoodCard({
@@ -70,6 +74,8 @@ export default function FoodCard({
   maxVotes,
   onImageClick,
   onCardClick,
+  yoloHighlighted = false,
+  yoloWinner = false,
 }: FoodCardProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -95,9 +101,10 @@ export default function FoodCard({
   return (
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
-      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
+      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
       style={{ animationDelay: `${cardIdx * 75}ms` }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
+      data-yolo-card-key={canteenName}
     >
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
