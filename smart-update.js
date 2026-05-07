@@ -121,6 +121,18 @@ async function listDayContents(bucket, days) {
     return Object.fromEntries(entries);
 }
 
+/**
+ * ISO 8601 says an ISO week's year is the year of its Thursday. Critical at
+ * year boundaries: Dec 29 2025 belongs to 2026-W01 even though the calendar
+ * year is 2025.
+ */
+function getISOWeekYearFromDate(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    return d.getFullYear();
+}
+
 function getCurrentISOWeek() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -716,8 +728,24 @@ async function main() {
             });
         });
     }
-    fs.writeFileSync(ORIGINS_PATH, JSON.stringify(origins, null, 2));
-    fs.writeFileSync(DESCRIPTIONS_PATH, JSON.stringify(descriptions, null, 2));
+    // Persist menu + origins + descriptions to weekly_menus.
+    // The frontend reads this row server-side — Supabase is now the single
+    // source of truth (no more workflow-committed JSON files in /public).
+    const weekNum = parseMenuWeekNumber(Object.values(newMenu.canteens)[0]?.week);
+    if (weekNum && supabase) {
+        const isoYear = getISOWeekYearFromDate(new Date());
+        const weekId = `${isoYear}-W${String(weekNum).padStart(2, '0')}`;
+        const { error } = await supabase
+            .from('weekly_menus')
+            .upsert(
+                { week_id: weekId, menu_data: newMenu, dish_origins: origins, dish_descriptions: descriptions },
+                { onConflict: 'week_id' }
+            );
+        if (error) console.error(`  ❌ weekly_menus upsert failed: ${error.message}`);
+        else console.log(`💾 saved ${weekId} (${Object.keys(origins).length} origins, ${Object.keys(descriptions).length} descriptions)`);
+    } else {
+        console.warn('⚠️  weekly_menus upsert skipped (no week number or supabase client)');
+    }
     console.log('\n🏁 FINISHED');
 }
 

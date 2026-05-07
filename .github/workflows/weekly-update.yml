@@ -14,8 +14,13 @@ on:
     - cron: '0 0,6,12,18 * * 0'  # Sunday
   workflow_dispatch: # Allow manual trigger
 
+# Menu data + origin/description JSON live in the Supabase weekly_menus
+# table now (smart-update.js upserts there). Workflow doesn't commit
+# anything back to the repo, so least-privilege is read.
+# `issues: write` is for the failure-notification step below.
 permissions:
-  contents: write
+  contents: read
+  issues: write
 
 jobs:
   update-menu:
@@ -42,6 +47,7 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Smart update (scrape + compare + regenerate only changes)
+        id: smart-update
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -49,19 +55,45 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node smart-update.js
 
-      - name: Commit and push updated menu
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/menu.json public/dish-origins.json public/dish-descriptions.json
-          # Note: images are now stored in Supabase and ignored by Git
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update weekly menu and food images $(date +%Y-%m-%d)"
-            for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
-              echo "Push attempt $attempt failed, retrying..."
-              sleep 5
-            done
-          fi
+      # Open (or update) a GitHub issue if the run failed, so we hear about it
+      # before staff notice empty cards on Monday morning.
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `weekly-update workflow failed`;
+            const body = [
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `Trigger: ${context.eventName}`,
+              `Started: ${new Date().toISOString()}`,
+              ``,
+              `Check the run log; smart-update.js prints the failure reason on the line above the stack trace.`,
+            ].join('\n');
+
+            // Reuse an existing open issue with this title rather than spamming.
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'workflow-failure',
+              per_page: 50,
+            });
+            const match = existing.find(i => i.title === title);
+            if (match) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: match.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['workflow-failure'],
+              });
+            }
