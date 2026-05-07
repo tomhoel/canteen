@@ -1366,32 +1366,32 @@ body {
   z-index: 1101;
   isolation: isolate;
   box-shadow:
-    0 0 0 2px rgba(255, 152, 56, 0.30),
+    0 0 0 3px rgba(255, 152, 56, 0.45),
     0 14px 32px rgba(0, 0, 0, 0.16),
     0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
-/* The comet itself. ::before pseudo-element sits 3px outside the card,
-   with mask-composite carving out the centre so only the 3px ring is
-   rendered. Conic-gradient is mostly transparent except for a ~70°
+/* The comet itself. ::before pseudo-element sits 5px outside the card,
+   with mask-composite carving out the centre so only the 5px ring is
+   rendered. Conic-gradient is mostly transparent except for a ~120°
    bright arc that fades up to nearly white at its peak and tails off
    into transparency on either side. The `from <angle>` rotates over
    6s — readable but not anxious. */
 .food-card.yolo-winner::before {
   content: "";
   position: absolute;
-  inset: -3px;
-  border-radius: 27px;
-  padding: 3px;
+  inset: -5px;
+  border-radius: 29px; /* card radius (24) + outset (5) */
+  padding: 5px;
   background: conic-gradient(
     from var(--yolo-comet-angle),
     transparent 0deg,
     transparent 200deg,
-    rgba(255, 200, 80, 0.35) 230deg,
-    rgba(255, 220, 120, 0.95) 250deg,
-    rgba(255, 245, 200, 1) 260deg,
-    rgba(255, 220, 120, 0.95) 270deg,
-    rgba(255, 200, 80, 0.35) 290deg,
+    rgba(255, 200, 80, 0.45) 220deg,
+    rgba(255, 220, 120, 1) 245deg,
+    rgba(255, 250, 215, 1) 260deg,
+    rgba(255, 220, 120, 1) 275deg,
+    rgba(255, 200, 80, 0.45) 300deg,
     transparent 320deg,
     transparent 360deg
   );
@@ -1406,11 +1406,40 @@ body {
   animation: yoloCometRotate 6s linear infinite;
   pointer-events: none;
   z-index: -1;
-  filter: drop-shadow(0 0 6px rgba(255, 220, 120, 0.55));
+  filter: drop-shadow(0 0 8px rgba(255, 220, 120, 0.65));
 }
 
 @keyframes yoloCometRotate {
   to { --yolo-comet-angle: 360deg; }
+}
+
+/* Title shimmer on the winner card — the dish name fills with a warm
+   gold gradient that slowly slides across the text. background-clip:
+   text + transparent fill means the gradient is only visible inside the
+   text shape, and animating background-position 0% → 100% looks like
+   light catching the letters. ~5s cycle. Falls back to plain dark text
+   if background-clip: text isn't supported (very rare in 2026). */
+.food-card.yolo-winner .dish-name {
+  background-image: linear-gradient(
+    100deg,
+    #b87515 0%,
+    #c9871f 20%,
+    #e9b75c 50%,
+    #c9871f 80%,
+    #b87515 100%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: yoloTitleShimmer 5s ease-in-out infinite;
+}
+
+@keyframes yoloTitleShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
 }
 
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
