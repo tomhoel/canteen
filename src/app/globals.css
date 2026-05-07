@@ -1342,19 +1342,31 @@ body {
   inherits: false;
 }
 
+/* CSS painting note that drives the layering decisions below:
+     - `outline` is painted AFTER all descendants. Using outline here would
+       cover the food image where its circle overflows the card's top edge.
+     - `box-shadow` and pseudo-elements with negative z-index in an isolated
+       stacking context paint at element-background time, BEFORE descendants,
+       so the food image always renders on top. */
+
 .food-card.yolo-active {
-  outline: 2px solid rgba(255, 152, 56, 0.7);
-  outline-offset: 4px;
+  position: relative;
+  z-index: 5;
+  /* First shadow is a 2px solid ring at the card's edge (spread 2px, no
+     blur, no offset). Subsequent layers are the lift's drop shadows. */
   box-shadow:
+    0 0 0 2px rgba(255, 152, 56, 0.7),
     0 12px 28px rgba(0, 0, 0, 0.14),
     0 4px 10px rgba(0, 0, 0, 0.06);
-  transition: outline-color 0.18s ease, box-shadow 0.18s ease;
-  z-index: 5;
+  transition: box-shadow 0.18s ease;
 }
 
 .food-card.yolo-winner {
   position: relative;
   z-index: 6;
+  /* Establish an isolated stacking context so the ::before pseudo at
+     z-index -1 stays under the card's children but above the page. */
+  isolation: isolate;
   /* Soft warm halo grounds the card without changing its scale/position. */
   box-shadow:
     0 0 36px 8px rgba(255, 179, 71, 0.30),
@@ -1362,18 +1374,17 @@ body {
     0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
-/* Rotating conic-gradient ribbon traces around the card's perimeter.
-   The ::before pseudo sits 3px outside the card; padding + mask-composite
-   carve the centre out so only the 3px-thick ring is rendered. The
-   `from <angle>` rotation animates via the registered @property at the
-   top of this block — that's what makes the gradient interpolate
-   smoothly instead of snapping. */
+/* Rotating conic-gradient ribbon at z-index -1, painted between the card's
+   own background and its children. The card background is opaque, so only
+   the 3px outset of the pseudo (the part NOT covered by the bg) renders —
+   no need for mask-composite to carve the centre. The food image, which
+   overflows the card's top via -68px margin, paints AFTER the ribbon and
+   so always sits on top. */
 .food-card.yolo-winner::before {
   content: "";
   position: absolute;
   inset: -3px;
   border-radius: 27px; /* card border-radius (24) + outset (3) */
-  padding: 3px;
   background: conic-gradient(
     from var(--yolo-angle),
     rgba(255, 179, 71, 0) 0deg,
@@ -1384,17 +1395,9 @@ body {
     #FFB347 300deg,
     rgba(255, 179, 71, 0) 360deg
   );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
   animation: yoloRibbonRotate 3s linear infinite;
   pointer-events: none;
-  z-index: 7;
+  z-index: -1;
   filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.55));
 }
 
