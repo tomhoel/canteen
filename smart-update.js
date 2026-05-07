@@ -181,28 +181,31 @@ async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png')
 }
 
 /**
- * Copy `srcPath` → `destPath` within a bucket. Falls back to download+upload
- * when the storage `copy` API rejects (e.g. for cross-bucket moves it would,
- * but here both paths share the same bucket).
+ * Copy `srcPath` → `destPath` within a bucket.
+ *
+ * Tries Supabase's server-side `copy` first (no bytes over the wire). If that
+ * fails for any reason — destination exists, mime-type quirks, etc. — falls
+ * back to download+upload, which always works as long as we re-state the
+ * content type explicitly.
  */
 async function copyInBucket(bucket, srcPath, destPath) {
     if (!supabase) return false;
     if (srcPath === destPath) return true;
+
+    const { error: copyErr } = await supabase.storage.from(bucket).copy(srcPath, destPath);
+    if (!copyErr) return true;
+
     try {
-        const { error } = await supabase.storage.from(bucket).copy(srcPath, destPath);
-        if (!error) return true;
-        if (/already exists/i.test(error.message)) {
-            // Slot is already occupied by an older image; overwrite via upload.
-            const { data: blob, error: dlErr } = await supabase.storage.from(bucket).download(srcPath);
-            if (dlErr) throw dlErr;
-            const buf = Buffer.from(await blob.arrayBuffer());
-            const { error: upErr } = await supabase.storage.from(bucket).upload(destPath, buf, { upsert: true });
-            if (upErr) throw upErr;
-            return true;
-        }
-        throw error;
+        const { data: blob, error: dlErr } = await supabase.storage.from(bucket).download(srcPath);
+        if (dlErr) throw dlErr;
+        const buf = Buffer.from(await blob.arrayBuffer());
+        const { error: upErr } = await supabase.storage
+            .from(bucket)
+            .upload(destPath, buf, { contentType: 'image/png', upsert: true });
+        if (upErr) throw upErr;
+        return true;
     } catch (err) {
-        console.error(`  ❌ copy ${bucket}/${srcPath} → ${destPath}: ${err.message}`);
+        console.error(`  ❌ copy ${bucket}/${srcPath} → ${destPath}: copy=${copyErr.message}; fallback=${err.message}`);
         return false;
     }
 }
@@ -547,11 +550,16 @@ async function main() {
     }
 
     console.log('\n🔍 Loading dish cache + listing storage in parallel...');
-    const [dishCache, nobgIndex] = await Promise.all([
+    const [dishCache, nobgIndex, archiveIndex] = await Promise.all([
         loadDishCache(),
         listDayContents('images_nobg', DAY_ORDER),
+        // 'archive' is a flat folder of <cache_key>.png files. Reusing
+        // listDayContents — the function name is a slight misnomer but the
+        // shape is identical.
+        listDayContents('images_nobg', ['archive']),
     ]);
-    console.log(`  📚 ${Object.keys(dishCache).length} cached dishes`);
+    const archiveFiles = archiveIndex.archive || new Set();
+    console.log(`  📚 ${Object.keys(dishCache).length} cache rows · ${archiveFiles.size} archive files`);
 
     // Four buckets of work:
     //   - skip:     slot has the right image AND cache row exists → no work
@@ -575,7 +583,12 @@ async function main() {
             const slotExists = nobgIndex[day]?.has(`${slug}.png`) || false;
             const dishUnchanged = normalizeDishName(oldDishes[day]) === cacheKey;
             const cached = dishCache[cacheKey];
-            const cachedImageFresh = !!(cached?.image_path && cached?.image_nobg_path);
+            // A cache row alone isn't enough — the archive file it points at
+            // must actually exist. Catches half-written cache state from past
+            // failed copies.
+            const cachedImageFresh = !!(
+                cached?.image_path && cached?.image_nobg_path && archiveFiles.has(`${cacheKey}.png`)
+            );
 
             if (slotExists && dishUnchanged) {
                 if (cachedImageFresh) {
