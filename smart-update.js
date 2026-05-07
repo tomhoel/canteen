@@ -145,19 +145,70 @@ async function generateSingleImage(dishName, canteenName, day) {
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
     const hasMasterPlate = fs.existsSync(MASTER_PLATE_REF_PATH);
-    const promptText = `Professional overhead food photography of "${dishName}". High contrast, dark grey background, warm beige plate.`;
+
+    // Prompt is co-designed with removeBgSingle's flood-fill: the algorithm
+    // accepts a pixel as background only if `maxDiff < 50 && brightness <= 185`.
+    // The #707070 grey + ZERO shadows + no out-of-plate elements clauses are
+    // what make that flood fill produce a clean transparent cutout. Anything
+    // softer in the prompt and utensils / table surfaces leak through.
+    const promptText = `Professional overhead food photography of "${dishName}".
+
+STRICT TECHNICAL SPECIFICATIONS:
+Camera & Composition:
+- Angle: Overhead shot, camera at 90° directly above plate
+- Framing: Plate perfectly centered, complete rim visible with margin
+- Size: Food covers 60-70% of plate surface
+- Format: Square 1:1 ratio
+
+Plate (CRITICAL - MUST FOLLOW EXACTLY):
+${hasMasterPlate ? '- REFERENCE IMAGE PROVIDED: Use the EXACT same plate from the reference image — identical shape, color, texture, and rim style. Do not deviate in any way.' : '- Plate: Round warm beige/cream stoneware dinner plate (10-11 inches)'}
+- Plate color: Warm sandy beige (#E8D5B7) — NOT white, NOT grey
+- Plate MUST have a clearly visible raised rim/edge all the way around
+- The plate must be IDENTICAL style across all images: same warm beige stoneware
+- EVERY image must show the COMPLETE plate with full rim visible — never cropped
+
+Food & Styling:
+- Professional restaurant plating, appetizing presentation
+- Food centered on plate with realistic portions
+- Lighting: Perfectly even flat lighting from all directions — ZERO shadows
+- Quality: Sharp, photorealistic, high detail, 8K quality
+
+Background (CRITICAL):
+- Background: Solid DARK GREY (#707070) seamless studio backdrop
+- Must be clearly DARKER than the beige plate (high contrast between plate edge and background)
+- MUST be perfectly uniform grey — no gradients, no textures
+- ABSOLUTELY NO SHADOWS anywhere — not under the plate, not around the plate, nowhere
+- The plate edge must transition DIRECTLY to the flat grey background with zero shadow
+
+Strict Exclusions:
+- NO white plates — use warm beige/sandy stoneware ONLY
+- NO light grey backgrounds — must be dark grey (#707070)
+- NO SHADOWS of any kind — no drop shadows, no cast shadows, no ambient shadows
+- NO table surfaces, wood, marble, or cloth
+- NO utensils, napkins, garnishes outside plate
+- NO hands, people, or decorative elements
+- NO text, watermarks, labels
+- NO angled views — strictly 90° overhead only
+
+Style: Minimalist Scandinavian food photography, flat-lit product shot, clean and professional.`;
 
     const parts = [{ text: promptText }];
     if (hasMasterPlate) {
         const plateData = fs.readFileSync(MASTER_PLATE_REF_PATH).toString('base64');
         parts.push({ inlineData: { mimeType: 'image/png', data: plateData } });
+        console.log('  🎨 Using master plate reference for consistent style');
     }
 
     try {
         const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-3.1-flash-image-preview',
             contents: [{ role: 'user', parts }],
-            config: { responseModalities: ["IMAGE"] },
+            // Text channel is kept so refusal/error messages surface in logs;
+            // aspectRatio enforces the 1:1 framing the prompt asks for.
+            config: {
+                responseModalities: ['Text', 'Image'],
+                imageConfig: { aspectRatio: '1:1' },
+            },
         }), `image: ${dishName}`);
 
         const candidate = response.candidates?.[0];
@@ -239,41 +290,96 @@ async function analyzeDish(dishName) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) return null;
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-    const promptText = `Analyze dish "${dishName}". Respond ONLY with JSON: {"origin":{"country":"Italy","code":"it"},"description":{"en":"...","no":"..."},"isValidDish":true}`;
+
+    const promptText = `Analyze this dish: "${dishName}"
+
+Do ALL of the following in one response:
+
+1. ORIGIN: Identify the single country this dish most likely originated from. Always provide a best guess — never refuse. Use ingredients, cooking style, or cultural context as clues.
+
+2. DESCRIPTION: Write a single short appetizing description (max 20 words). Be warm and inviting, mention a key flavor or texture. Provide in both English and Norwegian.
+
+3. VALIDATION: Is this a real dish name, or is it a category/theme header (like "THE MEDITERRANEAN SEA", "ASIAN STREET FOOD", "COMFORT FOOD")? If it's NOT a real dish, set isValidDish to false.
+
+Respond ONLY with raw JSON:
+{"origin":{"country":"Italy","code":"it"},"description":{"en":"English description","no":"Norwegian description"},"isValidDish":true}
+
+"code" must be an ISO 3166-1 alpha-2 country code in lowercase.`;
+
     try {
         const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash-lite',
             contents: [{ role: 'user', parts: [{ text: promptText }] }],
             config: { responseMimeType: 'application/json' },
         }), `analyze: ${dishName}`);
-        return JSON.parse(response.candidates[0].content.parts[0].text.trim());
-    } catch (error) { return null; }
+        const text = response.candidates[0].content.parts[0].text.trim();
+        const parsed = JSON.parse(text);
+        if (parsed.origin?.country && parsed.origin?.code && parsed.description?.en && parsed.description?.no) {
+            return parsed;
+        }
+        return null;
+    } catch (error) {
+        console.error(`  ❌ Dish analysis failed for "${dishName}": ${error.message}`);
+        return null;
+    }
 }
 
 async function cleanDishTitles(menu) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) return {};
+    if (!GEMINI_API_KEY) { console.log('  ⚠️  GEMINI_API_KEY not set — skipping title cleanup'); return {}; }
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+    // Collect all unique dish strings across both languages
     const allDishes = new Set();
     for (const canteen of Object.values(menu.canteens)) {
         for (const dayEntry of canteen.menu) {
             for (const lang of ['no', 'en']) {
                 for (const item of (dayEntry[lang]?.items || [])) {
-                    if (item.dish && !isDishClosed(item.dish)) allDishes.add(item.dish);
+                    if (item.dish && !isDishClosed(item.dish)) {
+                        allDishes.add(item.dish);
+                    }
                 }
             }
         }
     }
     if (allDishes.size === 0) return {};
-    const promptText = `Fix Norwegian typos in: ${[...allDishes].join(', ')}. Respond ONLY with JSON: {"original": "corrected"}`;
+
+    const dishList = [...allDishes];
+    const promptText = `You are a proofreader for a workplace canteen menu.
+
+Fix ONLY clear typos or joined compound words in Norwegian.
+DO NOT rephrase. DO NOT translate. DO NOT change words that look correct.
+If a title has no obvious typos, do NOT include it.
+
+Titles to proofread:
+${dishList.map((d, i) => `${i + 1}. "${d}"`).join('\n')}
+
+Respond with ONLY a JSON object containing entries where corrections were made.
+Format: {"original title": "corrected title"}
+If nothing needs fixing, respond with {}`;
+
     try {
         const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash-lite',
             contents: [{ role: 'user', parts: [{ text: promptText }] }],
             config: { responseMimeType: 'application/json' },
         }), 'title cleanup');
-        return JSON.parse(response.candidates[0].content.parts[0].text.trim());
-    } catch (error) { return {}; }
+        const text = response.candidates[0].content.parts[0].text.trim();
+        const corrections = JSON.parse(text);
+
+        // Validate: only keep corrections where the key actually exists in our dish list
+        // and the model actually changed something (avoids no-op rewrites).
+        const valid = {};
+        for (const [original, corrected] of Object.entries(corrections)) {
+            if (allDishes.has(original) && typeof corrected === 'string' && corrected !== original && corrected.length > 0) {
+                valid[original] = corrected;
+            }
+        }
+        return valid;
+    } catch (error) {
+        console.error(`  ⚠️  Title cleanup failed: ${error.message} — using raw titles`);
+        return {};
+    }
 }
 
 function applyTitleCorrections(menu, corrections) {
@@ -393,4 +499,17 @@ async function main() {
     console.log('\n🏁 FINISHED');
 }
 
-main().catch(console.error);
+if (require.main === module) {
+    main().catch(console.error);
+}
+
+// Exposed for one-off scripts (e.g. scripts/force-regen-current.js).
+module.exports = {
+    generateSingleImage,
+    removeBgSingle,
+    getDayItems,
+    isDishClosed,
+    DAY_ORDER,
+    IMAGES_DIR,
+    IMAGES_NOBG_DIR,
+};
