@@ -5,7 +5,7 @@
  * Re-runs the bg-removal pipeline in full RGB so cards no longer look washed out.
  */
 
-require('dotenv').config({ path: '.env.local' });
+// To run locally: `node --env-file=.env.local scripts/rebuild-nobg.js`
 const sharp = require('sharp');
 const { createClient } = require('@supabase/supabase-js');
 

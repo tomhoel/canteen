@@ -9,7 +9,8 @@
  * need to re-scrape locally.
  */
 
-require('dotenv').config({ path: '.env.local' });
+// To run locally: `node --env-file=.env.local scripts/force-regen-current.js`
+// In CI: env vars come from the workflow `env:` block.
 const https = require('https');
 const { generateSingleImage, removeBgSingle, getDayItems, isDishClosed, DAY_ORDER } = require('../smart-update.js');
 
