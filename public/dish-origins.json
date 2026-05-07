@@ -70,5 +70,13 @@
   "Chicken filet with pepper sauce, roasted potatoes and baked vegetables": {
     "country": "France",
     "code": "fr"
+  },
+  "Pasta Bolognese with parmesan": {
+    "country": "Italy",
+    "code": "it"
+  },
+  "French beef stew with skin potatoes": {
+    "country": "France",
+    "code": "fr"
   }
 }
