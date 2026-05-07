@@ -224,7 +224,7 @@ async function removeBgSingle(canteenName, day) {
         const finalBuffer = await sharp(data, { raw: { width, height, channels } })
             .trim().resize(PLATE_RESIZE_PX, PLATE_RESIZE_PX, { fit: 'inside' })
             .extend({ top: Math.floor((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), bottom: Math.ceil((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), left: Math.floor((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), right: Math.ceil((IMAGE_SIZE_PX-PLATE_RESIZE_PX)/2), background: { r: 0, g: 0, b: 0, alpha: 0 } })
-            .png({ compressionLevel: 9, palette: true }).toBuffer();
+            .png({ compressionLevel: 9 }).toBuffer(); // PNG-32 (full RGB+alpha) — palette mode banded the food photos
 
         fs.writeFileSync(outputPath, finalBuffer);
         await uploadToSupabase('images_nobg', `${day}/${slug}.png`, finalBuffer);
