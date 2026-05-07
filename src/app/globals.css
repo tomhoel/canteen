@@ -1336,24 +1336,11 @@ body {
    undisturbed. That's what kept causing the entry effect to replay when
    the winner class was removed. */
 
-@property --yolo-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-/* CSS painting note that drives the layering decisions below:
-     - `outline` is painted AFTER all descendants. Using outline here would
-       cover the food image where its circle overflows the card's top edge.
-     - `box-shadow` and pseudo-elements with negative z-index in an isolated
-       stacking context paint at element-background time, BEFORE descendants,
-       so the food image always renders on top. */
-
+/* The cycling state stays a soft 2px ring on the card (box-shadow paints
+   before descendants, so it never covers the overflowing food image). */
 .food-card.yolo-active {
   position: relative;
   z-index: 5;
-  /* First shadow is a 2px solid ring at the card's edge (spread 2px, no
-     blur, no offset). Subsequent layers are the lift's drop shadows. */
   box-shadow:
     0 0 0 2px rgba(255, 152, 56, 0.7),
     0 12px 28px rgba(0, 0, 0, 0.14),
@@ -1361,84 +1348,45 @@ body {
   transition: box-shadow 0.18s ease;
 }
 
+/* Winner state: NO card-level change. The reveal lives entirely on the
+   food image (a soft warm halo breathing behind the plate, see below).
+   The card frame stays at its default look so the effect feels like
+   light catching the plate, not a frame ornament. */
 .food-card.yolo-winner {
   position: relative;
   z-index: 6;
-  /* Establish an isolated stacking context so the ::before pseudo at
-     z-index -1 stays under the card's children but above the page. */
-  isolation: isolate;
-  /* Soft warm halo grounds the card without changing its scale/position. */
-  box-shadow:
-    0 0 36px 8px rgba(255, 179, 71, 0.30),
-    0 14px 32px rgba(0, 0, 0, 0.16),
-    0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
-/* Rotating conic-gradient ribbon at z-index -1, painted between the card's
-   own background and its children. The card background is opaque, so only
-   the 3px outset of the pseudo (the part NOT covered by the bg) renders —
-   no need for mask-composite to carve the centre. The food image, which
-   overflows the card's top via -68px margin, paints AFTER the ribbon and
-   so always sits on top. */
-.food-card.yolo-winner::before {
+/* Soft spotlight halo behind the plate. The pseudo-element sits BEHIND
+   the food <img> via z-index: -1 inside the .card-image-circle's own
+   stacking context (created by isolation: isolate). Radial gradient with
+   warm cream/gold stops fades to transparent. Opacity + scale breathe
+   4s in/out — slow enough to feel ambient, fast enough to register. */
+.food-card.yolo-winner .card-image-circle {
+  isolation: isolate;
+}
+
+.food-card.yolo-winner .card-image-circle::before {
   content: "";
   position: absolute;
-  inset: -3px;
-  border-radius: 27px; /* card border-radius (24) + outset (3) */
-  background: conic-gradient(
-    from var(--yolo-angle),
-    rgba(255, 179, 71, 0) 0deg,
-    #FFB347 60deg,
-    #ffd700 120deg,
-    #FFB347 180deg,
-    #ff9c2a 240deg,
-    #FFB347 300deg,
-    rgba(255, 179, 71, 0) 360deg
+  inset: -10%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 200, 130, 0.55) 0%,
+    rgba(255, 179, 71, 0.30) 35%,
+    rgba(255, 179, 71, 0.06) 60%,
+    transparent 80%
   );
-  animation: yoloRibbonRotate 3s linear infinite;
-  pointer-events: none;
+  filter: blur(14px);
   z-index: -1;
-  filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.55));
-}
-
-@keyframes yoloRibbonRotate {
-  to { --yolo-angle: 360deg; }
-}
-
-/* Starburst overlay — 10 spans laid out around the card centre, each
-   translated outward along its --angle and faded out. */
-.yolo-starburst {
-  position: absolute;
-  inset: 0;
   pointer-events: none;
-  z-index: 7;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  animation: yoloPlateHalo 4s ease-in-out infinite;
 }
 
-.yolo-spark {
-  position: absolute;
-  font-size: 22px;
-  line-height: 1;
-  transform: rotate(var(--angle)) translateY(0);
-  animation: yoloSparkFly 1.05s ease-out both;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
-}
-
-@keyframes yoloSparkFly {
-  0% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateY(0) scale(0.4);
-  }
-  20% {
-    opacity: 1;
-    transform: rotate(var(--angle)) translateY(-30px) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateY(-160px) scale(0.6);
-  }
+@keyframes yoloPlateHalo {
+  0%, 100% { opacity: 0.40; transform: scale(0.96); }
+  50%      { opacity: 0.78; transform: scale(1.06); }
 }
 
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */

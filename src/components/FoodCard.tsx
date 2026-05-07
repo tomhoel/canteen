@@ -106,15 +106,6 @@ export default function FoodCard({
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
       data-yolo-card-key={canteenName}
     >
-      {yoloWinner && (
-        <div className="yolo-starburst" aria-hidden="true">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <span key={i} className="yolo-spark" style={{ ['--angle' as string]: `${i * 36}deg` }}>
-              {i % 2 === 0 ? "✨" : "🎉"}
-            </span>
-          ))}
-        </div>
-      )}
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
           <svg className="vote-pip-icon" viewBox="0 0 16 16" fill="currentColor">
