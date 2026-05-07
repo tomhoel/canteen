@@ -519,13 +519,36 @@ If nothing needs fixing, respond with {}`;
         const text = response.candidates[0].content.parts[0].text.trim();
         const corrections = JSON.parse(text);
 
-        // Validate: only keep corrections where the key actually exists in our dish list
-        // and the model actually changed something (avoids no-op rewrites).
+        // Validate: only keep corrections where the key actually exists in our
+        // dish list and the model actually changed something. Also reject
+        // likely translations — Gemini sometimes ignores "DO NOT translate"
+        // in the prompt and turns "Svensk kjøttgrateng med hvitløkspoteter"
+        // into "Swedish meat gratin with garlic potatoes". Two heuristics:
+        //   1. The original carried Norwegian-only chars (æøå) but the
+        //      correction has none → it's a NO→EN translation.
+        //   2. Word overlap < 50% → most words got rewritten, not typo-fixed.
         const valid = {};
         for (const [original, corrected] of Object.entries(corrections)) {
-            if (allDishes.has(original) && typeof corrected === 'string' && corrected !== original && corrected.length > 0) {
-                valid[original] = corrected;
+            if (!allDishes.has(original)) continue;
+            if (typeof corrected !== 'string' || corrected === original || corrected.length === 0) continue;
+
+            const hadNoChar = /[æøåÆØÅ]/.test(original);
+            const stillHasNoChar = /[æøåÆØÅ]/.test(corrected);
+            if (hadNoChar && !stillHasNoChar) {
+                console.log(`  ⚠️  rejected likely translation: "${original}" → "${corrected}"`);
+                continue;
             }
+
+            const origWords = new Set(original.toLowerCase().split(/\s+/).filter(Boolean));
+            const newWords = new Set(corrected.toLowerCase().split(/\s+/).filter(Boolean));
+            const overlap = [...origWords].filter(w => newWords.has(w)).length;
+            const denom = Math.min(origWords.size, newWords.size) || 1;
+            if (overlap / denom < 0.5) {
+                console.log(`  ⚠️  rejected wholesale rewrite (<50% word overlap): "${original}" → "${corrected}"`);
+                continue;
+            }
+
+            valid[original] = corrected;
         }
         return valid;
     } catch (error) {
