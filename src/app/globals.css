@@ -1336,91 +1336,81 @@ body {
    undisturbed. That's what kept causing the entry effect to replay when
    the winner class was removed. */
 
-/* Cycling state: 3px ring + a clearly-visible warm outer glow on the card,
-   plus brightness/saturate + a small scale on the plate so the active
-   dish is visibly 'lit'. Layered effects, each individually small. */
+/* The angle that drives the rotating comet on the winner card. Registered
+   so the conic-gradient's `from <angle>` interpolates smoothly between
+   keyframes instead of snapping. */
+@property --yolo-comet-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Cycling state: a single solid 3px warm ring at the card edge.
+   No glow, no scale, no plate change. Discrete jump from card to card
+   IS the motion of the spin. */
 .food-card.yolo-active {
   position: relative;
-  /* Above the desktop header (z:10) AND the mobile fixed header (z:1000)
-     so the warm glow + outer ring don't get clipped by the bar. The
-     card contents (image, text) paint above the header in this state. */
   z-index: 1100;
   box-shadow:
     0 0 0 3px rgba(255, 152, 56, 0.85),
-    0 0 40px 4px rgba(255, 152, 56, 0.32),
     0 12px 28px rgba(0, 0, 0, 0.14),
     0 4px 10px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.18s ease;
 }
 
-.food-card.yolo-active .card-image-circle {
-  transform: scale(1.025);
-  transition: transform 0.18s cubic-bezier(0.34, 1.15, 0.64, 1);
-}
-
-.food-card.yolo-active .food-image {
-  filter:
-    drop-shadow(0 8px 20px rgba(80, 40, 0, 0.15))
-    drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10))
-    brightness(1.08) saturate(1.12);
-  transition: filter 0.18s ease;
-}
-
-/* Winner: card frame stays default; the reveal is on the plate itself —
-   a saturated amber halo behind it, the plate scales up slightly, and
-   the food image gets a brightness + saturation lift. The combined
-   effect reads clearly as 'this is the chosen one' without any frame
-   ornament. */
+/* Winner: a faint static warm ring at the edge, with a single bright
+   warm arc ('comet') slowly traveling around the perimeter — like light
+   moving across a polished trophy. Plate is left untouched. */
 .food-card.yolo-winner {
   position: relative;
-  /* Above the desktop header (z:10) AND the mobile fixed header (z:1000)
-     so the plate halo + scale-up don't get clipped by the bar where the
-     food image overflows the card's top via margin-top: -68px. */
   z-index: 1101;
-}
-
-.food-card.yolo-winner .card-image-circle {
   isolation: isolate;
-  transform: scale(1.06);
-  transition: transform 0.55s cubic-bezier(0.34, 1.15, 0.64, 1);
+  box-shadow:
+    0 0 0 2px rgba(255, 152, 56, 0.30),
+    0 14px 32px rgba(0, 0, 0, 0.16),
+    0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
-.food-card.yolo-winner .food-image {
-  filter:
-    drop-shadow(0 12px 28px rgba(80, 40, 0, 0.18))
-    drop-shadow(0 4px 10px rgba(80, 40, 0, 0.12))
-    brightness(1.13) saturate(1.22);
-  transition: filter 0.4s ease;
-}
-
-/* Spotlight halo behind the plate. Sits at z-index: -1 inside
-   .card-image-circle's own stacking context (created by isolation:
-   isolate above). Saturated amber gradient + blur(24px) read as
-   ambient light. Opacity range stays high (0.7 → 1.0) so the halo is
-   continuously visible — the breathing animates intensity, not whether
-   it's there. */
-.food-card.yolo-winner .card-image-circle::before {
+/* The comet itself. ::before pseudo-element sits 3px outside the card,
+   with mask-composite carving out the centre so only the 3px ring is
+   rendered. Conic-gradient is mostly transparent except for a ~70°
+   bright arc that fades up to nearly white at its peak and tails off
+   into transparency on either side. The `from <angle>` rotates over
+   6s — readable but not anxious. */
+.food-card.yolo-winner::before {
   content: "";
   position: absolute;
-  inset: -30%;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at center,
-    rgba(255, 225, 145, 1.00) 0%,
-    rgba(255, 175, 60, 0.75) 28%,
-    rgba(255, 130, 30, 0.40) 50%,
-    rgba(255, 130, 30, 0.10) 70%,
-    transparent 88%
+  inset: -3px;
+  border-radius: 27px;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--yolo-comet-angle),
+    transparent 0deg,
+    transparent 200deg,
+    rgba(255, 200, 80, 0.35) 230deg,
+    rgba(255, 220, 120, 0.95) 250deg,
+    rgba(255, 245, 200, 1) 260deg,
+    rgba(255, 220, 120, 0.95) 270deg,
+    rgba(255, 200, 80, 0.35) 290deg,
+    transparent 320deg,
+    transparent 360deg
   );
-  filter: blur(24px);
-  z-index: -1;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: yoloCometRotate 6s linear infinite;
   pointer-events: none;
-  animation: yoloPlateHalo 4s ease-in-out infinite;
+  z-index: -1;
+  filter: drop-shadow(0 0 6px rgba(255, 220, 120, 0.55));
 }
 
-@keyframes yoloPlateHalo {
-  0%, 100% { opacity: 0.70; transform: scale(0.96); }
-  50%      { opacity: 1.00; transform: scale(1.10); }
+@keyframes yoloCometRotate {
+  to { --yolo-comet-angle: 360deg; }
 }
 
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
