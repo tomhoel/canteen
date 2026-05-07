@@ -519,14 +519,32 @@ If nothing needs fixing, respond with {}`;
         const text = response.candidates[0].content.parts[0].text.trim();
         const corrections = JSON.parse(text);
 
-        // Validate: only keep corrections where the key actually exists in our
-        // dish list and the model actually changed something. Also reject
-        // likely translations — Gemini sometimes ignores "DO NOT translate"
-        // in the prompt and turns "Svensk kjøttgrateng med hvitløkspoteter"
-        // into "Swedish meat gratin with garlic potatoes". Two heuristics:
-        //   1. The original carried Norwegian-only chars (æøå) but the
-        //      correction has none → it's a NO→EN translation.
-        //   2. Word overlap < 50% → most words got rewritten, not typo-fixed.
+        // Validate: only keep corrections where the key exists in our dish list
+        // and the model actually changed something. Then run two safety nets
+        // because Gemini occasionally ignores "DO NOT translate" and rewrites
+        // a Norwegian title into English wholesale.
+        //
+        //   accept if   → same letters, only whitespace/punct differ
+        //                 (compound fix: "Tomat suppe" → "Tomatsuppe")
+        //              OR → high word overlap (≥50%) AND no Norwegian-only
+        //                   characters were dropped along the way
+        //              OR → ≤2 char edit distance (a single typo fix)
+        //   reject     → otherwise (translation or wholesale rewrite)
+        const stripNonLetters = (s) => s.toLowerCase().replace(/[^a-zæøåäöü0-9]/gi, '');
+        const editDistance = (a, b) => {
+            if (a === b) return 0;
+            const m = a.length, n = b.length;
+            if (Math.abs(m - n) > 4) return 5; // bail early; we only care about small edits
+            const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+            for (let j = 0; j <= n; j++) dp[0][j] = j;
+            for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+                dp[i][j] = a[i - 1] === b[j - 1]
+                    ? dp[i - 1][j - 1]
+                    : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+            }
+            return dp[m][n];
+        };
+
         const valid = {};
         for (const [original, corrected] of Object.entries(corrections)) {
             if (!allDishes.has(original)) continue;
@@ -534,11 +552,24 @@ If nothing needs fixing, respond with {}`;
 
             const hadNoChar = /[æøåÆØÅ]/.test(original);
             const stillHasNoChar = /[æøåÆØÅ]/.test(corrected);
+
+            // Compound-word fix: same letters, just whitespace/punctuation merged.
+            const isCompoundFix = stripNonLetters(original) === stripNonLetters(corrected);
+            if (isCompoundFix) { valid[original] = corrected; continue; }
+
+            // Hard reject: Norwegian-only chars dropped → translation.
             if (hadNoChar && !stillHasNoChar) {
                 console.log(`  ⚠️  rejected likely translation: "${original}" → "${corrected}"`);
                 continue;
             }
 
+            // Single typo fix: small edit distance.
+            if (editDistance(original.toLowerCase(), corrected.toLowerCase()) <= 2) {
+                valid[original] = corrected;
+                continue;
+            }
+
+            // Multi-word: require half the words to survive verbatim.
             const origWords = new Set(original.toLowerCase().split(/\s+/).filter(Boolean));
             const newWords = new Set(corrected.toLowerCase().split(/\s+/).filter(Boolean));
             const overlap = [...origWords].filter(w => newWords.has(w)).length;
