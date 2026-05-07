@@ -12,7 +12,6 @@ import { useMenySearch } from "@/lib/useMenySearch";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SkeletonCards from "@/components/SkeletonCard";
 import DaySelector from "@/components/DaySelector";
-import YoloButton from "@/components/YoloButton";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
 import Lightbox from "@/components/Lightbox";
@@ -441,15 +440,24 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
   const closedCanteens = useMemo(() => canteenDayData.filter(c => isCanteenClosed(c)), [canteenDayData]);
 
-  // YOLO runner: highlight cycles through openCanteens with growing intervals
-  // (60ms × 1.10^i) for ~5s, lands on a randomly-chosen index, scrolls that
-  // card into view, holds the winner glow for ~3.5s.
-  const runYolo = useCallback((soundEnabled: boolean) => {
+  // YOLO runner: triggered by tapping the Today button in the day bar. Cycles
+  // a highlight only over canteens that are currently serving (open + not
+  // outdated + not ahead-of-week), dimming the rest. Lands on a random one
+  // after a ~5s decelerating sweep, scrolls it into view, then resets.
+  // No audio.
+  const runYolo = useCallback((dayIdx: number) => {
     if (yoloSpinning) return;
-    const N = openCanteens.length;
-    if (N < 2) return;
 
-    // Clear any leftover timers from a prior aborted run.
+    // Use today's data directly so we don't race with `setSelectedDay` —
+    // by the time the setTimeout chain fires React will have re-rendered
+    // with selectedDay === dayIdx, and the cardIdx values match this array.
+    const cardsForDay = (allDaysData[dayIdx] ?? []).filter(c => !isCanteenClosed(c));
+    const eligibleIndices = cardsForDay
+      .map((c, i) => (!c.isOutdated && !c.isAhead) ? i : -1)
+      .filter(i => i !== -1);
+
+    if (eligibleIndices.length < 2) return;
+
     yoloTimersRef.current.forEach(clearTimeout);
     yoloTimersRef.current = [];
 
@@ -457,41 +465,29 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     setYoloWinner(-1);
     setYoloHighlight(-1);
 
-    const targetPos = Math.floor(Math.random() * N);
+    const E = eligibleIndices.length;
+    const targetPos = Math.floor(Math.random() * E);
 
-    // Pick K such that the LAST tick lands on targetPos (i.e. (K-1) % N === targetPos).
-    // K ~22-28 with 1.10 growth gives total ~4.7-5.7s.
+    // Pick K so the LAST tick is at eligibleIndices[targetPos]:
+    // sequence is eligibleIndices[0], [1], …, [E-1], [0], [1], … and we want
+    // (K-1) % E === targetPos. Base K = ~24 ticks gives ~5s with 1.10 growth.
     let K = 24;
-    while ((K - 1) % N !== targetPos) K++;
-
-    // Lazy-load the audio module on first user interaction so the
-    // AudioContext is created inside a click handler (autoplay policy).
-    type AudioModule = typeof import("@/lib/yoloAudio");
-    const audioP: Promise<AudioModule | null> = soundEnabled
-      ? import("@/lib/yoloAudio").catch(() => null)
-      : Promise.resolve(null);
+    while ((K - 1) % E !== targetPos) K++;
 
     let cumulative = 0;
     for (let step = 0; step < K; step++) {
       const interval = 60 * Math.pow(1.10, step);
       const delay = cumulative;
-      const idx = step % N;
+      const cardIdx = eligibleIndices[step % E];
       const isFinal = step === K - 1;
-      // Tick pitch slides down with each step so the slowdown reads in audio
-      // as well as visually.
-      const pitch = 1000 - step * 22;
 
       const t = setTimeout(() => {
-        setYoloHighlight(idx);
-        if (soundEnabled) audioP.then(m => m?.playTick(Math.max(pitch, 280)));
-
+        setYoloHighlight(cardIdx);
         if (isFinal) {
-          setYoloWinner(idx);
+          setYoloWinner(cardIdx);
           setYoloHighlight(-1);
-          if (soundEnabled) audioP.then(m => m?.playJackpot());
 
-          // Scroll the winning card into view (mobile especially).
-          const winnerName = openCanteens[idx]?.canteenName;
+          const winnerName = cardsForDay[cardIdx]?.canteenName;
           if (winnerName) {
             const el = scrollRef.current?.querySelector<HTMLElement>(
               `[data-yolo-card-key="${CSS.escape(winnerName)}"]`
@@ -499,7 +495,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
             el?.scrollIntoView({ behavior: "smooth", block: "center" });
           }
 
-          // Release winner highlight after a moment.
           const release = setTimeout(() => {
             setYoloWinner(-1);
             setYoloSpinning(false);
@@ -510,7 +505,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       yoloTimersRef.current.push(t);
       cumulative += interval;
     }
-  }, [yoloSpinning, openCanteens]);
+  }, [yoloSpinning, allDaysData]);
 
   // Cleanup any in-flight YOLO timers on unmount.
   useEffect(() => () => {
@@ -656,30 +651,40 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                     <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
                   </div>
                 )}
-                {openCanteens.map((data, cardIdx) => (
-                  <FoodCard
-                    key={data.canteenName}
-                    data={data}
-                    cardIdx={cardIdx}
-                    lang={lang}
-                    selectedDay={selectedDay}
-                    todayIndex={todayIndex}
-                    voteCount={voting.votes[data.canteenName] ?? 0}
-                    maxVotes={maxVotes}
-                    onImageClick={handleImageClick}
-                    onCardClick={handleCardClick}
-                    yoloHighlighted={yoloHighlight === cardIdx}
-                    yoloWinner={yoloWinner === cardIdx}
-                  />
-                ))}
+                {openCanteens.map((data, cardIdx) => {
+                  const highlighted = yoloHighlight === cardIdx;
+                  const winner = yoloWinner === cardIdx;
+                  // Dim every card that isn't the active or winning one while
+                  // a spin is in flight — so the eye is drawn entirely to the
+                  // bright pick. Outdated/ahead cards are dimmed too even
+                  // though they're never targets.
+                  const dimmed = (yoloSpinning || yoloWinner !== -1) && !highlighted && !winner;
+                  return (
+                    <FoodCard
+                      key={data.canteenName}
+                      data={data}
+                      cardIdx={cardIdx}
+                      lang={lang}
+                      selectedDay={selectedDay}
+                      todayIndex={todayIndex}
+                      voteCount={voting.votes[data.canteenName] ?? 0}
+                      maxVotes={maxVotes}
+                      onImageClick={handleImageClick}
+                      onCardClick={handleCardClick}
+                      yoloHighlighted={highlighted}
+                      yoloWinner={winner}
+                      yoloDimmed={dimmed}
+                    />
+                  );
+                })}
               </>
             )}
           </div>
         </ErrorBoundary>
       </main>
 
-      {/* Day Selector + YOLO randomiser (rendered absolutely-positioned beside
-          the day pill on desktop, see .yolo-wrap CSS). */}
+      {/* Day Selector — tapping the Today button also fires the YOLO
+          randomiser via onTodayPress. */}
       <DaySelector
         fullDayLabels={fullDayLabels}
         dayLabelsData={dayLabelsData}
@@ -688,15 +693,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         lang={lang}
         mode={mode}
         onDaySelect={handleDaySelect}
+        onTodayPress={mode === "weekday-current" ? () => runYolo(todayIndex) : undefined}
         cardsRef={scrollRef}
       />
-      {mode === "weekday-current" && openCanteens.length >= 2 && (
-        <YoloButton
-          onSpin={runYolo}
-          spinning={yoloSpinning}
-          lang={lang}
-        />
-      )}
 
       {/* Info Modal */}
       {infoOpen && (

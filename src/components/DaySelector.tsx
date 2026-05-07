@@ -9,6 +9,9 @@ interface DaySelectorProps {
   lang: "no" | "en";
   mode: DisplayMode;
   onDaySelect: (i: number) => void;
+  /** Tapping the Today button always fires this in addition to onDaySelect.
+      Used to trigger the YOLO randomiser from the day bar itself. */
+  onTodayPress?: () => void;
   cardsRef?: React.RefObject<HTMLElement | null>;
 }
 
@@ -20,6 +23,7 @@ export default function DaySelector({
   lang,
   mode,
   onDaySelect,
+  onTodayPress,
   cardsRef,
 }: DaySelectorProps) {
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -122,7 +126,10 @@ export default function DaySelector({
             className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`}
             aria-selected={selectedDay === i}
             aria-current={i === todayIndex ? "date" : undefined}
-            onClick={() => onDaySelect(i)}
+            onClick={() => {
+              onDaySelect(i);
+              if (i === todayIndex) onTodayPress?.();
+            }}
           >
             <span className="day-label-name">{dayName}</span>
             <span className="day-label-date">

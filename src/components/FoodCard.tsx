@@ -62,6 +62,8 @@ interface FoodCardProps {
   yoloHighlighted?: boolean;
   /** True after YOLO landed and this card is the chosen one. */
   yoloWinner?: boolean;
+  /** True for non-active cards during a YOLO spin (dim/desaturate). */
+  yoloDimmed?: boolean;
 }
 
 export default function FoodCard({
@@ -76,6 +78,7 @@ export default function FoodCard({
   onCardClick,
   yoloHighlighted = false,
   yoloWinner = false,
+  yoloDimmed = false,
 }: FoodCardProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -101,11 +104,20 @@ export default function FoodCard({
   return (
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
-      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
+      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}${yoloDimmed ? " yolo-dimmed" : ""}`}
       style={{ animationDelay: `${cardIdx * 75}ms` }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
       data-yolo-card-key={canteenName}
     >
+      {yoloWinner && (
+        <div className="yolo-starburst" aria-hidden="true">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span key={i} className="yolo-spark" style={{ ['--angle' as string]: `${i * 36}deg` }}>
+              {i % 2 === 0 ? "✨" : "🎉"}
+            </span>
+          ))}
+        </div>
+      )}
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
           <svg className="vote-pip-icon" viewBox="0 0 16 16" fill="currentColor">
