@@ -1056,6 +1056,30 @@ body {
   flex-shrink: 0;
 }
 
+/* Canteen-wide availability notes (e.g. "Halal tilgjengelig") shown below
+   the side-dish list. Distinct visual treatment so they don't get mistaken
+   for a dish or an allergen abbreviation. */
+.availability-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.availability-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 196, 126, 0.18);
+  color: var(--accent-orange);
+  border: 1px solid rgba(255, 196, 126, 0.45);
+  white-space: nowrap;
+}
+
 /* ─── Lightbox ─── */
 .lightbox-overlay {
   position: fixed;
