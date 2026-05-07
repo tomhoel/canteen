@@ -64,10 +64,19 @@ async function withRetry(fn, label, maxRetries = 2) {
     }
 }
 
+/**
+ * The kitchen language at all canteens is Norwegian; the English version on
+ * the menu page is a translation maintained by the canteen and sometimes drifts
+ * from what's actually served (e.g. NO says "Svensk kjøttgrateng" while EN says
+ * "Braised chicken leg with bell pepper sauce" — totally different dishes).
+ *
+ * For everything downstream — image generation, origin analysis, cache keying —
+ * we treat NO as authoritative and only fall back to EN if NO is empty.
+ */
 function getDayItems(entry) {
-    const en = entry?.en?.items || [];
     const no = entry?.no?.items || [];
-    return en.length > 0 ? en : no;
+    const en = entry?.en?.items || [];
+    return no.length > 0 ? no : en;
 }
 
 function getMainDishes(canteenData) {

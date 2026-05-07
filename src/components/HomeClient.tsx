@@ -400,7 +400,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const isAhead = cmp === 1;
         const enLookup = dayEntry?.en?.items || [];
         const noLookup = dayEntry?.no?.items || [];
-        const lookupMainDish = (enLookup.length > 0 ? enLookup : noLookup).find(i => i.isMain);
+        // Origin + description follow the kitchen's language (NO). The EN title
+        // is a translation maintained by the canteen and occasionally points at
+        // a completely different dish (e.g. NO "Svensk kjøttgrateng" vs.
+        // EN "Braised chicken leg"). Trust NO for cross-references.
+        const lookupMainDish = (noLookup.length > 0 ? noLookup : enLookup).find(i => i.isMain);
         const origin = dishOrigins[lookupMainDish?.dish || ""] ?? null;
         const descEntry = dishDescriptions[lookupMainDish?.dish || ""];
         const description = descEntry
