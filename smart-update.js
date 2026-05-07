@@ -744,10 +744,19 @@ async function main() {
     // Persist menu + origins + descriptions to weekly_menus.
     // The frontend reads this row server-side — Supabase is now the single
     // source of truth (no more workflow-committed JSON files in /public).
-    const weekNum = parseMenuWeekNumber(Object.values(newMenu.canteens)[0]?.week);
-    if (weekNum && supabase) {
+    //
+    // Picking the week number is fiddly: Flow's canteen page hard-codes
+    // "BYGG / BUILDING B - UKE/WEEK 17" and never updates it, so reading
+    // canteens[0].week is unreliable. Take the max across canteens whose
+    // value parses to something sensible — this also correctly catches the
+    // Friday case where canteens publish next week's menu ahead of time.
+    const reportedWeeks = Object.values(newMenu.canteens)
+        .map(c => parseMenuWeekNumber(c.week))
+        .filter(w => Number.isFinite(w) && w >= 1 && w <= 53);
+    const targetWeek = reportedWeeks.length ? Math.max(...reportedWeeks) : getCurrentISOWeek();
+    if (targetWeek && supabase) {
         const isoYear = getISOWeekYearFromDate(new Date());
-        const weekId = `${isoYear}-W${String(weekNum).padStart(2, '0')}`;
+        const weekId = `${isoYear}-W${String(targetWeek).padStart(2, '0')}`;
         const { error } = await supabase
             .from('weekly_menus')
             .upsert(
