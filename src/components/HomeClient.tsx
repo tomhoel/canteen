@@ -486,6 +486,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         if (isFinal) {
           setYoloWinner(cardIdx);
           setYoloHighlight(-1);
+          setYoloSpinning(false);
 
           const winnerName = cardsForDay[cardIdx]?.canteenName;
           if (winnerName) {
@@ -494,18 +495,21 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
             );
             el?.scrollIntoView({ behavior: "smooth", block: "center" });
           }
-
-          const release = setTimeout(() => {
-            setYoloWinner(-1);
-            setYoloSpinning(false);
-          }, 3500);
-          yoloTimersRef.current.push(release);
+          // No auto-release. Winner state persists until the next YOLO spin
+          // starts (which clears it at the top of runYolo) or selectedDay
+          // changes (cleared by the effect below).
         }
       }, delay);
       yoloTimersRef.current.push(t);
       cumulative += interval;
     }
   }, [yoloSpinning, allDaysData]);
+
+  // Clear the winner state when the user navigates to another day.
+  useEffect(() => {
+    setYoloWinner(-1);
+    setYoloHighlight(-1);
+  }, [selectedDay]);
 
   // Cleanup any in-flight YOLO timers on unmount.
   useEffect(() => () => {
