@@ -1325,47 +1325,81 @@ body {
   color: var(--text-primary);
 }
 
-/* ─── YOLO randomiser — triggered by double-tapping Today ─── */
-/* Two states only: yolo-active (the currently-spotlit card during the
-   cycle) and yolo-winner (the landed card). NO style is applied to the
-   non-active cards — they keep their default look. The pattern follows
-   Apple HIG (deference to content, subtle depth via shadow + a brand-
-   colour outline) and Material's elevation idea (lift on selection). No
-   brightness/saturation cranking, no dimming, no blur. */
+/* ─── YOLO randomiser — second-tap of Today on the day-bar ─── */
+/* Two states applied to .food-card by HomeClient:
+     yolo-active  — currently spotlit during the cycle (subtle ring only)
+     yolo-winner  — the chosen one (rotating conic-gradient ribbon)
+   Non-active cards stay completely untouched.
+
+   Crucially neither state writes to `transform` or `animation` on the
+   .food-card itself, so the base cardReveal entry animation is
+   undisturbed. That's what kept causing the entry effect to replay when
+   the winner class was removed. */
+
+@property --yolo-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
 
 .food-card.yolo-active {
-  /* Material-style lift: shadow grows, card rises 3px. */
-  transform: translateY(-3px) scale(1.02);
+  outline: 2px solid rgba(255, 152, 56, 0.7);
+  outline-offset: 4px;
   box-shadow:
-    0 14px 32px rgba(0, 0, 0, 0.16),
+    0 12px 28px rgba(0, 0, 0, 0.14),
     0 4px 10px rgba(0, 0, 0, 0.06);
-  /* Apple-style ring: outline + offset, doesn't reflow neighbours. */
-  outline: 2px solid rgba(255, 152, 56, 0.85);
-  outline-offset: 3px;
-  transition:
-    transform 0.18s cubic-bezier(0.34, 1.15, 0.64, 1),
-    box-shadow 0.18s ease,
-    outline-color 0.18s ease;
+  transition: outline-color 0.18s ease, box-shadow 0.18s ease;
   z-index: 5;
 }
 
 .food-card.yolo-winner {
-  transform: translateY(-4px) scale(1.03);
-  box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.18),
-    0 6px 14px rgba(0, 0, 0, 0.08);
-  outline: 3px solid #FFB347;
-  outline-offset: 4px;
-  /* One soft pulse on landing, then settle. */
-  animation: yoloWinPulse 0.65s cubic-bezier(0.34, 1.15, 0.64, 1) both;
-  z-index: 6;
   position: relative;
+  z-index: 6;
+  /* Soft warm halo grounds the card without changing its scale/position. */
+  box-shadow:
+    0 0 36px 8px rgba(255, 179, 71, 0.30),
+    0 14px 32px rgba(0, 0, 0, 0.16),
+    0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
-@keyframes yoloWinPulse {
-  0%   { transform: translateY(-3px) scale(1.02); }
-  45%  { transform: translateY(-6px) scale(1.06); }
-  100% { transform: translateY(-4px) scale(1.03); }
+/* Rotating conic-gradient ribbon traces around the card's perimeter.
+   The ::before pseudo sits 3px outside the card; padding + mask-composite
+   carve the centre out so only the 3px-thick ring is rendered. The
+   `from <angle>` rotation animates via the registered @property at the
+   top of this block — that's what makes the gradient interpolate
+   smoothly instead of snapping. */
+.food-card.yolo-winner::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 27px; /* card border-radius (24) + outset (3) */
+  padding: 3px;
+  background: conic-gradient(
+    from var(--yolo-angle),
+    rgba(255, 179, 71, 0) 0deg,
+    #FFB347 60deg,
+    #ffd700 120deg,
+    #FFB347 180deg,
+    #ff9c2a 240deg,
+    #FFB347 300deg,
+    rgba(255, 179, 71, 0) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: yoloRibbonRotate 3s linear infinite;
+  pointer-events: none;
+  z-index: 7;
+  filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.55));
+}
+
+@keyframes yoloRibbonRotate {
+  to { --yolo-angle: 360deg; }
 }
 
 /* Starburst overlay — 10 spans laid out around the card centre, each
