@@ -175,6 +175,29 @@ function normalizeDishName(name) {
         .trim();
 }
 
+/**
+ * Cache key → storage filename. Supabase storage rejects non-ASCII in object
+ * keys (æ, ø, å, é, î etc), so we slugify here. The DB cache row keeps the
+ * full Norwegian cache_key for human-readable lookup; only the on-disk path
+ * is folded.
+ */
+function archiveFilenameFor(cacheKey) {
+    const slug = cacheKey
+        .replace(/ø/g, 'o').replace(/Ø/g, 'O')
+        .replace(/æ/g, 'ae').replace(/Æ/g, 'AE')
+        .replace(/å/g, 'a').replace(/Å/g, 'A')
+        .normalize('NFD')                              // split é → e + combining accent
+        .replace(/[̀-ͯ]/g, '')               // strip combining accents (U+0300..U+036F)
+        .replace(/[^a-zA-Z0-9]+/g, '-')                // collapse remaining chars to '-'
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 180);
+    return `${slug || 'unnamed'}.png`;
+}
+
+function archivePathFor(cacheKey) {
+    return `archive/${archiveFilenameFor(cacheKey)}`;
+}
+
 async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png') {
     if (!supabase) return false;
     try {
@@ -596,7 +619,7 @@ async function main() {
             // must actually exist. Catches half-written cache state from past
             // failed copies.
             const cachedImageFresh = !!(
-                cached?.image_path && cached?.image_nobg_path && archiveFiles.has(`${cacheKey}.png`)
+                cached?.image_path && cached?.image_nobg_path && archiveFiles.has(archiveFilenameFor(cacheKey))
             );
 
             if (slotExists && dishUnchanged) {
@@ -623,7 +646,7 @@ async function main() {
     // Backfill: slot is correct but archive/cache row is missing. Copy slot → archive.
     if (backfill.length > 0) {
         await asyncPool(6, backfill, async (b) => {
-            const archivePath = `archive/${b.cacheKey}.png`;
+            const archivePath = archivePathFor(b.cacheKey);
             const okBg = await copyInBucket('images', b.slotPath, archivePath);
             const okNobg = await copyInBucket('images_nobg', b.slotPath, archivePath);
             if (okBg && okNobg) {
@@ -673,7 +696,7 @@ async function main() {
             if (!removed) return { ok: false, reason: 'bg-removal' };
 
             // Archive both variants under cache_key so future weeks can reuse them.
-            const archivePath = `archive/${c.cacheKey}.png`;
+            const archivePath = archivePathFor(c.cacheKey);
             await copyInBucket('images', c.slotPath, archivePath);
             await copyInBucket('images_nobg', c.slotPath, archivePath);
 
