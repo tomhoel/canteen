@@ -104,6 +104,23 @@ async function existsInSupabase(bucket, path) {
     }
 }
 
+/**
+ * One bulk listing per day folder is much faster than per-slot existence checks.
+ * Returns { day → Set<filename> }.
+ */
+async function listDayContents(bucket, days) {
+    if (!supabase) return Object.fromEntries(days.map(d => [d, new Set()]));
+    const entries = await Promise.all(days.map(async (day) => {
+        const { data, error } = await supabase.storage.from(bucket).list(day, { limit: 200 });
+        if (error) {
+            console.error(`  ⚠️  list ${bucket}/${day} failed: ${error.message}`);
+            return [day, new Set()];
+        }
+        return [day, new Set((data || []).map(f => f.name))];
+    }));
+    return Object.fromEntries(entries);
+}
+
 function getCurrentISOWeek() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -125,6 +142,18 @@ function validateMenu(menu) {
 
 const MASTER_PLATE_REF_PATH = path.join(__dirname, 'public', 'images', 'master-plate-ref.png');
 
+/**
+ * Normalised dish name → cache key. Same dish across weeks/canteens collapses
+ * to one key so we can reuse the archived image instead of regenerating.
+ */
+function normalizeDishName(name) {
+    if (!name) return '';
+    return name.toLowerCase()
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png') {
     if (!supabase) return false;
     try {
@@ -137,6 +166,82 @@ async function uploadToSupabase(bucket, path, buffer, contentType = 'image/png')
         console.error(`  ❌ Supabase upload failed (${path}): ${err.message}`);
         return false;
     }
+}
+
+/**
+ * Copy `srcPath` → `destPath` within a bucket. Falls back to download+upload
+ * when the storage `copy` API rejects (e.g. for cross-bucket moves it would,
+ * but here both paths share the same bucket).
+ */
+async function copyInBucket(bucket, srcPath, destPath) {
+    if (!supabase) return false;
+    if (srcPath === destPath) return true;
+    try {
+        const { error } = await supabase.storage.from(bucket).copy(srcPath, destPath);
+        if (!error) return true;
+        if (/already exists/i.test(error.message)) {
+            // Slot is already occupied by an older image; overwrite via upload.
+            const { data: blob, error: dlErr } = await supabase.storage.from(bucket).download(srcPath);
+            if (dlErr) throw dlErr;
+            const buf = Buffer.from(await blob.arrayBuffer());
+            const { error: upErr } = await supabase.storage.from(bucket).upload(destPath, buf, { upsert: true });
+            if (upErr) throw upErr;
+            return true;
+        }
+        throw error;
+    } catch (err) {
+        console.error(`  ❌ copy ${bucket}/${srcPath} → ${destPath}: ${err.message}`);
+        return false;
+    }
+}
+
+/** Read every row of dish_cache once at startup. */
+async function loadDishCache() {
+    if (!supabase) return {};
+    const { data, error } = await supabase.from('dish_cache').select('*');
+    if (error) {
+        console.error(`  ⚠️  dish_cache load failed: ${error.message}`);
+        return {};
+    }
+    const map = {};
+    for (const row of data || []) map[row.cache_key] = row;
+    return map;
+}
+
+/** Upsert one cache row. */
+async function saveDishCacheEntry(entry) {
+    if (!supabase) return;
+    const { error } = await supabase.from('dish_cache').upsert(entry, { onConflict: 'cache_key' });
+    if (error) console.error(`  ⚠️  dish_cache upsert failed (${entry.cache_key}): ${error.message}`);
+}
+
+/**
+ * Bounded-concurrency map. Runs `fn(item)` for each item with at most
+ * `concurrency` in flight. Preserves error isolation: one rejection
+ * doesn't tear down the whole batch.
+ */
+async function asyncPool(concurrency, items, fn) {
+    const results = new Array(items.length);
+    const inFlight = new Set();
+    let nextIdx = 0;
+
+    const launch = (idx) => {
+        const p = Promise.resolve()
+            .then(() => fn(items[idx], idx))
+            .then((v) => { results[idx] = { ok: true, value: v }; },
+                  (e) => { results[idx] = { ok: false, error: e }; })
+            .finally(() => inFlight.delete(p));
+        inFlight.add(p);
+        return p;
+    };
+
+    while (nextIdx < items.length || inFlight.size > 0) {
+        while (inFlight.size < concurrency && nextIdx < items.length) {
+            launch(nextIdx++);
+        }
+        if (inFlight.size > 0) await Promise.race(inFlight);
+    }
+    return results;
 }
 
 async function generateSingleImage(dishName, canteenName, day) {
@@ -429,38 +534,134 @@ async function main() {
         if (oldW !== null && newW !== null && newW > oldW) await archiveCurrentWeek(oldMenu);
     }
 
-    console.log('\n🔍 Checking Supabase storage...');
-    const changes = [];
-    const normalize = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    console.log('\n🔍 Loading dish cache + listing storage in parallel...');
+    const [dishCache, nobgIndex] = await Promise.all([
+        loadDishCache(),
+        listDayContents('images_nobg', DAY_ORDER),
+    ]);
+    console.log(`  📚 ${Object.keys(dishCache).length} cached dishes`);
+
+    // Four buckets of work:
+    //   - skip:     slot has the right image AND cache row exists → no work
+    //   - backfill: slot has the right image but cache row is missing → copy slot → archive (no API call)
+    //   - cacheHit: slot needs an image we've generated before → copy archive → slot
+    //   - regen:    new dish or missing archive → call Gemini
+    const skip = [], backfill = [], cacheHits = [], regen = [];
 
     for (const [canteenName, newCanteen] of Object.entries(newMenu.canteens)) {
         const oldCanteen = oldMenu?.canteens?.[canteenName];
         const newDishes = getMainDishes(newCanteen);
         const oldDishes = oldCanteen ? getMainDishes(oldCanteen) : {};
+        const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
 
         for (const day of DAY_ORDER) {
             const newDish = newDishes[day];
             if (!newDish || isDishClosed(newDish)) continue;
-            const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
-            const exists = await existsInSupabase('images_nobg', `${day}/${slug}.png`);
-            if (normalize(oldDishes[day]) !== normalize(newDish) || !exists) {
-                changes.push({ canteenName, day, newDish });
+
+            const cacheKey = normalizeDishName(newDish);
+            const slotPath = `${day}/${slug}.png`;
+            const slotExists = nobgIndex[day]?.has(`${slug}.png`) || false;
+            const dishUnchanged = normalizeDishName(oldDishes[day]) === cacheKey;
+            const cached = dishCache[cacheKey];
+            const cachedImageFresh = !!(cached?.image_path && cached?.image_nobg_path);
+
+            if (slotExists && dishUnchanged) {
+                if (cachedImageFresh) {
+                    skip.push({ canteenName, day, newDish });
+                } else {
+                    // Slot is correct but cache doesn't know about it. Copy slot →
+                    // archive so future weeks can reuse this image as a cache hit.
+                    backfill.push({ canteenName, day, slug, slotPath, newDish, cacheKey });
+                }
+                continue;
+            }
+
+            if (cachedImageFresh) {
+                cacheHits.push({ canteenName, day, slug, slotPath, newDish, cacheKey, cached });
+            } else {
+                regen.push({ canteenName, day, slug, slotPath, newDish, cacheKey });
             }
         }
     }
 
-    if (changes.length === 0) {
-        console.log('\n✅ Everything up to date!');
-    } else {
-        console.log(`\n🔄 Generating ${changes.length} missing images...`);
-        for (const c of changes) {
-            console.log(`📸 ${c.canteenName} / ${c.day}: ${c.newDish.substring(0, 30)}...`);
-            if (await generateSingleImage(c.newDish, c.canteenName, c.day)) {
-                await removeBgSingle(c.canteenName, c.day);
-                console.log('  ✅ Done');
+    console.log(`  ⏭️  ${skip.length} unchanged · 📦 ${backfill.length} cache backfill · ♻️  ${cacheHits.length} cache hits · 🔄 ${regen.length} need generation`);
+
+    // Backfill: slot is correct but archive/cache row is missing. Copy slot → archive.
+    if (backfill.length > 0) {
+        await asyncPool(6, backfill, async (b) => {
+            const archivePath = `archive/${b.cacheKey}.png`;
+            const okBg = await copyInBucket('images', b.slotPath, archivePath);
+            const okNobg = await copyInBucket('images_nobg', b.slotPath, archivePath);
+            if (okBg && okNobg) {
+                await saveDishCacheEntry({
+                    cache_key: b.cacheKey,
+                    original_name: b.newDish,
+                    image_path: archivePath,
+                    image_nobg_path: archivePath,
+                });
+                dishCache[b.cacheKey] = {
+                    cache_key: b.cacheKey,
+                    original_name: b.newDish,
+                    image_path: archivePath,
+                    image_nobg_path: archivePath,
+                };
             }
-            await new Promise(r => setTimeout(r, 1500));
-        }
+        });
+        console.log(`  📦 backfilled ${backfill.length} cache entries from existing slots`);
+    }
+
+    // Cache hits: copy archive → slot in parallel (network only, no API).
+    if (cacheHits.length > 0) {
+        console.log(`\n♻️  Copying ${cacheHits.length} cached images into current-week slots...`);
+        await asyncPool(6, cacheHits, async (c) => {
+            const okBg = await copyInBucket('images', c.cached.image_path, c.slotPath);
+            const okNobg = await copyInBucket('images_nobg', c.cached.image_nobg_path, c.slotPath);
+            if (okBg && okNobg) {
+                console.log(`  ♻️  ${c.canteenName}/${c.day}: ${c.newDish.substring(0, 40)}`);
+            } else {
+                console.log(`  ⚠️  cache copy failed for ${c.cacheKey} — falling back to regen`);
+                regen.push(c);
+            }
+        });
+    }
+
+    // Misses: generate, archive, upsert. Parallel with concurrency=3.
+    // Higher = bumping into Gemini per-minute rate limits and Playwright RAM.
+    if (regen.length === 0) {
+        console.log('\n✅ No images need generating.');
+    } else {
+        console.log(`\n🔄 Generating ${regen.length} new images (concurrency=3)...`);
+        const results = await asyncPool(3, regen, async (c) => {
+            console.log(`📸 ${c.canteenName}/${c.day}: ${c.newDish.substring(0, 40)}...`);
+            const generated = await generateSingleImage(c.newDish, c.canteenName, c.day);
+            if (!generated) return { ok: false, reason: 'generation' };
+            const removed = await removeBgSingle(c.canteenName, c.day);
+            if (!removed) return { ok: false, reason: 'bg-removal' };
+
+            // Archive both variants under cache_key so future weeks can reuse them.
+            const archivePath = `archive/${c.cacheKey}.png`;
+            await copyInBucket('images', c.slotPath, archivePath);
+            await copyInBucket('images_nobg', c.slotPath, archivePath);
+
+            await saveDishCacheEntry({
+                cache_key: c.cacheKey,
+                original_name: c.newDish,
+                image_path: archivePath,
+                image_nobg_path: archivePath,
+            });
+            // Update in-memory cache so a duplicate dish later in this run is a hit.
+            dishCache[c.cacheKey] = {
+                cache_key: c.cacheKey,
+                original_name: c.newDish,
+                image_path: archivePath,
+                image_nobg_path: archivePath,
+            };
+            console.log(`  ✅ ${c.canteenName}/${c.day} done & archived`);
+            return { ok: true };
+        });
+
+        const failures = results.filter(r => !r.ok && r.value?.ok === false);
+        if (failures.length) console.log(`  ⚠️  ${failures.length} regen failures`);
     }
 
     console.log('\n🍽️  Checking closed days...');
@@ -488,11 +689,32 @@ async function main() {
             if (m?.dish && !isDishClosed(m.dish)) allDishNames.add(m.dish);
         }
     }
+    // Hydrate origins/descriptions from dishCache first (free, no API call),
+    // then call analyzeDish only for dishes neither cache nor file knows about.
+    const toAnalyze = [];
     for (const name of allDishNames) {
-        if (!origins[name] || !descriptions[name]) {
+        const cacheKey = normalizeDishName(name);
+        const cached = dishCache[cacheKey];
+        if (cached?.origin && !origins[name]) origins[name] = cached.origin;
+        if (cached?.description && !descriptions[name]) descriptions[name] = cached.description;
+        if (!origins[name] || !descriptions[name]) toAnalyze.push({ name, cacheKey });
+    }
+
+    if (toAnalyze.length) {
+        console.log(`  🤖 analyzing ${toAnalyze.length} new dishes (concurrency=3)`);
+        await asyncPool(3, toAnalyze, async ({ name, cacheKey }) => {
             const res = await analyzeDish(name);
-            if (res) { origins[name] = res.origin; descriptions[name] = res.description; }
-        }
+            if (!res) return;
+            origins[name] = res.origin;
+            descriptions[name] = res.description;
+            // Persist in dish_cache so future runs skip the API call.
+            await saveDishCacheEntry({
+                cache_key: cacheKey,
+                original_name: name,
+                origin: res.origin,
+                description: res.description,
+            });
+        });
     }
     fs.writeFileSync(ORIGINS_PATH, JSON.stringify(origins, null, 2));
     fs.writeFileSync(DESCRIPTIONS_PATH, JSON.stringify(descriptions, null, 2));
