@@ -1336,59 +1336,85 @@ body {
    undisturbed. That's what kept causing the entry effect to replay when
    the winner class was removed. */
 
-/* Cycling state: a 2px ring at the card edge plus a soft outer warm glow.
-   Both layers are box-shadow (paints with the background, before
-   descendants — never covers the overflowing food image). The outer glow
-   adds depth without needing a transform/scale on the card. */
+/* Cycling state: 3px ring + a clearly-visible warm outer glow on the card,
+   plus brightness/saturate + a small scale on the plate so the active
+   dish is visibly 'lit'. Layered effects, each individually small. */
 .food-card.yolo-active {
   position: relative;
   z-index: 5;
   box-shadow:
-    0 0 0 2px rgba(255, 152, 56, 0.75),
-    0 0 22px 2px rgba(255, 152, 56, 0.22),
+    0 0 0 3px rgba(255, 152, 56, 0.85),
+    0 0 40px 4px rgba(255, 152, 56, 0.32),
     0 12px 28px rgba(0, 0, 0, 0.14),
     0 4px 10px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.18s ease;
 }
 
-/* Winner: NO card-frame change. Effect lives entirely on the food image
-   as a soft amber halo behind the plate. */
+.food-card.yolo-active .card-image-circle {
+  transform: scale(1.025);
+  transition: transform 0.18s cubic-bezier(0.34, 1.15, 0.64, 1);
+}
+
+.food-card.yolo-active .food-image {
+  filter:
+    drop-shadow(0 8px 20px rgba(80, 40, 0, 0.15))
+    drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10))
+    brightness(1.08) saturate(1.12);
+  transition: filter 0.18s ease;
+}
+
+/* Winner: card frame stays default; the reveal is on the plate itself —
+   a saturated amber halo behind it, the plate scales up slightly, and
+   the food image gets a brightness + saturation lift. The combined
+   effect reads clearly as 'this is the chosen one' without any frame
+   ornament. */
 .food-card.yolo-winner {
   position: relative;
   z-index: 6;
 }
 
-/* Spotlight halo behind the plate. The pseudo-element sits BEHIND the
-   food <img> via z-index: -1 inside .card-image-circle's own stacking
-   context (created by isolation: isolate). Saturated amber stops contrast
-   against the warm-cream card bg; blur(20px) + the breathing animation
-   read as ambient light, not a static disc. */
 .food-card.yolo-winner .card-image-circle {
   isolation: isolate;
+  transform: scale(1.06);
+  transition: transform 0.55s cubic-bezier(0.34, 1.15, 0.64, 1);
 }
 
+.food-card.yolo-winner .food-image {
+  filter:
+    drop-shadow(0 12px 28px rgba(80, 40, 0, 0.18))
+    drop-shadow(0 4px 10px rgba(80, 40, 0, 0.12))
+    brightness(1.13) saturate(1.22);
+  transition: filter 0.4s ease;
+}
+
+/* Spotlight halo behind the plate. Sits at z-index: -1 inside
+   .card-image-circle's own stacking context (created by isolation:
+   isolate above). Saturated amber gradient + blur(24px) read as
+   ambient light. Opacity range stays high (0.7 → 1.0) so the halo is
+   continuously visible — the breathing animates intensity, not whether
+   it's there. */
 .food-card.yolo-winner .card-image-circle::before {
   content: "";
   position: absolute;
-  inset: -22%;
+  inset: -30%;
   border-radius: 50%;
   background: radial-gradient(
     circle at center,
-    rgba(255, 220, 140, 0.95) 0%,
-    rgba(255, 175, 60, 0.65) 28%,
-    rgba(255, 140, 40, 0.30) 50%,
-    rgba(255, 140, 40, 0.08) 70%,
-    transparent 85%
+    rgba(255, 225, 145, 1.00) 0%,
+    rgba(255, 175, 60, 0.75) 28%,
+    rgba(255, 130, 30, 0.40) 50%,
+    rgba(255, 130, 30, 0.10) 70%,
+    transparent 88%
   );
-  filter: blur(20px);
+  filter: blur(24px);
   z-index: -1;
   pointer-events: none;
   animation: yoloPlateHalo 4s ease-in-out infinite;
 }
 
 @keyframes yoloPlateHalo {
-  0%, 100% { opacity: 0.55; transform: scale(0.94); }
-  50%      { opacity: 1.00; transform: scale(1.08); }
+  0%, 100% { opacity: 0.70; transform: scale(0.96); }
+  50%      { opacity: 1.00; transform: scale(1.10); }
 }
 
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
