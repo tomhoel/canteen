@@ -3,15 +3,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem } from "@/lib/types";
-
-type DishDescription = string | { en: string; no: string };
-type DishOrigin = { country: string; code: string };
-
-export interface HomeClientProps {
-  initialMenu: MenuData | null;
-  initialOrigins: Record<string, DishOrigin>;
-  initialDescriptions: Record<string, DishDescription>;
-}
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import { getLocalDateKey, computeDisplayContext, compareWeeks } from "@/lib/dateUtils";
 import { useVoting } from "@/lib/useVoting";
@@ -31,6 +22,15 @@ import WeekOverview from "@/components/WeekOverview";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import { isCanteenClosed } from "@/lib/canteen-utils";
+
+type DishDescription = string | { en: string; no: string };
+type DishOrigin = { country: string; code: string };
+
+export interface HomeClientProps {
+  initialMenu: MenuData | null;
+  initialOrigins: Record<string, DishOrigin>;
+  initialDescriptions: Record<string, DishDescription>;
+}
 
 /** Purge stale localStorage keys older than 7 days. */
 function cleanupLocalStorage() {
