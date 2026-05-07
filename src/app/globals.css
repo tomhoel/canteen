@@ -1336,32 +1336,33 @@ body {
    undisturbed. That's what kept causing the entry effect to replay when
    the winner class was removed. */
 
-/* The cycling state stays a soft 2px ring on the card (box-shadow paints
-   before descendants, so it never covers the overflowing food image). */
+/* Cycling state: a 2px ring at the card edge plus a soft outer warm glow.
+   Both layers are box-shadow (paints with the background, before
+   descendants — never covers the overflowing food image). The outer glow
+   adds depth without needing a transform/scale on the card. */
 .food-card.yolo-active {
   position: relative;
   z-index: 5;
   box-shadow:
-    0 0 0 2px rgba(255, 152, 56, 0.7),
+    0 0 0 2px rgba(255, 152, 56, 0.75),
+    0 0 22px 2px rgba(255, 152, 56, 0.22),
     0 12px 28px rgba(0, 0, 0, 0.14),
     0 4px 10px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.18s ease;
 }
 
-/* Winner state: NO card-level change. The reveal lives entirely on the
-   food image (a soft warm halo breathing behind the plate, see below).
-   The card frame stays at its default look so the effect feels like
-   light catching the plate, not a frame ornament. */
+/* Winner: NO card-frame change. Effect lives entirely on the food image
+   as a soft amber halo behind the plate. */
 .food-card.yolo-winner {
   position: relative;
   z-index: 6;
 }
 
-/* Soft spotlight halo behind the plate. The pseudo-element sits BEHIND
-   the food <img> via z-index: -1 inside the .card-image-circle's own
-   stacking context (created by isolation: isolate). Radial gradient with
-   warm cream/gold stops fades to transparent. Opacity + scale breathe
-   4s in/out — slow enough to feel ambient, fast enough to register. */
+/* Spotlight halo behind the plate. The pseudo-element sits BEHIND the
+   food <img> via z-index: -1 inside .card-image-circle's own stacking
+   context (created by isolation: isolate). Saturated amber stops contrast
+   against the warm-cream card bg; blur(20px) + the breathing animation
+   read as ambient light, not a static disc. */
 .food-card.yolo-winner .card-image-circle {
   isolation: isolate;
 }
@@ -1369,24 +1370,25 @@ body {
 .food-card.yolo-winner .card-image-circle::before {
   content: "";
   position: absolute;
-  inset: -10%;
+  inset: -22%;
   border-radius: 50%;
   background: radial-gradient(
     circle at center,
-    rgba(255, 200, 130, 0.55) 0%,
-    rgba(255, 179, 71, 0.30) 35%,
-    rgba(255, 179, 71, 0.06) 60%,
-    transparent 80%
+    rgba(255, 220, 140, 0.95) 0%,
+    rgba(255, 175, 60, 0.65) 28%,
+    rgba(255, 140, 40, 0.30) 50%,
+    rgba(255, 140, 40, 0.08) 70%,
+    transparent 85%
   );
-  filter: blur(14px);
+  filter: blur(20px);
   z-index: -1;
   pointer-events: none;
   animation: yoloPlateHalo 4s ease-in-out infinite;
 }
 
 @keyframes yoloPlateHalo {
-  0%, 100% { opacity: 0.40; transform: scale(0.96); }
-  50%      { opacity: 0.78; transform: scale(1.06); }
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50%      { opacity: 1.00; transform: scale(1.08); }
 }
 
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
