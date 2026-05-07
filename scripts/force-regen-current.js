@@ -11,30 +11,28 @@
 
 // To run locally: `node --env-file=.env.local scripts/force-regen-current.js`
 // In CI: env vars come from the workflow `env:` block.
-const https = require('https');
+const { createClient } = require('@supabase/supabase-js');
 const { generateSingleImage, removeBgSingle, getDayItems, isDishClosed, DAY_ORDER } = require('../smart-update.js');
 
-const MENU_URL = process.env.MENU_URL || 'https://fbueat.vercel.app/menu.json';
-
-function fetchJson(url) {
-    return new Promise((resolve, reject) => {
-        https.get(url, (res) => {
-            if (res.statusCode !== 200) {
-                reject(new Error(`HTTP ${res.statusCode} from ${url}`));
-                return;
-            }
-            let data = '';
-            res.on('data', (c) => (data += c));
-            res.on('end', () => {
-                try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
-            });
-        }).on('error', reject);
-    });
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY');
+    process.exit(1);
 }
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function main() {
-    console.log(`📡 Fetching menu from ${MENU_URL}…`);
-    const menu = await fetchJson(MENU_URL);
+    console.log('📡 Fetching latest menu from weekly_menus…');
+    const { data, error } = await supabase
+        .from('weekly_menus')
+        .select('week_id, menu_data')
+        .order('week_id', { ascending: false })
+        .limit(1)
+        .single();
+    if (error) throw new Error(`weekly_menus read failed: ${error.message}`);
+    console.log(`  using ${data.week_id}`);
+    const menu = data.menu_data;
 
     const targets = [];
     for (const [canteenName, canteen] of Object.entries(menu.canteens)) {
