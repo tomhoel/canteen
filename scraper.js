@@ -102,6 +102,25 @@ function isLikelyThemeHeader(rawText) {
     return isAllCaps && isShort && hasNoNumbers;
 }
 
+/**
+ * Standalone-tag lines that aren't dishes — informational notes published
+ * by the canteen (e.g. "(Halal tilgjengelig)", "(Glutenfri tilgjengelig)",
+ * "(Vegan available)"). They sit on their own line between actual dishes
+ * and would otherwise turn into empty MenuItem entries when parseItem
+ * strips the parens.
+ *
+ * Returns the inside text if matched, else null.
+ */
+function extractAvailabilityNote(rawText) {
+    const m = rawText.trim().match(/^\(([^()]+)\)$/);
+    if (!m) return null;
+    const inside = m[1].trim();
+    // Filter: only keep notes that read like a canteen-wide hint, not allergens.
+    const looksLikeNote = /\b(tilgjengelig|available|halal|glutenfri|laktosefri|nøttefri|vegan|vegetar|vegetarian)\b/i.test(inside);
+    if (!looksLikeNote) return null;
+    return inside;
+}
+
 // ─── Merge continuation lines ───
 // e.g. "Fullkorn pasta Bolognese med" + "parmesan 1,3,4" → "Fullkorn pasta Bolognese med parmesan 1,3,4"
 function mergeItems(rawItems) {
@@ -163,12 +182,35 @@ async function scrapeCanteen(url) {
 
         const lang = (sec.header === 'MANDAG' || sec.header === 'TIRSDAG' || sec.header === 'ONSDAG' || sec.header === 'TORSDAG' || sec.header === 'FREDAG') ? 'no' : 'en';
 
-        // Merge continuation lines, then filter out theme headers before parsing
+        // Merge continuation lines, then peel off availability notes (e.g.
+        // "(Halal tilgjengelig)") and theme headers ("ASIAN STREET FOOD")
+        // before treating remaining lines as dishes.
         const mergedItems = mergeItems(sec.items);
-        const dishItems = mergedItems.filter(item => !isLikelyThemeHeader(item));
+        const availabilityNotes = [];
+        const dishItems = [];
+        for (const item of mergedItems) {
+            const note = extractAvailabilityNote(item);
+            if (note) {
+                if (!availabilityNotes.includes(note)) availabilityNotes.push(note);
+                continue;
+            }
+            if (isLikelyThemeHeader(item)) continue;
+            dishItems.push(item);
+        }
+
+        // Parse each dish, then drop entries that came out empty (e.g. a
+        // parenthetical-only line that didn't match the note regex above).
+        // Mark isMain on the first SURVIVING entry — assigning it before the
+        // filter would lose the main slot to a discarded empty.
+        const parsed = dishItems
+            .map(item => parseItem(item, false))
+            .filter(it => it.dish.trim().length > 0);
+        if (parsed.length > 0) parsed[0].isMain = true;
+
         groupedMenu[dayKey][lang] = {
             label: sec.header,
-            items: dishItems.map((item, idx) => parseItem(item, idx === 0))
+            items: parsed,
+            ...(availabilityNotes.length ? { availabilityNotes } : {}),
         };
     });
 

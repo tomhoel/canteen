@@ -374,10 +374,13 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const items = lang === "no"
           ? (noItems && noItems.length > 0 ? noItems : enItems)
           : (enItems && enItems.length > 0 ? enItems : noItems);
-        const mainDish = items?.find(i => i.isMain);
-        const displaySideDishes = items?.filter(i => !i.isMain).slice(0, 3) || [];
-        const noMainDish = noItems?.find(i => i.isMain);
-        const noSideDishes = noItems?.filter(i => !i.isMain) || [];
+        const mainDish = items?.find(i => i.isMain && i.dish.trim());
+        // Defense in depth: drop items whose `dish` field is empty (older
+        // weekly_menus rows have empty entries from a scraper bug fixed in
+        // a later commit; new rows shouldn't ever land here).
+        const displaySideDishes = items?.filter(i => !i.isMain && i.dish.trim()).slice(0, 3) || [];
+        const noMainDish = noItems?.find(i => i.isMain && i.dish.trim());
+        const noSideDishes = noItems?.filter(i => !i.isMain && i.dish.trim()) || [];
         const mainAllergens = noMainDish?.allergens || mainDish?.allergens || [];
         const sideDishes = displaySideDishes.map((item, idx) => ({
           ...item,
@@ -410,10 +413,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const description = descEntry
           ? (typeof descEntry === "string" ? descEntry : descEntry[lang] || descEntry["en"] || null)
           : null;
+        // Pull availability notes from the user's preferred language; fall back
+        // to the other language if the canteen only published one side.
+        const langNotes = dayEntry?.[lang]?.availabilityNotes;
+        const otherNotes = dayEntry?.[lang === "no" ? "en" : "no"]?.availabilityNotes;
+        const availabilityNotes = (langNotes?.length ? langNotes : otherNotes) || [];
         return {
           canteenName, canteen, dayEntry, items, mainDish, sideDishes,
           mainAllergens, imageSlug, imagePath, highResImagePath,
           isOutdated, isAhead, canteenWeekNum, origin, description,
+          availabilityNotes,
         };
       });
     });

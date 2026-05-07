@@ -86,6 +86,7 @@ export default function FoodCard({
     canteenWeekNum,
     origin,
     description,
+    availabilityNotes,
   } = data;
 
   const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
@@ -211,6 +212,13 @@ export default function FoodCard({
             </div>
           )}
         </div>
+        {availabilityNotes.length > 0 && (
+          <div className="availability-notes">
+            {availabilityNotes.map((note, i) => (
+              <span key={i} className="availability-pill" title={note}>{note}</span>
+            ))}
+          </div>
+        )}
       </div>
     </article>
     </Wrapper3D>
