@@ -127,8 +127,12 @@ export default function DaySelector({
             aria-selected={selectedDay === i}
             aria-current={i === todayIndex ? "date" : undefined}
             onClick={() => {
+              // YOLO fires only on a second tap of Today (i.e. user is
+              // already on today and tapped it again). First tap from
+              // another day just navigates, no spin.
+              const isYoloTap = i === todayIndex && selectedDay === todayIndex;
               onDaySelect(i);
-              if (i === todayIndex) onTodayPress?.();
+              if (isYoloTap) onTodayPress?.();
             }}
           >
             <span className="day-label-name">{dayName}</span>

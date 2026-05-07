@@ -651,32 +651,22 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                     <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
                   </div>
                 )}
-                {openCanteens.map((data, cardIdx) => {
-                  const highlighted = yoloHighlight === cardIdx;
-                  const winner = yoloWinner === cardIdx;
-                  // Dim every card that isn't the active or winning one while
-                  // a spin is in flight — so the eye is drawn entirely to the
-                  // bright pick. Outdated/ahead cards are dimmed too even
-                  // though they're never targets.
-                  const dimmed = (yoloSpinning || yoloWinner !== -1) && !highlighted && !winner;
-                  return (
-                    <FoodCard
-                      key={data.canteenName}
-                      data={data}
-                      cardIdx={cardIdx}
-                      lang={lang}
-                      selectedDay={selectedDay}
-                      todayIndex={todayIndex}
-                      voteCount={voting.votes[data.canteenName] ?? 0}
-                      maxVotes={maxVotes}
-                      onImageClick={handleImageClick}
-                      onCardClick={handleCardClick}
-                      yoloHighlighted={highlighted}
-                      yoloWinner={winner}
-                      yoloDimmed={dimmed}
-                    />
-                  );
-                })}
+                {openCanteens.map((data, cardIdx) => (
+                  <FoodCard
+                    key={data.canteenName}
+                    data={data}
+                    cardIdx={cardIdx}
+                    lang={lang}
+                    selectedDay={selectedDay}
+                    todayIndex={todayIndex}
+                    voteCount={voting.votes[data.canteenName] ?? 0}
+                    maxVotes={maxVotes}
+                    onImageClick={handleImageClick}
+                    onCardClick={handleCardClick}
+                    yoloHighlighted={yoloHighlight === cardIdx}
+                    yoloWinner={yoloWinner === cardIdx}
+                  />
+                ))}
               </>
             )}
           </div>
