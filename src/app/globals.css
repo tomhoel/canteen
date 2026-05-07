@@ -1085,10 +1085,9 @@ body {
   color: var(--accent-orange);
   border: 1px solid rgba(255, 196, 126, 0.45);
   white-space: nowrap;
-  /* Truncate gracefully if a note ever runs long on a narrow screen. */
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* No max-width: let pills size to their content. If a future note is
+     genuinely too long for the header row, the .availability-pills wrapper
+     above will wrap it onto a second pill-line within its own column. */
 }
 
 /* ─── Lightbox ─── */
