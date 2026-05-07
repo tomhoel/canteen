@@ -40,20 +40,21 @@ export const CANTEEN_IMAGE_SLUGS: Record<string, string> = {
   "Eat the street": "eat_the_street", "Fresh4you": "fresh4you", "Flow": "flow"
 };
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-export const SUPABASE_STORAGE_URL = SUPABASE_URL ? `${SUPABASE_URL}/storage/v1/object/public` : null;
+// Hardcoded fallback matches src/lib/supabase.ts so client-side image URLs
+// work even when Vercel's NEXT_PUBLIC_SUPABASE_URL env var is missing at build time.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sloutnqpqfesyoycklgd.supabase.co';
+export const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
 
 export function getSupabaseImageUrl(bucket: string, path: string, options?: { width?: number; height?: number; format?: string; quality?: number }) {
-  if (!SUPABASE_STORAGE_URL) return null;
   const url = `${SUPABASE_STORAGE_URL}/${bucket}/${path}`;
   if (!options) return url;
-  
+
   const params = new URLSearchParams();
   if (options.width) params.set('width', options.width.toString());
   if (options.height) params.set('height', options.height.toString());
   if (options.format) params.set('format', options.format);
   if (options.quality) params.set('quality', options.quality.toString());
-  
+
   const queryString = params.toString();
   return queryString ? `${url}?${queryString}` : url;
 }
