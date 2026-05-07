@@ -12,6 +12,7 @@ import { useMenySearch } from "@/lib/useMenySearch";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SkeletonCards from "@/components/SkeletonCard";
 import DaySelector from "@/components/DaySelector";
+import YoloButton from "@/components/YoloButton";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
 import Lightbox from "@/components/Lightbox";
@@ -87,6 +88,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
+
+  // YOLO randomiser: cycles a glow through the open canteens for ~5s then
+  // settles on one. yoloHighlight is the currently-lit card during the spin;
+  // yoloWinner is the finalist after deceleration completes.
+  const [yoloSpinning, setYoloSpinning] = useState(false);
+  const [yoloHighlight, setYoloHighlight] = useState<number>(-1);
+  const [yoloWinner, setYoloWinner] = useState<number>(-1);
+  const yoloTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Custom hooks — extracted state management
   const voting = useVoting();
@@ -432,6 +441,83 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
   const closedCanteens = useMemo(() => canteenDayData.filter(c => isCanteenClosed(c)), [canteenDayData]);
 
+  // YOLO runner: highlight cycles through openCanteens with growing intervals
+  // (60ms × 1.10^i) for ~5s, lands on a randomly-chosen index, scrolls that
+  // card into view, holds the winner glow for ~3.5s.
+  const runYolo = useCallback((soundEnabled: boolean) => {
+    if (yoloSpinning) return;
+    const N = openCanteens.length;
+    if (N < 2) return;
+
+    // Clear any leftover timers from a prior aborted run.
+    yoloTimersRef.current.forEach(clearTimeout);
+    yoloTimersRef.current = [];
+
+    setYoloSpinning(true);
+    setYoloWinner(-1);
+    setYoloHighlight(-1);
+
+    const targetPos = Math.floor(Math.random() * N);
+
+    // Pick K such that the LAST tick lands on targetPos (i.e. (K-1) % N === targetPos).
+    // K ~22-28 with 1.10 growth gives total ~4.7-5.7s.
+    let K = 24;
+    while ((K - 1) % N !== targetPos) K++;
+
+    // Lazy-load the audio module on first user interaction so the
+    // AudioContext is created inside a click handler (autoplay policy).
+    type AudioModule = typeof import("@/lib/yoloAudio");
+    const audioP: Promise<AudioModule | null> = soundEnabled
+      ? import("@/lib/yoloAudio").catch(() => null)
+      : Promise.resolve(null);
+
+    let cumulative = 0;
+    for (let step = 0; step < K; step++) {
+      const interval = 60 * Math.pow(1.10, step);
+      const delay = cumulative;
+      const idx = step % N;
+      const isFinal = step === K - 1;
+      // Tick pitch slides down with each step so the slowdown reads in audio
+      // as well as visually.
+      const pitch = 1000 - step * 22;
+
+      const t = setTimeout(() => {
+        setYoloHighlight(idx);
+        if (soundEnabled) audioP.then(m => m?.playTick(Math.max(pitch, 280)));
+
+        if (isFinal) {
+          setYoloWinner(idx);
+          setYoloHighlight(-1);
+          if (soundEnabled) audioP.then(m => m?.playJackpot());
+
+          // Scroll the winning card into view (mobile especially).
+          const winnerName = openCanteens[idx]?.canteenName;
+          if (winnerName) {
+            const el = scrollRef.current?.querySelector<HTMLElement>(
+              `[data-yolo-card-key="${CSS.escape(winnerName)}"]`
+            );
+            el?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+
+          // Release winner highlight after a moment.
+          const release = setTimeout(() => {
+            setYoloWinner(-1);
+            setYoloSpinning(false);
+          }, 3500);
+          yoloTimersRef.current.push(release);
+        }
+      }, delay);
+      yoloTimersRef.current.push(t);
+      cumulative += interval;
+    }
+  }, [yoloSpinning, openCanteens]);
+
+  // Cleanup any in-flight YOLO timers on unmount.
+  useEffect(() => () => {
+    yoloTimersRef.current.forEach(clearTimeout);
+    yoloTimersRef.current = [];
+  }, []);
+
   // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
     const idx = openCanteens.findIndex(c => c.canteenName === data.canteenName);
@@ -582,6 +668,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                     maxVotes={maxVotes}
                     onImageClick={handleImageClick}
                     onCardClick={handleCardClick}
+                    yoloHighlighted={yoloHighlight === cardIdx}
+                    yoloWinner={yoloWinner === cardIdx}
                   />
                 ))}
               </>
@@ -590,7 +678,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         </ErrorBoundary>
       </main>
 
-      {/* Day Selector */}
+      {/* Day Selector + YOLO randomiser (rendered absolutely-positioned beside
+          the day pill on desktop, see .yolo-wrap CSS). */}
       <DaySelector
         fullDayLabels={fullDayLabels}
         dayLabelsData={dayLabelsData}
@@ -601,6 +690,13 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         onDaySelect={handleDaySelect}
         cardsRef={scrollRef}
       />
+      {mode === "weekday-current" && openCanteens.length >= 2 && (
+        <YoloButton
+          onSpin={runYolo}
+          spinning={yoloSpinning}
+          lang={lang}
+        />
+      )}
 
       {/* Info Modal */}
       {infoOpen && (
