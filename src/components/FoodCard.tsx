@@ -197,7 +197,16 @@ export default function FoodCard({
         </div>
       )}
       <div className="card-bottom">
-        <div className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</div>
+        <div className="side-dishes-header">
+          <span className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</span>
+          {availabilityNotes.length > 0 && (
+            <span className="availability-pills">
+              {availabilityNotes.map((note, i) => (
+                <span key={i} className="availability-pill" title={note}>{note}</span>
+              ))}
+            </span>
+          )}
+        </div>
         <div className="side-dish-list">
           {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
             <div key={idx} className="side-dish-item">
@@ -212,13 +221,6 @@ export default function FoodCard({
             </div>
           )}
         </div>
-        {availabilityNotes.length > 0 && (
-          <div className="availability-notes">
-            {availabilityNotes.map((note, i) => (
-              <span key={i} className="availability-pill" title={note}>{note}</span>
-            ))}
-          </div>
-        )}
       </div>
     </article>
     </Wrapper3D>

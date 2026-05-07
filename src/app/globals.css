@@ -1007,14 +1007,22 @@ body {
   padding-top: 12px;
 }
 
+.side-dishes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-left: 2px;
+  min-height: 18px; /* keep header row stable when no pill is shown */
+}
+
 .side-dishes-title {
   font-size: 9.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--text-muted);
-  margin-bottom: 8px;
-  padding-left: 2px;
 }
 
 .side-dish-list {
@@ -1056,28 +1064,31 @@ body {
   flex-shrink: 0;
 }
 
-/* Canteen-wide availability notes (e.g. "Halal tilgjengelig") shown below
-   the side-dish list. Distinct visual treatment so they don't get mistaken
-   for a dish or an allergen abbreviation. */
-.availability-notes {
-  display: flex;
+/* Canteen-wide availability notes (e.g. "Halal tilgjengelig") shown inline
+   on the right side of the "Andre retter" / "Other dishes" header row.
+   Sized slightly smaller than the section title so it reads as secondary. */
+.availability-pills {
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-light);
+  gap: 4px;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .availability-pill {
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.2px;
-  padding: 3px 9px;
+  padding: 2px 7px;
   border-radius: 999px;
   background: rgba(255, 196, 126, 0.18);
   color: var(--accent-orange);
   border: 1px solid rgba(255, 196, 126, 0.45);
   white-space: nowrap;
+  /* Truncate gracefully if a note ever runs long on a narrow screen. */
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Lightbox ─── */
@@ -1876,10 +1887,19 @@ body {
     padding: clamp(2px, 0.5dvh, 6px) 0 0;
   }
 
-  .side-dishes-title {
-    font-size: clamp(7.5px, 1dvh, 9px);
+  .side-dishes-header {
     margin-bottom: clamp(2px, 0.4dvh, 6px);
     padding-left: 0;
+    min-height: 0;
+  }
+
+  .side-dishes-title {
+    font-size: clamp(7.5px, 1dvh, 9px);
+  }
+
+  .availability-pill {
+    font-size: clamp(7.5px, 1dvh, 9px);
+    padding: 1px 6px;
   }
 
   .side-dish-list {
