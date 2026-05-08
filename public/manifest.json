@@ -4,8 +4,8 @@
   "description": "Daily lunch menus from The Hub, Telenor Expo, and Bygg B canteens",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fffbf5",
-  "theme_color": "#ff9500",
+  "background_color": "#f5f0e8",
+  "theme_color": "#f5f0e8",
   "orientation": "portrait",
   "icons": [
     {
