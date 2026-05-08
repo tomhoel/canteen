@@ -481,15 +481,14 @@ async function cleanDishTitles(menu) {
     if (!GEMINI_API_KEY) { console.log('  ⚠️  GEMINI_API_KEY not set — skipping title cleanup'); return {}; }
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-    // Collect all unique dish strings across both languages
+    // Only proofread NO. EN is a translation maintained by the canteen, never
+    // used as a cache key or for image generation, so cleaning it just burns tokens.
     const allDishes = new Set();
     for (const canteen of Object.values(menu.canteens)) {
         for (const dayEntry of canteen.menu) {
-            for (const lang of ['no', 'en']) {
-                for (const item of (dayEntry[lang]?.items || [])) {
-                    if (item.dish && !isDishClosed(item.dish)) {
-                        allDishes.add(item.dish);
-                    }
+            for (const item of (dayEntry.no?.items || [])) {
+                if (item.dish && !isDishClosed(item.dish)) {
+                    allDishes.add(item.dish);
                 }
             }
         }
@@ -611,12 +610,51 @@ async function archiveCurrentWeek(oldMenu) {
     }
 }
 
+/**
+ * Stable hash of the raw scrape — sorted (canteen, day, dish, isMain) tuples
+ * across all NO items. If this matches last run's fingerprint, the canteen
+ * widgets returned identical text and there's nothing for the proofreader
+ * to do, so we skip the cleanDishTitles Gemini call.
+ */
+function menuRawFingerprint(menu) {
+    if (!menu?.canteens) return '';
+    const parts = [];
+    for (const [name, canteen] of Object.entries(menu.canteens).sort()) {
+        const days = (canteen.menu || []).slice().sort((a, b) => (a.day || '').localeCompare(b.day || ''));
+        for (const dayEntry of days) {
+            const items = (dayEntry?.no?.items || []).slice().sort((a, b) => (a.dish || '').localeCompare(b.dish || ''));
+            for (const item of items) {
+                parts.push(`${name}|${dayEntry.day}|${item.dish || ''}|${item.isMain ? 1 : 0}`);
+            }
+        }
+    }
+    return parts.join('\n');
+}
+
 async function main() {
     console.log('╔══════════════════════════════════════════════════════════╗');
     console.log('║  SMART WEEKLY UPDATE                                    ║');
     console.log('╚══════════════════════════════════════════════════════════╝\n');
 
-    let oldMenu = fs.existsSync(MENU_PATH) ? JSON.parse(fs.readFileSync(MENU_PATH, 'utf8')) : null;
+    // weekly_menus is the source of truth post-Supabase migration; menu.json
+    // isn't committed anymore, so reading it from disk in CI always returned
+    // null and made the skip path + archiveCurrentWeek dead code. Pull from
+    // Supabase first; fall back to disk for local dev when supabase isn't set.
+    let oldMenu = null;
+    if (supabase) {
+        const { data, error } = await supabase
+            .from('weekly_menus')
+            .select('menu_data')
+            .order('week_id', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (error) console.log(`  ⚠️  weekly_menus read failed: ${error.message}`);
+        else if (data?.menu_data) oldMenu = data.menu_data;
+    }
+    if (!oldMenu && fs.existsSync(MENU_PATH)) {
+        oldMenu = JSON.parse(fs.readFileSync(MENU_PATH, 'utf8'));
+    }
+
     const origins = fs.existsSync(ORIGINS_PATH) ? JSON.parse(fs.readFileSync(ORIGINS_PATH, 'utf8')) : {};
     const descriptions = fs.existsSync(DESCRIPTIONS_PATH) ? JSON.parse(fs.readFileSync(DESCRIPTIONS_PATH, 'utf8')) : {};
 
@@ -624,9 +662,21 @@ async function main() {
     execSync('node scraper.js', { stdio: 'inherit' });
     const newMenu = JSON.parse(fs.readFileSync(MENU_PATH, 'utf8'));
 
-    console.log('\n✏️  Cleaning dish titles...');
-    const corrections = await cleanDishTitles(newMenu);
-    applyTitleCorrections(newMenu, corrections);
+    // Skip the title-cleanup Gemini call when the raw scrape is byte-identical
+    // to last run. The previous fingerprint rides along inside menu_data so
+    // it survives across runs without a new column.
+    const rawFingerprint = menuRawFingerprint(newMenu);
+    const lastRawFingerprint = oldMenu?._rawFingerprint || null;
+    const scrapeUnchanged = lastRawFingerprint && lastRawFingerprint === rawFingerprint;
+
+    if (scrapeUnchanged) {
+        console.log('\n✏️  Scrape identical to last run — skipping title cleanup');
+    } else {
+        console.log('\n✏️  Cleaning dish titles...');
+        const corrections = await cleanDishTitles(newMenu);
+        applyTitleCorrections(newMenu, corrections);
+    }
+    newMenu._rawFingerprint = rawFingerprint;
     fs.writeFileSync(MENU_PATH, JSON.stringify(newMenu, null, 2));
 
     if (oldMenu) {
