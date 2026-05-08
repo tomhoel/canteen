@@ -41,6 +41,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+  background: #f5f0e8;
 }
 
 body {
@@ -1720,7 +1721,7 @@ body {
     width: 100%;
     z-index: 1000;
     background: linear-gradient(
-      135deg,
+      to bottom,
       var(--bg-cream) 0%,
       var(--bg-warm) 100%
     );
