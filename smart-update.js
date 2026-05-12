@@ -825,22 +825,10 @@ async function main() {
         if (failures.length) console.log(`  ⚠️  ${failures.length} regen failures`);
     }
 
-    console.log('\n🍽️  Checking closed days...');
-    for (const [canteenName, canteen] of Object.entries(newMenu.canteens)) {
-        for (const day of DAY_ORDER) {
-            const entry = canteen.menu.find(d => d.day.toLowerCase() === day);
-            const items = getDayItems(entry);
-            const main = items.find(i => i.isMain);
-            if (main && !isDishClosed(main.dish)) continue;
-            const slug = canteenName.toLowerCase().replace(/\s+/g, '_');
-            const staticSrc = path.join(__dirname, 'public', 'images', 'closed-plates', `closed-plate-1.png`);
-            if (fs.existsSync(staticSrc)) {
-                const buffer = fs.readFileSync(staticSrc);
-                await uploadToSupabase('images', `${day}/${slug}.png`, buffer);
-                await uploadToSupabase('images_nobg', `${day}/${slug}.png`, buffer);
-            }
-        }
-    }
+    // Closed canteens are now rendered by the frontend via getClosedPlateUrl,
+    // pointing at the static plates in images_nobg/closed-plates/. The workflow
+    // no longer needs to copy a closed-plate PNG into every closed slot every
+    // run — see scripts/upload-closed-plates.js for the one-time upload.
 
     console.log('\n🔍 Final analysis...');
     const allDishNames = new Set();
