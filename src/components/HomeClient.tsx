@@ -21,6 +21,7 @@ import LeaderboardModal from "@/components/LeaderboardModal";
 import WeekOverview from "@/components/WeekOverview";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
+import ClosedCard from "@/components/ClosedCard";
 import { isCanteenClosed } from "@/lib/canteen-utils";
 
 type DishDescription = string | { en: string; no: string };
@@ -461,9 +462,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     // Use today's data directly so we don't race with `setSelectedDay` —
     // by the time the setTimeout chain fires React will have re-rendered
     // with selectedDay === dayIdx, and the cardIdx values match this array.
-    const cardsForDay = (allDaysData[dayIdx] ?? []).filter(c => !isCanteenClosed(c));
+    // cardsForDay is the full canteen-ordered list (open + closed) since
+    // closed canteens now render as their own ClosedCard in the same slots;
+    // eligibility just excludes them from the sweep.
+    const cardsForDay = allDaysData[dayIdx] ?? [];
     const eligibleIndices = cardsForDay
-      .map((c, i) => (!c.isOutdated && !c.isAhead) ? i : -1)
+      .map((c, i) => (!isCanteenClosed(c) && !c.isOutdated && !c.isAhead) ? i : -1)
       .filter(i => i !== -1);
 
     if (eligibleIndices.length < 2) return;
@@ -665,21 +669,30 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                     <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
                   </div>
                 )}
-                {openCanteens.map((data, cardIdx) => (
-                  <FoodCard
-                    key={data.canteenName}
-                    data={data}
-                    cardIdx={cardIdx}
-                    lang={lang}
-                    selectedDay={selectedDay}
-                    todayIndex={todayIndex}
-                    voteCount={voting.votes[data.canteenName] ?? 0}
-                    maxVotes={maxVotes}
-                    onImageClick={handleImageClick}
-                    onCardClick={handleCardClick}
-                    yoloHighlighted={yoloHighlight === cardIdx}
-                    yoloWinner={yoloWinner === cardIdx}
-                  />
+                {canteenDayData.map((data, cardIdx) => (
+                  isCanteenClosed(data) ? (
+                    <ClosedCard
+                      key={data.canteenName}
+                      data={data}
+                      cardIdx={cardIdx}
+                      lang={lang}
+                    />
+                  ) : (
+                    <FoodCard
+                      key={data.canteenName}
+                      data={data}
+                      cardIdx={cardIdx}
+                      lang={lang}
+                      selectedDay={selectedDay}
+                      todayIndex={todayIndex}
+                      voteCount={voting.votes[data.canteenName] ?? 0}
+                      maxVotes={maxVotes}
+                      onImageClick={handleImageClick}
+                      onCardClick={handleCardClick}
+                      yoloHighlighted={yoloHighlight === cardIdx}
+                      yoloWinner={yoloWinner === cardIdx}
+                    />
+                  )
                 ))}
               </>
             )}
