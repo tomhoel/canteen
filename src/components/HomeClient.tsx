@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl } from "@/lib/constants";
+import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import { getLocalDateKey, computeDisplayContext, compareWeeks } from "@/lib/dateUtils";
@@ -395,13 +395,23 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           allergens: noSideDishes[idx]?.allergens || item.allergens,
         }));
         const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
-        
+
+        // Closed canteens point at one of 3 static cutlery-and-napkin plates
+        // hosted in Supabase. We don't generate dish images for closed days,
+        // so without this branch the slot URL would resolve to a stale image
+        // from whenever the canteen was last open on this weekday.
+        const isClosed = !mainDish || ["stengt", "closed", "lukket"].some(kw => mainDish.dish.toLowerCase().includes(kw));
+
         // Supabase Integration: Prefer remote images if available.
         // Lightbox uses the transparent PNG so the food sits on the warm gradient
         // backdrop instead of the studio dark-grey from the bg version.
         const supabasePath = `${dk}/${imageSlug}.png`;
-        const sbLowRes = getSupabaseImageUrl("images_nobg", supabasePath, { width: 440, format: "webp" });
-        const sbHighRes = getSupabaseImageUrl("images_nobg", supabasePath);
+        const sbLowRes = isClosed
+          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 440, format: "webp" })
+          : getSupabaseImageUrl("images_nobg", supabasePath, { width: 440, format: "webp" });
+        const sbHighRes = isClosed
+          ? getClosedPlateUrl(`${canteenName}-${dk}`)
+          : getSupabaseImageUrl("images_nobg", supabasePath);
 
         const imagePath = sbLowRes || `/images_nobg/${dk}/${imageSlug}.png`;
         const highResImagePath = sbHighRes || `/images_nobg/${dk}/${imageSlug}.png`;

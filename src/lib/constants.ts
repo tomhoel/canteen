@@ -58,3 +58,15 @@ export function getSupabaseImageUrl(bucket: string, path: string, options?: { wi
   const queryString = params.toString();
   return queryString ? `${url}?${queryString}` : url;
 }
+
+/**
+ * Closed canteens render one of 3 cutlery-and-napkin designs hosted at
+ * `images_nobg/closed-plates/`. The variant is picked deterministically
+ * from the seed so the same canteen+day always shows the same plate.
+ */
+export function getClosedPlateUrl(seed: string, options?: { width?: number; height?: number; format?: string; quality?: number }) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash + seed.charCodeAt(i)) | 0;
+  const variant = (Math.abs(hash) % 3) + 1;
+  return getSupabaseImageUrl('images_nobg', `closed-plates/closed-plate-${variant}.png`, options);
+}
