@@ -441,6 +441,63 @@ body {
   color: var(--text-secondary);
 }
 
+/* ─── Per-canteen closed card (renders in carousel slot, plate desaturated) ─── */
+.food-card.closed {
+  cursor: default;
+  background: linear-gradient(180deg, #fffcf8 0%, var(--card-white) 50%);
+  border-color: rgba(0, 0, 0, 0.05);
+  align-items: center;
+  text-align: center;
+}
+
+.food-card.closed:hover {
+  transform: none;
+}
+
+.food-card.closed .food-image.loaded {
+  filter: saturate(0.35) sepia(0.12) brightness(1.06)
+    drop-shadow(0 8px 20px rgba(80, 40, 0, 0.12));
+}
+
+.food-card.closed .canteen-name {
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+.closed-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.closed-card-status {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.closed-card-hours {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(200, 116, 26, 0.05);
+  border: 1px solid rgba(200, 116, 26, 0.08);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin: 0;
+}
+
+.closed-card-hours svg {
+  color: var(--accent-orange);
+  flex-shrink: 0;
+}
+
 /* ─── Closed canteens pill ─── */
 .closed-pill-wrapper {
   display: flex;
