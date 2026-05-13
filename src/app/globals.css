@@ -2039,6 +2039,35 @@ body {
     pointer-events: none;
   }
 
+  /* Per-canteen closed card — row layout (image left, text right) like FoodCard.
+     Desktop centered-column styles don't apply at this width. */
+  .food-card.closed {
+    text-align: left;
+    align-items: center;
+  }
+
+  .closed-card-body {
+    width: auto;
+    max-width: none;
+    flex: 1;
+    min-width: 0;
+    align-items: flex-start;
+    text-align: left;
+    padding: 0 2px 0 12px;
+    margin-top: 0;
+    align-self: center;
+    gap: 4px;
+  }
+
+  .closed-card-status {
+    font-size: 12px;
+  }
+
+  .closed-card-hours {
+    padding: 6px 10px;
+    font-size: 10.5px;
+  }
+
   /* All-closed card mobile */
   .all-closed-card {
     width: 100%;
