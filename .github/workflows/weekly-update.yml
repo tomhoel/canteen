@@ -25,7 +25,15 @@ permissions:
 jobs:
   update-menu:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    # Run inside Playwright's official image: Chromium is pre-baked at
+    # $PLAYWRIGHT_BROWSERS_PATH (/ms-playwright), so we never run the runtime
+    # `playwright install` download+unzip that started hanging at 100% on the
+    # hosted runners on 2026-05-29 and force-cancelled every run at the 45m
+    # timeout. Tag MUST match the pinned playwright version in package.json
+    # (1.58.2 -> browser build v1208) so the baked browser matches the library.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
 
     steps:
       - name: Checkout repository
@@ -43,26 +51,14 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      # Bound each attempt with a hard timeout + retry. Since 2026-05-29 the
-      # install started stalling at 100% download (CDN fetch of a follow-up
-      # artifact hangs with no client-side timeout), burning the full 45m job
-      # budget and getting force-cancelled — silently, since a cancel doesn't
-      # fire the failure step below. timeout+retry recovers transient stalls
-      # and, if genuinely broken, fails fast (≤~15m) so we actually get alerted.
-      - name: Install Playwright browsers
-        timeout-minutes: 18
-        run: |
-          for attempt in 1 2 3; do
-            echo "::group::playwright install (attempt $attempt)"
-            if timeout -k 30s 300s npx playwright install chromium --with-deps; then
-              echo "::endgroup::"
-              exit 0
-            fi
-            echo "::endgroup::"
-            echo "playwright install attempt $attempt stalled/failed; retrying..."
-          done
-          echo "playwright install failed after 3 attempts"
-          exit 1
+      # No `playwright install` here — the browser is baked into the container
+      # image. This step just asserts it's present (a fast no-op: "is already
+      # installed") so we fail loud if the image ever drifts from the pinned
+      # version, instead of falling through to a runtime download. The short
+      # timeout is a backstop against that drift case re-introducing a hang.
+      - name: Verify Playwright browser is present
+        timeout-minutes: 5
+        run: npx playwright install chromium
 
       - name: Smart update (scrape + compare + regenerate only changes)
         id: smart-update
