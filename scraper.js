@@ -144,8 +144,13 @@ async function scrapeCanteen(url) {
     let rawData;
     try {
         const page = await browser.newPage();
-        await page.goto(url);
-        await page.waitForSelector('.menu-container', { timeout: 10000 }).catch(() => { });
+        // The inisign widget keeps long-lived connections open (polling/analytics),
+        // so the 'load' event — page.goto's default waitUntil — never fires within
+        // the 30s timeout and goto throws before we ever read the menu, which is
+        // already in the server-rendered HTML. Wait for 'domcontentloaded' instead
+        // and let the .menu-container selector confirm the content is present.
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForSelector('.menu-container', { timeout: 15000 });
 
         rawData = await page.evaluate(() => {
             const elements = Array.from(document.querySelectorAll('h1, .menu-container'));
