@@ -43,8 +43,26 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      # Bound each attempt with a hard timeout + retry. Since 2026-05-29 the
+      # install started stalling at 100% download (CDN fetch of a follow-up
+      # artifact hangs with no client-side timeout), burning the full 45m job
+      # budget and getting force-cancelled — silently, since a cancel doesn't
+      # fire the failure step below. timeout+retry recovers transient stalls
+      # and, if genuinely broken, fails fast (≤~15m) so we actually get alerted.
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        timeout-minutes: 18
+        run: |
+          for attempt in 1 2 3; do
+            echo "::group::playwright install (attempt $attempt)"
+            if timeout -k 30s 300s npx playwright install chromium --with-deps; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "playwright install attempt $attempt stalled/failed; retrying..."
+          done
+          echo "playwright install failed after 3 attempts"
+          exit 1
 
       - name: Smart update (scrape + compare + regenerate only changes)
         id: smart-update
