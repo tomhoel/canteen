@@ -1,35 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+export interface NotifyPayload {
+  canteens: Record<string, number>;
+  dishes?: Record<string, string>;
+  date: string;
+  lang?: "no" | "en";
+}
 
-export async function POST(request: NextRequest) {
+export async function sendSlackNotification(data: NotifyPayload) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
-    return NextResponse.json({ skipped: true });
+    return { skipped: true };
   }
 
-  // Basic origin check — only allow requests from the same site
-  const origin = request.headers.get('origin');
-  const host = request.headers.get('host');
-  if (origin && host && !origin.includes(host)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  let canteens: Record<string, number>;
-  let dishes: Record<string, string>;
-  let date: string;
-  let lang: "no" | "en";
-
-  try {
-    const body = await request.json();
-    if (!body || typeof body.canteens !== 'object' || !body.date) {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-    }
-    canteens = body.canteens;
-    dishes = body.dishes || {};
-    date = body.date;
-    lang = body.lang === 'no' ? 'no' : 'en';
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
+  const { canteens, dishes = {}, date, lang = "no" } = data;
 
   const sorted = Object.entries(canteens).sort(([, a], [, b]) => b - a);
   const maxVotes = Math.max(0, ...Object.values(canteens));
@@ -50,9 +32,10 @@ export async function POST(request: NextRequest) {
     return `${isWinner ? "⭐ " : "     "}*${name}*${dish}\n${bar} ${count} ${votesLabel}`;
   });
 
-  const headerText = lang === "no"
-    ? `🍽️ Lunsjresultater — ${formattedDate}`
-    : `🍽️ Lunch results — ${formattedDate}`;
+  const headerText =
+    lang === "no"
+      ? `🍽️ Lunsjresultater — ${formattedDate}`
+      : `🍽️ Lunch results — ${formattedDate}`;
 
   const body = {
     blocks: [
@@ -67,10 +50,14 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`Slack returned ${res.status}`);
-    return NextResponse.json({ ok: true });
+
+    if (!res.ok) {
+      throw new Error(`Slack returned ${res.status}`);
+    }
+
+    return { ok: true };
   } catch (err) {
     console.error("Slack webhook error:", err);
-    return NextResponse.json({ error: "Failed to send" }, { status: 500 });
+    return { error: "Failed to send" };
   }
 }

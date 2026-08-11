@@ -1,7 +1,7 @@
-"use client";
-
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Recipe } from "@/lib/types";
+import { generateRecipe } from "@/server/recipe";
 
 interface RecipeModalState {
   isOpen: boolean;
@@ -13,7 +13,12 @@ interface RecipeModalState {
 }
 
 const INITIAL_STATE: RecipeModalState = {
-  isOpen: false, dishName: "", canteenName: "", recipe: null, isLoading: false, error: null,
+  isOpen: false,
+  dishName: "",
+  canteenName: "",
+  recipe: null,
+  isLoading: false,
+  error: null,
 };
 
 interface UseRecipeReturn {
@@ -25,55 +30,73 @@ interface UseRecipeReturn {
 }
 
 export function useRecipe(lang: "no" | "en"): UseRecipeReturn {
-  const [recipeModal, setRecipeModal] = useState<RecipeModalState>(INITIAL_STATE);
+  const queryClient = useQueryClient();
+  const [recipeModal, setRecipeModal] =
+    useState<RecipeModalState>(INITIAL_STATE);
   const [recipeServings, setRecipeServings] = useState(4);
-  const abortRef = useRef<AbortController | null>(null);
 
-  const handleRecipeClick = useCallback(async (dishName: string, canteenName: string) => {
-    // Abort any in-flight request
-    abortRef.current?.abort();
+  const recipeMutation = useMutation({
+    mutationFn: async ({
+      dishName,
+      lang,
+    }: {
+      dishName: string;
+      lang: "no" | "en";
+    }) => {
+      const cached = queryClient.getQueryData<Recipe>(["recipe", dishName, lang]);
+      if (cached) return cached;
 
-    const cacheKey = `recipe_v4_${lang}_${dishName}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const recipe = JSON.parse(cached) as Recipe;
-        setRecipeServings(recipe.servings);
-        setRecipeModal({ isOpen: true, dishName, canteenName, recipe, isLoading: false, error: null });
-        return;
-      } catch { /* cache corrupted, refetch */ }
-    }
+      const recipe = (await generateRecipe({ dishName, lang })) as Recipe;
+      queryClient.setQueryData(["recipe", dishName, lang], recipe);
+      return recipe;
+    },
+  });
 
-    setRecipeModal({ isOpen: true, dishName, canteenName, recipe: null, isLoading: true, error: null });
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const res = await fetch('/api/recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dishName, lang }),
-        signal: controller.signal,
+  const handleRecipeClick = useCallback(
+    async (dishName: string, canteenName: string) => {
+      setRecipeModal({
+        isOpen: true,
+        dishName,
+        canteenName,
+        recipe: null,
+        isLoading: true,
+        error: null,
       });
-      if (!res.ok) throw new Error('Failed');
-      const recipe = await res.json() as Recipe;
-      localStorage.setItem(cacheKey, JSON.stringify(recipe));
-      setRecipeServings(recipe.servings);
-      setRecipeModal(prev => ({ ...prev, recipe, isLoading: false }));
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
-      setRecipeModal(prev => ({
-        ...prev, isLoading: false,
-        error: lang === 'no' ? 'Kunne ikke generere oppskrift' : 'Could not generate recipe',
-      }));
-    }
-  }, [lang]);
+
+      try {
+        const recipe = await recipeMutation.mutateAsync({ dishName, lang });
+        setRecipeServings(recipe.servings);
+        setRecipeModal({
+          isOpen: true,
+          dishName,
+          canteenName,
+          recipe,
+          isLoading: false,
+          error: null,
+        });
+      } catch (err) {
+        setRecipeModal((prev) => ({
+          ...prev,
+          isLoading: false,
+          error:
+            lang === "no"
+              ? "Kunne ikke generere oppskrift"
+              : "Could not generate recipe",
+        }));
+      }
+    },
+    [lang, recipeMutation]
+  );
 
   const closeRecipe = useCallback(() => {
-    abortRef.current?.abort();
     setRecipeModal(INITIAL_STATE);
   }, []);
 
-  return { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe };
+  return {
+    recipeModal,
+    recipeServings,
+    setRecipeServings,
+    handleRecipeClick,
+    closeRecipe,
+  };
 }

@@ -16,12 +16,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
       "@/*": [
         "./src/*"
@@ -29,14 +23,9 @@
     }
   },
   "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts",
-    "dist/types/**/*.ts",
-    "dist/dev/types/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "app.config.ts"
   ],
   "exclude": [
     "node_modules"

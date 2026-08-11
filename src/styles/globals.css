@@ -16,6 +16,9 @@
   --shadow-soft: rgba(60, 30, 0, 0.05);
   --shadow-medium: rgba(60, 30, 0, 0.10);
   --shadow-strong: rgba(60, 30, 0, 0.18);
+  --font-heading: "Outfit", sans-serif;
+  --font-body: "Outfit", sans-serif;
+  --font-serif: "Outfit", sans-serif;
   --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -42,9 +45,11 @@ html {
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
   background: #f5f0e8;
+  font-family: "Outfit", sans-serif;
 }
 
 body {
+  font-family: "Outfit", sans-serif;
   background: #f5f0e8;
   color: var(--text-primary);
   height: 100%;

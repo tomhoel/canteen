@@ -1,7 +1,7 @@
-"use client";
-
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Recipe, MenyResponse } from "@/lib/types";
+import { searchMeny } from "@/server/meny";
 
 interface MenyViewState {
   isOpen: boolean;
@@ -11,7 +11,10 @@ interface MenyViewState {
 }
 
 const INITIAL_STATE: MenyViewState = {
-  isOpen: false, data: null, isLoading: false, error: null,
+  isOpen: false,
+  data: null,
+  isLoading: false,
+  error: null,
 };
 
 interface UseMenySearchReturn {
@@ -21,53 +24,58 @@ interface UseMenySearchReturn {
 }
 
 export function useMenySearch(lang: "no" | "en"): UseMenySearchReturn {
+  const queryClient = useQueryClient();
   const [menyView, setMenyView] = useState<MenyViewState>(INITIAL_STATE);
-  const abortRef = useRef<AbortController | null>(null);
 
-  const handleMenyClick = useCallback(async (dishName: string, recipe: Recipe) => {
-    // Abort any in-flight request
-    abortRef.current?.abort();
+  const menyMutation = useMutation({
+    mutationFn: async ({
+      dishName,
+      recipe,
+      lang,
+    }: {
+      dishName: string;
+      recipe: Recipe;
+      lang: "no" | "en";
+    }) => {
+      const cached = queryClient.getQueryData<MenyResponse>(["meny", dishName, lang]);
+      if (cached) return cached;
 
-    const cacheKey = `meny_v4_${dishName}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
+      const data = (await searchMeny({
+        ingredients: recipe.ingredients,
+        dishName,
+        lang,
+      })) as MenyResponse;
+
+      queryClient.setQueryData(["meny", dishName, lang], data);
+      return data;
+    },
+  });
+
+  const handleMenyClick = useCallback(
+    async (dishName: string, recipe: Recipe) => {
+      setMenyView({ isOpen: true, data: null, isLoading: true, error: null });
+
       try {
-        const parsed = JSON.parse(cached) as MenyResponse;
-        const age = Date.now() - new Date(parsed.generatedAt).getTime();
-        if (age < 24 * 60 * 60 * 1000) {
-          setMenyView({ isOpen: true, data: parsed, isLoading: false, error: null });
-          return;
-        }
-      } catch { /* stale/corrupt cache */ }
-    }
-
-    setMenyView({ isOpen: true, data: null, isLoading: true, error: null });
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const res = await fetch('/api/meny/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients: recipe.ingredients, dishName, lang }),
-        signal: controller.signal,
-      });
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json() as MenyResponse;
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      setMenyView(prev => ({ ...prev, data, isLoading: false }));
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
-      setMenyView(prev => ({
-        ...prev, isLoading: false,
-        error: lang === 'no' ? 'Kunne ikke s\u00F8ke hos Meny' : 'Could not search Meny',
-      }));
-    }
-  }, [lang]);
+        const data = await menyMutation.mutateAsync({ dishName, recipe, lang });
+        setMenyView({
+          isOpen: true,
+          data,
+          isLoading: false,
+          error: null,
+        });
+      } catch (err) {
+        setMenyView((prev) => ({
+          ...prev,
+          isLoading: false,
+          error:
+            lang === "no" ? "Kunne ikke søke hos Meny" : "Could not search Meny",
+        }));
+      }
+    },
+    [lang, menyMutation]
+  );
 
   const closeMeny = useCallback(() => {
-    abortRef.current?.abort();
     setMenyView(INITIAL_STATE);
   }, []);
 

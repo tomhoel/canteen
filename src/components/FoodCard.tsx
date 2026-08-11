@@ -165,7 +165,7 @@ export default function FoodCard({
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
         </div>
 
-        {mainAllergens.length > 0 && (
+        {mainAllergens && mainAllergens.length > 0 && (
           <div className="dish-meta-row">
             <div className="allergens-row">
               {mainAllergens.map((a, aIdx) => {
@@ -206,7 +206,7 @@ export default function FoodCard({
       <div className="card-bottom">
         <div className="side-dishes-header">
           <span className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</span>
-          {availabilityNotes.length > 0 && (
+          {availabilityNotes && availabilityNotes.length > 0 && (
             <span className="availability-pills">
               {availabilityNotes.map((note, i) => (
                 <span key={i} className="availability-pill" title={note}>{note}</span>
@@ -215,10 +215,10 @@ export default function FoodCard({
           )}
         </div>
         <div className="side-dish-list">
-          {sideDishes.length > 0 ? sideDishes.map((item, idx) => (
+          {sideDishes && sideDishes.length > 0 ? sideDishes.map((item, idx) => (
             <div key={idx} className="side-dish-item">
               <span className="side-dish-text">{item.dish}</span>
-              {item.allergens.length > 0 && (
+              {item.allergens?.length > 0 && (
                 <span className="side-allergens">{item.allergens.map(a => lang === "no" ? (ALLERGEN_ABBREV_NO[a.name] || a.name.slice(0, 2)) : (ALLERGEN_ABBREV[a.name] || a.name.slice(0, 2))).join(" ")}</span>
               )}
             </div>

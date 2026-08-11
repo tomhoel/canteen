@@ -1,10 +1,9 @@
-"use client";
-
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { getLocalDateKey } from "@/lib/dateUtils";
 import type { CanteenDayItem } from "@/lib/types";
-
-const POLL_INTERVAL = 60_000;
+import { submitVote } from "@/server/attendance";
+import { sendSlackNotification } from "@/server/notify";
 
 interface UseVotingReturn {
   votes: Record<string, number>;
@@ -14,7 +13,10 @@ interface UseVotingReturn {
   voteSuccess: boolean;
   shareState: "idle" | "loading" | "sent";
   handleVote: (canteenName: string) => Promise<void>;
-  handleShareSlack: (canteenDayData: CanteenDayItem[], lang: "no" | "en") => Promise<void>;
+  handleShareSlack: (
+    canteenDayData: CanteenDayItem[],
+    lang: "no" | "en"
+  ) => Promise<void>;
   setVoteSuccess: (v: boolean) => void;
   setShareState: (v: "idle" | "loading" | "sent") => void;
 }
@@ -23,15 +25,15 @@ export function useVoting(): UseVotingReturn {
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState("");
-  const [isVoting, setIsVoting] = useState(false);
   const [voteSuccess, setVoteSuccess] = useState(false);
-  const [shareState, setShareState] = useState<"idle" | "loading" | "sent">("idle");
+  const [shareState, setShareState] = useState<"idle" | "loading" | "sent">(
+    "idle"
+  );
 
-  const isVotingRef = useRef(false);
   const shareInFlightRef = useRef(false);
 
-  // Check persisted share state on mount
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const todayKey = getLocalDateKey();
     const voted = localStorage.getItem(`voted_${todayKey}`);
     if (voted) {
@@ -40,99 +42,83 @@ export function useVoting(): UseVotingReturn {
     }
   }, []);
 
-  // Fetch votes + poll with visibility awareness and vote-in-flight guard
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    const fetchVotes = () => {
-      if (isVotingRef.current) return; // Skip polling while voting
-      fetch("/api/attendance")
-        .then(r => r.json())
-        .then(data => setVotes(data.canteens || {}))
-        .catch(() => {});
-    };
-
-    fetchVotes(); // Initial fetch
-
-    const startPolling = () => {
-      if (interval) clearInterval(interval);
-      interval = setInterval(fetchVotes, POLL_INTERVAL);
-    };
-
-    const stopPolling = () => {
-      if (interval) { clearInterval(interval); interval = null; }
-    };
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        fetchVotes();
-        startPolling();
-      }
-    };
-
-    startPolling();
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      stopPolling();
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, []);
-
-  const handleVote = useCallback(async (canteenName: string) => {
-    setIsVoting(true);
-    isVotingRef.current = true;
-    try {
-      const res = await fetch("/api/attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canteenName, action: "add" }),
-      });
-      const data = await res.json();
-      setVotes(data.canteens || {});
-      const todayKey = getLocalDateKey();
-      localStorage.setItem(`voted_${todayKey}`, canteenName);
+  const voteMutation = useMutation({
+    mutationFn: async (canteenName: string) => {
+      const result = await submitVote({ canteenId: canteenName });
+      return { canteenName, canteens: result.canteens };
+    },
+    onMutate: async (canteenName) => {
+      setVotes((prev) => ({
+        ...prev,
+        [canteenName]: (prev[canteenName] || 0) + 1,
+      }));
       setVotedCanteen(canteenName);
       setHasVoted(true);
       setVoteSuccess(true);
-    } finally {
-      setIsVoting(false);
-      isVotingRef.current = false;
-    }
-  }, []);
+      const todayKey = getLocalDateKey();
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`voted_${todayKey}`, canteenName);
+      }
+    },
+    onSuccess: (data) => {
+      if (data.canteens) {
+        setVotes(data.canteens);
+      }
+    },
+    onError: (err) => {
+      console.error("Optimistic vote error:", err);
+    },
+  });
 
-  const handleShareSlack = useCallback(async (canteenDayData: CanteenDayItem[], lang: "no" | "en") => {
-    if (shareInFlightRef.current) return;
-    const todayKey = getLocalDateKey();
-    if (localStorage.getItem(`slack_shared_${todayKey}`)) return;
+  const handleVote = useCallback(
+    async (canteenName: string) => {
+      await voteMutation.mutateAsync(canteenName);
+    },
+    [voteMutation]
+  );
 
-    shareInFlightRef.current = true;
-    setShareState("loading");
-    const dishes = Object.fromEntries(
-      canteenDayData.map(c => [c.canteenName, c.mainDish?.dish ?? ""])
-    );
+  const handleShareSlack = useCallback(
+    async (canteenDayData: CanteenDayItem[], lang: "no" | "en") => {
+      if (shareInFlightRef.current) return;
+      const todayKey = getLocalDateKey();
+      if (
+        typeof window !== "undefined" &&
+        localStorage.getItem(`slack_shared_${todayKey}`)
+      )
+        return;
 
-    try {
-      const res = await fetch("/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canteens: votes, dishes, date: todayKey, lang }),
-      });
-      if (!res.ok) throw new Error(`notify failed: ${res.status}`);
-      localStorage.setItem(`slack_shared_${todayKey}`, "1");
-      setShareState("sent");
-      setTimeout(() => setShareState("idle"), 2000);
-    } catch {
-      setShareState("idle");
-    } finally {
-      shareInFlightRef.current = false;
-    }
-  }, [votes]);
+      shareInFlightRef.current = true;
+      setShareState("loading");
+      const dishes = Object.fromEntries(
+        canteenDayData.map((c) => [c.canteenName, c.mainDish?.dish ?? ""])
+      );
+
+      try {
+        await sendSlackNotification({ canteens: votes, dishes, date: todayKey, lang });
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`slack_shared_${todayKey}`, "1");
+        }
+        setShareState("sent");
+        setTimeout(() => setShareState("idle"), 2000);
+      } catch {
+        setShareState("idle");
+      } finally {
+        shareInFlightRef.current = false;
+      }
+    },
+    [votes]
+  );
 
   return {
-    votes, hasVoted, votedCanteen, isVoting, voteSuccess, shareState,
-    handleVote, handleShareSlack, setVoteSuccess, setShareState,
+    votes,
+    hasVoted,
+    votedCanteen,
+    isVoting: voteMutation.isPending,
+    voteSuccess,
+    shareState,
+    handleVote,
+    handleShareSlack,
+    setVoteSuccess,
+    setShareState,
   };
 }
