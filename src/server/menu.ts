@@ -1,5 +1,5 @@
-import type { MenuData, DishOrigin, DishDescription } from "../lib/types.ts";
-import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service.ts";
+import type { MenuData, DishOrigin, DishDescription } from "../lib/types";
+import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service";
 
 export interface WeeklyMenuResponse {
   menuData: MenuData;

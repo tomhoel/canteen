@@ -1,4 +1,4 @@
-import type { MenuItem } from "./types.ts";
+import type { MenuItem } from "./types";
 
 /**
  * Single source of truth for "which of today's dishes is the main dish".

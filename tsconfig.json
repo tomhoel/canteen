@@ -13,10 +13,6 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "types": ["node"],
-    // Server modules under src/server and api/ are imported with explicit .ts
-    // specifiers so the same files run under `node --test` (type stripping)
-    // and through the bundler without a second resolution scheme.
-    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -22,8 +22,8 @@
  * the old CI workflow ran, failed with ERR_MODULE_NOT_FOUND every time.
  */
 
-import { runWeeklyUpdateService } from "./src/server/services/menu.service.ts";
-import { processAllCanteenAIImages } from "./src/server/services/image.service.ts";
+import { runWeeklyUpdateService } from "./src/server/services/menu.service";
+import { processAllCanteenAIImages } from "./src/server/services/image.service";
 
 function parseArgs(argv) {
   const force = argv.includes("--force");

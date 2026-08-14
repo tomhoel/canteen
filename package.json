@@ -9,7 +9,7 @@
     "start": "vite preview",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test scraper.test.js src/lib/dateUtils.test.ts src/lib/dish-ranking.test.ts src/server/services/scraper.service.test.ts",
+    "test": "node --import tsx --test scraper.test.js src/lib/dateUtils.test.ts src/lib/dish-ranking.test.ts src/server/services/scraper.service.test.ts",
     "update": "tsx smart-update.js",
     "update:force": "tsx smart-update.js --force",
     "postinstall": "node scripts/cleanup-phantom-types.js"

@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { Redis } from "@upstash/redis";
-import { getLocalDateKey } from "../../lib/dateUtils.ts";
+import { getLocalDateKey } from "../../lib/dateUtils";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

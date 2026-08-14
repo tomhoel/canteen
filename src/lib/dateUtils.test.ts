@@ -5,7 +5,7 @@ import {
   getIsoWeekYearForDate,
   getWeekIdForDate,
   compareWeeks,
-} from "./dateUtils.ts";
+} from "./dateUtils";
 
 test("getWeekNumberForDate - ordinary mid-year date", () => {
   // Fri 14 Aug 2026 — the week the app was showing as "Uke 33".

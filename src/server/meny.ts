@@ -5,8 +5,8 @@ import type {
   MenyProduct,
   MenyIngredientMatch,
   MenyResponse,
-} from "../lib/types.ts";
-import { getWeekNumber } from "../lib/dateUtils.ts";
+} from "../lib/types";
+import { getWeekNumber } from "../lib/dateUtils";
 
 function getRedis() {
   if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {

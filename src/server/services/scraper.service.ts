@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
-import type { MenuData, CanteenData, MenuItem, Allergen, DayMenu } from "../../lib/types.ts";
-import { rankItems, scoreMainDish } from "../../lib/dish-ranking.ts";
+import type { MenuData, CanteenData, MenuItem, Allergen, DayMenu } from "../../lib/types";
+import { rankItems, scoreMainDish } from "../../lib/dish-ranking";
 
 // Re-exported so existing importers of the scraper keep working; the single
 // implementation now lives in lib/dish-ranking.ts.

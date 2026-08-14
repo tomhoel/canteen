@@ -1,16 +1,16 @@
 import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { MenuData, WeeklyMenuRecord, DishOrigin, DishDescription } from "../../lib/types.ts";
-import { getWeekId } from "../../lib/dateUtils.ts";
-import { scrapeAllCanteens, type ScrapeReport } from "./scraper.service.ts";
-import { detectDishOrigins, generateDishDescriptions } from "./ai.service.ts";
+import type { MenuData, WeeklyMenuRecord, DishOrigin, DishDescription } from "../../lib/types";
+import { getWeekId } from "../../lib/dateUtils";
+import { scrapeAllCanteens, type ScrapeReport } from "./scraper.service";
+import { detectDishOrigins, generateDishDescriptions } from "./ai.service";
 import {
   loadDishCache,
   saveDishCacheEntries,
   normalizeDishName,
   type DishCacheEntry,
-} from "./dish-cache.service.ts";
+} from "./dish-cache.service";
 
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;

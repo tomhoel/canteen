@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { scoreMainDish, rankItems, pickMainDish } from "./dish-ranking.ts";
-import type { MenuItem } from "./types.ts";
+import { scoreMainDish, rankItems, pickMainDish } from "./dish-ranking";
+import type { MenuItem } from "./types";
 
 const item = (dish: string): MenuItem => ({ dish, isMain: false, allergens: [] });
 

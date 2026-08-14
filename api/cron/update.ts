@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { runWeeklyUpdateService } from "../../src/server/services/menu.service.ts";
-import { processAllCanteenAIImages } from "../../src/server/services/image.service.ts";
-import { sendCronAlert } from "../../src/server/notify.ts";
+import { runWeeklyUpdateService } from "../../src/server/services/menu.service";
+import { processAllCanteenAIImages } from "../../src/server/services/image.service";
+import { sendCronAlert } from "../../src/server/notify";
 
 /**
  * The weekly updater. This is the only thing that writes menu data.

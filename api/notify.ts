@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { sendSlackNotification } from "../src/server/notify.ts";
-import { methodNotAllowed, readJsonBody, respond } from "./_lib/handler.ts";
+import { sendSlackNotification } from "../src/server/notify";
+import { methodNotAllowed, readJsonBody, respond } from "./_lib/handler";
 
 /** Posts the lunch vote result to Slack. Keeps SLACK_WEBHOOK_URL server-side. */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
