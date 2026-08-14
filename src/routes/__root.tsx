@@ -36,6 +36,8 @@ export const Route = createRootRoute({
       },
       { name: "theme-color", content: "#f5f0e8" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Dagens Lunsj" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { title: "🍽️ Dagens Lunsj | Telenor Fornebu" },
       {
@@ -46,7 +48,15 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: globalCss },
-      { rel: "icon", href: "/favicon.ico" },
+      // These must mirror index.html. The router rewrites the head at runtime,
+      // so a stale entry here silently wins over the correct static one — which
+      // is how /favicon.ico came back after index.html stopped referencing it.
+      // There is no favicon.ico in public/, and the SPA rewrite answers the
+      // request with index.html, so the browser was parsing HTML as an icon.
+      { rel: "manifest", href: "/manifest.json" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
+      { rel: "icon", type: "image/svg+xml", href: "/icon.svg" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
         rel: "preconnect",
