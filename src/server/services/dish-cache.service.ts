@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { DishOrigin, DishDescription } from "../../lib/types";
+import type { DishOrigin, DishDescription } from "../../lib/types.js";
 
 /**
  * Per-dish cache backed by the Supabase `dish_cache` table.

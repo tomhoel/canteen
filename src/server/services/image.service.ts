@@ -1,13 +1,13 @@
 import sharp from "sharp";
 import { GoogleGenAI } from "@google/genai";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { MenuData } from "../../lib/types";
-import { pickMainDish } from "../../lib/dish-ranking";
+import type { MenuData } from "../../lib/types.js";
+import { pickMainDish } from "../../lib/dish-ranking.js";
 import {
   loadDishCache,
   saveDishCacheEntries,
   normalizeDishName,
-} from "./dish-cache.service";
+} from "./dish-cache.service.js";
 
 // The cache key function lives with the cache now; re-exported because other
 // modules already import it from here.

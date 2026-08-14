@@ -6,7 +6,7 @@ import {
   extractAvailabilityNote,
   parseCanteenHtml,
   CANTEENS,
-} from "./scraper.service";
+} from "./scraper.service.js";
 
 const names = (item: ReturnType<typeof parseItem>) => item.allergens.map((a) => a.name).sort();
 

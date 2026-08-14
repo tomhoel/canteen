@@ -1,5 +1,5 @@
-import type { MenuData, DishOrigin, DishDescription } from "../lib/types";
-import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service";
+import type { MenuData, DishOrigin, DishDescription } from "../lib/types.js";
+import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service.js";
 
 export interface WeeklyMenuResponse {
   menuData: MenuData;

@@ -4,8 +4,8 @@ import type {
   ProductOffer,
   StoreRecommendation,
   DealsResponse,
-} from "../lib/types";
-import { getWeekNumber } from "../lib/dateUtils";
+} from "../lib/types.js";
+import { getWeekNumber } from "../lib/dateUtils.js";
 
 function getRedis() {
   if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {

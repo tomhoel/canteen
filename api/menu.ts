@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getWeeklyMenu, MenuUnavailableError } from "../src/server/menu";
-import { methodNotAllowed, queryParam } from "./_lib/handler";
+import { getWeeklyMenu, MenuUnavailableError } from "../src/server/menu.js";
+import { methodNotAllowed, queryParam } from "./_lib/handler.js";
 
 /**
  * The menu the app renders. Reads stored data only — scraping and AI

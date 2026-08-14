@@ -1,4 +1,4 @@
-import { submitVoteService } from "./services/attendance.service";
+import { submitVoteService } from "./services/attendance.service.js";
 
 export async function getAttendanceHistory() {
   return { entries: [] };

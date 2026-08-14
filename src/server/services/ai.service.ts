@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import type { DishOrigin, DishDescription, Recipe } from "../../lib/types";
+import type { DishOrigin, DishDescription, Recipe } from "../../lib/types.js";
 
 function getAIClient() {
   const apiKey = process.env.GEMINI_API_KEY;
