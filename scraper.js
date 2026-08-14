@@ -1,6 +1,10 @@
-const { chromium } = require('playwright');
-const fs = require('fs');
-const path = require('path');
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const CANTEENS = [
     { name: 'The Hub', token: '6e5cc038-e918-4f97-9a59-d2afa0456abf', hours: '11:00 - 13:30', displayName: 'Eat the street' },
@@ -247,8 +251,5 @@ async function main() {
     console.log('\n✅ Scraping complete! Data saved.');
 }
 
-if (require.main === module) {
-    main();
-}
+export { mergeItems, parseItem };
 
-module.exports = { mergeItems, parseItem };
