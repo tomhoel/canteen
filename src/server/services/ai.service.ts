@@ -79,12 +79,28 @@ function fallbackOrigin(dish: string): DishOrigin {
   return match ? { code: match.code, country: match.country } : { code: "no", country: "Norway" };
 }
 
+/**
+ * An enrichment pass plus the provenance of each entry.
+ *
+ * Both passes below guarantee full coverage by filling gaps with a pattern
+ * fallback, which is right for rendering — no dish should show up blank — but
+ * wrong to persist: a rate-limited run would otherwise write canned copy into
+ * dish_cache, where it is reused forever and never retried. Callers that cache
+ * must consult `fromModel` and store only those.
+ */
+export interface EnrichmentPass<T> {
+  values: Record<string, T>;
+  /** Dishes the model actually answered for; the rest are fallbacks. */
+  fromModel: Set<string>;
+}
+
 export async function detectDishOrigins(
   dishes: string[]
-): Promise<Record<string, DishOrigin>> {
-  if (dishes.length === 0) return {};
+): Promise<EnrichmentPass<DishOrigin>> {
+  if (dishes.length === 0) return { values: {}, fromModel: new Set() };
 
   const result: Record<string, DishOrigin> = {};
+  const fromModel = new Set<string>();
 
   for (const batch of chunk(dishes, BATCH_SIZE)) {
     const prompt = `Analyze these dish names and determine their culinary origin country.
@@ -101,7 +117,10 @@ Return ONLY a JSON object mapping each dish name EXACTLY as given above to its o
     if (parsed) {
       for (const dish of batch) {
         const entry = parsed[dish];
-        if (entry?.code && entry?.country) result[dish] = entry;
+        if (entry?.code && entry?.country) {
+          result[dish] = entry;
+          fromModel.add(dish);
+        }
       }
     }
   }
@@ -112,15 +131,16 @@ Return ONLY a JSON object mapping each dish name EXACTLY as given above to its o
     if (!result[dish]) result[dish] = fallbackOrigin(dish);
   }
 
-  return result;
+  return { values: result, fromModel };
 }
 
 export async function generateDishDescriptions(
   dishes: string[]
-): Promise<Record<string, DishDescription>> {
-  if (dishes.length === 0) return {};
+): Promise<EnrichmentPass<DishDescription>> {
+  if (dishes.length === 0) return { values: {}, fromModel: new Set() };
 
   const result: Record<string, DishDescription> = {};
+  const fromModel = new Set<string>();
 
   for (const batch of chunk(dishes, BATCH_SIZE)) {
     const prompt = `Generate witty, mouth-watering, and quietly funny 1-2 sentence descriptions for these canteen dishes:
@@ -145,7 +165,10 @@ Guidelines:
     if (parsed) {
       for (const dish of batch) {
         const entry = parsed[dish];
-        if (entry && (entry.no || entry.en)) result[dish] = entry;
+        if (entry && (entry.no || entry.en)) {
+          result[dish] = entry;
+          fromModel.add(dish);
+        }
       }
     }
   }
@@ -187,7 +210,7 @@ Guidelines:
     result[dish] = { no: noDesc, en: enDesc };
   }
 
-  return result;
+  return { values: result, fromModel };
 }
 
 export async function generateAIRecipe(

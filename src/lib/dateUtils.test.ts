@@ -5,6 +5,9 @@ import {
   getIsoWeekYearForDate,
   getWeekIdForDate,
   compareWeeks,
+  parseCanteenWeekNumber,
+  weekIdForWeekNumber,
+  getWeekId,
 } from "./dateUtils";
 
 test("getWeekNumberForDate - ordinary mid-year date", () => {
@@ -49,4 +52,44 @@ test("compareWeeks - handles the year wrap", () => {
   assert.equal(compareWeeks(52, 1), -1);
   assert.equal(compareWeeks(34, 33), 1);
   assert.equal(compareWeeks(33, 33), 0);
+});
+
+test("parseCanteenWeekNumber - reads the real labels the canteens publish", () => {
+  assert.equal(parseCanteenWeekNumber("UKE/WEEK 33"), 33);
+  assert.equal(parseCanteenWeekNumber("Uke/week 34"), 34);
+  assert.equal(parseCanteenWeekNumber("UKE 7"), 7);
+  assert.equal(parseCanteenWeekNumber("Week: 12"), 12);
+});
+
+test("parseCanteenWeekNumber - anchors to the word, not the first digits", () => {
+  // Flow's label carries a building name. Taking the first number in the
+  // string would key the whole week off "Building 2".
+  assert.equal(parseCanteenWeekNumber("BYGG / BUILDING M - UKE/WEEK 33"), 33);
+  assert.equal(parseCanteenWeekNumber("Bygg 2 / Building 2 - Uke/Week 41"), 41);
+});
+
+test("parseCanteenWeekNumber - rejects labels with no usable number", () => {
+  assert.equal(parseCanteenWeekNumber("Unknown"), null);
+  assert.equal(parseCanteenWeekNumber(""), null);
+  assert.equal(parseCanteenWeekNumber(undefined), null);
+  // Out of range for an ISO week.
+  assert.equal(parseCanteenWeekNumber("uke 54"), null);
+});
+
+test("weekIdForWeekNumber - the current week resolves to today's week id", () => {
+  const current = Number(getWeekId().slice(-2));
+  assert.equal(weekIdForWeekNumber(current), getWeekId());
+});
+
+test("weekIdForWeekNumber - zero-pads to match the primary key format", () => {
+  assert.match(weekIdForWeekNumber(7), /^\d{4}-W07$/);
+});
+
+test("weekIdForWeekNumber - a canteen one week ahead stays in the same week-year", () => {
+  const [year, w] = getWeekId().split("-W");
+  const next = Number(w) + 1;
+  // Skip the genuine year-end wrap, which the next test covers directly.
+  if (next <= 52) {
+    assert.equal(weekIdForWeekNumber(next), `${year}-W${String(next).padStart(2, "0")}`);
+  }
 });

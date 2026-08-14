@@ -86,6 +86,43 @@ export function compareWeeks(a: number, b: number): -1 | 0 | 1 {
   return b - a <= 26 ? -1 : 1;
 }
 
+/**
+ * The week number a canteen says its menu is for, or null if the label has none.
+ *
+ * Anchored to the word "uke"/"week" rather than taking the first digits in the
+ * string: Flow's label is "Bygg / Building M - Uke/Week 33", and a building
+ * number would otherwise win. Falls back to a bare 1-2 digit number so an
+ * unadorned "34" still parses.
+ */
+export function parseCanteenWeekNumber(label: string | undefined | null): number | null {
+  if (!label) return null;
+  const tagged = label.match(/(?:uke|week)[\s/]*(?:uke|week)?[\s:-]*(\d{1,2})/i);
+  const raw = tagged?.[1] ?? label.match(/\b(\d{1,2})\b/)?.[1];
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= 53 ? n : null;
+}
+
+/**
+ * Canonical week id for a week number a canteen published, e.g. 34 -> "2026-W34".
+ *
+ * The week-year is resolved against today rather than assumed, because a canteen
+ * publishing "week 1" during week 52 means *next* year. compareWeeks already
+ * encodes that wrap rule; this only has to apply the resulting direction.
+ */
+export function weekIdForWeekNumber(weekNumber: number): string {
+  const { year, month, day } = todayOsloParts();
+  const currentWeek = getWeekNumberForDate(year, month, day);
+  let weekYear = getIsoWeekYearForDate(year, month, day);
+
+  const direction = compareWeeks(weekNumber, currentWeek);
+  // Only a wrap moves the year: ahead but numerically smaller, or behind but
+  // numerically larger. A normal ahead/behind stays inside the same week-year.
+  if (direction === 1 && weekNumber < currentWeek) weekYear += 1;
+  if (direction === -1 && weekNumber > currentWeek) weekYear -= 1;
+
+  return `${weekYear}-W${String(weekNumber).padStart(2, '0')}`;
+}
+
 export type DisplayMode = 'weekday-current' | 'weekend-preview' | 'weekend-recap';
 
 export interface DisplayContext {

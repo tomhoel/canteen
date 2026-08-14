@@ -63,31 +63,26 @@ export default defineConfig([
     },
   },
 
-  // Legacy one-off maintenance utilities, written as CommonJS before the
-  // package moved to "type": "module". They are not part of the app or the
-  // build; they would need renaming to .cjs to actually run today.
+  // One-off maintenance utilities, kept as CommonJS. The .cjs extension is what
+  // makes them runnable at all: "type": "module" applies to .js, so as .js every
+  // one of them died on `require is not defined in ES module scope`.
   {
     files: [
-      "fix-image-sizes.js",
-      "generate-icon.js",
-      "remove-grey-bg.js",
-      "validate-images.js",
-      "scripts/rebuild-nobg.js",
-      "scripts/upload-closed-plates.js",
+      "fix-image-sizes.cjs",
+      "generate-icon.cjs",
+      "remove-grey-bg.cjs",
+      "validate-images.cjs",
+      "scripts/rebuild-nobg.cjs",
+      "scripts/upload-closed-plates.cjs",
     ],
+    languageOptions: {
+      // These used to inherit node globals from the generic **/*.js block; as
+      // .cjs they match nothing else, so declare the environment explicitly.
+      sourceType: "commonjs",
+      globals: { ...globals.node },
+    },
     rules: {
       "@typescript-eslint/no-require-imports": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-    },
-  },
-
-  // The legacy Playwright scraper evaluates callbacks in the page context.
-  {
-    files: ["scraper.js"],
-    languageOptions: {
-      globals: { ...globals.node, ...globals.browser },
-    },
-    rules: {
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
