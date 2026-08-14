@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { getWeeklyMenu } from "@/server/menu";
+import { getWeeklyMenu } from "@/lib/api-client";
 import HomeClient from "@/components/HomeClient";
 import SkeletonCard from "@/components/SkeletonCard";
 

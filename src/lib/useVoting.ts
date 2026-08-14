@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { getLocalDateKey } from "@/lib/dateUtils";
 import type { CanteenDayItem } from "@/lib/types";
-import { submitVote } from "@/server/attendance";
-import { sendSlackNotification } from "@/server/notify";
+import { submitVote, sendSlackNotification } from "@/lib/api-client";
 
 interface UseVotingReturn {
   votes: Record<string, number>;

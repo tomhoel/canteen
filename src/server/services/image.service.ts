@@ -1,21 +1,43 @@
 import sharp from "sharp";
-import ws from "ws";
 import { GoogleGenAI } from "@google/genai";
-import { createClient } from "@supabase/supabase-js";
-import type { MenuData } from "@/lib/types";
-import { scoreMainDish } from "./scraper.service";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { MenuData } from "../../lib/types.ts";
+import { pickMainDish } from "../../lib/dish-ranking.ts";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://sloutnqpqfesyoycklgd.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsb3V0bnFwcWZlc3lveWNrbGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NzQ2NzYsImV4cCI6MjA5MzU1MDY3Nn0.8QQbCvzFkZzQjJUEYBhBxAHJ-wgf-tfFyj5i-3sUfdo";
+/**
+ * Storage writes need the service role key. This used to fall back to a
+ * hardcoded anon key, under which every upload was rejected by RLS while the
+ * run still reported success — which is why stale plate images kept being
+ * served against new dishes.
+ */
+let cachedClient: SupabaseClient | null = null;
+function getStorageClient(): SupabaseClient {
+  if (cachedClient) return cachedClient;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false },
-  realtime: { transport: ws as any },
-});
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set — cannot upload dish images.");
+  if (!key) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is not set — refusing to upload with the anon key, " +
+        "which RLS would reject while still reporting success."
+    );
+  }
+
+  cachedClient = createClient(url, key, { auth: { persistSession: false } });
+  return cachedClient;
+}
 
 const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const IMAGE_SIZE_PX = 1024;
 const PLATE_RESIZE_PX = 880;
+
+/**
+ * Image-capable Gemini model. A plain text model (e.g. gemini-2.5-flash) will
+ * happily accept responseModalities: ["Text","Image"] and then return no
+ * inlineData at all, so every generation silently yields null.
+ */
+const IMAGE_MODEL = "gemini-3.1-flash-image-preview";
 
 function getAIClient() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -27,7 +49,7 @@ export function normalizeDishName(name: string): string {
   if (!name) return "";
   return name
     .toLowerCase()
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -79,7 +101,9 @@ export async function removeBgBuffer(inputBuffer: Buffer): Promise<Buffer> {
     if (x > 0) enqueue(idx - 1);
     if (x < width - 1) enqueue(idx + 1);
     if (y > 0) enqueue(idx - width);
-    if (y < height - 1) enqueue(idx + height);
+    // Stepping down one row advances by `width`, not `height`. These are equal
+    // for the square images Gemini returns, which is why this went unnoticed.
+    if (y < height - 1) enqueue(idx + width);
   }
 
   for (let i = 0; i < totalPixels; i++) {
@@ -106,7 +130,7 @@ export async function uploadToSupabase(
   buffer: Buffer,
   contentType = "image/png"
 ): Promise<boolean> {
-  if (!supabase) return false;
+  const supabase = getStorageClient();
   try {
     const { error } = await supabase.storage
       .from(bucket)
@@ -124,11 +148,14 @@ export async function copyInSupabaseBucket(
   srcPath: string,
   destPath: string
 ): Promise<boolean> {
-  if (!supabase || srcPath === destPath) return false;
+  if (srcPath === destPath) return false;
+  const supabase = getStorageClient();
   try {
     const { error } = await supabase.storage.from(bucket).copy(srcPath, destPath);
     if (!error) return true;
-  } catch (e) {}
+  } catch {
+    // Server-side copy is an optimisation; fall through to download+upload.
+  }
 
   try {
     const { data, error } = await supabase.storage.from(bucket).download(srcPath);
@@ -140,11 +167,7 @@ export async function copyInSupabaseBucket(
   }
 }
 
-export async function generateSingleAIImage(
-  dishName: string,
-  canteenName: string,
-  day: string
-): Promise<Buffer | null> {
+export async function generateSingleAIImage(dishName: string): Promise<Buffer | null> {
   const ai = getAIClient();
   if (!ai) return null;
 
@@ -161,7 +184,7 @@ Strict Exclusions: NO white plates, NO shadows, NO utensils, NO table text or ga
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: IMAGE_MODEL,
       contents: [{ role: "user", parts: [{ text: promptText }] }],
       config: {
         responseModalities: ["Text", "Image"],
@@ -185,10 +208,44 @@ Strict Exclusions: NO white plates, NO shadows, NO utensils, NO table text or ga
   return null;
 }
 
-export async function processAllCanteenAIImages(menuData: MenuData) {
-  console.log("📸 Auditing and processing AI dish images for main dishes...");
+export interface ImageRunOptions {
+  /**
+   * Stop starting new *generations* once this much wall-clock has elapsed.
+   * Archive reuse is cheap and keeps running. Defaults to no limit.
+   */
+  budgetMs?: number;
 
-  for (const [canteenName, canteen] of Object.entries(menuData.canteens)) {
+  /**
+   * Regenerate even when an archived image already exists. Used to rebuild
+   * every plate after a prompt change — the job the manual
+   * force-regen-images workflow used to do. Expensive: one model call per
+   * main dish of the week.
+   */
+  force?: boolean;
+}
+
+export interface ImageRunResult {
+  reused: number;
+  generated: number;
+  failed: number;
+  /** Main dishes left without an image because the budget ran out. */
+  deferred: number;
+  budgetExhausted: boolean;
+}
+
+interface ImageJob {
+  canteenName: string;
+  dayKey: string;
+  dish: string;
+  slotPath: string;
+  archivePath: string;
+}
+
+/** Flattens the week into one job per canteen-day main dish. */
+function buildImageJobs(menuData: MenuData): ImageJob[] {
+  const jobs: ImageJob[] = [];
+
+  for (const [canteenName, canteen] of Object.entries(menuData.canteens || {})) {
     const slug = canteenName.toLowerCase().replace(/\s+/g, "_");
 
     for (const dayItem of canteen.menu || []) {
@@ -198,39 +255,105 @@ export async function processAllCanteenAIImages(menuData: MenuData) {
       const noItems = dayItem.no?.items || [];
       const enItems = dayItem.en?.items || [];
       const rawItems = noItems.length > 0 ? noItems : enItems;
-
       if (rawItems.length === 0) continue;
 
-      // Rank items to pick out the true Main Dish (e.g. Buffalo Wings, Slakterbiff, Coq au vin)
-      const copy = [...rawItems].sort((a, b) => {
-        return scoreMainDish(b.dish, canteenName) - scoreMainDish(a.dish, canteenName);
+      // Same ranking the client uses, so the generated plate belongs to the
+      // dish the card actually shows.
+      const mainDish = pickMainDish(rawItems, canteenName);
+      if (!mainDish?.dish) continue;
+
+      jobs.push({
+        canteenName,
+        dayKey,
+        dish: mainDish.dish,
+        slotPath: `${dayKey}/${slug}.png`,
+        archivePath: `archive/${normalizeDishName(mainDish.dish)}.png`,
       });
-
-      const mainDish = copy[0];
-      if (!mainDish || !mainDish.dish) continue;
-
-      const cacheKey = normalizeDishName(mainDish.dish);
-      const slotPath = `${dayKey}/${slug}.png`;
-      const archivePath = `archive/${cacheKey}.png`;
-
-      console.log(`🍽️ Main Dish for ${canteenName} (${dayKey}): "${mainDish.dish}"`);
-
-      // Smart Cache Check: Check if an archived image exists for this exact dish
-      const copiedFromArchive = await copyInSupabaseBucket("images_nobg", archivePath, slotPath);
-      if (copiedFromArchive) {
-        console.log(`  ♻️ Reused archived AI image from Supabase history for "${mainDish.dish}"`);
-        continue;
-      }
-
-      // Cache Miss: Generate fresh AI plate image via Gemini API
-      const aiBuffer = await generateSingleAIImage(mainDish.dish, canteenName, dayKey);
-      if (aiBuffer) {
-        const transparentBuffer = await removeBgBuffer(aiBuffer);
-        // Upload to daily slot AND archive for future reuse
-        await uploadToSupabase("images_nobg", slotPath, transparentBuffer);
-        await uploadToSupabase("images_nobg", archivePath, transparentBuffer);
-        console.log(`  ✨ Generated & archived transparent AI food image to Supabase: images_nobg/${slotPath}`);
-      }
     }
   }
+
+  return jobs;
+}
+
+/**
+ * Ensures every main dish of the week has a plate image in its daily slot.
+ *
+ * Work is ordered cheap-first: dishes already in the archive are copied
+ * (fast, free), and only genuine cache misses hit the image model. With a
+ * budget set, unfinished generations are simply deferred — the next run picks
+ * them up, because the archive check makes the whole pass idempotent.
+ */
+export async function processAllCanteenAIImages(
+  menuData: MenuData,
+  options: ImageRunOptions = {}
+): Promise<ImageRunResult> {
+  const { budgetMs, force = false } = options;
+  const startedAt = Date.now();
+  const outOfTime = () => budgetMs !== undefined && Date.now() - startedAt >= budgetMs;
+
+  const jobs = buildImageJobs(menuData);
+  console.log(
+    `📸 ${jobs.length} main dishes to ensure images for${force ? " (force: ignoring archive)" : ""}...`
+  );
+
+  const result: ImageRunResult = {
+    reused: 0,
+    generated: 0,
+    failed: 0,
+    deferred: 0,
+    budgetExhausted: false,
+  };
+
+  for (const job of jobs) {
+    // Cheap path: this exact dish has been generated before at some point.
+    if (!force) {
+      const copiedFromArchive = await copyInSupabaseBucket(
+        "images_nobg",
+        job.archivePath,
+        job.slotPath
+      );
+      if (copiedFromArchive) {
+        result.reused++;
+        console.log(
+          `  ♻️ Reused archived image for "${job.dish}" (${job.canteenName}/${job.dayKey})`
+        );
+        continue;
+      }
+    }
+
+    if (outOfTime()) {
+      result.deferred++;
+      result.budgetExhausted = true;
+      continue;
+    }
+
+    const aiBuffer = await generateSingleAIImage(job.dish);
+    if (!aiBuffer) {
+      result.failed++;
+      continue;
+    }
+
+    const transparentBuffer = await removeBgBuffer(aiBuffer);
+    const slotOk = await uploadToSupabase("images_nobg", job.slotPath, transparentBuffer);
+    // Archive under the dish name so the same dish is free for every future week.
+    await uploadToSupabase("images_nobg", job.archivePath, transparentBuffer);
+
+    if (slotOk) {
+      result.generated++;
+      console.log(`  ✨ Generated images_nobg/${job.slotPath} for "${job.dish}"`);
+    } else {
+      result.failed++;
+    }
+  }
+
+  if (result.budgetExhausted) {
+    console.warn(
+      `⏳ Image budget of ${budgetMs}ms exhausted — ${result.deferred} dish(es) deferred to the next run.`
+    );
+  }
+  console.log(
+    `📸 Images: ${result.reused} reused, ${result.generated} generated, ${result.failed} failed, ${result.deferred} deferred.`
+  );
+
+  return result;
 }

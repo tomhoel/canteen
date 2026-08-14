@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Recipe } from "@/lib/types";
-import { generateRecipe } from "@/server/recipe";
+import { generateRecipe } from "@/lib/api-client";
 
 interface RecipeModalState {
   isOpen: boolean;

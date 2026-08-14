@@ -5,8 +5,8 @@ import type {
   MenyProduct,
   MenyIngredientMatch,
   MenyResponse,
-} from "@/lib/types";
-import { getWeekNumber } from "@/lib/dateUtils";
+} from "../lib/types.ts";
+import { getWeekNumber } from "../lib/dateUtils.ts";
 
 function getRedis() {
   if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
@@ -98,7 +98,7 @@ interface MenyApiHit {
 function extractWords(text: string): string[] {
   return text
     .toLowerCase()
-    .split(/[\s,.\-\/]+/)
+    .split(/[\s,.\-/]+/)
     .filter((w) => w.length >= 3);
 }
 
@@ -214,7 +214,7 @@ export async function searchMeny(data: MenySearchPayload): Promise<MenyResponse>
     const orig = ingredients[i];
     if (i > 0) await delay(50);
 
-    let hits = await searchMenyApi(t.searchTerm, activeStoreId);
+    const hits = await searchMenyApi(t.searchTerm, activeStoreId);
     let relevant = hits
       .filter((h) => !h.contentData._source.isOutOfStock)
       .filter((h) => isRelevantProduct(h, t.searchTerm));

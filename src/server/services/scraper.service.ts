@@ -1,5 +1,10 @@
 import * as cheerio from "cheerio";
-import type { MenuData, CanteenData, MenuItem, Allergen } from "@/lib/types";
+import type { MenuData, CanteenData, MenuItem, Allergen } from "../../lib/types.ts";
+import { rankItems, scoreMainDish } from "../../lib/dish-ranking.ts";
+
+// Re-exported so existing importers of the scraper keep working; the single
+// implementation now lives in lib/dish-ranking.ts.
+export { scoreMainDish };
 
 export interface CanteenConfig {
   name: string;
@@ -106,49 +111,6 @@ export function splitJammedDishes(text: string): string[] {
     .filter((s) => s.length > 1);
 }
 
-export function scoreMainDish(dish: string, canteenName: string): number {
-  let score = 0;
-  const lower = dish.toLowerCase();
-
-  // Rule 1: Pizza is NEVER the main dish for Eat the street
-  if (canteenName === "Eat the street" && lower.includes("pizza")) {
-    return -100;
-  }
-  if (lower.includes("pizza")) score -= 80;
-
-  // Rule 2: Soups are side dishes
-  if (lower.includes("suppe") || lower.includes("soup")) score -= 50;
-
-  // Rule 3: Heavy protein / centerpiece main dish boost (NO & EN)
-  if (
-    /biff|beef|steak|karbonad|patties|patty|kylling|chicken|svin|pork|torsk|cod|laks|salmon|rødspette|plaice|elg|moose|stroganoff|gyros|wings|coq au vin|panert|breaded|slakterbiff|hanger|kjøtt|meat|bolognese|tortilla|casserole/i.test(
-      lower
-    )
-  ) {
-    score += 50;
-  }
-
-  // Rule 4: Complete meals with sides (NO & EN)
-  if (
-    /med stekte|with fried|med fløte|with cream|med poteter|with potatoes|med fries|with fries|serveres med|served with|med ris/i.test(
-      lower
-    )
-  ) {
-    score += 30;
-  }
-
-  // Rule 5: Pure vegetarian sides penalty unless it's the only option
-  if (
-    /^stekt ris|^fried rice|^couscous|^nudler|^noodles|^falafel|^linsegryte|^lentil|^bønnegryte|^bean stew|^sopprisotto|^mushroom risotto/i.test(
-      lower
-    )
-  ) {
-    score -= 30;
-  }
-
-  return score;
-}
-
 export function parseItem(text: string): MenuItem {
   let dish = text;
   const allergens: Allergen[] = [];
@@ -172,6 +134,23 @@ export function parseItem(text: string): MenuItem {
       return " ";
     }
     return nums.length > 0 ? " " : ` (${inner}) `;
+  });
+
+  // Pattern 1b: Allergen numbers jammed mid-string against the following word,
+  // e.g. "Stenbitkaker med eggesmør, råkost og 2,4potet" — the canteen types
+  // them inline and the widget emits them verbatim. Only strip a run when
+  // EVERY number in it is a real allergen id, so quantities survive untouched
+  // ("200g biff" leaves "0g" as a candidate, 0 is not an allergen, so it stays).
+  dish = dish.replace(/(\d{1,2}(?:,\d{1,2})*)(?=[A-Za-zÆØÅæøå])/g, (match, run: string) => {
+    const nums = run.split(",").map((n) => n.trim());
+    if (!nums.every((n) => ALLERGEN_MAP[n])) return match;
+
+    nums.forEach((n) => {
+      if (!allergens.find((a) => a.id === n)) {
+        allergens.push({ id: n, name: ALLERGEN_MAP[n] });
+      }
+    });
+    return " ";
   });
 
   // Pattern 2: Trailing bare allergen numbers (e.g. "Betasuppe med røkt pølse7" or "Karbonader 1,3,4")
@@ -387,22 +366,13 @@ export async function scrapeSingleCanteen(
       .map((item) => parseItem(item))
       .filter((it) => it.dish.trim().length > 0);
 
-    if (parsed.length > 0) {
-      // Intelligently rank items to select the true Main Dish & place at index 0
-      parsed.sort((a, b) => {
-        const scoreA = scoreMainDish(a.dish, canteen.displayName);
-        const scoreB = scoreMainDish(b.dish, canteen.displayName);
-        return scoreB - scoreA;
-      });
-
-      parsed.forEach((item, idx) => {
-        item.isMain = idx === 0;
-      });
-    }
+    // Rank so the true main dish sits at index 0 with isMain set. Shared with
+    // the client and the image pipeline so all three pick the same dish.
+    const ranked = rankItems(parsed, canteen.displayName);
 
     groupedMenu[dayKey][lang] = {
       label: sec.header,
-      items: parsed,
+      items: ranked,
       ...(availabilityNotes.length ? { availabilityNotes } : {}),
     };
   });

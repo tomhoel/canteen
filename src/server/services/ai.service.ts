@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import type { DishOrigin, DishDescription, Recipe } from "@/lib/types";
+import type { DishOrigin, DishDescription, Recipe } from "../../lib/types.ts";
 
 function getAIClient() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -7,8 +7,54 @@ function getAIClient() {
   return new GoogleGenAI({ apiKey });
 }
 
-// Model cascade: try fast & free models in order
-const FLASH_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+/**
+ * Model cascade for the text calls, in preference order. These are the models
+ * the previous pipeline ran against in production; the earlier v2 list
+ * included gemini-1.5-flash, which is retired and fails every call.
+ */
+const FLASH_MODELS = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+];
+
+/**
+ * Dishes per request. A full week is ~100 distinct dishes across both
+ * languages; asking for all of them in one shot produces a long JSON reply
+ * that gets truncated, and a truncated reply fails JSON.parse and throws away
+ * every dish in the batch. Smaller batches also mean one bad batch degrades to
+ * the pattern fallback on its own rather than for the whole week.
+ */
+const BATCH_SIZE = 40;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/** Runs one prompt through the cascade, returning parsed JSON or null. */
+async function generateJson<T>(prompt: string, label: string): Promise<T | null> {
+  const ai = getAIClient();
+  if (!ai) return null;
+
+  for (const model of FLASH_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: { parts: [{ text: prompt }] },
+        config: { responseMimeType: "application/json" },
+      });
+
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) continue;
+      return JSON.parse(text) as T;
+    } catch (err: any) {
+      console.warn(`Model ${model} failed for ${label}: ${err?.message ?? err}`);
+    }
+  }
+  return null;
+}
 
 // Smart pattern-based fallback origin detection when AI API key is not present or rate limited
 const ORIGIN_PATTERNS: Array<{ regex: RegExp; code: string; country: string }> = [
@@ -27,51 +73,45 @@ const ORIGIN_PATTERNS: Array<{ regex: RegExp; code: string; country: string }> =
   { regex: /fiskesuppe|karbonader|kjøttkaker|norsk|betasuppe|elg|potet/i, code: "no", country: "Norway" },
 ];
 
+/** Pattern-based origin, used for anything the model didn't cover. */
+function fallbackOrigin(dish: string): DishOrigin {
+  const match = ORIGIN_PATTERNS.find((p) => p.regex.test(dish));
+  return match ? { code: match.code, country: match.country } : { code: "no", country: "Norway" };
+}
+
 export async function detectDishOrigins(
   dishes: string[]
 ): Promise<Record<string, DishOrigin>> {
   if (dishes.length === 0) return {};
-  const ai = getAIClient();
 
-  if (ai) {
+  const result: Record<string, DishOrigin> = {};
+
+  for (const batch of chunk(dishes, BATCH_SIZE)) {
     const prompt = `Analyze these dish names and determine their culinary origin country.
 Every dish MUST have a country origin. If a dish is a general Scandinavian/Norwegian canteen dish, classify it as Norway (code: "no", country: "Norway").
 
-${dishes.map((d, i) => `${i + 1}. ${d}`).join("\n")}
+${batch.map((d, i) => `${i + 1}. ${d}`).join("\n")}
 
-Return ONLY a JSON object mapping each dish name to its origin:
+Return ONLY a JSON object mapping each dish name EXACTLY as given above to its origin:
 {
   "Dish Name": { "code": "2-letter ISO country code e.g. it, fr, th, mx, no", "country": "English Country Name" }
 }`;
 
-    for (const model of FLASH_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: { parts: [{ text: prompt }] },
-          config: { responseMimeType: "application/json" },
-        });
-
-        const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          return JSON.parse(text) as Record<string, DishOrigin>;
-        }
-      } catch (err) {
-        console.warn(`Model ${model} failed for origin detection, trying next model in cascade...`);
+    const parsed = await generateJson<Record<string, DishOrigin>>(prompt, "origin detection");
+    if (parsed) {
+      for (const dish of batch) {
+        const entry = parsed[dish];
+        if (entry?.code && entry?.country) result[dish] = entry;
       }
     }
   }
 
-  // Fallback pattern matching — defaults to Norway for 100% dish coverage
-  const result: Record<string, DishOrigin> = {};
+  // Guarantee full coverage: anything the model skipped, renamed or dropped
+  // still gets an origin, so no dish renders without a flag.
   for (const dish of dishes) {
-    const match = ORIGIN_PATTERNS.find((p) => p.regex.test(dish));
-    if (match) {
-      result[dish] = { code: match.code, country: match.country };
-    } else {
-      result[dish] = { code: "no", country: "Norway" };
-    }
+    if (!result[dish]) result[dish] = fallbackOrigin(dish);
   }
+
   return result;
 }
 
@@ -79,16 +119,18 @@ export async function generateDishDescriptions(
   dishes: string[]
 ): Promise<Record<string, DishDescription>> {
   if (dishes.length === 0) return {};
-  const ai = getAIClient();
 
-  if (ai) {
+  const result: Record<string, DishDescription> = {};
+
+  for (const batch of chunk(dishes, BATCH_SIZE)) {
     const prompt = `Generate witty, mouth-watering, and quietly funny 1-2 sentence descriptions for these canteen dishes:
 
-${dishes.map((d, i) => `${i + 1}. ${d}`).join("\n")}
+${batch.map((d, i) => `${i + 1}. ${d}`).join("\n")}
 
 Guidelines:
 - Make them sound delicious with subtle Scandinavian/workday humor, light sarcasm, or gourmet chef flair.
-- Return ONLY a JSON object mapping each dish name to bilingual descriptions:
+- Describe the dish named, not a different one.
+- Return ONLY a JSON object mapping each dish name EXACTLY as given above to bilingual descriptions:
 {
   "Dish Name": {
     "no": "Appetizing and quietly witty description in Norwegian (Bokmål)",
@@ -96,27 +138,22 @@ Guidelines:
   }
 }`;
 
-    for (const model of FLASH_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: { parts: [{ text: prompt }] },
-          config: { responseMimeType: "application/json" },
-        });
-
-        const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          return JSON.parse(text) as Record<string, DishDescription>;
-        }
-      } catch (err) {
-        console.warn(`Model ${model} failed for description generation, trying next model...`);
+    const parsed = await generateJson<Record<string, DishDescription>>(
+      prompt,
+      "description generation"
+    );
+    if (parsed) {
+      for (const dish of batch) {
+        const entry = parsed[dish];
+        if (entry && (entry.no || entry.en)) result[dish] = entry;
       }
     }
   }
 
-  // Enriched, quietly witty fallback description generator for Scandinavian canteen dishes
-  const result: Record<string, DishDescription> = {};
+  // Any dish the model skipped falls back to the canned copy below, so every
+  // dish carries a description rather than rendering blank.
   for (const dish of dishes) {
+    if (result[dish]) continue;
     const lower = dish.toLowerCase();
     let noDesc = `Chef's special fra kantinens helter. Tilberedt med stolthet og friske råvarer.`;
     let enDesc = `Chef's special crafted by canteen heroes. Made with pride and fresh ingredients.`;

@@ -1,5 +1,5 @@
 import { generateAIRecipe } from "./services/ai.service";
-import { getWeekNumber } from "@/lib/dateUtils";
+import { getWeekNumber } from "../lib/dateUtils.ts";
 import { Redis } from "@upstash/redis";
 
 function getRedis() {

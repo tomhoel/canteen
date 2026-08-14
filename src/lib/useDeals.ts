@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Recipe, DealsResponse } from "@/lib/types";
-import { fetchDeals } from "@/server/deals";
+import { fetchDeals } from "@/lib/api-client";
 
 interface DealsViewState {
   isOpen: boolean;

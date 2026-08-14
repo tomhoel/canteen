@@ -433,8 +433,13 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         // weekly_menus rows have empty entries from a scraper bug fixed in
         // a later commit; new rows shouldn't ever land here).
         const displaySideDishes = items?.filter(i => !i.isMain && i.dish.trim()).slice(0, 3) || [];
-        const noMainDish = noItems?.find(i => i.isMain && i.dish.trim());
-        const noSideDishes = noItems?.filter(i => !i.isMain && i.dish.trim()) || [];
+        // Rank the Norwegian list with the SAME function rather than trusting
+        // the stored `isMain` flag. Rows written by an earlier version of the
+        // ranking disagree with today's, and reading the flag straight from
+        // the database attached the wrong dish's allergens to the card.
+        const noRanked = getRankedItems(noItems, canteenName);
+        const noMainDish = noRanked.find(i => i.isMain && i.dish.trim());
+        const noSideDishes = noRanked.filter(i => !i.isMain && i.dish.trim());
         const mainAllergens = noMainDish?.allergens || mainDish?.allergens || [];
         const sideDishes = displaySideDishes.map((item, idx) => ({
           ...item,
@@ -466,12 +471,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const isOutdated = cmp === -1;
         const isAhead = cmp === 1;
         const enLookup = dayEntry?.en?.items || [];
-        const noLookup = dayEntry?.no?.items || [];
         // Origin + description follow the kitchen's language (NO). The EN title
         // is a translation maintained by the canteen and occasionally points at
         // a completely different dish (e.g. NO "Svensk kjøttgrateng" vs.
         // EN "Braised chicken leg"). Trust NO for cross-references.
-        const lookupMainDish = (noLookup.length > 0 ? noLookup : enLookup).find(i => i.isMain);
+        const lookupMainDish =
+          noMainDish ?? getRankedItems(enLookup, canteenName).find(i => i.isMain);
         const origin = dishOrigins[lookupMainDish?.dish || ""] ?? null;
         const descEntry = dishDescriptions[lookupMainDish?.dish || ""];
         const description = descEntry

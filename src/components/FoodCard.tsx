@@ -117,7 +117,7 @@ export default function FoodCard({
       )}
       <div
         className="card-image-wrapper"
-        onClick={e => { e.stopPropagation(); mainDish && onImageClick(data); }}
+        onClick={e => { e.stopPropagation(); if (mainDish) onImageClick(data); }}
       >
         <div className="card-image-circle">
           {imgError ? (

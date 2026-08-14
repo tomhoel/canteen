@@ -1,74 +1,57 @@
 #!/usr/bin/env node
 /**
- * Smart Weekly Update
- * Compares old menu with freshly scraped menu.
- * Only regenerates images for canteens whose main dishes actually changed.
- * Saves Gemini API calls by skipping canteens that are already up-to-date.
+ * Manual weekly update — the same work the Vercel Cron job does, run locally.
+ *
+ * The scheduled run lives in api/cron/update.ts and is triggered by Vercel
+ * Cron (see vercel.json). This script exists for running the pipeline by hand:
+ * after a prompt change, to backfill a week, or to debug a scrape without
+ * waiting for the schedule.
+ *
+ *   npm run update              # scrape + enrich + persist, reusing archived images
+ *   npm run update -- --force   # also regenerate every dish image
+ *   npm run update -- --week 2026-W34
+ *
+ * Requires GEMINI_API_KEY, NEXT_PUBLIC_SUPABASE_URL and
+ * SUPABASE_SERVICE_ROLE_KEY in the environment (a local .env is picked up by
+ * tsx automatically via --env-file, or export them in the shell).
+ *
+ * Run through tsx (`npm run update`) rather than bare node: it imports the
+ * TypeScript services directly. The previous version imported
+ * "./src/server/services/menu.service.js" — a file that does not exist,
+ * because the module is .ts — so `node smart-update.js`, which is exactly what
+ * the old CI workflow ran, failed with ERR_MODULE_NOT_FOUND every time.
  */
 
-import fs from 'fs';
-import path from 'path';
-import ws from 'ws';
-import { fileURLToPath } from 'url';
-import { createClient } from '@supabase/supabase-js';
+import { runWeeklyUpdateService } from "./src/server/services/menu.service.ts";
+import { processAllCanteenAIImages } from "./src/server/services/image.service.ts";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+function parseArgs(argv) {
+  const force = argv.includes("--force");
+  const weekFlag = argv.indexOf("--week");
+  const weekId = weekFlag !== -1 ? argv[weekFlag + 1] : undefined;
+  return { force, weekId };
+}
 
-// Supabase Configuration
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://sloutnqpqfesyoycklgd.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsb3V0bnFwcWZlc3lveWNrbGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NzQ2NzYsImV4cCI6MjA5MzU1MDY3Nn0.8QQbCvzFkZzQjJUEYBhBxAHJ-wgf-tfFyj5i-3sUfdo";
+async function main() {
+  const { force, weekId } = parseArgs(process.argv.slice(2));
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-  realtime: { transport: ws },
+  console.log("╔══════════════════════════════════════════════════════════╗");
+  console.log("║  WEEKLY MENU UPDATE (manual)                             ║");
+  console.log("╚══════════════════════════════════════════════════════════╝\n");
+
+  const record = await runWeeklyUpdateService(weekId);
+  console.log(`\n🔍 Generating dish images for ${record.weekId}...`);
+
+  const images = await processAllCanteenAIImages(record.menuData, { force });
+
+  console.log("\n🏁 Finished.");
+  console.log(
+    `   week ${record.weekId} · ${Object.keys(record.menuData.canteens).length} canteens · ` +
+      `${images.reused} images reused, ${images.generated} generated, ${images.failed} failed`
+  );
+}
+
+main().catch((err) => {
+  console.error("\n❌ Update failed:", err.message);
+  process.exit(1);
 });
-
-export const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-const CLOSED_KEYWORDS = ['stengt', 'closed', 'lukket'];
-
-/** Returns true if a dish name is a "closed" placeholder, not real food. */
-export function isDishClosed(dishName) {
-    if (!dishName) return true;
-    const lower = dishName.toLowerCase();
-    return CLOSED_KEYWORDS.some(kw => lower.includes(kw));
-}
-
-/** Returns items prioritizing Norwegian over English */
-export function getDayItems(entry) {
-    const no = entry?.no?.items || [];
-    const en = entry?.en?.items || [];
-    return no.length > 0 ? no : en;
-}
-
-/** Ranks main dishes, penalizing Pizza for Eat the street and soups/sides */
-export function scoreMainDish(dish, canteenName) {
-    let score = 0;
-    const lower = (dish || '').toLowerCase();
-    if (canteenName === "Eat the street" && lower.includes("pizza")) return -100;
-    if (lower.includes("pizza")) score -= 80;
-    if (lower.includes("suppe") || lower.includes("soup")) score -= 50;
-    if (/biff|beef|steak|karbonad|patties|patty|kylling|chicken|svin|pork|torsk|cod|laks|salmon|rødspette|plaice|elg|moose|stroganoff|gyros|wings|coq au vin|panert|breaded|slakterbiff|hanger|kjøtt|meat|bolognese|tortilla|casserole/i.test(lower)) score += 50;
-    if (/med stekte|with fried|med fløte|with cream|med poteter|with potatoes|med fries|with fries|serveres med|served with|med ris/i.test(lower)) score += 30;
-    if (/^stekt ris|^fried rice|^couscous|^nudler|^noodles|^falafel|^linsegryte|^lentil|^bønnegryte|^bean stew|^sopprisotto|^mushroom risotto/i.test(lower)) score -= 30;
-    return score;
-}
-
-export async function runSmartUpdate() {
-    console.log('╔══════════════════════════════════════════════════════════╗');
-    console.log('║  SMART WEEKLY UPDATE                                    ║');
-    console.log('╚══════════════════════════════════════════════════════════╝\n');
-
-    const { runWeeklyUpdateService } = await import('./src/server/services/menu.service.js');
-    const { processAllCanteenAIImages } = await import('./src/server/services/image.service.js');
-
-    const record = await runWeeklyUpdateService();
-    console.log(`\n🔍 Auditing and generating AI dish images for main dishes (${record.weekId})...`);
-    await processAllCanteenAIImages(record.menuData);
-
-    console.log('\n🏁 FINISHED SMART UPDATE');
-}
-
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-    runSmartUpdate().catch(console.error);
-}
