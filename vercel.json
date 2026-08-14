@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/cron/update.ts": {
+      "maxDuration": 300,
+      "memory": 2048
+    },
+    "api/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    { "path": "/api/cron/update", "schedule": "0 6 * * 1-5" },
+    { "path": "/api/cron/update", "schedule": "0 9 * * 1-5" }
+  ],
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

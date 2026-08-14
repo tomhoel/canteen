@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { MenyResponse, MenyIngredientMatch, MenyProduct } from "@/lib/types";
+import type { MenyResponse, MenyIngredientMatch } from "@/lib/types";
+import { PriceRanger } from "@/components/PriceRanger";
 
 interface MenyViewProps {
   meny: MenyResponse;
@@ -9,7 +10,7 @@ interface MenyViewProps {
 
 function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang: "no" | "en"; index: number }) {
   const [showAlts, setShowAlts] = useState(false);
-  const hasAlts = match.alternatives.length > 0;
+  const hasAlts = (match.alternatives || []).length > 0;
   const recipeDesc = [match.recipeAmount, match.recipeUnit].filter(Boolean).join(" ");
 
   return (
@@ -64,7 +65,7 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
 
       {hasAlts && showAlts && (
         <div className="mv-alts">
-          {match.alternatives.map((alt, ai) => (
+          {(match.alternatives || []).map((alt, ai) => (
             <ProductLink key={alt.ean} url={alt.productUrl}>
               <div className="mv-alt" style={{ animationDelay: `${ai * 50}ms` }}>
                 <div className="mv-alt-thumb">
@@ -99,14 +100,17 @@ function ProductLink({ url, children }: { url: string | null | undefined; childr
 }
 
 export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
-  const { matches, totalPrice, matchedCount, totalCount, allMatched, storeName } = meny;
-  const outOfStockCount = matches.filter(m => m.matched && m.outOfStock).length;
-  const trueAllMatched = allMatched && outOfStockCount === 0;
+  const { matches, totalCount, storeName } = meny;
+  const [maxPrice, setMaxPrice] = useState(250);
 
-  const matched = matches.filter(m => m.matched);
-  const unmatched = matches.filter(m => !m.matched);
-  const toBuy = matched.filter(m => !m.pantryStaple);
-  const pantry = matched.filter(m => m.pantryStaple);
+  const filteredMatches = matches.filter(
+    (m) => !m.matched || !m.product || m.product.price <= maxPrice
+  );
+
+  const matched = filteredMatches.filter((m) => m.matched);
+  const unmatched = filteredMatches.filter((m) => !m.matched);
+  const toBuy = matched.filter((m) => !m.pantryStaple);
+  const pantry = matched.filter((m) => m.pantryStaple);
 
   const toBuyPrice = toBuy.reduce((s, m) => s + (!m.outOfStock ? (m.product?.price || 0) : 0), 0);
   const pantryPrice = pantry.reduce((s, m) => s + (!m.outOfStock ? (m.product?.price || 0) : 0), 0);
@@ -118,12 +122,14 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
         <span>{lang === "no" ? "Tilbake til oppskrift" : "Back to recipe"}</span>
       </button>
 
+      <PriceRanger min={0} max={250} value={maxPrice} onChange={setMaxPrice} />
+
       {/* Header */}
       <div className="mv-header">
         <div>
           <span className="mv-store">{storeName}</span>
-          <span className={`mv-count${trueAllMatched ? "" : " partial"}`}>
-            {matchedCount}/{totalCount} {lang === "no" ? "varer" : "items"}
+          <span className="mv-count">
+            {matched.length}/{totalCount} {lang === "no" ? "varer" : "items"}
           </span>
         </div>
         <div className="mv-totals">
@@ -164,7 +170,7 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
             {lang === "no" ? "Ikke funnet" : "Not found"}
           </span>
           <div className="mv-chips">
-            {unmatched.map(m => (
+            {unmatched.map((m) => (
               <span key={m.ingredient} className="mv-chip">{m.ingredient}</span>
             ))}
           </div>

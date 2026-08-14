@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useSearch, useNavigate } from "@tanstack/react-router";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
-import type { MenuData, CanteenData, CanteenDayItem } from "@/lib/types";
+import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import { getLocalDateKey, computeDisplayContext, compareWeeks } from "@/lib/dateUtils";
 import { useVoting } from "@/lib/useVoting";
@@ -22,10 +23,9 @@ import WeekOverview from "@/components/WeekOverview";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import ClosedCard from "@/components/ClosedCard";
-import { isCanteenClosed } from "@/lib/canteen-utils";
-
-type DishDescription = string | { en: string; no: string };
-type DishOrigin = { country: string; code: string };
+import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
+import { useAppStore, setFeedbackModalOpen } from "@/store/useAppStore";
+import { CanteenFeedbackForm } from "@/components/CanteenFeedbackForm";
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -71,10 +71,29 @@ function cleanupLocalStorage() {
 }
 
 export default function HomeClient({ initialMenu, initialOrigins, initialDescriptions }: HomeClientProps) {
+  const navigate = useNavigate({ from: "/" });
+  const searchParams = useSearch({ strict: false }) as { day?: string };
+
+  const [selectedDay, setSelectedDay] = useState(() => {
+    if (searchParams?.day) {
+      const idx = DAY_KEYS.indexOf(searchParams.day.toLowerCase() as typeof DAY_KEYS[number]);
+      if (idx >= 0) return idx;
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    if (searchParams?.day) {
+      const idx = DAY_KEYS.indexOf(searchParams.day.toLowerCase() as typeof DAY_KEYS[number]);
+      if (idx >= 0 && idx !== selectedDay) {
+        setSelectedDay(idx);
+      }
+    }
+  }, [searchParams?.day]);
+
   const [menuData] = useState<MenuData | null>(initialMenu);
   const [lang, setLang] = useState<"no" | "en">("no");
   const [langAnim, setLangAnim] = useState("");
-  const [selectedDay, setSelectedDay] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
@@ -88,6 +107,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const feedbackModalOpen = useAppStore((state) => state.feedbackModalOpen);
 
   // YOLO randomiser: cycles a glow through the open canteens for ~5s then
   // settles on one. yoloHighlight is the currently-lit card during the spin;
@@ -99,6 +119,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   // Custom hooks — extracted state management
   const voting = useVoting();
+  const { votes, hasVoted, votedCanteen, isVoting, voteSuccess, shareState, handleVote, handleShareSlack, setVoteSuccess, setShareState } = voting;
   const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe(lang);
   const { dealsView, handleDealsClick, closeDeals } = useDeals(lang);
   const { menyView, handleMenyClick, closeMeny } = useMenySearch(lang);
@@ -139,9 +160,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const minSwipeDistance = 50;
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (showSwipeHint) setShowSwipeHint(false);
     touchEndRef.current = null;
     touchStartRef.current = e.targetTouches[0].clientX;
+    if (showSwipeHint) setShowSwipeHint(false);
   }, [showSwipeHint]);
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
@@ -157,12 +178,28 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     const isRightSwipe = distance < -minSwipeDistance;
 
     if (isLeftSwipe) {
-      setSelectedDay(prev => { if (prev < 4) { setSwipeDirection("swipe-left"); return prev + 1; } return prev; });
+      setSelectedDay(prev => {
+        if (prev < 4) {
+          const nextDay = prev + 1;
+          setSwipeDirection("swipe-left");
+          navigate({ search: (p: Record<string, unknown>) => ({ ...p, day: DAY_KEYS[nextDay] }), replace: true });
+          return nextDay;
+        }
+        return prev;
+      });
     }
     if (isRightSwipe) {
-      setSelectedDay(prev => { if (prev > 0) { setSwipeDirection("swipe-right"); return prev - 1; } return prev; });
+      setSelectedDay(prev => {
+        if (prev > 0) {
+          const nextDay = prev - 1;
+          setSwipeDirection("swipe-right");
+          navigate({ search: (p: Record<string, unknown>) => ({ ...p, day: DAY_KEYS[nextDay] }), replace: true });
+          return nextDay;
+        }
+        return prev;
+      });
     }
-  }, []);
+  }, [navigate]);
 
   const handleDaySelect = useCallback((i: number) => {
     setSelectedDay(prev => {
@@ -171,7 +208,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       else setSwipeDirection("");
       return i;
     });
-  }, []);
+    navigate({
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        day: DAY_KEYS[i],
+      }),
+      replace: true,
+    });
+  }, [navigate]);
 
   const langAnimBusy = useRef(false);
   const handleLangSwitch = useCallback((newLang: "no" | "en") => {
@@ -380,16 +424,22 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dk);
         const noItems = dayEntry?.no?.items;
         const enItems = dayEntry?.en?.items;
-        const items = lang === "no"
+        const rawItems = lang === "no"
           ? (noItems && noItems.length > 0 ? noItems : enItems)
           : (enItems && enItems.length > 0 ? enItems : noItems);
+        const items = getRankedItems(rawItems, canteenName);
         const mainDish = items?.find(i => i.isMain && i.dish.trim());
         // Defense in depth: drop items whose `dish` field is empty (older
         // weekly_menus rows have empty entries from a scraper bug fixed in
         // a later commit; new rows shouldn't ever land here).
         const displaySideDishes = items?.filter(i => !i.isMain && i.dish.trim()).slice(0, 3) || [];
-        const noMainDish = noItems?.find(i => i.isMain && i.dish.trim());
-        const noSideDishes = noItems?.filter(i => !i.isMain && i.dish.trim()) || [];
+        // Rank the Norwegian list with the SAME function rather than trusting
+        // the stored `isMain` flag. Rows written by an earlier version of the
+        // ranking disagree with today's, and reading the flag straight from
+        // the database attached the wrong dish's allergens to the card.
+        const noRanked = getRankedItems(noItems, canteenName);
+        const noMainDish = noRanked.find(i => i.isMain && i.dish.trim());
+        const noSideDishes = noRanked.filter(i => !i.isMain && i.dish.trim());
         const mainAllergens = noMainDish?.allergens || mainDish?.allergens || [];
         const sideDishes = displaySideDishes.map((item, idx) => ({
           ...item,
@@ -421,12 +471,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const isOutdated = cmp === -1;
         const isAhead = cmp === 1;
         const enLookup = dayEntry?.en?.items || [];
-        const noLookup = dayEntry?.no?.items || [];
         // Origin + description follow the kitchen's language (NO). The EN title
         // is a translation maintained by the canteen and occasionally points at
         // a completely different dish (e.g. NO "Svensk kjøttgrateng" vs.
         // EN "Braised chicken leg"). Trust NO for cross-references.
-        const lookupMainDish = (noLookup.length > 0 ? noLookup : enLookup).find(i => i.isMain);
+        const lookupMainDish =
+          noMainDish ?? getRankedItems(enLookup, canteenName).find(i => i.isMain);
         const origin = dishOrigins[lookupMainDish?.dish || ""] ?? null;
         const descEntry = dishDescriptions[lookupMainDish?.dish || ""];
         const description = descEntry
@@ -631,10 +681,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
           </button>
-          <div className="lang-switcher">
-            <button className={lang === "no" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("no")}>NO</button>
-            <button className={lang === "en" ? "lang-btn active" : "lang-btn"} onClick={() => handleLangSwitch("en")}>EN</button>
-          </div>
+          <button
+            className="info-btn"
+            onClick={() => setFeedbackModalOpen(true)}
+            title="Ønsk en rett"
+            aria-label="Ønsk en rett"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
         </div>
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
         {closedCanteens.length > 0 && openCanteens.length > 0 && (
@@ -1120,6 +1176,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           </div>
         </div>
       )}
+      {feedbackModalOpen && <CanteenFeedbackForm onClose={() => setFeedbackModalOpen(false)} />}
     </div>
   );
 }

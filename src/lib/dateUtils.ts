@@ -42,6 +42,37 @@ export function getWeekNumber(): number {
 }
 
 /**
+ * ISO 8601 week-numbering year — the calendar year containing that week's
+ * Thursday. This is NOT always the calendar year: 2027-01-01 falls in week 53
+ * of week-year 2026, and 2029-12-31 falls in week 1 of week-year 2030. Pairing
+ * a calendar year with an ISO week number silently produces the wrong id on
+ * those boundary days.
+ */
+export function getIsoWeekYearForDate(year: number, month: number, day: number): number {
+  const d = new Date(year, month - 1, day);
+  d.setHours(0, 0, 0, 0);
+  // Step to the Thursday of this ISO week; its calendar year is the week-year.
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  return d.getFullYear();
+}
+
+/**
+ * Canonical id for a week, e.g. "2026-W34". Used as the primary key of the
+ * Supabase `weekly_menus` table, so it must be stable and zero-padded.
+ */
+export function getWeekIdForDate(year: number, month: number, day: number): string {
+  const weekNum = getWeekNumberForDate(year, month, day);
+  const weekYear = getIsoWeekYearForDate(year, month, day);
+  return `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+/** Canonical id for the current week (Europe/Oslo timezone). */
+export function getWeekId(): string {
+  const { year, month, day } = todayOsloParts();
+  return getWeekIdForDate(year, month, day);
+}
+
+/**
  * Compare two ISO week numbers with year-wrap handling.
  * Returns 1 if `a` is ahead of `b`, -1 if behind, 0 if same.
  *
