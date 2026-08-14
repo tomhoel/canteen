@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { runWeeklyUpdateService } from "../../src/server/services/menu.service.ts";
 import { processAllCanteenAIImages } from "../../src/server/services/image.service.ts";
+import { sendCronAlert } from "../../src/server/notify.ts";
 
 /**
  * The weekly updater. This is the only thing that writes menu data.
@@ -11,7 +12,7 @@ import { processAllCanteenAIImages } from "../../src/server/services/image.servi
  * rather than in git. Vercel Cron has no such rule.
  *
  * Scheduled from vercel.json. Vercel sends `Authorization: Bearer $CRON_SECRET`
- * when that variable is set on the project.
+ * on every cron invocation once that variable is set on the project.
  */
 
 /** Total function budget, mirrored from vercel.json's maxDuration. */
@@ -20,41 +21,74 @@ const MAX_DURATION_MS = 300_000;
 /** Head-room left for the response and cleanup after image work stops. */
 const SAFETY_MARGIN_MS = 20_000;
 
-function isAuthorized(req: VercelRequest): boolean {
+type AuthResult = { ok: true } | { ok: false; status: number; error: string };
+
+/**
+ * Fails closed. An earlier version accepted any request carrying the
+ * `x-vercel-cron` header when CRON_SECRET was unset — but that header is just
+ * a request header, so anyone could set it and trigger an unbounded run of
+ * paid image generation. The secret is now mandatory.
+ */
+function authorize(req: VercelRequest): AuthResult {
   const secret = process.env.CRON_SECRET;
 
-  // Without a secret configured we cannot authenticate, so only accept
-  // Vercel's own scheduler, which stamps this header on cron invocations.
-  if (!secret) return req.headers["x-vercel-cron"] !== undefined;
+  if (!secret) {
+    return {
+      ok: false,
+      status: 503,
+      error:
+        "CRON_SECRET is not configured on this deployment, so cron requests cannot be " +
+        "authenticated. Set it in the Vercel project settings; Vercel then sends it " +
+        "automatically on scheduled invocations.",
+    };
+  }
 
-  return req.headers["authorization"] === `Bearer ${secret}`;
+  if (req.headers["authorization"] !== `Bearer ${secret}`) {
+    return { ok: false, status: 401, error: "Unauthorized cron trigger" };
+  }
+
+  return { ok: true };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: "Unauthorized cron trigger" });
-  }
+  const auth = authorize(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
   const startedAt = Date.now();
-  console.log("🚀 [cron] Starting weekly menu scrape & AI processing...");
+
+  // `?force=1` re-asks the model for every dish and rebuilds every plate
+  // instead of reusing the dish cache — the job the manual force-regen
+  // workflow used to do. Never set by the scheduler.
+  const force = req.query?.force === "1" || req.query?.force === "true";
+
+  console.log(`🚀 [cron] Weekly menu update starting${force ? " (force)" : ""}...`);
 
   let record;
   try {
-    record = await runWeeklyUpdateService();
+    record = await runWeeklyUpdateService(undefined, { force });
   } catch (error: any) {
     // A failed scrape or a rejected write must surface as a 500 so it shows up
-    // in Vercel's cron run history rather than passing silently.
+    // in Vercel's cron run history, and as a Slack alert so someone notices
+    // before staff do.
     console.error("❌ [cron] Menu update failed:", error);
+    await sendCronAlert("error", "Weekly menu update failed", [
+      error.message,
+      "The stored menu was left untouched.",
+    ]);
     return res.status(500).json({ error: "Menu update failed", details: error.message });
+  }
+
+  // A partial scrape still persists — one canteen being down should not cost
+  // us the other two — but it is worth hearing about.
+  if (record.stats.failedCanteens.length > 0) {
+    await sendCronAlert("warning", "Some canteens could not be scraped", [
+      `Failed: ${record.stats.failedCanteens.join(", ")}`,
+      `Stored ${record.stats.dishCount} dishes for ${record.weekId} from the rest.`,
+    ]);
   }
 
   // Images are best-effort: the menu itself is already safely stored, and a
   // missing plate photo is far less bad than a missing menu.
-  // `?force=1` rebuilds every plate instead of reusing archived ones — the
-  // job the manual force-regen-images workflow used to do. Only reachable
-  // with the cron secret, and never set by the scheduler itself.
-  const force = req.query?.force === "1" || req.query?.force === "true";
-
   let images = null;
   let imageError: string | null = null;
   try {
@@ -64,13 +98,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err: any) {
     imageError = err.message;
     console.warn("⚠️ [cron] Image processing failed:", err.message);
+    await sendCronAlert("warning", "Dish images could not be processed", [
+      err.message,
+      `The menu for ${record.weekId} was stored successfully.`,
+    ]);
   }
 
   return res.status(200).json({
     status: "success",
     weekId: record.weekId,
+    unchanged: record.stats.unchanged,
     canteens: Object.keys(record.menuData.canteens || {}).length,
-    dishes: Object.keys(record.dishOrigins || {}).length,
+    dishes: record.stats.dishCount,
+    dishesFromCache: record.stats.fromCache,
+    dishesGenerated: record.stats.generated,
+    failedCanteens: record.stats.failedCanteens,
     images,
     imageError,
     durationMs: Date.now() - startedAt,

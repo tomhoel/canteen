@@ -3,6 +3,15 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { MenuData } from "../../lib/types.ts";
 import { pickMainDish } from "../../lib/dish-ranking.ts";
+import {
+  loadDishCache,
+  saveDishCacheEntries,
+  normalizeDishName,
+} from "./dish-cache.service.ts";
+
+// The cache key function lives with the cache now; re-exported because other
+// modules already import it from here.
+export { normalizeDishName };
 
 /**
  * Storage writes need the service role key. This used to fall back to a
@@ -43,15 +52,6 @@ function getAIClient() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   return new GoogleGenAI({ apiKey });
-}
-
-export function normalizeDishName(name: string): string {
-  if (!name) return "";
-  return name
-    .toLowerCase()
-    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 export async function removeBgBuffer(inputBuffer: Buffer): Promise<Buffer> {
@@ -304,19 +304,19 @@ export async function processAllCanteenAIImages(
     budgetExhausted: false,
   };
 
+  // One read tells us which of this week's dishes have been drawn before,
+  // instead of attempting a storage copy per dish and learning from the miss.
+  const cache = await loadDishCache(jobs.map((j) => j.dish));
+  const newlyDrawn: Array<{ dish: string; archivePath: string }> = [];
+
   for (const job of jobs) {
-    // Cheap path: this exact dish has been generated before at some point.
+    // Cheap path: this exact dish has been drawn before, in any past week.
     if (!force) {
-      const copiedFromArchive = await copyInSupabaseBucket(
-        "images_nobg",
-        job.archivePath,
-        job.slotPath
-      );
-      if (copiedFromArchive) {
+      const known = cache.get(normalizeDishName(job.dish))?.imageNoBgPath ?? job.archivePath;
+      const copied = await copyInSupabaseBucket("images_nobg", known, job.slotPath);
+      if (copied) {
         result.reused++;
-        console.log(
-          `  ♻️ Reused archived image for "${job.dish}" (${job.canteenName}/${job.dayKey})`
-        );
+        console.log(`  ♻️ Reused image for "${job.dish}" (${job.canteenName}/${job.dayKey})`);
         continue;
       }
     }
@@ -336,14 +336,29 @@ export async function processAllCanteenAIImages(
     const transparentBuffer = await removeBgBuffer(aiBuffer);
     const slotOk = await uploadToSupabase("images_nobg", job.slotPath, transparentBuffer);
     // Archive under the dish name so the same dish is free for every future week.
-    await uploadToSupabase("images_nobg", job.archivePath, transparentBuffer);
+    const archiveOk = await uploadToSupabase("images_nobg", job.archivePath, transparentBuffer);
 
     if (slotOk) {
       result.generated++;
+      if (archiveOk) newlyDrawn.push({ dish: job.dish, archivePath: job.archivePath });
       console.log(`  ✨ Generated images_nobg/${job.slotPath} for "${job.dish}"`);
     } else {
       result.failed++;
     }
+  }
+
+  // Record where each new plate landed so future weeks reuse it directly.
+  if (newlyDrawn.length > 0) {
+    await saveDishCacheEntries(
+      newlyDrawn.map(({ dish, archivePath }) => ({
+        cacheKey: normalizeDishName(dish),
+        originalName: dish,
+        origin: null,
+        description: null,
+        imagePath: null,
+        imageNoBgPath: archivePath,
+      }))
+    );
   }
 
   if (result.budgetExhausted) {

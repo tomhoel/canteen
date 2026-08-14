@@ -1,48 +1,62 @@
--- Canteen Database Schema for Supabase PostgreSQL
+-- Canteen database schema (Supabase / PostgreSQL)
+--
+-- This file describes what is actually deployed. The previous version drifted:
+-- it declared a `canteen_attendance` table that was never created (votes live
+-- in Upstash Redis), omitted `dish_cache` entirely, and its policies were
+-- written as `FOR ALL USING (true)` — which grants the public anon role write
+-- access, not the service role. In practice RLS was simply switched off, so
+-- anyone holding the anon key (a public credential, and one that was committed
+-- to this repo) could rewrite or delete every menu.
+--
+-- The rule now: the app only ever SELECTs, and every writer — the cron updater
+-- and the maintenance scripts — authenticates with the service-role key, which
+-- bypasses RLS. So the tables need read policies and no write policies at all.
 
--- 1. Weekly Menus Table
+-- ── Weekly menus ──────────────────────────────────────────────────────────
+-- One row per ISO week, keyed "2026-W34". menu_data additionally carries a
+-- `fingerprint` field the updater uses to skip enrichment when a re-scrape is
+-- identical to what is already stored.
 CREATE TABLE IF NOT EXISTS public.weekly_menus (
-    week_id TEXT PRIMARY KEY,
-    menu_data JSONB NOT NULL,
-    dish_origins JSONB DEFAULT '{}'::jsonb,
+    week_id           TEXT PRIMARY KEY,
+    menu_data         JSONB NOT NULL,
+    dish_origins      JSONB DEFAULT '{}'::jsonb,
     dish_descriptions JSONB DEFAULT '{}'::jsonb,
-    scraped_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    scraped_at        TIMESTAMPTZ DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index on week_id for fast lookup
-CREATE INDEX IF NOT EXISTS idx_weekly_menus_week_id ON public.weekly_menus (week_id);
-
--- 2. Canteen Attendance Voting Table
-CREATE TABLE IF NOT EXISTS public.canteen_attendance (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    vote_date DATE NOT NULL,
-    canteen_name TEXT NOT NULL,
-    vote_count INT DEFAULT 1,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE (vote_date, canteen_name)
+-- ── Dish cache ────────────────────────────────────────────────────────────
+-- One row per distinct dish, keyed by its normalised name. A dish means the
+-- same thing in every week it appears, so its origin, description and plate
+-- image are produced once and reused forever. This is what keeps the twice-
+-- daily cron from re-billing the model for dishes it has already seen.
+CREATE TABLE IF NOT EXISTS public.dish_cache (
+    cache_key       VARCHAR PRIMARY KEY,
+    original_name   TEXT,
+    clean_name      TEXT,
+    origin          JSONB,
+    description     JSONB,
+    image_path      TEXT,
+    image_nobg_path TEXT,
+    first_seen      TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index on vote_date for historical queries
-CREATE INDEX IF NOT EXISTS idx_canteen_attendance_date ON public.canteen_attendance (vote_date);
-
--- Enable RLS (Row Level Security) with public read access
+-- ── Row level security ────────────────────────────────────────────────────
 ALTER TABLE public.weekly_menus ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.canteen_attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.dish_cache   ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read access for weekly_menus" 
-    ON public.weekly_menus FOR SELECT 
+DROP POLICY IF EXISTS "weekly_menus public read" ON public.weekly_menus;
+CREATE POLICY "weekly_menus public read"
+    ON public.weekly_menus
+    FOR SELECT
+    TO anon, authenticated
     USING (true);
 
-CREATE POLICY "Allow public read access for canteen_attendance" 
-    ON public.canteen_attendance FOR SELECT 
+DROP POLICY IF EXISTS "dish_cache public read" ON public.dish_cache;
+CREATE POLICY "dish_cache public read"
+    ON public.dish_cache
+    FOR SELECT
+    TO anon, authenticated
     USING (true);
 
-CREATE POLICY "Allow service role write access for weekly_menus" 
-    ON public.weekly_menus FOR ALL 
-    USING (true);
-
-CREATE POLICY "Allow service role write access for canteen_attendance" 
-    ON public.canteen_attendance FOR ALL 
-    USING (true);
+-- Intentionally no INSERT/UPDATE/DELETE policies: writes are service-role only.

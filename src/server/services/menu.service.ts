@@ -1,9 +1,16 @@
+import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { MenuData, WeeklyMenuRecord } from "../../lib/types.ts";
+import type { MenuData, WeeklyMenuRecord, DishOrigin, DishDescription } from "../../lib/types.ts";
 import { getWeekId } from "../../lib/dateUtils.ts";
-import { scrapeAllCanteens } from "./scraper.service.ts";
+import { scrapeAllCanteens, type ScrapeReport } from "./scraper.service.ts";
 import { detectDishOrigins, generateDishDescriptions } from "./ai.service.ts";
+import {
+  loadDishCache,
+  saveDishCacheEntries,
+  normalizeDishName,
+  type DishCacheEntry,
+} from "./dish-cache.service.ts";
 
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
@@ -12,7 +19,7 @@ function getRedis(): Redis | null {
   return new Redis({ url, token });
 }
 
-/** Read-only client. The anon key is sufficient; RLS grants public SELECT. */
+/** Read-only client. The anon key is sufficient; the app only ever selects. */
 function getReadClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -22,31 +29,19 @@ function getReadClient(): SupabaseClient | null {
 
 /**
  * Write client. Deliberately throws rather than silently falling back to the
- * anon key: under RLS the anon key cannot write, so the previous fallback
- * turned a missing secret into an update that reported success and persisted
- * nothing.
+ * anon key: the anon key is a public credential, and the updater must not be
+ * able to write with it.
  */
 function getWriteClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set — cannot persist the menu.");
   if (!key) {
-    throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY is not set — refusing to write with the anon key, " +
-        "which RLS would reject while still reporting success."
-    );
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to write with the anon key.");
   }
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-/**
- * Reads the stored menu for a week. Cache, then database, then null.
- *
- * This never scrapes. It used to fall through to a full scrape + AI run on a
- * cache miss, which meant an ordinary page view could trigger the entire
- * weekly pipeline. Producing data is the updater's job (see
- * runWeeklyUpdateService); serving it is this function's.
- */
 export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuRecord | null> {
   const targetWeekId = weekId || getWeekId();
 
@@ -80,8 +75,7 @@ export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuR
   // Fall back to the most recent stored week when the requested one has no row
   // yet — e.g. Monday morning before the first cron of the new week lands.
   // Showing last week's menu (which the UI flags as outdated) beats an empty
-  // app. Only do this for the implicit "current week" request, never when a
-  // specific week was asked for.
+  // app. Only for the implicit "current week" request, never a specific week.
   let row = data;
   if ((!row || !row.menu_data) && !weekId) {
     const { data: latest, error: latestError } = await supabase
@@ -102,14 +96,13 @@ export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuR
   }
 
   if (!row || !row.menu_data) return null;
-  const data_ = row;
 
   const record: WeeklyMenuRecord = {
-    weekId: data_.week_id,
-    menuData: data_.menu_data,
-    dishOrigins: data_.dish_origins || {},
-    dishDescriptions: data_.dish_descriptions || {},
-    scrapedAt: data_.scraped_at,
+    weekId: row.week_id,
+    menuData: row.menu_data,
+    dishOrigins: row.dish_origins || {},
+    dishDescriptions: row.dish_descriptions || {},
+    scrapedAt: row.scraped_at,
   };
 
   // Only cache an exact hit. Caching a fallback under the requested week's key
@@ -126,23 +119,64 @@ export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuR
   return record;
 }
 
+/** Every distinct non-empty dish name in a week, both languages. */
 function extractAllDishes(menuData: MenuData): string[] {
   const dishes = new Set<string>();
   Object.values(menuData.canteens || {}).forEach((canteen) => {
     (canteen.menu || []).forEach((dayItem) => {
-      (["no", "en"] as const).forEach((langKey) => {
-        const langData = dayItem[langKey];
-        if (langData && Array.isArray(langData.items)) {
-          langData.items.forEach((it) => {
-            if (it.dish && it.dish.trim().length > 0) {
-              dishes.add(it.dish.trim());
-            }
-          });
-        }
+      (["no", "en"] as const).forEach((lang) => {
+        (dayItem[lang]?.items ?? []).forEach((it) => {
+          if (it.dish?.trim()) dishes.add(it.dish.trim());
+        });
       });
     });
   });
   return Array.from(dishes);
+}
+
+/**
+ * Stable hash of the dish names a scrape produced.
+ *
+ * Used to skip the enrichment pass when nothing changed. Deliberately ignores
+ * `scrapedAt` and ranking flags, which differ on every run, so it only moves
+ * when the kitchens actually publish something new.
+ */
+function fingerprintScrape(menuData: MenuData): string {
+  const canonical = Object.keys(menuData.canteens || {})
+    .sort()
+    .map((name) => {
+      const canteen = menuData.canteens[name];
+      const days = (canteen.menu || [])
+        .map((d) => {
+          const items = (["no", "en"] as const)
+            .map((lang) => (d[lang]?.items ?? []).map((i) => i.dish).join("|"))
+            .join("~");
+          return `${d.day}:${items}`;
+        })
+        .join(";");
+      return `${name}[${canteen.week}]{${days}}`;
+    })
+    .join("||");
+
+  return createHash("sha256").update(canonical).digest("hex").slice(0, 32);
+}
+
+export interface UpdateStats {
+  weekId: string;
+  dishCount: number;
+  /** Dishes served straight from dish_cache, costing no model calls. */
+  fromCache: number;
+  /** Dishes sent to the model because they had never been seen before. */
+  generated: number;
+  /** Canteens that returned nothing usable this run. */
+  failedCanteens: string[];
+  /** True when the scrape matched the stored one and enrichment was skipped. */
+  unchanged: boolean;
+}
+
+export interface WeeklyUpdateResult extends WeeklyMenuRecord {
+  stats: UpdateStats;
+  scrape: ScrapeReport;
 }
 
 /** True when the scrape produced no dishes at all for any canteen. */
@@ -153,35 +187,54 @@ function isEmptyScrape(menuData: MenuData): boolean {
 }
 
 /**
- * Scrapes, enriches and persists one week of menus. This is the only writer.
- * Throws on failure so the caller (cron handler / CLI) reports a real error
- * instead of a success with no data behind it.
+ * Scrapes, enriches and persists one week of menus. The only writer.
+ *
+ * Enrichment is incremental: dish names already in `dish_cache` reuse their
+ * stored origin and description, so the model is only asked about dishes
+ * nobody has seen before. On a typical run that is zero, and the whole pass
+ * costs one table read.
  */
-export async function runWeeklyUpdateService(weekIdInput?: string): Promise<WeeklyMenuRecord> {
-  console.log("🚀 Starting weekly menu scrape & AI processing...");
+export async function runWeeklyUpdateService(
+  weekIdInput?: string,
+  options: { force?: boolean } = {}
+): Promise<WeeklyUpdateResult> {
+  const { force = false } = options;
+  console.log("🚀 Starting weekly menu scrape...");
 
-  const menuData = await scrapeAllCanteens();
+  const scrape = await scrapeAllCanteens();
+  const { menuData } = scrape;
   const weekId = weekIdInput || getWeekId();
 
   if (isEmptyScrape(menuData)) {
     // Refuse to overwrite a good week with nothing. An upstream outage or a
     // markup change should page us, not quietly blank the app.
     throw new Error(
-      `Scrape produced no menu items for any canteen (${weekId}) — refusing to overwrite stored data.`
+      `Scrape produced no menu items for any canteen (${weekId}) — refusing to overwrite stored data. ` +
+        scrape.results.map((r) => `${r.canteen.displayName}: ${r.error ?? "ok"}`).join("; ")
     );
   }
 
   const allDishes = extractAllDishes(menuData);
-  console.log(`🔍 Extracted ${allDishes.length} unique dishes.`);
+  const fingerprint = fingerprintScrape(menuData);
+  console.log(`🔍 ${allDishes.length} distinct dishes; fingerprint ${fingerprint}`);
 
-  const [dishOrigins, dishDescriptions] = await Promise.all([
-    detectDishOrigins(allDishes),
-    generateDishDescriptions(allDishes),
-  ]);
+  const existing = await getStoredRow(weekId);
+  const unchanged = !force && existing?.fingerprint === fingerprint;
 
-  console.log(
-    `✨ Processed ${Object.keys(dishOrigins).length} origins and ${Object.keys(dishDescriptions).length} descriptions.`
-  );
+  let dishOrigins: Record<string, DishOrigin> = existing?.dishOrigins ?? {};
+  let dishDescriptions: Record<string, DishDescription> = existing?.dishDescriptions ?? {};
+  let fromCache = 0;
+  let generated = 0;
+
+  if (unchanged) {
+    console.log("✅ Scrape identical to the stored week — skipping enrichment.");
+  } else {
+    const enriched = await enrichDishes(allDishes);
+    dishOrigins = enriched.origins;
+    dishDescriptions = enriched.descriptions;
+    fromCache = enriched.fromCache;
+    generated = enriched.generated;
+  }
 
   const record: WeeklyMenuRecord = {
     weekId,
@@ -197,7 +250,8 @@ export async function runWeeklyUpdateService(weekIdInput?: string): Promise<Week
   const { error } = await supabase.from("weekly_menus").upsert(
     {
       week_id: weekId,
-      menu_data: menuData,
+      // The fingerprint rides inside menu_data so no schema change is needed.
+      menu_data: { ...menuData, fingerprint },
       dish_origins: dishOrigins,
       dish_descriptions: dishDescriptions,
       scraped_at: record.scrapedAt,
@@ -207,9 +261,7 @@ export async function runWeeklyUpdateService(weekIdInput?: string): Promise<Week
 
   // supabase-js resolves with an `error` field rather than rejecting, so this
   // check is what turns a rejected write into a visible failure.
-  if (error) {
-    throw new Error(`Supabase upsert failed for ${weekId}: ${error.message}`);
-  }
+  if (error) throw new Error(`Supabase upsert failed for ${weekId}: ${error.message}`);
 
   const redis = getRedis();
   if (redis) {
@@ -220,6 +272,105 @@ export async function runWeeklyUpdateService(weekIdInput?: string): Promise<Week
     }
   }
 
-  console.log(`✅ Weekly menu update complete for ${weekId}.`);
-  return record;
+  const stats: UpdateStats = {
+    weekId,
+    dishCount: allDishes.length,
+    fromCache,
+    generated,
+    failedCanteens: scrape.failed,
+    unchanged,
+  };
+
+  console.log(
+    `✅ ${weekId} stored — ${allDishes.length} dishes (${fromCache} cached, ${generated} new)` +
+      (scrape.failed.length ? `, failed: ${scrape.failed.join(", ")}` : "")
+  );
+
+  return { ...record, stats, scrape };
+}
+
+/** Reads the stored row for a week, including the embedded fingerprint. */
+async function getStoredRow(weekId: string): Promise<{
+  fingerprint?: string;
+  dishOrigins: Record<string, DishOrigin>;
+  dishDescriptions: Record<string, DishDescription>;
+} | null> {
+  const supabase = getReadClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("weekly_menus")
+    .select("menu_data, dish_origins, dish_descriptions")
+    .eq("week_id", weekId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    fingerprint: data.menu_data?.fingerprint,
+    dishOrigins: data.dish_origins ?? {},
+    dishDescriptions: data.dish_descriptions ?? {},
+  };
+}
+
+/**
+ * Resolves an origin and description for every dish, using the cache first.
+ *
+ * Only genuinely unseen dishes reach the model, and whatever it returns is
+ * written back so the next run gets them for free.
+ */
+async function enrichDishes(dishes: string[]): Promise<{
+  origins: Record<string, DishOrigin>;
+  descriptions: Record<string, DishDescription>;
+  fromCache: number;
+  generated: number;
+}> {
+  const cache = await loadDishCache(dishes);
+
+  const origins: Record<string, DishOrigin> = {};
+  const descriptions: Record<string, DishDescription> = {};
+  const missing: string[] = [];
+  let fromCache = 0;
+
+  for (const dish of dishes) {
+    const hit = cache.get(normalizeDishName(dish));
+    if (hit?.origin && hit?.description) {
+      origins[dish] = hit.origin;
+      descriptions[dish] = hit.description;
+      fromCache++;
+    } else {
+      missing.push(dish);
+    }
+  }
+
+  console.log(`🗃️  ${fromCache} dishes from cache, ${missing.length} to generate.`);
+  if (missing.length === 0) return { origins, descriptions, fromCache, generated: 0 };
+
+  const [newOrigins, newDescriptions] = await Promise.all([
+    detectDishOrigins(missing),
+    generateDishDescriptions(missing),
+  ]);
+
+  Object.assign(origins, newOrigins);
+  Object.assign(descriptions, newDescriptions);
+
+  // Write the new dishes back so this cost is never paid twice. Preserve any
+  // image path already recorded against the same key.
+  const entries: DishCacheEntry[] = missing.map((dish) => {
+    const key = normalizeDishName(dish);
+    const hit = cache.get(key);
+    return {
+      cacheKey: key,
+      originalName: dish,
+      origin: newOrigins[dish] ?? hit?.origin ?? null,
+      description: newDescriptions[dish] ?? hit?.description ?? null,
+      imagePath: hit?.imagePath ?? null,
+      imageNoBgPath: hit?.imageNoBgPath ?? null,
+    };
+  });
+
+  const saved = await saveDishCacheEntries(entries);
+  console.log(`🗃️  ${saved} dishes written back to dish_cache.`);
+
+  return { origins, descriptions, fromCache, generated: missing.length };
 }

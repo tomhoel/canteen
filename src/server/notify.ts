@@ -5,6 +5,52 @@ export interface NotifyPayload {
   lang?: "no" | "en";
 }
 
+/**
+ * Posts an operational alert about the weekly updater to Slack.
+ *
+ * The deleted GitHub workflow opened an issue when a run failed, which was the
+ * only reason anyone found out before staff saw empty cards on Monday. Vercel
+ * Cron has no equivalent, so failures are announced through the Slack webhook
+ * the app already has. Never throws: an alert that fails must not turn a
+ * partial success into a hard error.
+ */
+export async function sendCronAlert(
+  level: "error" | "warning",
+  title: string,
+  details: string[]
+): Promise<{ ok?: boolean; skipped?: boolean }> {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  if (!webhookUrl) return { skipped: true };
+
+  const icon = level === "error" ? "🚨" : "⚠️";
+  const body = {
+    blocks: [
+      { type: "header", text: { type: "plain_text", text: `${icon} ${title}` } },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: details.map((d) => `• ${d}`).join("\n") || "_no detail_" },
+      },
+      {
+        type: "context",
+        elements: [{ type: "mrkdwn", text: `Weekly menu updater · ${new Date().toISOString()}` }],
+      },
+    ],
+  };
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Slack returned ${res.status}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("Cron alert failed to send:", err);
+    return { skipped: true };
+  }
+}
+
 export async function sendSlackNotification(data: NotifyPayload) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {

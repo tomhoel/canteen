@@ -39,16 +39,22 @@ async function main() {
   console.log("║  WEEKLY MENU UPDATE (manual)                             ║");
   console.log("╚══════════════════════════════════════════════════════════╝\n");
 
-  const record = await runWeeklyUpdateService(weekId);
-  console.log(`\n🔍 Generating dish images for ${record.weekId}...`);
+  const record = await runWeeklyUpdateService(weekId, { force });
+  console.log(`\n🔍 Ensuring dish images for ${record.weekId}...`);
 
   const images = await processAllCanteenAIImages(record.menuData, { force });
 
   console.log("\n🏁 Finished.");
   console.log(
     `   week ${record.weekId} · ${Object.keys(record.menuData.canteens).length} canteens · ` +
-      `${images.reused} images reused, ${images.generated} generated, ${images.failed} failed`
+      `${record.stats.dishCount} dishes (${record.stats.fromCache} cached, ${record.stats.generated} new)`
   );
+  console.log(
+    `   images: ${images.reused} reused, ${images.generated} generated, ${images.failed} failed`
+  );
+  if (record.stats.failedCanteens.length > 0) {
+    console.warn(`   ⚠️  canteens that failed: ${record.stats.failedCanteens.join(", ")}`);
+  }
 }
 
 main().catch((err) => {
