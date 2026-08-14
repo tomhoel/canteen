@@ -87,6 +87,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
   }
 
+  // Normal late in the week, but worth seeing: it means the canteens disagree
+  // about which week it is, and the app is rendering only one of them.
+  if (record.weeksWritten.length > 1) {
+    await sendCronAlert("warning", "Canteens are mid-rollover across two weeks", [
+      ...record.weeksWritten.map((w) => `${w.weekId}: ${w.canteens.join(", ")}`),
+      `Showing ${record.weekId}; plate images were built for that week.`,
+    ]);
+  }
+
   // Images are best-effort: the menu itself is already safely stored, and a
   // missing plate photo is far less bad than a missing menu.
   let images = null;
@@ -113,6 +122,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     dishesFromCache: record.stats.fromCache,
     dishesGenerated: record.stats.generated,
     failedCanteens: record.stats.failedCanteens,
+    // Which canteens landed in which week's row. More than one entry means the
+    // kitchens are rolling over and `weekId` above is only the displayed one.
+    weeksWritten: record.weeksWritten,
     images,
     imageError,
     durationMs: Date.now() - startedAt,

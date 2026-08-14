@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { MenuData, WeeklyMenuRecord, DishOrigin, DishDescription } from "../../lib/types.js";
-import { getWeekId } from "../../lib/dateUtils.js";
+import { getWeekId, parseCanteenWeekNumber, weekIdForWeekNumber } from "../../lib/dateUtils.js";
 import { scrapeAllCanteens, type ScrapeReport } from "./scraper.service.js";
 import { detectDishOrigins, generateDishDescriptions } from "./ai.service.js";
 import {
@@ -174,9 +174,53 @@ export interface UpdateStats {
   unchanged: boolean;
 }
 
+/** What one week's row received from a single scrape. */
+export interface WeekWriteResult {
+  weekId: string;
+  /** Canteens whose published week label routed them here. */
+  canteens: string[];
+  dishCount: number;
+  fromCache: number;
+  generated: number;
+  unchanged: boolean;
+}
+
 export interface WeeklyUpdateResult extends WeeklyMenuRecord {
   stats: UpdateStats;
   scrape: ScrapeReport;
+  /**
+   * Every week this scrape wrote. Usually one; two while the kitchens roll over
+   * to next week, which they do at different times on a Thursday or Friday.
+   */
+  weeksWritten: WeekWriteResult[];
+}
+
+/**
+ * Routes each canteen to the week it says its menu is for.
+ *
+ * The canteens publish one week at a time and flip to the next at their own
+ * pace — on the Friday this was written, two had moved to week 34 while the
+ * third was still on 33. Keying the whole scrape off the calendar week wrote
+ * next week's food into this week's row, which is how the stored 2026-W34 row
+ * ended up holding two canteens' week-33 menus.
+ *
+ * An unparseable label falls back to the calendar week rather than dropping the
+ * canteen: a missing menu is worse than one filed under a debatable key.
+ */
+export function groupCanteensByPublishedWeek(
+  menuData: MenuData,
+  fallbackWeekId: string
+): Map<string, MenuData["canteens"]> {
+  const groups = new Map<string, MenuData["canteens"]>();
+
+  for (const [name, canteen] of Object.entries(menuData.canteens || {})) {
+    const weekNumber = parseCanteenWeekNumber(canteen.week);
+    const weekId = weekNumber === null ? fallbackWeekId : weekIdForWeekNumber(weekNumber);
+    if (!groups.has(weekId)) groups.set(weekId, {});
+    groups.get(weekId)![name] = canteen;
+  }
+
+  return groups;
 }
 
 /** True when the scrape produced no dishes at all for any canteen. */
@@ -203,90 +247,138 @@ export async function runWeeklyUpdateService(
 
   const scrape = await scrapeAllCanteens();
   const { menuData } = scrape;
-  const weekId = weekIdInput || getWeekId();
+  const displayWeekId = getWeekId();
+  const fallbackWeekId = weekIdInput || displayWeekId;
 
   if (isEmptyScrape(menuData)) {
     // Refuse to overwrite a good week with nothing. An upstream outage or a
     // markup change should page us, not quietly blank the app.
     throw new Error(
-      `Scrape produced no menu items for any canteen (${weekId}) — refusing to overwrite stored data. ` +
+      `Scrape produced no menu items for any canteen (${fallbackWeekId}) — refusing to overwrite stored data. ` +
         scrape.results.map((r) => `${r.canteen.displayName}: ${r.error ?? "ok"}`).join("; ")
     );
   }
 
-  const allDishes = extractAllDishes(menuData);
-  const fingerprint = fingerprintScrape(menuData);
-  console.log(`🔍 ${allDishes.length} distinct dishes; fingerprint ${fingerprint}`);
+  // An explicit week id is a manual override ("rebuild 2026-W31"), so it wins
+  // over whatever the canteens currently advertise.
+  const groups = weekIdInput
+    ? new Map([[weekIdInput, menuData.canteens || {}]])
+    : groupCanteensByPublishedWeek(menuData, fallbackWeekId);
 
-  const existing = await getStoredRow(weekId);
-  const unchanged = !force && existing?.fingerprint === fingerprint;
-
-  let dishOrigins: Record<string, DishOrigin> = existing?.dishOrigins ?? {};
-  let dishDescriptions: Record<string, DishDescription> = existing?.dishDescriptions ?? {};
-  let fromCache = 0;
-  let generated = 0;
-
-  if (unchanged) {
-    console.log("✅ Scrape identical to the stored week — skipping enrichment.");
-  } else {
-    const enriched = await enrichDishes(allDishes);
-    dishOrigins = enriched.origins;
-    dishDescriptions = enriched.descriptions;
-    fromCache = enriched.fromCache;
-    generated = enriched.generated;
+  if (groups.size > 1) {
+    console.log(
+      `📆 Canteens are mid-rollover — routing to ${[...groups.keys()].sort().join(" and ")}.`
+    );
   }
 
-  const record: WeeklyMenuRecord = {
-    weekId,
-    menuData,
-    dishOrigins,
-    dishDescriptions,
-    scrapedAt: new Date().toISOString(),
-  };
-
-  // Persist first, cache second: the cache must never hold data the database
-  // does not, or a failed write would be masked for the whole TTL.
   const supabase = getWriteClient();
-  const { error } = await supabase.from("weekly_menus").upsert(
-    {
-      week_id: weekId,
-      // The fingerprint rides inside menu_data so no schema change is needed.
-      menu_data: { ...menuData, fingerprint },
-      dish_origins: dishOrigins,
-      dish_descriptions: dishDescriptions,
-      scraped_at: record.scrapedAt,
-    },
-    { onConflict: "week_id" }
-  );
-
-  // supabase-js resolves with an `error` field rather than rejecting, so this
-  // check is what turns a rejected write into a visible failure.
-  if (error) throw new Error(`Supabase upsert failed for ${weekId}: ${error.message}`);
-
   const redis = getRedis();
-  if (redis) {
-    try {
-      await redis.set(`menu:${weekId}`, record, { ex: 7 * 24 * 60 * 60 });
-    } catch (err) {
-      console.error("Redis menu write error:", err);
+  const scrapedAt = new Date().toISOString();
+  const weeksWritten: WeekWriteResult[] = [];
+  const writtenRecords = new Map<string, WeeklyMenuRecord>();
+
+  for (const weekId of [...groups.keys()].sort()) {
+    const scrapedCanteens = groups.get(weekId)!;
+    const existing = await getStoredRow(weekId);
+
+    // Merge rather than replace. A canteen that has not rolled over yet must
+    // not erase the one that has, and vice versa — each week's row keeps every
+    // canteen it has ever been told about until that canteen supersedes it.
+    const mergedCanteens = { ...(existing?.menuData?.canteens ?? {}), ...scrapedCanteens };
+    const weekMenuData: MenuData = { ...menuData, canteens: mergedCanteens };
+
+    const allDishes = extractAllDishes(weekMenuData);
+    const fingerprint = fingerprintScrape(weekMenuData);
+    const unchanged = !force && existing?.fingerprint === fingerprint;
+
+    let dishOrigins: Record<string, DishOrigin> = existing?.dishOrigins ?? {};
+    let dishDescriptions: Record<string, DishDescription> = existing?.dishDescriptions ?? {};
+    let fromCache = 0;
+    let generated = 0;
+
+    if (unchanged) {
+      console.log(`✅ ${weekId} identical to the stored week — skipping enrichment.`);
+    } else {
+      const enriched = await enrichDishes(allDishes);
+      dishOrigins = enriched.origins;
+      dishDescriptions = enriched.descriptions;
+      fromCache = enriched.fromCache;
+      generated = enriched.generated;
     }
+
+    const record: WeeklyMenuRecord = {
+      weekId,
+      menuData: weekMenuData,
+      dishOrigins,
+      dishDescriptions,
+      scrapedAt,
+    };
+
+    // Persist first, cache second: the cache must never hold data the database
+    // does not, or a failed write would be masked for the whole TTL.
+    const { error } = await supabase.from("weekly_menus").upsert(
+      {
+        week_id: weekId,
+        // The fingerprint rides inside menu_data so no schema change is needed.
+        menu_data: { ...weekMenuData, fingerprint },
+        dish_origins: dishOrigins,
+        dish_descriptions: dishDescriptions,
+        scraped_at: scrapedAt,
+      },
+      { onConflict: "week_id" }
+    );
+
+    // supabase-js resolves with an `error` field rather than rejecting, so this
+    // check is what turns a rejected write into a visible failure.
+    if (error) throw new Error(`Supabase upsert failed for ${weekId}: ${error.message}`);
+
+    if (redis) {
+      try {
+        await redis.set(`menu:${weekId}`, record, { ex: 7 * 24 * 60 * 60 });
+      } catch (err) {
+        console.error("Redis menu write error:", err);
+      }
+    }
+
+    writtenRecords.set(weekId, record);
+    weeksWritten.push({
+      weekId,
+      canteens: Object.keys(scrapedCanteens),
+      dishCount: allDishes.length,
+      fromCache,
+      generated,
+      unchanged,
+    });
+
+    console.log(
+      `✅ ${weekId} stored — ${allDishes.length} dishes (${fromCache} cached, ${generated} new)` +
+        ` from ${Object.keys(scrapedCanteens).join(", ")}`
+    );
   }
 
+  // Plate images live in per-day, per-canteen slots with no week dimension, so
+  // only one week's plates can exist at a time. They must therefore depict the
+  // week the app is actually rendering — not whichever week this scrape
+  // happened to catch, which on a Friday afternoon is already the next one.
+  const primary =
+    writtenRecords.get(displayWeekId) ??
+    (await getWeeklyMenuService(displayWeekId)) ??
+    writtenRecords.get([...writtenRecords.keys()].sort()[0])!;
+
+  const primaryWrite = weeksWritten.find((w) => w.weekId === primary.weekId);
   const stats: UpdateStats = {
-    weekId,
-    dishCount: allDishes.length,
-    fromCache,
-    generated,
+    weekId: primary.weekId,
+    dishCount: primaryWrite?.dishCount ?? extractAllDishes(primary.menuData).length,
+    fromCache: weeksWritten.reduce((n, w) => n + w.fromCache, 0),
+    generated: weeksWritten.reduce((n, w) => n + w.generated, 0),
     failedCanteens: scrape.failed,
-    unchanged,
+    // Nothing to regenerate downstream unless the displayed week itself moved.
+    unchanged: primaryWrite ? primaryWrite.unchanged : true,
   };
 
-  console.log(
-    `✅ ${weekId} stored — ${allDishes.length} dishes (${fromCache} cached, ${generated} new)` +
-      (scrape.failed.length ? `, failed: ${scrape.failed.join(", ")}` : "")
-  );
+  if (scrape.failed.length) console.log(`⚠️  failed: ${scrape.failed.join(", ")}`);
 
-  return { ...record, stats, scrape };
+  return { ...primary, stats, scrape, weeksWritten };
 }
 
 /** Reads the stored row for a week, including the embedded fingerprint. */
@@ -294,6 +386,8 @@ async function getStoredRow(weekId: string): Promise<{
   fingerprint?: string;
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
+  /** The stored week, so a partial scrape can be merged into it. */
+  menuData: MenuData | null;
 } | null> {
   const supabase = getReadClient();
   if (!supabase) return null;
@@ -310,6 +404,7 @@ async function getStoredRow(weekId: string): Promise<{
     fingerprint: data.menu_data?.fingerprint,
     dishOrigins: data.dish_origins ?? {},
     dishDescriptions: data.dish_descriptions ?? {},
+    menuData: (data.menu_data as MenuData) ?? null,
   };
 }
 
@@ -351,26 +446,38 @@ async function enrichDishes(dishes: string[]): Promise<{
     generateDishDescriptions(missing),
   ]);
 
-  Object.assign(origins, newOrigins);
-  Object.assign(descriptions, newDescriptions);
+  Object.assign(origins, newOrigins.values);
+  Object.assign(descriptions, newDescriptions.values);
 
-  // Write the new dishes back so this cost is never paid twice. Preserve any
-  // image path already recorded against the same key.
-  const entries: DishCacheEntry[] = missing.map((dish) => {
+  // Cache only what the model actually answered. Both passes fill their gaps
+  // with a pattern fallback so nothing renders blank, but persisting those
+  // would bake a rate-limited afternoon into dish_cache permanently — the
+  // entry is a cache hit forever after, so the dish is never asked about again.
+  // Displaying a fallback for one run is cheap; storing it is not.
+  const durable = missing.filter(
+    (dish) => newOrigins.fromModel.has(dish) && newDescriptions.fromModel.has(dish)
+  );
+
+  // Preserve any image path already recorded against the same key.
+  const entries: DishCacheEntry[] = durable.map((dish) => {
     const key = normalizeDishName(dish);
     const hit = cache.get(key);
     return {
       cacheKey: key,
       originalName: dish,
-      origin: newOrigins[dish] ?? hit?.origin ?? null,
-      description: newDescriptions[dish] ?? hit?.description ?? null,
+      origin: newOrigins.values[dish] ?? hit?.origin ?? null,
+      description: newDescriptions.values[dish] ?? hit?.description ?? null,
       imagePath: hit?.imagePath ?? null,
       imageNoBgPath: hit?.imageNoBgPath ?? null,
     };
   });
 
   const saved = await saveDishCacheEntries(entries);
-  console.log(`🗃️  ${saved} dishes written back to dish_cache.`);
+  const skipped = missing.length - durable.length;
+  console.log(
+    `🗃️  ${saved} dishes written back to dish_cache` +
+      (skipped ? `; ${skipped} left uncached (model did not answer, will retry next run).` : ".")
+  );
 
   return { origins, descriptions, fromCache, generated: missing.length };
 }
