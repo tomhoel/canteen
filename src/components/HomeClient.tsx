@@ -5,7 +5,12 @@ import { useSearch, useNavigate } from "@tanstack/react-router";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
-import { getLocalDateKey, computeDisplayContext, compareWeeks } from "@/lib/dateUtils";
+import {
+  getLocalDateKey,
+  computeDisplayContext,
+  compareWeeks,
+  parseCanteenWeekNumber,
+} from "@/lib/dateUtils";
 import { useVoting } from "@/lib/useVoting";
 import { useRecipe } from "@/lib/useRecipe";
 import { useDeals } from "@/lib/useDeals";
@@ -274,8 +279,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   const canteenWeekNumbers = useMemo(
     () => sortedCanteens
-      .map(([, c]) => parseInt(c.week.match(/\d+/)?.[0] || "0", 10))
-      .filter(n => n > 0),
+      .map(([, c]) => parseCanteenWeekNumber(c.week))
+      .filter((n): n is number => n !== null),
     [sortedCanteens],
   );
 
@@ -466,8 +471,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
         const imagePath = sbLowRes || `/images_nobg/${dk}/${imageSlug}.png`;
         const highResImagePath = sbHighRes || `/images_nobg/${dk}/${imageSlug}.png`;
-        const canteenWeekNum = parseInt(canteen.week.match(/\d+/)?.[0] || "0", 10);
-        const cmp = canteenWeekNum > 0 ? compareWeeks(canteenWeekNum, displayWeek) : 0;
+        // CanteenDayItem models "no usable week label" as undefined, not null.
+        const canteenWeekNum = parseCanteenWeekNumber(canteen.week) ?? undefined;
+        const cmp = canteenWeekNum !== undefined ? compareWeeks(canteenWeekNum, displayWeek) : 0;
         const isOutdated = cmp === -1;
         const isAhead = cmp === 1;
         const enLookup = dayEntry?.en?.items || [];

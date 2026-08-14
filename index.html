@@ -6,9 +6,29 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
+    <!-- Tints the iOS status bar and Safari's chrome even before install. -->
     <meta name="theme-color" content="#f5f0e8" />
     <title>Canteen — Menus, Deals & Culinary Discovery</title>
-    <link rel="icon" href="/favicon.ico" />
+
+    <!-- public/manifest.json and the icons beside it already existed but were
+         never linked, so the app could not be installed from any browser. -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+
+    <!-- iOS ignores the manifest for launch chrome and reads these instead, so
+         both have to ship. The icon must be opaque: iOS fills any transparency
+         with a colour we don't choose. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Dagens Lunsj" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Deliberately no apple-touch-startup-image. iOS shows a launch image only
+         on an exact device-size media match and has no fallback, so a partial
+         matrix gives unlisted iPhones a blank white launch instead of the plain
+         one they get now. Adding it means generating the full device set. -->
   </head>
   <body>
     <div id="root"></div>

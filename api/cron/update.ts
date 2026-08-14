@@ -1,5 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { runWeeklyUpdateService } from "../../src/server/services/menu.service.js";
+import {
+  runWeeklyUpdateService,
+  type WeekWriteResult,
+} from "../../src/server/services/menu.service.js";
 import { processAllCanteenAIImages } from "../../src/server/services/image.service.js";
 import { sendCronAlert } from "../../src/server/notify.js";
 
@@ -71,11 +74,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // in Vercel's cron run history, and as a Slack alert so someone notices
     // before staff do.
     console.error("❌ [cron] Menu update failed:", error);
+    // The write loop commits one week at a time, so "nothing was touched" is
+    // only true when it failed before the first upsert landed.
+    const committed: WeekWriteResult[] = error?.weeksWritten ?? [];
     await sendCronAlert("error", "Weekly menu update failed", [
       error.message,
-      "The stored menu was left untouched.",
+      committed.length
+        ? `Already committed before the failure: ${committed.map((w) => w.weekId).join(", ")}.`
+        : "The stored menu was left untouched.",
     ]);
-    return res.status(500).json({ error: "Menu update failed", details: error.message });
+    return res.status(500).json({
+      error: "Menu update failed",
+      details: error.message,
+      weeksWritten: committed,
+    });
   }
 
   // A partial scrape still persists — one canteen being down should not cost
@@ -84,6 +96,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sendCronAlert("warning", "Some canteens could not be scraped", [
       `Failed: ${record.stats.failedCanteens.join(", ")}`,
       `Stored ${record.stats.dishCount} dishes for ${record.weekId} from the rest.`,
+    ]);
+  }
+
+  // A week left untouched because its row could not be read. Not data loss —
+  // that is the point of skipping — but it is stale until the next run.
+  if (record.weeksSkipped.length > 0) {
+    await sendCronAlert("warning", "Some weeks were skipped to avoid overwriting them", [
+      ...record.weeksSkipped.map((w) => `${w.weekId}: ${w.reason}`),
+      "Their stored rows were left as they were; the next run will retry.",
+    ]);
+  }
+
+  // Normal late in the week, but worth seeing: it means the canteens disagree
+  // about which week it is, and the app is rendering only one of them.
+  if (record.weeksWritten.length > 1) {
+    await sendCronAlert("warning", "Canteens are mid-rollover across two weeks", [
+      ...record.weeksWritten.map((w) => `${w.weekId}: ${w.canteens.join(", ")}`),
+      `Showing ${record.weekId}; plate images were built for that week.`,
     ]);
   }
 
@@ -113,6 +143,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     dishesFromCache: record.stats.fromCache,
     dishesGenerated: record.stats.generated,
     failedCanteens: record.stats.failedCanteens,
+    // Which canteens landed in which week's row. More than one entry means the
+    // kitchens are rolling over and `weekId` above is only the displayed one.
+    weeksWritten: record.weeksWritten,
+    weeksSkipped: record.weeksSkipped,
     images,
     imageError,
     durationMs: Date.now() - startedAt,

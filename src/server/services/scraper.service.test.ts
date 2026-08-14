@@ -138,3 +138,46 @@ test("parseCanteenHtml - marks exactly one main dish per language", () => {
   assert.equal(mains.length, 1);
   assert.equal(mains[0].dish, "Kylling med ris");
 });
+
+// ─── mergeItems: continuation-line rules ────────────────────────────────────
+// Ported from the retired Playwright scraper's suite, which carried the only
+// coverage of these cases. The widget breaks one dish across two lines at
+// unpredictable points, so the rules about what counts as a continuation are
+// what keep "Laks på" and "eng av grønnsaker" from becoming two dishes.
+
+test("mergeItems - joins a line ending in a preposition", () => {
+  assert.deepEqual(
+    mergeItems(["Fullkorn pasta Bolognese med", "parmesan 1,3,4"]),
+    ["Fullkorn pasta Bolognese med parmesan 1,3,4"]
+  );
+});
+
+test("mergeItems - joins after every preposition the kitchens use", () => {
+  const preps = ["med", "og", "with", "and", "in", "på", "i", "over",
+                 "under", "til", "fra", "av", "uten", "mashed"];
+  for (const prep of preps) {
+    assert.deepEqual(mergeItems([`Dish ${prep}`, "side"]), [`Dish ${prep} side`], prep);
+  }
+});
+
+test("mergeItems - does not join a long lowercase line", () => {
+  // Long lowercase text is prose (an availability note), not a dish remainder.
+  const long = "this is a very long line that starts with lowercase but is more than thirty characters long";
+  assert.deepEqual(mergeItems(["Pasta", long]), ["Pasta", long]);
+});
+
+test("mergeItems - does not join a line starting uppercase", () => {
+  assert.deepEqual(mergeItems(["Item 1", "Item 2"]), ["Item 1", "Item 2"]);
+});
+
+test("mergeItems - chains multiple continuations into one dish", () => {
+  assert.deepEqual(mergeItems(["Kylling og", "ris", "med salat"]), ["Kylling og ris med salat"]);
+});
+
+test("mergeItems - trims and drops blank lines", () => {
+  assert.deepEqual(mergeItems(["  Item 1  ", "", "   ", "Item 2"]), ["Item 1", "Item 2"]);
+});
+
+test("mergeItems - preserves Norwegian characters across a join", () => {
+  assert.deepEqual(mergeItems(["Laks på", "eng av grønnsaker"]), ["Laks på eng av grønnsaker"]);
+});

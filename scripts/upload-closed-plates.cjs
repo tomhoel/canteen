@@ -10,7 +10,7 @@
  * repeatedly.
  *
  *   NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
- *   node scripts/upload-closed-plates.js
+ *   node scripts/upload-closed-plates.cjs
  */
 
 const fs = require('fs');
