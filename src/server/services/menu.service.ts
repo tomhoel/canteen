@@ -193,6 +193,8 @@ export interface WeeklyUpdateResult extends WeeklyMenuRecord {
    * to next week, which they do at different times on a Thursday or Friday.
    */
   weeksWritten: WeekWriteResult[];
+  /** Weeks left untouched because their stored row could not be read. */
+  weeksSkipped: Array<{ weekId: string; reason: string }>;
 }
 
 /**
@@ -221,6 +223,48 @@ export function groupCanteensByPublishedWeek(
   }
 
   return groups;
+}
+
+/**
+ * Builds one week's canteen set from three sources, weakest first.
+ *
+ * 1. `stored` — what the row already holds. Merged rather than replaced, so a
+ *    canteen that has not rolled over cannot erase one that has.
+ * 2. `allScraped` — every canteen in this scrape, regardless of which week it
+ *    published, used only to fill a canteen the row has never heard of. Without
+ *    this, the row created for next week holds only the kitchens that rolled
+ *    over early and the laggard vanishes from the app the moment that week
+ *    becomes current. The seeded entry keeps its own `week` label, so the card
+ *    renders with the existing "outdated" badge rather than pretending.
+ * 3. `thisWeek` — the canteens that actually published this week. Authoritative.
+ */
+export function mergeCanteensForWeek(
+  stored: MenuData["canteens"] | undefined,
+  allScraped: MenuData["canteens"],
+  thisWeek: MenuData["canteens"]
+): MenuData["canteens"] {
+  const merged: MenuData["canteens"] = { ...(stored ?? {}) };
+
+  for (const [name, canteen] of Object.entries(allScraped)) {
+    if (!merged[name]) merged[name] = canteen;
+  }
+
+  return Object.assign(merged, thisWeek);
+}
+
+/**
+ * Thrown when a multi-week run fails after some weeks are already committed.
+ *
+ * The write loop is not a transaction — each week is its own upsert — so unlike
+ * the previous single-write updater, a failure here does not mean the stored
+ * data is untouched. Callers reporting the failure need to say which weeks did
+ * land.
+ */
+export class PartialUpdateError extends Error {
+  constructor(message: string, readonly weeksWritten: WeekWriteResult[]) {
+    super(message);
+    this.name = "PartialUpdateError";
+  }
 }
 
 /** True when the scrape produced no dishes at all for any canteen. */
@@ -275,16 +319,28 @@ export async function runWeeklyUpdateService(
   const redis = getRedis();
   const scrapedAt = new Date().toISOString();
   const weeksWritten: WeekWriteResult[] = [];
+  const weeksSkipped: Array<{ weekId: string; reason: string }> = [];
   const writtenRecords = new Map<string, WeeklyMenuRecord>();
 
   for (const weekId of [...groups.keys()].sort()) {
     const scrapedCanteens = groups.get(weekId)!;
-    const existing = await getStoredRow(weekId);
 
-    // Merge rather than replace. A canteen that has not rolled over yet must
-    // not erase the one that has, and vice versa — each week's row keeps every
-    // canteen it has ever been told about until that canteen supersedes it.
-    const mergedCanteens = { ...(existing?.menuData?.canteens ?? {}), ...scrapedCanteens };
+    const stored = await getStoredRow(weekId);
+    if (!stored.ok) {
+      // Writing now would merge into an assumed-empty row and delete every
+      // canteen this scrape did not see. Skipping costs one stale week until
+      // the next run; guessing costs menus that no longer exist upstream.
+      console.error(`⛔ ${weekId} skipped — could not read the stored row: ${stored.error}`);
+      weeksSkipped.push({ weekId, reason: stored.error });
+      continue;
+    }
+    const existing = stored.row;
+
+    const mergedCanteens = mergeCanteensForWeek(
+      existing?.menuData?.canteens,
+      menuData.canteens || {},
+      scrapedCanteens
+    );
     const weekMenuData: MenuData = { ...menuData, canteens: mergedCanteens };
 
     const allDishes = extractAllDishes(weekMenuData);
@@ -329,8 +385,16 @@ export async function runWeeklyUpdateService(
     );
 
     // supabase-js resolves with an `error` field rather than rejecting, so this
-    // check is what turns a rejected write into a visible failure.
-    if (error) throw new Error(`Supabase upsert failed for ${weekId}: ${error.message}`);
+    // check is what turns a rejected write into a visible failure. Weeks
+    // committed before this point stay committed, so the error carries them —
+    // an alert claiming nothing was touched would send someone looking in the
+    // wrong place.
+    if (error) {
+      throw new PartialUpdateError(
+        `Supabase upsert failed for ${weekId}: ${error.message}`,
+        [...weeksWritten]
+      );
+    }
 
     if (redis) {
       try {
@@ -356,14 +420,27 @@ export async function runWeeklyUpdateService(
     );
   }
 
+  if (weeksWritten.length === 0) {
+    // Every week was skipped, so the run achieved nothing. Fail loudly rather
+    // than returning a record that suggests otherwise.
+    throw new Error(
+      `No week could be written — the stored rows could not be read: ` +
+        weeksSkipped.map((w) => `${w.weekId} (${w.reason})`).join("; ")
+    );
+  }
+
   // Plate images live in per-day, per-canteen slots with no week dimension, so
   // only one week's plates can exist at a time. They must therefore depict the
   // week the app is actually rendering — not whichever week this scrape
   // happened to catch, which on a Friday afternoon is already the next one.
-  const primary =
-    writtenRecords.get(displayWeekId) ??
-    (await getWeeklyMenuService(displayWeekId)) ??
-    writtenRecords.get([...writtenRecords.keys()].sort()[0])!;
+  //
+  // An explicit weekIdInput is the exception: the caller named a week, so that
+  // is the one to return and to build plates for.
+  const primary = weekIdInput
+    ? writtenRecords.get(weekIdInput)!
+    : writtenRecords.get(displayWeekId) ??
+      (await getWeeklyMenuService(displayWeekId)) ??
+      writtenRecords.get([...writtenRecords.keys()].sort()[0])!;
 
   const primaryWrite = weeksWritten.find((w) => w.weekId === primary.weekId);
   const stats: UpdateStats = {
@@ -378,19 +455,33 @@ export async function runWeeklyUpdateService(
 
   if (scrape.failed.length) console.log(`⚠️  failed: ${scrape.failed.join(", ")}`);
 
-  return { ...primary, stats, scrape, weeksWritten };
+  return { ...primary, stats, scrape, weeksWritten, weeksSkipped };
 }
 
-/** Reads the stored row for a week, including the embedded fingerprint. */
-async function getStoredRow(weekId: string): Promise<{
+interface StoredRow {
   fingerprint?: string;
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
   /** The stored week, so a partial scrape can be merged into it. */
   menuData: MenuData | null;
-} | null> {
+}
+
+/**
+ * Reads the stored row for a week, including the embedded fingerprint.
+ *
+ * `ok: false` and `row: null` are deliberately different answers. The write path
+ * merges this scrape into whatever is already stored, so "the row has no
+ * canteens" and "I could not find out what the row holds" must never collapse
+ * into the same value: treating a failed read as an empty row turns the merge
+ * into a full replace and deletes the canteens this scrape did not see. Once
+ * those kitchens have rolled over to the next week, their old page is gone
+ * upstream and no later run can restore it.
+ */
+async function getStoredRow(
+  weekId: string
+): Promise<{ ok: true; row: StoredRow | null } | { ok: false; error: string }> {
   const supabase = getReadClient();
-  if (!supabase) return null;
+  if (!supabase) return { ok: false, error: "Supabase is not configured" };
 
   const { data, error } = await supabase
     .from("weekly_menus")
@@ -398,13 +489,19 @@ async function getStoredRow(weekId: string): Promise<{
     .eq("week_id", weekId)
     .maybeSingle();
 
-  if (error || !data) return null;
+  // supabase-js resolves rather than rejects, so a network blip or a PostgREST
+  // 5xx arrives here as a populated `error` — not as a throw.
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: true, row: null };
 
   return {
-    fingerprint: data.menu_data?.fingerprint,
-    dishOrigins: data.dish_origins ?? {},
-    dishDescriptions: data.dish_descriptions ?? {},
-    menuData: (data.menu_data as MenuData) ?? null,
+    ok: true,
+    row: {
+      fingerprint: data.menu_data?.fingerprint,
+      dishOrigins: data.dish_origins ?? {},
+      dishDescriptions: data.dish_descriptions ?? {},
+      menuData: (data.menu_data as MenuData) ?? null,
+    },
   };
 }
 
