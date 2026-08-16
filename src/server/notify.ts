@@ -37,17 +37,46 @@ export async function sendCronAlert(
     ],
   };
 
+  return await postToSlack(webhookUrl, body, "Cron alert").then(
+    (result) => (result.ok ? { ok: true } : { skipped: true })
+  );
+}
+
+/**
+ * Posts a block payload and reports what Slack actually said.
+ *
+ * Both callers used to collapse every failure into one opaque string — "Failed
+ * to send", or a swallowed `skipped: true`. A revoked webhook, a channel that
+ * was archived and a payload Slack refused all looked identical, which is a bad
+ * property for the only thing that tells anyone the updater died. Slack is
+ * specific if you read the body: `invalid_payload` for a malformed message,
+ * `invalid_token` or `no_service` for a URL that no longer works. That
+ * distinction is the difference between "fix the message" and "the alerting
+ * channel has been dead for months".
+ */
+async function postToSlack(
+  webhookUrl: string,
+  body: unknown,
+  what: string
+): Promise<{ ok: true } | { ok: false; status?: number; detail: string }> {
   try {
     const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`Slack returned ${res.status}`);
+
+    if (!res.ok) {
+      // Slack answers a webhook failure with a short plain-text reason.
+      const detail = await res.text().catch(() => "");
+      console.error(`${what} rejected by Slack: ${res.status} ${detail}`);
+      return { ok: false, status: res.status, detail: detail || `HTTP ${res.status}` };
+    }
+
     return { ok: true };
-  } catch (err) {
-    console.error("Cron alert failed to send:", err);
-    return { skipped: true };
+  } catch (err: any) {
+    console.error(`${what} could not reach Slack:`, err);
+    return { ok: false, detail: err?.message ?? "network error" };
   }
 }
 
@@ -59,7 +88,19 @@ export async function sendSlackNotification(data: NotifyPayload) {
 
   const { canteens, dishes = {}, date, lang = "no" } = data;
 
-  const sorted = Object.entries(canteens).sort(([, a], [, b]) => b - a);
+  const sorted = Object.entries(canteens)
+    .filter(([, count]) => count > 0)
+    .sort(([, a], [, b]) => b - a);
+
+  // An empty tally builds a section block with empty text, which Slack rejects
+  // outright — so sharing before anyone had voted came back "Failed to send"
+  // and looked like a broken webhook. It was reachable every time; the message
+  // was unsendable. Worth guarding rather than fixing at the call site: until
+  // today the vote endpoint returned `{}` for every vote ever cast, so this was
+  // not the edge case it looks like. It was every share.
+  if (sorted.length === 0) {
+    return { skipped: true, reason: "no votes to share yet" };
+  }
   const maxVotes = Math.max(0, ...Object.values(canteens));
   const totalVotes = Object.values(canteens).reduce((a, b) => a + b, 0);
 
@@ -90,20 +131,7 @@ export async function sendSlackNotification(data: NotifyPayload) {
     ],
   };
 
-  try {
-    const res = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      throw new Error(`Slack returned ${res.status}`);
-    }
-
-    return { ok: true };
-  } catch (err) {
-    console.error("Slack webhook error:", err);
-    return { error: "Failed to send" };
-  }
+  const result = await postToSlack(webhookUrl, body, "Lunch result");
+  if (result.ok) return { ok: true };
+  return { error: `Slack rejected the message: ${result.detail}` };
 }
