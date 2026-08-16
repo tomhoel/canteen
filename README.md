@@ -1,36 +1,169 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Canteen
 
-## Getting Started
+The lunch menu for three workplace canteens — **Eat the street**, **Fresh4you**
+and **Flow** — as an installable phone app. It shows the week's dishes in
+Norwegian or English, a plate photo for each day's main dish, where the dish
+comes from, a recipe for it, grocery prices for its ingredients, and a vote for
+where people are eating today.
 
-First, run the development server:
+Production: <https://fbueat.vercel.app>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## The one rule
+
+**A page view never scrapes anything.** The canteens are scraped, enriched and
+photographed twice a day by a cron job that writes to Supabase; the app only
+ever reads what is already stored.
+
+This is worth stating first because the app broke this rule once and it was
+invisible: `src/server/*` was imported straight into components, and since the
+build is a client-only SPA, that shipped the scraper, the AI prompts and every
+`process.env` lookup into the browser bundle. Every visitor re-scraped all three
+canteens themselves, and no feature that needed a secret could work at all.
+Everything server-side now sits behind `/api`.
+
+## How it fits together
+
+```
+        twice daily (06:00 and 09:00 UTC, Mon–Fri)
+                        │
+                        ▼
+        ┌───────────────────────────────┐
+        │  api/cron/update.ts           │   the only writer
+        │   1. scrape 3 canteen widgets │
+        │   2. ask Gemini for origins,  │
+        │      descriptions, plates     │
+        │   3. upsert the week          │
+        └───────────────┬───────────────┘
+                        │
+          ┌─────────────┴──────────────┐
+          ▼                            ▼
+   Supabase Postgres            Supabase Storage
+   weekly_menus                 plate images
+   dish_cache                   (dish-addressed)
+   canteen_attendance
+          │
+          ▼
+   ┌──────────────┐     ┌─────────────────────────┐
+   │  /api/*      │◀────│  React SPA (Vite +      │
+   │  functions   │     │  TanStack Router)       │
+   └──────────────┘     └─────────────────────────┘
+          │
+          ▼
+    Upstash Redis (optional cache)
+    Gemini · kassal.app · meny.no · Slack
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The menu is scraped from each canteen's InSign display widget — the same screen
+that hangs in the canteen — which is HTML meant for a TV, not an API. Most of
+`scraper.service.ts` is about surviving that.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Piece | Choice |
+| --- | --- |
+| App | React 19 + Vite, TanStack Router / Query / Store, plain CSS |
+| Server | Vercel Functions under `api/`, thin wrappers over `src/server/*` |
+| Database | Supabase Postgres (`supabase/schema.sql`) |
+| Images | Supabase Storage, generated with Gemini and background-removed |
+| Cache | Upstash Redis, optional everywhere |
+| Schedule | Vercel Cron (`vercel.json`) |
 
-## Learn More
+It is a PWA: `public/manifest.json` plus the iOS meta tags in `index.html`, and
+it is used installed on an Android home screen, so safe-area insets and standalone
+display are real constraints rather than nice-to-haves.
 
-To learn more about Next.js, take a look at the following resources:
+### Why Vercel Cron and not GitHub Actions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+GitHub disables scheduled workflows after 60 days without repository activity,
+and this repo intentionally goes quiet — the menu lives in Supabase, not in git.
+The updater moved to Vercel Cron, which has no such rule. CI still runs on
+GitHub, because push and pull_request triggers are never disabled.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Running it locally
 
-## Deploy on Vercel
+```bash
+npm install
+cp .env.example .env      # then fill it in — every variable is documented there
+npm run dev               # http://localhost:5173
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`npm run dev` serves the `api/` functions too: a plugin in `vite.config.ts`
+loads the same handler modules through Vite's SSR pipeline and adapts Node's
+req/res to the slice of the Vercel signature they use, so endpoint edits
+hot-reload and no `vercel dev` is needed.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The client itself needs no environment: the two public Supabase values have
+hardcoded fallbacks in `src/lib/constants.ts`, which is why the client build
+works with nothing set. The functions are what read `.env`.
+
+To run the pipeline by hand — after a prompt change, to backfill a week, or to
+debug a scrape without waiting for the schedule:
+
+```bash
+npm run update                    # scrape, enrich, persist; reuse cached dishes
+npm run update -- --force         # re-ask the model and rebuild every image
+npm run update -- --week 2026-W34 # a specific week
+```
+
+`--force` costs real money — it regenerates every plate. `--week` writes to the
+week you name, so a typo overwrites a real one.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server |
+| `npm run build` | `tsr generate` then `vite build` into `dist/` |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint, zero warnings tolerated |
+| `npm test` | `node --test` over `src/**/*.test.ts` |
+| `npm run update` | The weekly updater, run locally |
+
+CI runs typecheck, lint, test and build on every pull request and every push to
+main.
+
+## Endpoints
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/menu` | GET | The stored week. `?week=2026-W34` pins one. CDN-cached. |
+| `/api/attendance` | GET / POST | Today's vote tally, and casting a vote |
+| `/api/recipe` | POST | AI recipe for a dish |
+| `/api/meny` | POST | meny.no product search for its ingredients |
+| `/api/deals` | POST | kassal.app grocery prices |
+| `/api/notify` | POST | Posts the lunch vote result to Slack |
+| `/api/cron/update` | GET | The updater. Requires `Authorization: Bearer $CRON_SECRET` |
+
+Every file under `api/` that imports from `src/server` must use **`.js`
+specifiers** on relative imports. Node's ESM resolver requires the extension at
+runtime; omit it and the build stays green while every function dies on
+invocation.
+
+## Database
+
+`supabase/schema.sql` describes what is actually deployed and is safe to re-run
+against a live database — every statement is idempotent.
+
+| Table | Contents |
+| --- | --- |
+| `weekly_menus` | One row per ISO week, keyed `2026-W34` |
+| `dish_cache` | One row per distinct dish: origin, description, plate path, retry counters |
+| `canteen_attendance` | One row per canteen per day, with `cast_attendance_vote()` |
+
+`dish_cache` is what keeps the twice-daily cron from re-billing the model for
+dishes it has already seen: a dish means the same thing in every week it
+appears, so its origin, description and plate are produced once and reused.
+
+The app only ever SELECTs. Every writer — the cron updater and the maintenance
+scripts — authenticates with the service-role key, which bypasses RLS, so the
+tables carry read policies and no write policies at all.
+
+## Deploying
+
+Pushes to `main` auto-deploy. The environment variables in `.env.example` must
+exist on the Vercel project; several features fail silently without them, and
+each one says so in that file.
+
+A green build is not evidence that anything runs. The functions, the cron and
+the data are all separately capable of being broken behind a successful
+deployment — check the endpoint, the runtime log and the stored row.
