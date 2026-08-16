@@ -154,7 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   return res.status(200).json({
     status: "success",
     weekId: record.weekId,
-    unchanged: record.stats.unchanged,
+    displayedWeekUnchanged: record.stats.displayedWeekUnchanged,
     canteens: Object.keys(record.menuData.canteens || {}).length,
     dishes: record.stats.dishCount,
     dishesFromCache: record.stats.fromCache,
