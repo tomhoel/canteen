@@ -130,10 +130,20 @@ export default function FoodCard({
             <>
               {!imgLoaded && <div className="image-shimmer" />}
               <img
+                // Remount per dish so the ref below re-runs and imgLoaded is
+                // never carried over from the previous day's plate.
+                key={imagePath}
                 src={imagePath}
                 alt={mainDish?.dish || "Matrett"}
                 className={`food-image${imgLoaded ? " loaded" : ""}`}
                 loading="lazy"
+                // .food-image is opacity: 0 until `loaded`, so a plate whose
+                // onLoad never fires stays invisible forever — and a cached
+                // image can finish decoding before React attaches the handler.
+                // That race was unloseable while these were 1.5 MB PNGs and is
+                // near-certain now they are 24 KB WebPs off a CDN, so ask the
+                // element whether it already finished instead of only listening.
+                ref={el => { if (el?.complete && el.naturalWidth > 0) setImgLoaded(true); }}
                 onLoad={() => setImgLoaded(true)}
                 onError={() => setImgError(true)}
               />
