@@ -1,0 +1,68 @@
+name: CI
+
+# Runs on every pull request and on everything that lands on main.
+#
+# This is deliberately NOT a scheduled workflow. GitHub disables scheduled
+# workflows after 60 days without repository activity, which is why the weekly
+# updater lives in Vercel Cron (api/cron/update.ts) instead — see the comment
+# there. A push/pull_request trigger has no such rule: it only ever runs when
+# there is something to check.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch supersedes the first; don't burn minutes
+# checking a commit nobody will merge. main is never cancelled, so the history
+# of what passed stays complete.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck · lint · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          # Matches the runtime Vercel gives the functions in api/.
+          node-version: 24
+          cache: npm
+
+      # `npm ci` rather than `npm install`: it installs exactly what
+      # package-lock.json pins and fails if the two files disagree. That alone
+      # would have caught @vercel/node being a declared devDependency that was
+      # never actually installed, which left `npm run typecheck` broken locally
+      # for weeks without anything noticing.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # eslint exits non-zero on errors only. The repo currently carries 14
+      # warnings (unused vars, one exhaustive-deps); --max-warnings=0 would fail
+      # from day one, and cleaning those up is a separate piece of work.
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # `npm run build` starts with `tsr generate`, which rewrites
+      # src/routeTree.gen.ts — a file that is also committed. If the two ever
+      # disagree the checked-in tree is stale, and the next person to run a
+      # build gets an unexplained diff in their working copy.
+      - name: Generated route tree is up to date
+        run: git diff --exit-code -- src/routeTree.gen.ts
