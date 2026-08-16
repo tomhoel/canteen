@@ -49,6 +49,22 @@ function getWriteClient(): SupabaseClient {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+/**
+ * How long a cached week may outlive the row it was copied from.
+ *
+ * This was seven days, in front of data that changes twice a day. The only
+ * scenario that buys anything is a multi-day Supabase outage — during which the
+ * app would confidently serve a week-old menu, which is worse than saying it
+ * cannot load one. Everything else it buys is staleness: a write that cannot
+ * reach the cache leaves the wrong menu up for a week, and the database looks
+ * correct the entire time.
+ *
+ * An hour still absorbs the traffic this is for — the CDN already caps the
+ * origin at one request per five minutes per edge — while bounding any missed
+ * invalidation to something shorter than the gap between two cron runs.
+ */
+const MENU_CACHE_TTL_SECONDS = 60 * 60;
+
 export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuRecord | null> {
   const targetWeekId = weekId || getWeekId();
 
@@ -484,12 +500,31 @@ export async function runWeeklyUpdateService(
       );
     }
 
+    // Refreshing the cache is part of the write, not a nicety. getWeeklyMenuService
+    // reads `menu:<weekId>` *before* it reads Supabase, so a stored row the cache
+    // does not know about is a row nobody will ever be served.
     if (redis) {
       try {
-        await redis.set(`menu:${weekId}`, record, { ex: 7 * 24 * 60 * 60 });
+        await redis.set(`menu:${weekId}`, record, { ex: MENU_CACHE_TTL_SECONDS });
       } catch (err) {
         console.error("Redis menu write error:", err);
+        console.warn(
+          `⚠️  ${weekId} is stored but its cache entry was not replaced. The app will ` +
+            `keep serving the previous copy for up to ${MENU_CACHE_TTL_SECONDS / 60} minutes.`
+        );
       }
+    } else {
+      // The case that actually bit: a manual run from a machine whose .env has
+      // the Supabase keys but no Redis ones. The database gets the new menu,
+      // production keeps serving the old one out of a cache this run cannot
+      // reach, and every check against the database says everything is fine.
+      console.warn(
+        `⚠️  ${weekId} was written to the database, but no Redis credentials are set ` +
+          `here, so the cache the app reads first was not refreshed. Until it expires ` +
+          `(${MENU_CACHE_TTL_SECONDS / 60} minutes) the deployed app keeps serving the ` +
+          `previous menu. Set UPSTASH_REDIS_REST_URL/TOKEN (or KV_REST_API_URL/TOKEN) ` +
+          `to make a manual run take effect immediately.`
+      );
     }
 
     writtenRecords.set(weekId, record);
