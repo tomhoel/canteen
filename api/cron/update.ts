@@ -130,18 +130,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (record.weeksWritten.length > 1) {
     await sendCronAlert("warning", "Canteens are mid-rollover across two weeks", [
       ...record.weeksWritten.map((w) => `${w.weekId}: ${w.canteens.join(", ")}`),
-      `Showing ${record.weekId}; plate images were built for that week.`,
+      `Showing ${record.weekId}.`,
     ]);
   }
 
   // Images are best-effort: the menu itself is already safely stored, and a
   // missing plate photo is far less bad than a missing menu.
+  //
+  // The displayed week goes first and is the only one that fills the per-day
+  // slots — those carry no week, so a second week written there would overwrite
+  // it. Every other week this run wrote gets its plates into the dish-addressed
+  // archive instead, which is what the read path resolves through and what
+  // gives a week-ahead view pictures at all. Ordering matters for the same
+  // reason: if the budget runs out, it must run out on the week nobody is
+  // looking at yet.
   let images = null;
   let imageError: string | null = null;
   try {
-    const elapsed = Date.now() - startedAt;
-    const budgetMs = Math.max(0, MAX_DURATION_MS - elapsed - SAFETY_MARGIN_MS);
-    images = await processAllCanteenAIImages(record.menuData, { budgetMs, force });
+    const remainingBudget = () =>
+      Math.max(0, MAX_DURATION_MS - (Date.now() - startedAt) - SAFETY_MARGIN_MS);
+
+    images = await processAllCanteenAIImages(record.menuData, {
+      budgetMs: remainingBudget(),
+      force,
+    });
+
+    for (const week of record.weeksWritten) {
+      if (week.weekId === record.weekId) continue;
+      const ahead = await processAllCanteenAIImages(week.menuData, {
+        budgetMs: remainingBudget(),
+        force,
+        writeSlots: false,
+      });
+      console.log(
+        `📸 [cron] ${week.weekId} (archive only): ${ahead.reused} reused, ` +
+          `${ahead.generated} generated, ${ahead.deferred} deferred.`
+      );
+    }
   } catch (err: any) {
     imageError = err.message;
     console.warn("⚠️ [cron] Image processing failed:", err.message);
@@ -170,7 +195,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     failedCanteens: record.stats.failedCanteens,
     // Which canteens landed in which week's row. More than one entry means the
     // kitchens are rolling over and `weekId` above is only the displayed one.
-    weeksWritten: record.weeksWritten,
+    // menuData is stripped: it is a whole week of menus per entry, and this
+    // response is meant to be readable in Vercel's cron run history.
+    weeksWritten: record.weeksWritten.map(({ menuData: _menuData, ...week }) => week),
     weeksSkipped: record.weeksSkipped,
     images,
     imageError,

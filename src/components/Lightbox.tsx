@@ -76,7 +76,7 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
         )}
 
         <div className="lightbox-image-container">
-          {failedIndex === currentIndex ? (
+          {failedIndex === currentIndex || !current.highResImagePath ? (
             <div className="image-placeholder">{current.canteenName.charAt(0)}</div>
           ) : (
             <img

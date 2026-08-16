@@ -23,6 +23,12 @@ export interface WeeklyMenuResponse {
   menuData: MenuData;
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
+  /**
+   * Storage path of each card's plate image, keyed `"<day>|<canteen name>"`.
+   * The server resolves this because it knows which dish a stored plate depicts;
+   * the browser cannot. A missing key means no picture exists for that day.
+   */
+  plateImages: Record<string, string>;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

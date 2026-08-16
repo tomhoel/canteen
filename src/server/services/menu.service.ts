@@ -228,6 +228,12 @@ export interface WeekWriteResult extends EnrichmentCounts {
   canteens: string[];
   dishCount: number;
   unchanged: boolean;
+  /**
+   * The week as written, so the caller can build plate images for every week
+   * this run touched rather than only the displayed one. Not part of the JSON
+   * the cron endpoint returns — see how it is stripped there.
+   */
+  menuData: MenuData;
 }
 
 export interface WeeklyUpdateResult extends WeeklyMenuRecord {
@@ -505,6 +511,7 @@ export async function runWeeklyUpdateService(
       exhausted: enriched.exhausted,
       newlyExhausted: enriched.newlyExhausted,
       unchanged,
+      menuData: weekMenuData,
     });
 
     console.log(

@@ -174,7 +174,31 @@ export function weekIdForWeekNumber(weekNumber: number): string {
   return `${weekYear}-W${String(weekNumber).padStart(2, '0')}`;
 }
 
-export type DisplayMode = 'weekday-current' | 'weekend-preview' | 'weekend-recap';
+/**
+ * Monday of a canonical week id, or null if the id is not one.
+ *
+ * ISO week 1 is the week containing 4 January, so that date's Monday anchors
+ * the year and every other week is a multiple of seven days from it.
+ */
+export function mondayOfWeekId(weekId: string | undefined | null): Date | null {
+  const match = weekId?.match(/^(\d{4})-W(\d{2})$/);
+  if (!match) return null;
+
+  const weekYear = Number(match[1]);
+  const weekNumber = Number(match[2]);
+  if (weekNumber < 1 || weekNumber > 53) return null;
+
+  // Noon, so adding whole days can never be shifted by a DST transition.
+  const jan4 = new Date(weekYear, 0, 4, 12, 0, 0);
+  const week1Monday = new Date(jan4);
+  week1Monday.setDate(jan4.getDate() - ((jan4.getDay() || 7) - 1));
+
+  const monday = new Date(week1Monday);
+  monday.setDate(week1Monday.getDate() + (weekNumber - 1) * 7);
+  return monday;
+}
+
+export type DisplayMode = 'weekday-current' | 'weekend-preview' | 'weekend-recap' | 'pinned-week';
 
 export interface DisplayContext {
   /** Monday of the displayed week (local TZ Date used only for date math). */
@@ -196,11 +220,43 @@ export interface DisplayContext {
  *
  * Pass the parsed week numbers from canteen.week. Empty array → treated as
  * "no data yet" (defaults to weekday-current / weekend-recap).
+ *
+ * `pinnedWeekId` is the `?week=` search param. Without it this function derives
+ * everything from today, which is right for the normal case and wrong the
+ * moment the app is asked for a specific week: it would render that week's food
+ * under this week's dates, with a "today" that is not in the week on screen.
+ * A pinned week that happens to be the current one falls through to the normal
+ * rules, so linking to the current week changes nothing.
  */
-export function computeDisplayContext(canteenWeekNumbers: number[]): DisplayContext {
+export function computeDisplayContext(
+  canteenWeekNumbers: number[],
+  pinnedWeekId?: string,
+): DisplayContext {
   const { year, month, day } = todayOsloParts();
   // Local-TZ Date that matches Oslo's calendar day. Noon avoids DST edges.
   const today = new Date(year, month - 1, day, 12, 0, 0);
+
+  const pinnedMonday =
+    pinnedWeekId && pinnedWeekId !== getWeekIdForDate(year, month, day)
+      ? mondayOfWeekId(pinnedWeekId)
+      : null;
+
+  if (pinnedMonday) {
+    return {
+      anchor: pinnedMonday,
+      weekNumber: getWeekNumberForDate(
+        pinnedMonday.getFullYear(),
+        pinnedMonday.getMonth() + 1,
+        pinnedMonday.getDate(),
+      ),
+      // Today is not in the week being shown, so nothing is "today" and the
+      // week opens on its Monday. Voting keys off weekday-current and stays
+      // off, which is correct: you cannot vote on a lunch you are not at.
+      todayIndex: -1,
+      defaultSelectedDay: 0,
+      mode: 'pinned-week',
+    };
+  }
   const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 

@@ -36,6 +36,15 @@ export interface HomeClientProps {
   initialMenu: MenuData | null;
   initialOrigins: Record<string, DishOrigin>;
   initialDescriptions: Record<string, DishDescription>;
+  /**
+   * Storage path per card, keyed `"<day>|<canteen name>"`, resolved server-side.
+   *
+   * The client used to build `<day>/<canteen>.png` itself — a slot with no week
+   * in it, so only one week's plates could exist and any other week's cards
+   * showed the wrong food. Only the server can do better: it knows, via
+   * dish_cache, which dish each stored plate depicts.
+   */
+  plateImages: Record<string, string>;
 }
 
 /** Purge stale localStorage keys older than 7 days. */
@@ -75,9 +84,9 @@ function cleanupLocalStorage() {
   }
 }
 
-export default function HomeClient({ initialMenu, initialOrigins, initialDescriptions }: HomeClientProps) {
+export default function HomeClient({ initialMenu, initialOrigins, initialDescriptions, plateImages }: HomeClientProps) {
   const navigate = useNavigate({ from: "/" });
-  const searchParams = useSearch({ strict: false }) as { day?: string };
+  const searchParams = useSearch({ strict: false }) as { day?: string; week?: string };
 
   const [selectedDay, setSelectedDay] = useState(() => {
     if (searchParams?.day) {
@@ -289,9 +298,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   // dateTick forces a recompute on visibility/interval so Sun→Mon transitions cleanly.
   const displayContext = useMemo(
-    () => computeDisplayContext(canteenWeekNumbers),
+    () => computeDisplayContext(canteenWeekNumbers, searchParams.week),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canteenWeekNumbers, dateTick],
+    [canteenWeekNumbers, dateTick, searchParams.week],
   );
 
   const { mode, weekNumber: displayWeek, todayIndex, anchor: displayMonday } = displayContext;
@@ -355,11 +364,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       const dk = DAY_KEYS[dayIdx];
       if (!dk) return;
       CANTEEN_ORDER.forEach(name => {
-        const slug = CANTEEN_IMAGE_SLUGS[name] || name.toLowerCase().replace(/\s+/g, "_");
-        const supabasePath = `${dk}/${slug}.png`;
-        const sbLowRes = getSupabaseImageUrl("images_nobg", supabasePath, { width: 440, format: "webp" });
-        const src = sbLowRes || `/images_nobg/${dk}/${slug}.png`;
-        
+        // Same server-resolved map the cards use. Building the path here
+        // independently is what let the preloader warm a URL the card never
+        // requested — and now that a card can legitimately have no image,
+        // guessing one would fetch 404s on every day change.
+        const plateImage = plateImages[`${dk}|${name}`];
+        if (!plateImage) return;
+        const src = getSupabaseImageUrl("images_nobg", plateImage, { width: 440, format: "webp" });
+
         if (preloadedRef.current.has(src)) return;
         preloadedRef.current.add(src);
         const img = new window.Image();
@@ -377,7 +389,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [menuData, selectedDay]);
+  }, [menuData, selectedDay, plateImages]);
 
   // Disable vertical scrolling when content fits viewport
   useEffect(() => {
@@ -461,19 +473,22 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         // from whenever the canteen was last open on this weekday.
         const isClosed = !mainDish || ["stengt", "closed", "lukket"].some(kw => mainDish.dish.toLowerCase().includes(kw));
 
-        // Supabase Integration: Prefer remote images if available.
-        // Lightbox uses the transparent PNG so the food sits on the warm gradient
+        // The server resolves which stored plate belongs to this card; an absent
+        // entry means no picture exists for this dish yet, and the card's
+        // onError placeholder is the honest answer. Lightbox uses the
+        // untransformed transparent PNG so the food sits on the warm gradient
         // backdrop instead of the studio dark-grey from the bg version.
-        const supabasePath = `${dk}/${imageSlug}.png`;
-        const sbLowRes = isClosed
+        const plateImage = plateImages[`${dk}|${canteenName}`];
+        const imagePath = isClosed
           ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 440, format: "webp" })
-          : getSupabaseImageUrl("images_nobg", supabasePath, { width: 440, format: "webp" });
-        const sbHighRes = isClosed
+          : plateImage
+            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 440, format: "webp" })
+            : "";
+        const highResImagePath = isClosed
           ? getClosedPlateUrl(`${canteenName}-${dk}`)
-          : getSupabaseImageUrl("images_nobg", supabasePath);
-
-        const imagePath = sbLowRes || `/images_nobg/${dk}/${imageSlug}.png`;
-        const highResImagePath = sbHighRes || `/images_nobg/${dk}/${imageSlug}.png`;
+          : plateImage
+            ? getSupabaseImageUrl("images_nobg", plateImage)
+            : "";
         // CanteenDayItem models "no usable week label" as undefined, not null.
         const canteenWeekNum = parseCanteenWeekNumber(canteen.week) ?? undefined;
         const cmp = canteenWeekNum !== undefined ? compareWeeks(canteenWeekNum, displayWeek) : 0;
@@ -504,7 +519,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         };
       });
     });
-  }, [sortedCanteens, lang, dishOrigins, dishDescriptions, displayWeek]);
+  }, [sortedCanteens, lang, dishOrigins, dishDescriptions, displayWeek, plateImages]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
@@ -659,6 +674,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               ? (lang === "no" ? "Dagens" : "Today's")
               : mode === "weekend-preview"
               ? (lang === "no" ? "Neste ukes" : "Next week's")
+              : mode === "pinned-week"
+              ? (lang === "no" ? `Uke ${displayWeek}s` : `Week ${displayWeek}'s`)
               : (lang === "no" ? "Denne ukens" : "This week's")}{" "}
             <span>{lang === "no" ? "Lunsj" : "Lunch"}</span>
           </h1>
@@ -903,7 +920,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
             {/* Hero image */}
             <div className="action-sheet-hero">
-              {sheetImageFailed ? (
+              {sheetImageFailed || !actionSheet.imagePath ? (
                 <div className="image-placeholder">{actionSheet.canteenName.charAt(0)}</div>
               ) : (
                 <img
