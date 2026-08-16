@@ -72,6 +72,32 @@ export function getWeekId(): string {
   return getWeekIdForDate(year, month, day);
 }
 
+/** Canonical id for the week `weeks` weeks from today, e.g. 1 for next week. */
+export function getWeekIdOffset(weeks: number): string {
+  const { year, month, day } = todayOsloParts();
+  // Noon so the ±7-day step cannot land on a DST boundary and shift the date.
+  const d = new Date(year, month - 1, day, 12, 0, 0);
+  d.setDate(d.getDate() + weeks * 7);
+  return getWeekIdForDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+/**
+ * Whether a set of canteens has all moved on to a week after `currentWeek`.
+ *
+ * The predicate `computeDisplayContext` uses to choose between weekend-preview
+ * and weekend-recap, named rather than inlined because the read path will need
+ * exactly the same test the day it starts serving next week's row on a weekend
+ * (see the note on weekend-preview reachability in README). If the two ever
+ * disagreed the app would render one week's food under the other week's dates,
+ * which is the specific failure the display context exists to prevent.
+ */
+export function allCanteensAhead(canteenWeekNumbers: number[], currentWeek: number): boolean {
+  return (
+    canteenWeekNumbers.length > 0 &&
+    canteenWeekNumbers.every(w => compareWeeks(w, currentWeek) === 1)
+  );
+}
+
 /**
  * Compare two ISO week numbers with year-wrap handling.
  * Returns 1 if `a` is ahead of `b`, -1 if behind, 0 if same.
@@ -93,13 +119,38 @@ export function compareWeeks(a: number, b: number): -1 | 0 | 1 {
  * string: Flow's label is "Bygg / Building M - Uke/Week 33", and a building
  * number would otherwise win. Falls back to a bare 1-2 digit number so an
  * unadorned "34" still parses.
+ *
+ * `(?!\d)` on the capture stops a longer run being silently truncated: without
+ * it "Uke 2026" reads as week 20. A label we cannot read confidently is worth
+ * more as `null` — the caller falls back to the calendar week — than as a
+ * plausible-looking wrong number, which routes a canteen's whole menu into a
+ * row nothing displays.
  */
 export function parseCanteenWeekNumber(label: string | undefined | null): number | null {
   if (!label) return null;
-  const tagged = label.match(/(?:uke|week)[\s/]*(?:uke|week)?[\s:-]*(\d{1,2})/i);
+  const tagged = label.match(/(?:uke|week)[\s/]*(?:uke|week)?[\s:-]*(\d{1,2})(?!\d)/i);
   const raw = tagged?.[1] ?? label.match(/\b(\d{1,2})\b/)?.[1];
   const n = Number(raw);
   return Number.isInteger(n) && n >= 1 && n <= 53 ? n : null;
+}
+
+/**
+ * Signed distance in weeks from `b` to `a`, year-wrap aware. `+2` means `a` is
+ * two weeks ahead of `b`; week 1 is one week ahead of week 52, not 51 behind.
+ *
+ * Exists so callers can sanity-check a parsed week number before trusting it.
+ * `parseCanteenWeekNumber` accepts anything in 1..53, which is right for a
+ * label that genuinely says "week 3" — but a canteen cannot plausibly be
+ * publishing thirty weeks from now, so a number that far out is a misread.
+ */
+export function weekDistance(a: number, b: number): number {
+  if (a === b) return 0;
+  const raw = Math.abs(a - b);
+  // A year is 52 or 53 weeks, and this does not know which, so the wrapped
+  // magnitude can come out one short: week 1 is one week after week 53, but
+  // `52 - 52` says zero. Clamping to 1 keeps "different weeks are at least one
+  // week apart" true, which is the only property callers rely on.
+  return compareWeeks(a, b) * Math.max(1, Math.min(raw, 52 - raw));
 }
 
 /**
@@ -173,11 +224,7 @@ export function computeDisplayContext(canteenWeekNumbers: number[]): DisplayCont
   // a single early-publishing canteen would hide the rest behind dates
   // that don't apply to them. Year-wrap aware so week 52 → 1 still reads
   // as "ahead".
-  const allAhead =
-    canteenWeekNumbers.length > 0 &&
-    canteenWeekNumbers.every(w => compareWeeks(w, currentWeek) === 1);
-
-  if (allAhead) {
+  if (allCanteensAhead(canteenWeekNumbers, currentWeek)) {
     const nextMonday = new Date(thisMonday);
     nextMonday.setDate(thisMonday.getDate() + 7);
     return {

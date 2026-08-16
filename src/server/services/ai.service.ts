@@ -73,10 +73,51 @@ const ORIGIN_PATTERNS: Array<{ regex: RegExp; code: string; country: string }> =
   { regex: /fiskesuppe|karbonader|kjøttkaker|norsk|betasuppe|elg|potet/i, code: "no", country: "Norway" },
 ];
 
-/** Pattern-based origin, used for anything the model didn't cover. */
-function fallbackOrigin(dish: string): DishOrigin {
+/**
+ * Pattern-based origin, used for anything the model didn't cover.
+ *
+ * Exported because the updater also needs it for dishes it has deliberately
+ * stopped asking about (see MAX_ENRICH_ATTEMPTS in dish-cache.service): those
+ * never reach a pass, so nothing else would give them a flag.
+ */
+export function fallbackOrigin(dish: string): DishOrigin {
   const match = ORIGIN_PATTERNS.find((p) => p.regex.test(dish));
   return match ? { code: match.code, country: match.country } : { code: "no", country: "Norway" };
+}
+
+/** Canned bilingual copy, keyed off whatever the dish name gives away. */
+export function fallbackDescription(dish: string): DishDescription {
+  const lower = dish.toLowerCase();
+  let noDesc = `Chef's special fra kantinens helter. Tilberedt med stolthet og friske råvarer.`;
+  let enDesc = `Chef's special crafted by canteen heroes. Made with pride and fresh ingredients.`;
+
+  if (lower.includes("suppe") || lower.includes("soup")) {
+    noDesc = `Varmende trøst på boks. Garanti mot vestavind og dårlig mandagsstemning.`;
+    enDesc = `Liquid comfort in a bowl. Scientifically proven to cure Monday morning blues.`;
+  } else if (lower.includes("pizza")) {
+    noDesc = `Nystekt italiensk magi. Kantinens ubestridte stjerne – kom før kollegaene spiser alt.`;
+    enDesc = `Freshly baked crispy perfection. The crown jewel of the canteen floor.`;
+  } else if (lower.includes("pasta")) {
+    noDesc = `Karbo-glede på sitt beste. Serveres med nok parmesan til å glemme neste møte.`;
+    enDesc = `Carb-loaded bliss. Topped with enough parmesan to make your next meeting bearable.`;
+  } else if (lower.includes("gryte") || lower.includes("stew") || lower.includes("curry")) {
+    noDesc = `Langsomt kokt kjærlighet. Så mør og smaksrik at du vurderer porsjon nummer to.`;
+    enDesc = `Slow-cooked culinary magic. So rich and tender you'll secretly contemplate seconds.`;
+  } else if (lower.includes("schnitzel") || lower.includes("panert")) {
+    noDesc = `Sprø utside, saftig innside. Gylden lykke som løfter humøret tre hakk.`;
+    enDesc = `Golden crispy perfection on the outside, pure joy on the inside.`;
+  } else if (lower.includes("biff") || lower.includes("beef") || lower.includes("karbonad") || lower.includes("pølse")) {
+    noDesc = `Saftig proteinkick tilberedt med tradisjon. Kjøkkenets stolthet i dag.`;
+    enDesc = `Hearty protein feast crafted with pride. Today's undisputed hero dish.`;
+  } else if (lower.includes("fisk") || lower.includes("fish") || lower.includes("rødspette") || lower.includes("torsk") || lower.includes("laks")) {
+    noDesc = `Fersk fangst i gourmetdrakt. Så godt at selv fiskeskeptikere blir omvendt.`;
+    enDesc = `Fresh catch done right. So delicious it'll convert even the fiercest fish skeptics.`;
+  } else if (lower.includes("taco") || lower.includes("burrito") || lower.includes("tortilla") || lower.includes("meksikansk")) {
+    noDesc = `Fiesta midt i arbeidsdagen. Litt krydder for å våkne før ettermiddagsøkta.`;
+    enDesc = `A workday fiesta in a tortilla. Just enough spice to revive your post-lunch focus.`;
+  }
+
+  return { no: noDesc, en: enDesc };
 }
 
 /**
@@ -173,41 +214,10 @@ Guidelines:
     }
   }
 
-  // Any dish the model skipped falls back to the canned copy below, so every
-  // dish carries a description rather than rendering blank.
+  // Any dish the model skipped falls back to the canned copy, so every dish
+  // carries a description rather than rendering blank.
   for (const dish of dishes) {
-    if (result[dish]) continue;
-    const lower = dish.toLowerCase();
-    let noDesc = `Chef's special fra kantinens helter. Tilberedt med stolthet og friske råvarer.`;
-    let enDesc = `Chef's special crafted by canteen heroes. Made with pride and fresh ingredients.`;
-
-    if (lower.includes("suppe") || lower.includes("soup")) {
-      noDesc = `Varmende trøst på boks. Garanti mot vestavind og dårlig mandagsstemning.`;
-      enDesc = `Liquid comfort in a bowl. Scientifically proven to cure Monday morning blues.`;
-    } else if (lower.includes("pizza")) {
-      noDesc = `Nystekt italiensk magi. Kantinens ubestridte stjerne – kom før kollegaene spiser alt.`;
-      enDesc = `Freshly baked crispy perfection. The crown jewel of the canteen floor.`;
-    } else if (lower.includes("pasta")) {
-      noDesc = `Karbo-glede på sitt beste. Serveres med nok parmesan til å glemme neste møte.`;
-      enDesc = `Carb-loaded bliss. Topped with enough parmesan to make your next meeting bearable.`;
-    } else if (lower.includes("gryte") || lower.includes("stew") || lower.includes("curry")) {
-      noDesc = `Langsomt kokt kjærlighet. Så mør og smaksrik at du vurderer porsjon nummer to.`;
-      enDesc = `Slow-cooked culinary magic. So rich and tender you'll secretly contemplate seconds.`;
-    } else if (lower.includes("schnitzel") || lower.includes("panert")) {
-      noDesc = `Sprø utside, saftig innside. Gylden lykke som løfter humøret tre hakk.`;
-      enDesc = `Golden crispy perfection on the outside, pure joy on the inside.`;
-    } else if (lower.includes("biff") || lower.includes("beef") || lower.includes("karbonad") || lower.includes("pølse")) {
-      noDesc = `Saftig proteinkick tilberedt med tradisjon. Kjøkkenets stolthet i dag.`;
-      enDesc = `Hearty protein feast crafted with pride. Today's undisputed hero dish.`;
-    } else if (lower.includes("fisk") || lower.includes("fish") || lower.includes("rødspette") || lower.includes("torsk") || lower.includes("laks")) {
-      noDesc = `Fersk fangst i gourmetdrakt. Så godt at selv fiskeskeptikere blir omvendt.`;
-      enDesc = `Fresh catch done right. So delicious it'll convert even the fiercest fish skeptics.`;
-    } else if (lower.includes("taco") || lower.includes("burrito") || lower.includes("tortilla") || lower.includes("meksikansk")) {
-      noDesc = `Fiesta midt i arbeidsdagen. Litt krydder for å våkne før ettermiddagsøkta.`;
-      enDesc = `A workday fiesta in a tortilla. Just enough spice to revive your post-lunch focus.`;
-    }
-
-    result[dish] = { no: noDesc, en: enDesc };
+    if (!result[dish]) result[dish] = fallbackDescription(dish);
   }
 
   return { values: result, fromModel };

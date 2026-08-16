@@ -306,7 +306,16 @@ export async function processAllCanteenAIImages(
 
   // One read tells us which of this week's dishes have been drawn before,
   // instead of attempting a storage copy per dish and learning from the miss.
-  const cache = await loadDishCache(jobs.map((j) => j.dish));
+  //
+  // A failed read is survivable here in a way it is not for enrichment: the
+  // archive path is a deterministic function of the dish name, so the copy
+  // still finds most plates without the cache. It does miss the ones stored
+  // under the older slug convention, which then get redrawn — worth a line in
+  // the log so an expensive run is explainable after the fact.
+  const { rows: cache, failed: cacheUnreadable } = await loadDishCache(jobs.map((j) => j.dish));
+  if (cacheUnreadable) {
+    console.warn("⚠️  dish_cache unreadable — falling back to archive paths; some plates may be redrawn.");
+  }
   const newlyDrawn: Array<{ dish: string; archivePath: string }> = [];
 
   for (const job of jobs) {

@@ -79,15 +79,36 @@ CREATE TRIGGER weekly_menus_touch_updated_at
 -- image are produced once and reused forever. This is what keeps the twice-
 -- daily cron from re-billing the model for dishes it has already seen.
 CREATE TABLE IF NOT EXISTS public.dish_cache (
-    cache_key       VARCHAR PRIMARY KEY,
-    original_name   TEXT,
-    clean_name      TEXT,
-    origin          JSONB,
-    description     JSONB,
-    image_path      TEXT,
-    image_nobg_path TEXT,
-    first_seen      TIMESTAMPTZ DEFAULT NOW()
+    cache_key           VARCHAR PRIMARY KEY,
+    original_name       TEXT,
+    clean_name          TEXT,
+    origin              JSONB,
+    description         JSONB,
+    image_path          TEXT,
+    image_nobg_path     TEXT,
+    first_seen          TIMESTAMPTZ DEFAULT NOW(),
+    enrich_attempts     INTEGER DEFAULT 0,
+    last_enrich_attempt TIMESTAMPTZ
 );
+
+-- Bounded retries for dishes the model never answers for.
+--
+-- A fallback origin/description is deliberately never persisted here: a cache
+-- hit means the dish is never asked about again, so storing canned copy would
+-- bake one rate-limited afternoon in permanently. The cost of that rule is that
+-- such a dish is re-sent on every run forever, and nothing reported it. These
+-- columns are where the updater counts attempts so it can stop after
+-- MAX_ENRICH_ATTEMPTS (src/server/services/dish-cache.service.ts) and say so in
+-- the cron response.
+--
+-- Nullable with a default rather than NOT NULL: PostgREST fills any column
+-- listed in a bulk upsert that a given row omits with NULL, so NOT NULL would
+-- reject writes from callers that do not carry the counter — the image pass,
+-- for one. Clearing these two columns for a dish is the supported way to make
+-- the updater try it again before the cooldown elapses.
+ALTER TABLE public.dish_cache ADD COLUMN IF NOT EXISTS enrich_attempts     INTEGER DEFAULT 0;
+ALTER TABLE public.dish_cache ADD COLUMN IF NOT EXISTS last_enrich_attempt TIMESTAMPTZ;
+UPDATE public.dish_cache SET enrich_attempts = 0 WHERE enrich_attempts IS NULL;
 
 -- ── Row level security ────────────────────────────────────────────────────
 ALTER TABLE public.weekly_menus ENABLE ROW LEVEL SECURITY;

@@ -2,13 +2,27 @@ import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { MenuData, WeeklyMenuRecord, DishOrigin, DishDescription } from "../../lib/types.js";
-import { getWeekId, parseCanteenWeekNumber, weekIdForWeekNumber } from "../../lib/dateUtils.js";
+import {
+  getWeekId,
+  getWeekNumber,
+  parseCanteenWeekNumber,
+  weekDistance,
+  weekIdForWeekNumber,
+} from "../../lib/dateUtils.js";
 import { scrapeAllCanteens, type ScrapeReport } from "./scraper.service.js";
-import { detectDishOrigins, generateDishDescriptions } from "./ai.service.js";
+import {
+  detectDishOrigins,
+  generateDishDescriptions,
+  fallbackOrigin,
+  fallbackDescription,
+} from "./ai.service.js";
 import {
   loadDishCache,
   saveDishCacheEntries,
   normalizeDishName,
+  activeEnrichAttempts,
+  isEnrichmentExhausted,
+  MAX_ENRICH_ATTEMPTS,
   type DishCacheEntry,
 } from "./dish-cache.service.js";
 
@@ -161,27 +175,52 @@ function fingerprintScrape(menuData: MenuData): string {
   return createHash("sha256").update(canonical).digest("hex").slice(0, 32);
 }
 
-export interface UpdateStats {
-  weekId: string;
-  dishCount: number;
+/**
+ * What an enrichment pass cost and what it left behind.
+ *
+ * `sentToModel` used to be reported as `generated`, which was a lie in the
+ * direction that matters: it counted dishes *asked about*, not dishes durably
+ * answered for. A run that asked about forty dishes and got nothing back
+ * reported forty "generated", so a silently failing model looked identical to a
+ * working one.
+ */
+export interface EnrichmentCounts {
   /** Dishes served straight from dish_cache, costing no model calls. */
   fromCache: number;
-  /** Dishes sent to the model because they had never been seen before. */
-  generated: number;
+  /** Dishes put in front of the model this run, for either field. */
+  sentToModel: number;
+  /** Dishes that gained at least one durably cached field this run. */
+  durablyCached: number;
+  /** Dishes still rendering a pattern fallback for origin or description. */
+  unresolved: string[];
+  /** Dishes that have used up their retries and will not be sent again. */
+  exhausted: string[];
+  /**
+   * Dishes that used up their last retry on *this* run.
+   *
+   * Separate from `exhausted` so the alert fires once. An exhausted dish stays
+   * exhausted for as long as it is on the menu — up to ten cron runs — and an
+   * alert keyed on `exhausted` would repeat every one of them, which is how a
+   * channel gets muted.
+   */
+  newlyExhausted: string[];
+}
+
+export interface UpdateStats extends EnrichmentCounts {
+  weekId: string;
+  dishCount: number;
   /** Canteens that returned nothing usable this run. */
   failedCanteens: string[];
-  /** True when the scrape matched the stored one and enrichment was skipped. */
+  /** True when the scrape matched the stored week, dish for dish. */
   unchanged: boolean;
 }
 
 /** What one week's row received from a single scrape. */
-export interface WeekWriteResult {
+export interface WeekWriteResult extends EnrichmentCounts {
   weekId: string;
   /** Canteens whose published week label routed them here. */
   canteens: string[];
   dishCount: number;
-  fromCache: number;
-  generated: number;
   unchanged: boolean;
 }
 
@@ -214,15 +253,49 @@ export function groupCanteensByPublishedWeek(
   fallbackWeekId: string
 ): Map<string, MenuData["canteens"]> {
   const groups = new Map<string, MenuData["canteens"]>();
+  const currentWeek = getWeekNumber();
 
   for (const [name, canteen] of Object.entries(menuData.canteens || {})) {
     const weekNumber = parseCanteenWeekNumber(canteen.week);
-    const weekId = weekNumber === null ? fallbackWeekId : weekIdForWeekNumber(weekNumber);
+    const weekId =
+      weekNumber === null || !isPlausibleWeek(weekNumber, currentWeek)
+        ? fallbackWeekId
+        : weekIdForWeekNumber(weekNumber);
     if (!groups.has(weekId)) groups.set(weekId, {});
     groups.get(weekId)![name] = canteen;
   }
 
   return groups;
+}
+
+/**
+ * How far from the calendar week a canteen's own label is still allowed to
+ * route it to its own row.
+ *
+ * The kitchens publish one week at a time and roll over up to a few days early,
+ * so `+1` is routine and `+2` is generous headroom. Behind is the mirror case —
+ * a kitchen that has not updated yet. Anything further out is not a canteen
+ * planning ahead, it is a misread label: "Bygg 2" parses as week 2, which in
+ * August resolves to 2027-W02 and files that canteen's entire menu into a row
+ * the app will not look at until January. A week id, once written, is a
+ * permanent primary key — there is no delete path in this codebase — and it
+ * also outranks every real row in the "most recent stored week" fallback, which
+ * orders by week_id descending.
+ *
+ * Rejected numbers fall back to the calendar week, which is what the whole
+ * pipeline did before per-week routing existed. The canteen still shows up; its
+ * own stale label is what makes the UI badge the card outdated.
+ */
+const MAX_ROUTING_DISTANCE_WEEKS = 2;
+
+function isPlausibleWeek(weekNumber: number, currentWeek: number): boolean {
+  const distance = weekDistance(weekNumber, currentWeek);
+  if (Math.abs(distance) <= MAX_ROUTING_DISTANCE_WEEKS) return true;
+  console.warn(
+    `⚠️  Ignoring implausible published week ${weekNumber} (${distance > 0 ? "+" : ""}${distance} ` +
+      `weeks from the calendar week ${currentWeek}) — filing under the calendar week instead.`
+  );
+  return false;
 }
 
 /**
@@ -321,6 +394,7 @@ export async function runWeeklyUpdateService(
   const weeksWritten: WeekWriteResult[] = [];
   const weeksSkipped: Array<{ weekId: string; reason: string }> = [];
   const writtenRecords = new Map<string, WeeklyMenuRecord>();
+  const enrichmentRun: EnrichmentRun = { attempted: new Set() };
 
   for (const weekId of [...groups.keys()].sort()) {
     const scrapedCanteens = groups.get(weekId)!;
@@ -347,19 +421,28 @@ export async function runWeeklyUpdateService(
     const fingerprint = fingerprintScrape(weekMenuData);
     const unchanged = !force && existing?.fingerprint === fingerprint;
 
-    let dishOrigins: Record<string, DishOrigin> = existing?.dishOrigins ?? {};
-    let dishDescriptions: Record<string, DishDescription> = existing?.dishDescriptions ?? {};
-    let fromCache = 0;
-    let generated = 0;
+    // Enrichment runs on every pass, not only when the menu changed.
+    //
+    // It used to be skipped whenever the fingerprint matched, which quietly
+    // made the "will retry next run" message below a lie: a dish the model had
+    // failed on was never asked about again for as long as the kitchens kept
+    // publishing the same food, and users were served the pattern fallback all
+    // week. Running it every time costs one dish_cache read when everything is
+    // already cached — which is the normal case — because the model is only
+    // asked about dishes that are genuinely missing a field.
+    const enriched = await enrichDishes(
+      allDishes,
+      {
+        origins: existing?.dishOrigins ?? {},
+        descriptions: existing?.dishDescriptions ?? {},
+      },
+      enrichmentRun
+    );
+    const dishOrigins = enriched.origins;
+    const dishDescriptions = enriched.descriptions;
 
     if (unchanged) {
-      console.log(`✅ ${weekId} identical to the stored week — skipping enrichment.`);
-    } else {
-      const enriched = await enrichDishes(allDishes);
-      dishOrigins = enriched.origins;
-      dishDescriptions = enriched.descriptions;
-      fromCache = enriched.fromCache;
-      generated = enriched.generated;
+      console.log(`✅ ${weekId} identical to the stored week — no new food to file.`);
     }
 
     const record: WeeklyMenuRecord = {
@@ -409,13 +492,18 @@ export async function runWeeklyUpdateService(
       weekId,
       canteens: Object.keys(scrapedCanteens),
       dishCount: allDishes.length,
-      fromCache,
-      generated,
+      fromCache: enriched.fromCache,
+      sentToModel: enriched.sentToModel,
+      durablyCached: enriched.durablyCached,
+      unresolved: enriched.unresolved,
+      exhausted: enriched.exhausted,
+      newlyExhausted: enriched.newlyExhausted,
       unchanged,
     });
 
     console.log(
-      `✅ ${weekId} stored — ${allDishes.length} dishes (${fromCache} cached, ${generated} new)` +
+      `✅ ${weekId} stored — ${allDishes.length} dishes (${enriched.fromCache} cached, ` +
+        `${enriched.sentToModel} asked, ${enriched.durablyCached} newly cached)` +
         ` from ${Object.keys(scrapedCanteens).join(", ")}`
     );
   }
@@ -447,7 +535,13 @@ export async function runWeeklyUpdateService(
     weekId: primary.weekId,
     dishCount: primaryWrite?.dishCount ?? extractAllDishes(primary.menuData).length,
     fromCache: weeksWritten.reduce((n, w) => n + w.fromCache, 0),
-    generated: weeksWritten.reduce((n, w) => n + w.generated, 0),
+    sentToModel: weeksWritten.reduce((n, w) => n + w.sentToModel, 0),
+    durablyCached: weeksWritten.reduce((n, w) => n + w.durablyCached, 0),
+    // Deduplicated: the two weeks of a rollover share most of their dishes, so
+    // concatenating would double-count every dish that failed in both.
+    unresolved: [...new Set(weeksWritten.flatMap((w) => w.unresolved))],
+    exhausted: [...new Set(weeksWritten.flatMap((w) => w.exhausted))],
+    newlyExhausted: [...new Set(weeksWritten.flatMap((w) => w.newlyExhausted))],
     failedCanteens: scrape.failed,
     // Nothing to regenerate downstream unless the displayed week itself moved.
     unchanged: primaryWrite ? primaryWrite.unchanged : true,
@@ -505,76 +599,210 @@ async function getStoredRow(
   };
 }
 
+/** What the row already holds, so a fallback never overwrites a real answer. */
+interface StoredEnrichment {
+  origins: Record<string, DishOrigin>;
+  descriptions: Record<string, DishDescription>;
+}
+
+/**
+ * State shared by every week a single run writes.
+ *
+ * Both rows of a rollover contain nearly the same dishes — mergeCanteensForWeek
+ * seeds every canteen into every week — so without this, one cron run asks the
+ * model about a failing dish twice and charges it two of its five attempts. The
+ * dishes that succeed are already protected: week A writes them to dish_cache
+ * and week B reads them straight back.
+ */
+interface EnrichmentRun {
+  attempted: Set<string>;
+}
+
 /**
  * Resolves an origin and description for every dish, using the cache first.
  *
- * Only genuinely unseen dishes reach the model, and whatever it returns is
- * written back so the next run gets them for free.
+ * Three rules, each of which cost something to learn:
+ *
+ * 1. **Per field.** The two passes are asked about different dish lists — only
+ *    the dishes actually missing *that* field. They used to be asked the same
+ *    list, and a dish was only cached when both came back, so a run where the
+ *    origins landed and the descriptions timed out threw away a perfectly good
+ *    origin and paid to ask for it again.
+ * 2. **A fallback never wins over something real.** Both passes guarantee full
+ *    coverage by filling gaps with canned copy, which is right for rendering
+ *    and wrong for storing. The canned value is used only where neither the
+ *    cache nor the stored row has anything better — otherwise a single bad
+ *    afternoon at the model would rewrite the whole week as boilerplate and the
+ *    fingerprint would then freeze it there.
+ * 3. **Give up eventually.** A dish the model never answers for is re-asked on
+ *    every run, forever, at no benefit. After MAX_ENRICH_ATTEMPTS it stops
+ *    being sent and renders the fallback instead — recorded in `exhausted`, so
+ *    it is a number someone can look at rather than a silent recurring cost.
+ *    The fallback is still never written to dish_cache: a cache hit is
+ *    permanent, and this decision has to stay reversible.
  */
-async function enrichDishes(dishes: string[]): Promise<{
-  origins: Record<string, DishOrigin>;
-  descriptions: Record<string, DishDescription>;
-  fromCache: number;
-  generated: number;
-}> {
-  const cache = await loadDishCache(dishes);
+async function enrichDishes(
+  dishes: string[],
+  stored: StoredEnrichment,
+  run: EnrichmentRun
+): Promise<{ origins: Record<string, DishOrigin>; descriptions: Record<string, DishDescription> } & EnrichmentCounts> {
+  const { rows: cache, failed: cacheUnreadable } = await loadDishCache(dishes);
+  const now = Date.now();
+
+  // A cache we could not read is not a cache with nothing in it. Treating the
+  // two the same would re-ask the model about an entire week that is already
+  // fully answered, and record a failed attempt against every dish in it.
+  // Reusing what the row already holds costs nothing and loses nothing; the
+  // next run reads the cache again.
+  if (cacheUnreadable) {
+    console.warn("⚠️  dish_cache unreadable — reusing the stored enrichment and asking nothing.");
+    const origins: Record<string, DishOrigin> = {};
+    const descriptions: Record<string, DishDescription> = {};
+    const unresolved: string[] = [];
+
+    for (const dish of dishes) {
+      const origin = stored.origins[dish];
+      const description = stored.descriptions[dish];
+      origins[dish] = origin ?? fallbackOrigin(dish);
+      descriptions[dish] = description ?? fallbackDescription(dish);
+      if (!origin || !description) unresolved.push(dish);
+    }
+
+    return {
+      origins,
+      descriptions,
+      fromCache: 0,
+      sentToModel: 0,
+      durablyCached: 0,
+      unresolved,
+      exhausted: [],
+      newlyExhausted: [],
+    };
+  }
 
   const origins: Record<string, DishOrigin> = {};
   const descriptions: Record<string, DishDescription> = {};
-  const missing: string[] = [];
+  const needOrigin: string[] = [];
+  const needDescription: string[] = [];
+  const givenUp: string[] = [];
   let fromCache = 0;
 
   for (const dish of dishes) {
     const hit = cache.get(normalizeDishName(dish));
+    if (hit?.origin) origins[dish] = hit.origin;
+    if (hit?.description) descriptions[dish] = hit.description;
     if (hit?.origin && hit?.description) {
-      origins[dish] = hit.origin;
-      descriptions[dish] = hit.description;
       fromCache++;
-    } else {
-      missing.push(dish);
+      continue;
     }
+
+    if (isEnrichmentExhausted(hit, now)) {
+      givenUp.push(dish);
+      continue;
+    }
+    // Already sent earlier in this same run, for the other week of a rollover.
+    // The answer did not arrive then and will not arrive now; asking again just
+    // doubles the bill and burns a second attempt on one run.
+    if (run.attempted.has(dish)) continue;
+
+    if (!hit?.origin) needOrigin.push(dish);
+    if (!hit?.description) needDescription.push(dish);
   }
 
-  console.log(`🗃️  ${fromCache} dishes from cache, ${missing.length} to generate.`);
-  if (missing.length === 0) return { origins, descriptions, fromCache, generated: 0 };
+  const asked = new Set([...needOrigin, ...needDescription]);
+  for (const dish of asked) run.attempted.add(dish);
+  console.log(
+    `🗃️  ${fromCache} dishes fully cached, ${asked.size} to ask about ` +
+      `(${needOrigin.length} origins, ${needDescription.length} descriptions)` +
+      (givenUp.length ? `, ${givenUp.length} given up on` : "") +
+      "."
+  );
 
+  // detectDishOrigins/generateDishDescriptions short-circuit on an empty list,
+  // so a fully-cached week costs no model call at all.
   const [newOrigins, newDescriptions] = await Promise.all([
-    detectDishOrigins(missing),
-    generateDishDescriptions(missing),
+    detectDishOrigins(needOrigin),
+    generateDishDescriptions(needDescription),
   ]);
 
-  Object.assign(origins, newOrigins.values);
-  Object.assign(descriptions, newDescriptions.values);
+  for (const dish of needOrigin) {
+    if (newOrigins.fromModel.has(dish)) origins[dish] = newOrigins.values[dish];
+  }
+  for (const dish of needDescription) {
+    if (newDescriptions.fromModel.has(dish)) descriptions[dish] = newDescriptions.values[dish];
+  }
 
-  // Cache only what the model actually answered. Both passes fill their gaps
-  // with a pattern fallback so nothing renders blank, but persisting those
-  // would bake a rate-limited afternoon into dish_cache permanently — the
-  // entry is a cache hit forever after, so the dish is never asked about again.
-  // Displaying a fallback for one run is cheap; storing it is not.
-  const durable = missing.filter(
-    (dish) => newOrigins.fromModel.has(dish) && newDescriptions.fromModel.has(dish)
-  );
+  // `origins[dish]`/`descriptions[dish]` now hold only durable values — a cache
+  // hit or a fresh model answer. Anything still blank gets the best available
+  // stand-in, preferring what the row already holds over new boilerplate.
+  const durableOrigins = new Set(Object.keys(origins));
+  const durableDescriptions = new Set(Object.keys(descriptions));
+  const unresolved: string[] = [];
 
-  // Preserve any image path already recorded against the same key.
-  const entries: DishCacheEntry[] = durable.map((dish) => {
+  for (const dish of dishes) {
+    if (!durableOrigins.has(dish)) origins[dish] = stored.origins[dish] ?? fallbackOrigin(dish);
+    if (!durableDescriptions.has(dish)) {
+      descriptions[dish] = stored.descriptions[dish] ?? fallbackDescription(dish);
+    }
+    if (!durableOrigins.has(dish) || !durableDescriptions.has(dish)) unresolved.push(dish);
+  }
+
+  const askedOrigin = new Set(needOrigin);
+  const askedDescription = new Set(needDescription);
+  const entries: DishCacheEntry[] = [];
+  const newlyExhausted: string[] = [];
+  let durablyCached = 0;
+
+  for (const dish of asked) {
     const key = normalizeDishName(dish);
-    const hit = cache.get(key);
-    return {
-      cacheKey: key,
-      originalName: dish,
-      origin: newOrigins.values[dish] ?? hit?.origin ?? null,
-      description: newDescriptions.values[dish] ?? hit?.description ?? null,
-      imagePath: hit?.imagePath ?? null,
-      imageNoBgPath: hit?.imageNoBgPath ?? null,
-    };
-  });
+    const gainedOrigin = newOrigins.fromModel.has(dish);
+    const gainedDescription = newDescriptions.fromModel.has(dish);
+    const failed =
+      (askedOrigin.has(dish) && !gainedOrigin) ||
+      (askedDescription.has(dish) && !gainedDescription);
+
+    if (gainedOrigin || gainedDescription) durablyCached++;
+
+    const entry: DishCacheEntry = { cacheKey: key, originalName: dish };
+    if (gainedOrigin) entry.origin = newOrigins.values[dish];
+    if (gainedDescription) entry.description = newDescriptions.values[dish];
+
+    if (failed) {
+      const hit = cache.get(key);
+      const attempts = activeEnrichAttempts(hit, now) + 1;
+      entry.enrichAttempts = attempts;
+      entry.lastEnrichAttempt = new Date(now).toISOString();
+      if (attempts >= MAX_ENRICH_ATTEMPTS) newlyExhausted.push(dish);
+    } else {
+      // Fully answered — clear the counter so a dish that recovers is not one
+      // bad run away from being given up on next time it goes missing.
+      entry.enrichAttempts = 0;
+      entry.lastEnrichAttempt = null;
+    }
+
+    entries.push(entry);
+  }
+
+  // Dishes already past the cap were never sent, so they carry no new attempt —
+  // but they are still the thing an operator wants to see in the run report.
+  const exhausted = [...newlyExhausted, ...givenUp];
 
   const saved = await saveDishCacheEntries(entries);
-  const skipped = missing.length - durable.length;
   console.log(
-    `🗃️  ${saved} dishes written back to dish_cache` +
-      (skipped ? `; ${skipped} left uncached (model did not answer, will retry next run).` : ".")
+    `🗃️  ${saved} dish_cache rows written` +
+      (unresolved.length ? `; ${unresolved.length} dish(es) still on a fallback` : "") +
+      (exhausted.length ? `; ${exhausted.length} given up on after ${MAX_ENRICH_ATTEMPTS} tries` : "") +
+      "."
   );
 
-  return { origins, descriptions, fromCache, generated: missing.length };
+  return {
+    origins,
+    descriptions,
+    fromCache,
+    sentToModel: asked.size,
+    durablyCached,
+    unresolved,
+    exhausted,
+    newlyExhausted,
+  };
 }
