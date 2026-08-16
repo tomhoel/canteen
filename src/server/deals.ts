@@ -1,4 +1,3 @@
-import { Redis } from "@upstash/redis";
 import type {
   RecipeIngredient,
   ProductOffer,
@@ -6,16 +5,7 @@ import type {
   DealsResponse,
 } from "../lib/types.js";
 import { getWeekNumber } from "../lib/dateUtils.js";
-
-function getRedis() {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    return new Redis({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
-    });
-  }
-  return null;
-}
+import { getRedis } from "./services/redis.service.js";
 
 const KASSAL_API_BASE = "https://kassal.app/api/v1";
 const TJEK_API_BASE = "https://squid-api.tjek.com/v2";
