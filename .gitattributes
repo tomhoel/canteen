@@ -1,0 +1,11 @@
+# `tsr generate` writes routeTree.gen.ts with LF endings on every build. On a
+# Windows checkout git hands the file back with CRLF, so the generator and the
+# working copy disagree about a file neither side edited — `npm run build`
+# leaves the tree dirty and `git status` shows a modification whose `git diff`
+# is empty.
+#
+# Pinning this one generated file to LF makes the checkout match what the
+# generator writes. Deliberately not `* text=auto eol=lf` for the whole repo:
+# that fixes the same annoyance but renormalises every file at once, and a
+# thousand-line commit touching nothing would bury the history that matters.
+src/routeTree.gen.ts text eol=lf

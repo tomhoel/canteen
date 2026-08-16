@@ -10,8 +10,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-test-module-mocks --import tsx --test \"src/**/*.test.ts\" \"*.test.js\"",
-    "update": "tsx smart-update.js",
-    "update:force": "tsx smart-update.js --force",
+    "update": "node --env-file-if-exists=.env --import tsx smart-update.js",
+    "update:force": "node --env-file-if-exists=.env --import tsx smart-update.js --force",
     "postinstall": "node scripts/cleanup-phantom-types.js"
   },
   "dependencies": {
