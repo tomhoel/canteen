@@ -143,6 +143,13 @@ export async function fetchDeals(data: FetchDealsPayload): Promise<DealsResponse
   if (!ingredients || !dishName) {
     throw new Error("Invalid request");
   }
+  // An ingredient carrying neither `item` nor `itemLocal` reaches
+  // isPantryStaple as undefined and dies on .toLowerCase(), which the handler
+  // can only report as a 500 — a caller sending the wrong field name gets told
+  // the server is broken. The shape is the caller's problem, so say so.
+  if (!Array.isArray(ingredients) || ingredients.some((ing) => !ing?.item && !ing?.itemLocal)) {
+    throw new Error("Invalid ingredients: each one needs an `item` (or `itemLocal`) name.");
+  }
 
   const weekNum = getWeekNumber();
   const cacheKey = `prices:v4:wk${weekNum}:${dishName}`;

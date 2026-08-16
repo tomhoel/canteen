@@ -181,6 +181,13 @@ export async function searchMeny(data: MenySearchPayload): Promise<MenyResponse>
   if (!ingredients || !dishName) {
     throw new Error("Invalid request");
   }
+  // Not a crash here as it is in deals.ts — this one interpolates the name into
+  // a prompt, so a missing `item` searches meny.no for the literal string
+  // "undefined" and pays the model to translate it first. Same contract, so the
+  // same refusal.
+  if (!Array.isArray(ingredients) || ingredients.some((ing) => !ing?.item && !ing?.itemLocal)) {
+    throw new Error("Invalid ingredients: each one needs an `item` (or `itemLocal`) name.");
+  }
 
   const activeStoreId = storeId || MENY_STORE_ID;
   const weekNum = getWeekNumber();
