@@ -93,6 +93,45 @@ export function normalizeDishName(name: string): string {
     .trim();
 }
 
+/**
+ * The archive object key for a dish — the cache key, folded to ASCII.
+ *
+ * Supabase Storage rejects an object key containing a non-ASCII character:
+ * `archive/svinekjøtt toppet med søtpotet lokk.png` comes back "Invalid key",
+ * while `archive/tandoori kylling med ris.png` uploads and serves fine. Spaces
+ * are not the problem — å, ø and æ are.
+ *
+ * The archive path was built straight from normalizeDishName, which keeps
+ * Norwegian letters on purpose because the dish_cache keys depend on it. So
+ * every Norwegian-named dish failed to archive, silently: the plate landed in
+ * the weekly slot, no image_nobg_path was recorded, and the next run found
+ * nothing to reuse and generated it again. Ten of fifteen dishes in a typical
+ * week, twice a day, each one a paid image — for a picture that already
+ * existed.
+ *
+ * Folding is deliberately one-way and lossy ("søt" and "sot" collide). That is
+ * the same trade the original slugifier made, and a collision costs one shared
+ * plate between two dishes that are spelled almost identically. Not folding
+ * costs every one of them, every run.
+ *
+ * The cache key itself is untouched: only the storage path folds, and the path
+ * actually used is what gets recorded in image_nobg_path, so existing objects —
+ * including the older hyphenated ones — keep resolving exactly as before.
+ */
+export function archiveObjectKey(dishName: string): string {
+  return normalizeDishName(dishName)
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "o")
+    .replace(/å/g, "a")
+    // Anything else carrying a diacritic (é, ü, ñ …) decomposes and loses it.
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    // Whatever is still not plain ASCII cannot go in a key at all.
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function getClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
