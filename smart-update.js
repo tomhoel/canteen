@@ -12,8 +12,15 @@
  *   npm run update -- --week 2026-W34
  *
  * Requires GEMINI_API_KEY, NEXT_PUBLIC_SUPABASE_URL and
- * SUPABASE_SERVICE_ROLE_KEY in the environment (a local .env is picked up by
- * tsx automatically via --env-file, or export them in the shell).
+ * SUPABASE_SERVICE_ROLE_KEY in the environment.
+ *
+ * The npm script loads .env with node's --env-file-if-exists. tsx does *not*
+ * read .env on its own, whatever this comment used to claim: `tsx smart-update.js`
+ * started, scraped all three canteens, and only then died with
+ * "NEXT_PUBLIC_SUPABASE_URL is not set". The documented way to run the pipeline
+ * by hand could not reach the database at all. `-if-exists` rather than
+ * `--env-file` so the run still works when the variables come from the shell
+ * and no .env is present, which is how CI and any one-off invocation would do it.
  *
  * Run through tsx (`npm run update`) rather than bare node: it imports the
  * TypeScript services directly. The previous version imported

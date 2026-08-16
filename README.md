@@ -108,6 +108,11 @@ npm run update -- --week 2026-W34 # a specific week
 `--force` costs real money — it regenerates every plate. `--week` writes to the
 week you name, so a typo overwrites a real one.
 
+This writes to the same Supabase the deployed app reads, so it needs the write
+credentials — `SUPABASE_SERVICE_ROLE_KEY` and `GEMINI_API_KEY` — in `.env`, not
+just the two public values. Without the service-role key it refuses to run
+rather than falling back to the anon key, and says so.
+
 ## Commands
 
 | Command | What it does |
