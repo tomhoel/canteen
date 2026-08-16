@@ -133,7 +133,7 @@ export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuR
   // fills in the real one.
   if (redis && record.weekId === targetWeekId) {
     try {
-      await redis.set(`menu:${targetWeekId}`, record, { ex: 6 * 60 * 60 });
+      await redis.set(`menu:${targetWeekId}`, record, { ex: MENU_CACHE_TTL_SECONDS });
     } catch (err) {
       console.error("Redis menu write error:", err);
     }
