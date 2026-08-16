@@ -1,8 +1,8 @@
 -- Canteen database schema (Supabase / PostgreSQL)
 --
 -- This file describes what is actually deployed. The previous version drifted:
--- it declared a `canteen_attendance` table that was never created (votes live
--- in Upstash Redis), omitted `dish_cache` entirely, and its policies were
+-- it declared a `canteen_attendance` table that was never created (see below —
+-- it exists now), omitted `dish_cache` entirely, and its policies were
 -- written as `FOR ALL USING (true)` — which grants the public anon role write
 -- access, not the service role. In practice RLS was simply switched off, so
 -- anyone holding the anon key (a public credential, and one that was committed
@@ -110,9 +110,73 @@ ALTER TABLE public.dish_cache ADD COLUMN IF NOT EXISTS enrich_attempts     INTEG
 ALTER TABLE public.dish_cache ADD COLUMN IF NOT EXISTS last_enrich_attempt TIMESTAMPTZ;
 UPDATE public.dish_cache SET enrich_attempts = 0 WHERE enrich_attempts IS NULL;
 
+-- ── Attendance votes ──────────────────────────────────────────────────────
+-- One row per canteen per day. The app has always written here; the table is
+-- what was missing. Votes were meant to live in Upstash Redis instead, and
+-- never did: src/server/services/attendance.service.ts reached for this table
+-- first and only fell back to Redis if Supabase *threw*, which supabase-js does
+-- not do for a missing relation. Every vote ever cast was silently discarded.
+-- Votes live here now, and that fallback is gone.
+--
+-- A composite primary key rather than a surrogate id: one canteen has exactly
+-- one count on a given day, and saying so in the key is what makes the upsert
+-- below safe to repeat.
+CREATE TABLE IF NOT EXISTS public.canteen_attendance (
+    vote_date    DATE    NOT NULL,
+    canteen_name TEXT    NOT NULL,
+    vote_count   INTEGER NOT NULL DEFAULT 0,
+    updated_at   TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (vote_date, canteen_name)
+);
+
+-- The leaderboard reads a trailing 14-day window on every open, and the primary
+-- key's leading column already orders by date — but the query filters on it
+-- alone, so give it an index that matches the shape it actually asks for.
+CREATE INDEX IF NOT EXISTS canteen_attendance_recent
+    ON public.canteen_attendance (vote_date DESC);
+
+-- Casting a vote, in one statement.
+--
+-- The service used to SELECT the count, add one in JavaScript and write it
+-- back. Lunch votes arrive in a burst just before 11:00, so two clients reading
+-- the same number and storing the same increment is the normal case, not a rare
+-- race — the second vote overwrote the first. Postgres is the only place that
+-- addition can be atomic, and returning the whole day from the same call saves
+-- the caller a second round trip.
+--
+-- Not SECURITY DEFINER: the only caller is the API function, which holds the
+-- service-role key. Leaving it INVOKER means the anon key cannot vote by
+-- calling the RPC directly, which is the same boundary the missing write
+-- policies draw.
+--
+-- `#variable_conflict use_column` is load-bearing, not decoration. RETURNS TABLE
+-- declares `canteen_name` and `vote_count` as OUT variables, and PL/pgSQL then
+-- refuses the ON CONFLICT target with "column reference canteen_name is
+-- ambiguous" — the function creates fine and fails only when first called. The
+-- directive tells it to read those names as columns. Renaming the OUT variables
+-- would work too, but they are the JSON keys PostgREST hands the client.
+CREATE OR REPLACE FUNCTION public.cast_attendance_vote(p_date DATE, p_canteen TEXT)
+RETURNS TABLE (canteen_name TEXT, vote_count INTEGER)
+LANGUAGE plpgsql
+AS $$
+#variable_conflict use_column
+BEGIN
+    INSERT INTO public.canteen_attendance AS a (vote_date, canteen_name, vote_count, updated_at)
+    VALUES (p_date, p_canteen, 1, NOW())
+    ON CONFLICT (vote_date, canteen_name)
+    DO UPDATE SET vote_count = a.vote_count + 1, updated_at = NOW();
+
+    RETURN QUERY
+    SELECT a.canteen_name, a.vote_count
+      FROM public.canteen_attendance a
+     WHERE a.vote_date = p_date;
+END;
+$$;
+
 -- ── Row level security ────────────────────────────────────────────────────
-ALTER TABLE public.weekly_menus ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.dish_cache   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.weekly_menus       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.dish_cache         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.canteen_attendance ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "weekly_menus public read" ON public.weekly_menus;
 CREATE POLICY "weekly_menus public read"
@@ -124,6 +188,13 @@ CREATE POLICY "weekly_menus public read"
 DROP POLICY IF EXISTS "dish_cache public read" ON public.dish_cache;
 CREATE POLICY "dish_cache public read"
     ON public.dish_cache
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "canteen_attendance public read" ON public.canteen_attendance;
+CREATE POLICY "canteen_attendance public read"
+    ON public.canteen_attendance
     FOR SELECT
     TO anon, authenticated
     USING (true);

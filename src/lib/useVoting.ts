@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { getLocalDateKey } from "@/lib/dateUtils";
 import type { CanteenDayItem } from "@/lib/types";
-import { submitVote, sendSlackNotification } from "@/lib/api-client";
+import { submitVote, sendSlackNotification, getAttendanceHistory } from "@/lib/api-client";
 
 interface UseVotingReturn {
   votes: Record<string, number>;
@@ -41,12 +41,37 @@ export function useVoting(): UseVotingReturn {
     }
   }, []);
 
+  /**
+   * Today's tally, so the cards show where people are already going rather than
+   * three zeroes until you vote yourself. `votes` started empty on every load
+   * and was only ever filled by your own tap.
+   */
+  const historyQuery = useQuery({
+    queryKey: ["attendance-history"],
+    queryFn: () => getAttendanceHistory(),
+    staleTime: 60_000,
+  });
+
+  const seeded = useRef(false);
+
+  useEffect(() => {
+    if (seeded.current || !historyQuery.data) return;
+    seeded.current = true;
+    const today = historyQuery.data.entries.find((e) => e.date === getLocalDateKey());
+    // Never over a tally we already hold: if a vote landed while this was in
+    // flight, its numbers are the fresher ones.
+    if (today) setVotes((prev) => (Object.keys(prev).length > 0 ? prev : today.canteens));
+  }, [historyQuery.data]);
+
   const voteMutation = useMutation({
     mutationFn: async (canteenName: string) => {
       const result = await submitVote({ canteenId: canteenName });
       return { canteenName, canteens: result.canteens };
     },
     onMutate: async (canteenName) => {
+      // Kept so it can be put back if the write turns out to have failed.
+      const previous = { votes, hasVoted, votedCanteen };
+
       setVotes((prev) => ({
         ...prev,
         [canteenName]: (prev[canteenName] || 0) + 1,
@@ -58,20 +83,45 @@ export function useVoting(): UseVotingReturn {
       if (typeof window !== "undefined") {
         localStorage.setItem(`voted_${todayKey}`, canteenName);
       }
+
+      return previous;
     },
     onSuccess: (data) => {
-      if (data.canteens) {
+      // An empty tally must never overwrite the optimistic count. That is
+      // precisely how the vote used to disappear: the server could not store it,
+      // answered `{ canteens: {} }` with a 200, and `{}` is truthy — so the
+      // number you had just watched appear was replaced with nothing.
+      if (data.canteens && Object.keys(data.canteens).length > 0) {
         setVotes(data.canteens);
       }
     },
-    onError: (err) => {
-      console.error("Optimistic vote error:", err);
+    onError: (err, _canteenName, previous) => {
+      // Roll the optimistic vote back. Leaving it up marks you as having voted
+      // — in localStorage, so across reloads — and disables the button for the
+      // rest of the day, all for a vote that was never recorded anywhere.
+      console.error("Vote could not be recorded:", err);
+      if (previous) {
+        setVotes(previous.votes);
+        setHasVoted(previous.hasVoted);
+        setVotedCanteen(previous.votedCanteen);
+      }
+      setVoteSuccess(false);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(`voted_${getLocalDateKey()}`);
+      }
     },
   });
 
   const handleVote = useCallback(
     async (canteenName: string) => {
-      await voteMutation.mutateAsync(canteenName);
+      try {
+        await voteMutation.mutateAsync(canteenName);
+      } catch {
+        // onError has already rolled the optimistic update back. Swallowing the
+        // rejection here keeps it from reaching the click handler as an
+        // unhandled rejection — which is what it would do now that a write the
+        // database refuses actually throws instead of answering 200.
+      }
     },
     [voteMutation]
   );

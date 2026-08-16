@@ -93,6 +93,27 @@ export function submitVote(payload: { canteenId: string }): Promise<{ canteens: 
   return post("/api/attendance", payload);
 }
 
+/** One entry per day that saw at least one vote, newest first. */
+export interface AttendanceHistoryEntry {
+  date: string;
+  canteens: Record<string, number>;
+}
+
+/**
+ * The last fortnight of tallies.
+ *
+ * GET on the same endpoint that accepts the votes. The leaderboard used to
+ * fetch `/api/attendance/history`, which is not a function that exists — and
+ * because the SPA rewrite in vercel.json deliberately excludes `/api/`, that
+ * path was never rewritten to index.html either. It answered a plain 404,
+ * `.json()` threw, and the modal's catch left it showing its empty state.
+ */
+export function getAttendanceHistory(
+  signal?: AbortSignal
+): Promise<{ entries: AttendanceHistoryEntry[] }> {
+  return request("/api/attendance", { signal });
+}
+
 export function sendSlackNotification(payload: {
   canteens: Record<string, number>;
   dishes: Record<string, string>;

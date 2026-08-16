@@ -1,11 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { CANTEEN_ORDER } from "@/lib/constants";
-
-interface HistoryEntry {
-  date: string;
-  canteens: Record<string, number>;
-}
+import { getAttendanceHistory, type AttendanceHistoryEntry as HistoryEntry } from "@/lib/api-client";
 
 interface CanteenStats {
   name: string;
@@ -27,10 +23,16 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
     const controller = new AbortController();
     setIsLoading(true);
     setEntries([]);
-    fetch('/api/attendance/history', { signal: controller.signal })
-      .then(r => r.json())
+    getAttendanceHistory(controller.signal)
       .then(data => { setEntries(data.entries || []); setIsLoading(false); })
-      .catch(err => { if (err.name !== 'AbortError') setIsLoading(false); });
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        // The empty state below says "no votes in the last 14 days", which is a
+        // lie when the request failed. Say so in the console at least — this
+        // modal spent its whole life rendering that line against a 404.
+        console.error('Leaderboard history could not be loaded:', err);
+        setIsLoading(false);
+      });
     return () => controller.abort();
   }, [isOpen]);
 
