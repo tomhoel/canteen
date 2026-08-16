@@ -7,6 +7,7 @@ import {
   loadDishCache,
   saveDishCacheEntries,
   normalizeDishName,
+  archiveObjectKey,
 } from "./dish-cache.service.js";
 
 // The cache key function lives with the cache now; re-exported because other
@@ -279,7 +280,7 @@ function buildImageJobs(menuData: MenuData): ImageJob[] {
         dayKey,
         dish: mainDish.dish,
         slotPath: `${dayKey}/${slug}.png`,
-        archivePath: `archive/${normalizeDishName(mainDish.dish)}.png`,
+        archivePath: `archive/${archiveObjectKey(mainDish.dish)}.png`,
       });
     }
   }
