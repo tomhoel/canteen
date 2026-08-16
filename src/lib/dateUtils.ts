@@ -72,6 +72,22 @@ export function getWeekId(): string {
   return getWeekIdForDate(year, month, day);
 }
 
+/**
+ * Saturday or Sunday in Europe/Oslo.
+ *
+ * The read path needs this to decide whether to serve next week's row, and it
+ * has to agree with computeDisplayContext's own weekend test — which is derived
+ * from the same Oslo parts, not from the server's local clock. A server in UTC
+ * asking `new Date().getDay()` would flip to Monday two hours after Oslo does,
+ * and spend those two hours serving a week the UI would not be in preview mode
+ * for.
+ */
+export function isOsloWeekend(): boolean {
+  const { year, month, day } = todayOsloParts();
+  const dayOfWeek = new Date(year, month - 1, day, 12, 0, 0).getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
 /** Canonical id for the week `weeks` weeks from today, e.g. 1 for next week. */
 export function getWeekIdOffset(weeks: number): string {
   const { year, month, day } = todayOsloParts();
@@ -85,9 +101,12 @@ export function getWeekIdOffset(weeks: number): string {
  * Whether a set of canteens has all moved on to a week after `currentWeek`.
  *
  * The predicate `computeDisplayContext` uses to choose between weekend-preview
- * and weekend-recap, named rather than inlined because the read path will need
- * exactly the same test the day it starts serving next week's row on a weekend
- * (see the note on weekend-preview reachability in README). If the two ever
+ * and weekend-recap. The read path now does serve next week's row from Saturday
+ * (`readWeekForDisplay` in src/server/menu.ts) — which is what makes this test
+ * satisfiable at all. Between the week-routing fix and that change, every row
+ * held canteens labelled with its own week, so a weekend request could only
+ * ever produce labels equal to the current week and preview was unreachable.
+ * If the two ever
  * disagreed the app would render one week's food under the other week's dates,
  * which is the specific failure the display context exists to prevent.
  */
