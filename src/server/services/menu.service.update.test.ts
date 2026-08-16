@@ -55,12 +55,15 @@ interface World {
   cacheRows: Map<string, Record<string, any>>;
   redisAvailable: boolean;
   redisWritesFail: boolean;
+  /** What a Redis GET answers with, so a stale cache hit can be simulated. */
+  redisRecords: Map<string, unknown>;
 
   upserts: Upsert[];
   cacheWrites: Array<Record<string, unknown>[]>;
   originsAsked: string[][];
   descriptionsAsked: string[][];
   redisSets: string[];
+  redisGets: string[];
   redisConstructed: number;
   trace: string[];
 }
@@ -98,11 +101,13 @@ function reset(overrides: Partial<World> = {}) {
     cacheRows: new Map(),
     redisAvailable: false,
     redisWritesFail: false,
+    redisRecords: new Map(),
     upserts: [],
     cacheWrites: [],
     originsAsked: [],
     descriptionsAsked: [],
     redisSets: [],
+    redisGets: [],
     redisConstructed: 0,
     trace: [],
     ...overrides,
@@ -162,8 +167,9 @@ mock.module("@upstash/redis", {
       constructor() {
         world.redisConstructed++;
       }
-      async get() {
-        return null;
+      async get(key: string) {
+        world.redisGets.push(key);
+        return world.redisRecords.get(key) ?? null;
       }
       async set(key: string) {
         if (world.redisWritesFail) throw new Error("redis down");
@@ -827,4 +833,67 @@ test("a rollover asks about a new dish once and reuses it for the other week", a
     "the second week reads back what the first week cached"
   );
   assert.equal(result.stats.durablyCached, 1);
+});
+
+test("the displayed week is read back from the database, not from Redis", async () => {
+  // When every canteen has rolled over, the displayed week is not written this
+  // run and has to be read back — and that record is what the image pass draws
+  // plates from. Redis holds this week under a seven-day TTL, so answering from
+  // the cache could have the run illustrate a version of the week that the
+  // database no longer agrees with.
+  reset({
+    scrape: makeScrape({
+      Flow: makeCanteen(label(1), ["Neste ukes rett"]),
+      Fresh4you: makeCanteen(label(1), ["Neste ukes rett"]),
+    }),
+  });
+  world.rows.set(W_NOW, storedRow({ Flow: makeCanteen(label(0), ["Denne ukens rett"]) }));
+  world.redisRecords.set(`menu:${W_NOW}`, {
+    weekId: W_NOW,
+    menuData: { scrapedAt: "stale", canteens: { Flow: makeCanteen(label(0), ["Utdatert rett"]) } },
+    dishOrigins: {},
+    dishDescriptions: {},
+    scrapedAt: "stale",
+  });
+  process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
+  process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+
+  try {
+    const result = await runWeeklyUpdateService();
+
+    assert.deepEqual(result.weeksWritten.map((w) => w.weekId), [W_B], "only next week was written");
+    assert.equal(result.weekId, W_NOW, "but the displayed week is what comes back");
+    assert.equal(
+      result.menuData.canteens.Flow.menu[0].no!.items[0].dish,
+      "Denne ukens rett",
+      "read from the database"
+    );
+    assert.ok(
+      !world.redisGets.includes(`menu:${W_NOW}`),
+      "and the stale cached copy was never consulted"
+    );
+  } finally {
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  }
+});
+
+test("displayedWeekUnchanged is about the displayed week, not the whole run", async () => {
+  reset({
+    scrape: makeScrape({
+      Flow: makeCanteen(label(1), ["Ny rett"]),
+      Fresh4you: makeCanteen(label(1), ["Ny rett"]),
+    }),
+  });
+  world.rows.set(W_NOW, storedRow({ Flow: makeCanteen(label(0), ["Denne ukens rett"]) }));
+
+  const result = await runWeeklyUpdateService();
+
+  assert.equal(result.weeksWritten[0].weekId, W_B, "next week changed");
+  assert.equal(result.weeksWritten[0].unchanged, false);
+  assert.equal(
+    result.stats.displayedWeekUnchanged,
+    true,
+    "yet the displayed week has nothing to regenerate"
+  );
 });

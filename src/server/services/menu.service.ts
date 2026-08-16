@@ -211,8 +211,14 @@ export interface UpdateStats extends EnrichmentCounts {
   dishCount: number;
   /** Canteens that returned nothing usable this run. */
   failedCanteens: string[];
-  /** True when the scrape matched the stored week, dish for dish. */
-  unchanged: boolean;
+  /**
+   * True when the *displayed* week's stored menu matched this scrape dish for
+   * dish — and true by default when the displayed week was not written at all,
+   * because there is then nothing new to regenerate downstream. Deliberately
+   * not a statement about the run as a whole: during a rollover another week
+   * may well have changed.
+   */
+  displayedWeekUnchanged: boolean;
 }
 
 /** What one week's row received from a single scrape. */
@@ -524,10 +530,15 @@ export async function runWeeklyUpdateService(
   //
   // An explicit weekIdInput is the exception: the caller named a week, so that
   // is the one to return and to build plates for.
+  //
+  // The read-back deliberately bypasses the caches. getWeeklyMenuService would
+  // answer from Redis, whose copy of this week can be up to seven days old, and
+  // this record is what the image pass draws plates from — so a cache hit could
+  // have the run illustrate a version of the week that no longer exists.
   const primary = weekIdInput
     ? writtenRecords.get(weekIdInput)!
     : writtenRecords.get(displayWeekId) ??
-      (await getWeeklyMenuService(displayWeekId)) ??
+      (await readStoredRecord(displayWeekId)) ??
       writtenRecords.get([...writtenRecords.keys()].sort()[0])!;
 
   const primaryWrite = weeksWritten.find((w) => w.weekId === primary.weekId);
@@ -543,13 +554,48 @@ export async function runWeeklyUpdateService(
     exhausted: [...new Set(weeksWritten.flatMap((w) => w.exhausted))],
     newlyExhausted: [...new Set(weeksWritten.flatMap((w) => w.newlyExhausted))],
     failedCanteens: scrape.failed,
-    // Nothing to regenerate downstream unless the displayed week itself moved.
-    unchanged: primaryWrite ? primaryWrite.unchanged : true,
+    // Scoped to the displayed week on purpose: it answers "is there anything to
+    // regenerate downstream", and a week this run did not write has nothing.
+    // Named for what it measures — as plain `unchanged` it read as a claim
+    // about the whole run, which is false during a rollover.
+    displayedWeekUnchanged: primaryWrite ? primaryWrite.unchanged : true,
   };
 
   if (scrape.failed.length) console.log(`⚠️  failed: ${scrape.failed.join(", ")}`);
 
   return { ...primary, stats, scrape, weeksWritten, weeksSkipped };
+}
+
+/**
+ * Reads one week straight from the database, ignoring Redis.
+ *
+ * getWeeklyMenuService is the app's read and is right to prefer the cache. The
+ * updater is not: it needs what is actually stored, both to decide what to
+ * return and to hand the image pass something it can trust.
+ */
+async function readStoredRecord(weekId: string): Promise<WeeklyMenuRecord | null> {
+  const supabase = getReadClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("weekly_menus")
+    .select("week_id, menu_data, dish_origins, dish_descriptions, scraped_at")
+    .eq("week_id", weekId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(`Could not read back ${weekId}: ${error.message}`);
+    return null;
+  }
+  if (!data?.menu_data) return null;
+
+  return {
+    weekId: data.week_id,
+    menuData: data.menu_data,
+    dishOrigins: data.dish_origins ?? {},
+    dishDescriptions: data.dish_descriptions ?? {},
+    scrapedAt: data.scraped_at,
+  };
 }
 
 interface StoredRow {

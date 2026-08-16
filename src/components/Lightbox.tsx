@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 
 interface LightboxProps {
@@ -12,6 +12,10 @@ interface LightboxProps {
 export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose, onNavigate }: LightboxProps) {
   const touchStartRef = useRef<number | null>(null);
   const touchEndRef = useRef<number | null>(null);
+  // Every card has an onError placeholder; this was the one <img> without one,
+  // so a plate that has never been drawn showed the browser's broken-image
+  // glyph full-screen. Keyed by index so swiping to the next dish clears it.
+  const [failedIndex, setFailedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -72,7 +76,16 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
         )}
 
         <div className="lightbox-image-container">
-          <img src={current.highResImagePath} alt={current.mainDish?.dish || ""} className="lightbox-image" />
+          {failedIndex === currentIndex ? (
+            <div className="image-placeholder">{current.canteenName.charAt(0)}</div>
+          ) : (
+            <img
+              src={current.highResImagePath}
+              alt={current.mainDish?.dish || ""}
+              className="lightbox-image"
+              onError={() => setFailedIndex(currentIndex)}
+            />
+          )}
         </div>
         <div className="lightbox-info">
           <p className="lightbox-canteen">{current.canteenName}</p>

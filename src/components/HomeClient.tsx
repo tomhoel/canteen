@@ -105,6 +105,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [dateTick, setDateTick] = useState(0);
   const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: "" });
   const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+  // The hero image was the other <img> with no onError, so a dish that has
+  // never had a plate drawn opened the sheet onto a broken-image glyph.
+  const [sheetImageFailed, setSheetImageFailed] = useState(false);
   const [dishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
@@ -595,6 +598,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   const handleCardClick = useCallback((canteenName: string) => {
     const data = canteenDayData.find(c => c.canteenName === canteenName);
+    // A new dish deserves a fresh attempt; without this, one missing plate
+    // would leave every sheet opened afterwards showing the placeholder.
+    setSheetImageFailed(false);
     setActionSheet({
       isOpen: true,
       canteenName,
@@ -897,7 +903,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
             {/* Hero image */}
             <div className="action-sheet-hero">
-              <img src={actionSheet.imagePath} alt={actionSheet.dishName} className="action-sheet-img" />
+              {sheetImageFailed ? (
+                <div className="image-placeholder">{actionSheet.canteenName.charAt(0)}</div>
+              ) : (
+                <img
+                  src={actionSheet.imagePath}
+                  alt={actionSheet.dishName}
+                  className="action-sheet-img"
+                  onError={() => setSheetImageFailed(true)}
+                />
+              )}
               <div className="action-sheet-hero-fade" />
             </div>
 
