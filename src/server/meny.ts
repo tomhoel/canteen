@@ -1,5 +1,4 @@
 import { GoogleGenAI } from "@google/genai";
-import { Redis } from "@upstash/redis";
 import type {
   RecipeIngredient,
   MenyProduct,
@@ -7,16 +6,7 @@ import type {
   MenyResponse,
 } from "../lib/types.js";
 import { getWeekNumber } from "../lib/dateUtils.js";
-
-function getRedis() {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    return new Redis({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
-    });
-  }
-  return null;
-}
+import { getRedis } from "./services/redis.service.js";
 
 const MENY_STORE_ID = process.env.MENY_DEFAULT_STORE_ID || "7080001150488";
 const MENY_STORE_NAME = "MENY Bryn";

@@ -1,16 +1,6 @@
 import { generateAIRecipe } from "./services/ai.service.js";
 import { getWeekNumber } from "../lib/dateUtils.js";
-import { Redis } from "@upstash/redis";
-
-function getRedis() {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    return new Redis({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
-    });
-  }
-  return null;
-}
+import { getRedis } from "./services/redis.service.js";
 
 export interface RecipeRequest {
   dishName: string;
