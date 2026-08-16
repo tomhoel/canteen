@@ -104,6 +104,10 @@ export default function DaySelector({
         <div className="day-bar-banner" role="status">
           {mode === "weekend-preview"
             ? (lang === "no" ? "Forhåndsvisning av neste uke" : "Next week preview")
+            : mode === "pinned-week"
+            // A week reached by ?week=. Say so, or the dates in the strip look
+            // like a bug rather than an answer to what was asked for.
+            ? (lang === "no" ? "Du ser på en annen uke" : "Viewing another week")
             : (lang === "no" ? "Helg — kantinene er stengt" : "Weekend — canteens closed")}
         </div>
       )}

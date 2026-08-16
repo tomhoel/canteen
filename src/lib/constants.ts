@@ -65,16 +65,23 @@ export const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
  * cacheable; only sized requests take the render path.
  */
 export function getSupabaseImageUrl(bucket: string, path: string, options?: { width?: number; height?: number; format?: string; quality?: number }) {
+  // Paths are dish names now, not the tidy `monday/flow.png` slots they used to
+  // be — "archive/spanish pork casserole with potatoes.png" is a real object.
+  // Browsers happen to percent-encode a space themselves, but a "?" in a dish
+  // name would swallow the rest of the path into the query string, so encode
+  // each segment rather than depending on that. Slot paths are unaffected:
+  // encoding a segment with no special characters returns it unchanged.
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
   const params = new URLSearchParams();
   if (options?.width) params.set('width', options.width.toString());
   if (options?.height) params.set('height', options.height.toString());
   if (options?.format) params.set('format', options.format);
   if (options?.quality) params.set('quality', options.quality.toString());
 
-  if ([...params.keys()].length === 0) return `${SUPABASE_STORAGE_URL}/${bucket}/${path}`;
+  if ([...params.keys()].length === 0) return `${SUPABASE_STORAGE_URL}/${bucket}/${encodedPath}`;
 
   params.set('resize', 'contain');
-  return `${SUPABASE_URL}/storage/v1/render/image/public/${bucket}/${path}?${params.toString()}`;
+  return `${SUPABASE_URL}/storage/v1/render/image/public/${bucket}/${encodedPath}?${params.toString()}`;
 }
 
 /**

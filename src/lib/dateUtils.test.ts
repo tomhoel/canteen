@@ -11,6 +11,8 @@ import {
   getWeekId,
   getWeekIdOffset,
   allCanteensAhead,
+  mondayOfWeekId,
+  computeDisplayContext,
 } from "./dateUtils";
 
 test("getWeekNumberForDate - ordinary mid-year date", () => {
@@ -154,4 +156,57 @@ test("allCanteensAhead - needs every canteen, not just one early publisher", () 
   assert.equal(allCanteensAhead([], 33), false, "no data is not a preview");
   // Year wrap: in week 52, a canteen showing week 1 is ahead.
   assert.equal(allCanteensAhead([1, 1], 52), true);
+});
+
+test("mondayOfWeekId - resolves to a Monday whose own week id round-trips", () => {
+  for (const weekId of ["2026-W01", "2026-W33", "2026-W53", "2027-W01", "2029-W52"]) {
+    const monday = mondayOfWeekId(weekId)!;
+    assert.ok(monday, `no Monday for ${weekId}`);
+    assert.equal(monday.getDay(), 1, `${weekId} did not land on a Monday`);
+    assert.equal(
+      getWeekIdForDate(monday.getFullYear(), monday.getMonth() + 1, monday.getDate()),
+      weekId,
+      `${weekId} did not round-trip`
+    );
+  }
+});
+
+test("mondayOfWeekId - rejects anything that is not a week id", () => {
+  for (const bad of ["2026-W", "2026-W00", "2026-W54", "26-W33", "next week", "", undefined]) {
+    assert.equal(mondayOfWeekId(bad), null, `accepted ${JSON.stringify(bad)}`);
+  }
+});
+
+test("computeDisplayContext - a pinned week anchors on that week, not on today", () => {
+  // Without this the app renders one week's food under another week's dates,
+  // with a "today" that is not in the week on screen.
+  const pinned = getWeekIdOffset(3);
+  const ctx = computeDisplayContext([], pinned);
+
+  assert.equal(ctx.mode, "pinned-week");
+  assert.equal(ctx.todayIndex, -1, "nothing in a future week is today");
+  assert.equal(ctx.defaultSelectedDay, 0, "it opens on its Monday");
+  assert.equal(
+    getWeekIdForDate(ctx.anchor.getFullYear(), ctx.anchor.getMonth() + 1, ctx.anchor.getDate()),
+    pinned
+  );
+  assert.equal(ctx.weekNumber, Number(pinned.slice(-2)));
+});
+
+test("computeDisplayContext - pinning the current week changes nothing", () => {
+  const plain = computeDisplayContext([]);
+  const pinned = computeDisplayContext([], getWeekId());
+
+  assert.equal(pinned.mode, plain.mode);
+  assert.equal(pinned.todayIndex, plain.todayIndex);
+  assert.equal(pinned.defaultSelectedDay, plain.defaultSelectedDay);
+  assert.equal(pinned.weekNumber, plain.weekNumber);
+});
+
+test("computeDisplayContext - an unparseable week param is ignored, not obeyed", () => {
+  const plain = computeDisplayContext([]);
+  const junk = computeDisplayContext([], "not-a-week");
+
+  assert.equal(junk.mode, plain.mode);
+  assert.equal(junk.weekNumber, plain.weekNumber);
 });

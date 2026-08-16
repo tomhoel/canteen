@@ -53,3 +53,20 @@ test("getClosedPlateUrl - transforms through the render endpoint too", () => {
   assert.match(url, /\/render\/image\/public\//);
   assert.ok(url.includes("resize=contain"));
 });
+
+test("getSupabaseImageUrl - percent-encodes each path segment, but not the slashes", () => {
+  // Paths are dish names now: "archive/spanish pork casserole with potatoes.png"
+  // is a real object. A raw space happens to survive because browsers encode it,
+  // but a "?" would swallow the rest of the path into the query string.
+  const url = getSupabaseImageUrl("images_nobg", "archive/spanish pork casserole.png", {
+    width: 440,
+  });
+  assert.ok(url.includes("/images_nobg/archive/spanish%20pork%20casserole.png?"));
+  assert.ok(!url.includes("archive%2F"), "the separator must stay a separator");
+});
+
+test("getSupabaseImageUrl - a plain slot path is untouched by the encoding", () => {
+  assert.ok(
+    getSupabaseImageUrl("images_nobg", "monday/flow.png").endsWith("/images_nobg/monday/flow.png")
+  );
+});

@@ -120,7 +120,10 @@ export default function FoodCard({
         onClick={e => { e.stopPropagation(); if (mainDish) onImageClick(data); }}
       >
         <div className="card-image-circle">
-          {imgError ? (
+          {/* An empty path means the server found no plate for this dish. Go
+              straight to the placeholder rather than letting the browser
+              request the document URL and fail. */}
+          {imgError || !imagePath ? (
             <div className="image-placeholder">
               {canteenName.charAt(0)}
             </div>

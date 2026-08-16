@@ -222,6 +222,18 @@ export interface ImageRunOptions {
    * main dish of the week.
    */
   force?: boolean;
+
+  /**
+   * Whether to fill the per-day slots as well as the archive.
+   *
+   * The slots (`<day>/<canteen>.png`) carry no week, so exactly one week can
+   * occupy them — writing a second week's plates there would overwrite the
+   * displayed week's. Only the week the app is rendering gets slots; every
+   * other week this run wrote gets its plates into the dish-addressed archive,
+   * which the read path resolves through `dish_cache.image_nobg_path`. That is
+   * what lets a week-ahead view have pictures at all.
+   */
+  writeSlots?: boolean;
 }
 
 export interface ImageRunResult {
@@ -287,13 +299,16 @@ export async function processAllCanteenAIImages(
   menuData: MenuData,
   options: ImageRunOptions = {}
 ): Promise<ImageRunResult> {
-  const { budgetMs, force = false } = options;
+  const { budgetMs, force = false, writeSlots = true } = options;
   const startedAt = Date.now();
   const outOfTime = () => budgetMs !== undefined && Date.now() - startedAt >= budgetMs;
 
   const jobs = buildImageJobs(menuData);
   console.log(
-    `📸 ${jobs.length} main dishes to ensure images for${force ? " (force: ignoring archive)" : ""}...`
+    `📸 ${jobs.length} main dishes to ensure images for` +
+      (force ? " (force: ignoring archive)" : "") +
+      (writeSlots ? "" : " (archive only — not the displayed week)") +
+      "..."
   );
 
   const result: ImageRunResult = {
@@ -319,13 +334,28 @@ export async function processAllCanteenAIImages(
   const newlyDrawn: Array<{ dish: string; archivePath: string }> = [];
 
   for (const job of jobs) {
+    const knownPath = cache.get(normalizeDishName(job.dish))?.imageNoBgPath ?? null;
+
     // Cheap path: this exact dish has been drawn before, in any past week.
     if (!force) {
-      const known = cache.get(normalizeDishName(job.dish))?.imageNoBgPath ?? job.archivePath;
-      const copied = await copyInSupabaseBucket("images_nobg", known, job.slotPath);
-      if (copied) {
+      if (writeSlots) {
+        const source = knownPath ?? job.archivePath;
+        const copied = await copyInSupabaseBucket("images_nobg", source, job.slotPath);
+        if (copied) {
+          result.reused++;
+          // A successful copy is proof the source object exists. Record it when
+          // the cache did not already know, because a plate nobody can address
+          // by dish name is a plate no other week can use — which is why 8 of
+          // the 29 stored main dishes had no resolvable image despite one
+          // sitting in the bucket.
+          if (!knownPath) newlyDrawn.push({ dish: job.dish, archivePath: source });
+          console.log(`  ♻️ Reused image for "${job.dish}" (${job.canteenName}/${job.dayKey})`);
+          continue;
+        }
+      } else if (knownPath) {
+        // Archive-only: the plate is already addressable, so there is nothing
+        // to copy anywhere. This is the whole cost of a non-displayed week.
         result.reused++;
-        console.log(`  ♻️ Reused image for "${job.dish}" (${job.canteenName}/${job.dayKey})`);
         continue;
       }
     }
@@ -343,14 +373,18 @@ export async function processAllCanteenAIImages(
     }
 
     const transparentBuffer = await removeBgBuffer(aiBuffer);
-    const slotOk = await uploadToSupabase("images_nobg", job.slotPath, transparentBuffer);
-    // Archive under the dish name so the same dish is free for every future week.
+    // Archive first: it is the durable, dish-addressed copy every future week
+    // resolves through, whereas the slot is overwritten weekly.
     const archiveOk = await uploadToSupabase("images_nobg", job.archivePath, transparentBuffer);
+    const slotOk = writeSlots
+      ? await uploadToSupabase("images_nobg", job.slotPath, transparentBuffer)
+      : false;
 
-    if (slotOk) {
+    if (archiveOk || slotOk) {
       result.generated++;
       if (archiveOk) newlyDrawn.push({ dish: job.dish, archivePath: job.archivePath });
-      console.log(`  ✨ Generated images_nobg/${job.slotPath} for "${job.dish}"`);
+      else console.warn(`  ⚠️ Archived copy of "${job.dish}" failed; only the weekly slot has it.`);
+      console.log(`  ✨ Generated images_nobg/${job.archivePath} for "${job.dish}"`);
     } else {
       result.failed++;
     }
