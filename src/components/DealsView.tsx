@@ -87,8 +87,6 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
     });
   }
 
-  const ingredientsWithDeals = new Set(dealsByIngredient.keys());
-  const noDealsIngredients = searchedIngredients.filter((i) => !ingredientsWithDeals.has(i));
   const hasDeals = dealsByIngredient.size > 0;
   const showRecommendation = !isStreaming && recommendation.store !== "";
 
