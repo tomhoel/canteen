@@ -127,6 +127,33 @@ rather than falling back to the anon key, and says so.
 CI runs typecheck, lint, test and build on every pull request and every push to
 main.
 
+## Which week you see
+
+`computeDisplayContext` in `src/lib/dateUtils.ts` is the single source of truth,
+and it has four modes:
+
+| Mode | When | What it does |
+| --- | --- | --- |
+| `weekday-current` | Mon–Fri | Lands on today, "Dagens Lunsj", voting on |
+| `weekend-preview` | Sat/Sun, next week published | Dates shift +7, lands on Monday, "Neste ukes Lunsj", voting off |
+| `weekend-recap` | Sat/Sun, next week not out yet | Stays on the week just ended, lands on Friday, "kantinene er stengt" |
+| `pinned-week` | `?week=2026-W35` | Shows that week, says so in the day bar |
+
+The mode is chosen from the week each canteen's **own label** claims, not from
+the row it was stored in. That is why the read path serves next week's row from
+Saturday (`readWeekForDisplay`): without it the client only ever sees
+current-week labels and preview cannot trigger.
+
+This is worth knowing before touching the updater's week routing. Preview used
+to work by accident — the updater wrote every canteen into the current week's
+row regardless of what it published, so a rolled-over kitchen put next-week
+labels in this week's row. Routing each canteen to the week it actually
+publishes fixed a real data-loss bug and silently killed the preview with it.
+The two are coupled; change one and check the other.
+
+A canteen that has not published next week yet is simply absent from that row.
+The preview banner names it, so a missing card reads as "not out yet".
+
 ## Endpoints
 
 | Route | Method | Purpose |

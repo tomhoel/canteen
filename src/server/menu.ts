@@ -1,5 +1,5 @@
 import type { MenuData, DishOrigin, DishDescription } from "../lib/types.js";
-import { getWeekId } from "../lib/dateUtils.js";
+import { getWeekId, getWeekIdOffset, isOsloWeekend } from "../lib/dateUtils.js";
 import { pickMainDish } from "../lib/dish-ranking.js";
 import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service.js";
 import { loadDishCache, normalizeDishName } from "./services/dish-cache.service.js";
@@ -97,8 +97,49 @@ async function resolvePlateImages(
  * working app serving a strangely empty week. A failure here is now visible:
  * the route renders its error state and the log says why.
  */
+/**
+ * Which stored week an unpinned request should be answered with.
+ *
+ * On a weekday, this week. From Saturday, next week if it has been published —
+ * that is what puts the app into `weekend-preview`, and it had quietly stopped
+ * being possible.
+ *
+ * The mode is chosen on the client, by `allCanteensAhead`, from the week each
+ * canteen's own label claims. That test used to pass by accident: before the
+ * week-routing fix (0c0be3d) the updater wrote every canteen into the row keyed
+ * by the *current* week regardless of what they published, so after the
+ * kitchens rolled over, this week's row physically contained next-week labels.
+ * Routing each canteen to the week it actually publishes was the right fix for
+ * a real data bug — next week's menus were overwriting this week's — but it
+ * removed the only way the preview condition could ever be true. Every row now
+ * holds labels matching its own week, so a weekend request for this week can
+ * only ever produce `weekend-recap`.
+ *
+ * Handing back next week's row restores it with no client change at all: the
+ * labels read `[34, 34, 34]` against a current week of 33, `allCanteensAhead`
+ * is true, and the UI shifts the dates, lands on Monday, hides voting and shows
+ * its preview banner exactly as it was written to.
+ *
+ * A canteen that has not published yet is simply absent from that row, which is
+ * honest — it is the same reason the row is trustworthy. The banner names them
+ * so a missing card reads as "not out yet" rather than as a bug.
+ */
+async function readWeekForDisplay(weekId?: string) {
+  // An explicitly requested week is never second-guessed.
+  if (weekId) return await getWeeklyMenuService(weekId);
+
+  if (isOsloWeekend()) {
+    const ahead = await getWeeklyMenuService(getWeekIdOffset(1));
+    // An empty or missing row means the kitchens have not published yet; fall
+    // through to the week that just ended rather than showing a blank app.
+    if (Object.keys(ahead?.menuData?.canteens ?? {}).length > 0) return ahead;
+  }
+
+  return await getWeeklyMenuService();
+}
+
 export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse> {
-  const record = await getWeeklyMenuService(weekId);
+  const record = await readWeekForDisplay(weekId);
 
   if (!record?.menuData) {
     throw new MenuUnavailableError(

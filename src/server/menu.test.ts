@@ -14,6 +14,7 @@ import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import type { WeeklyMenuRecord, CanteenData, MenuItem } from "../lib/types.js";
 import { getWeekId, getWeekIdOffset } from "../lib/dateUtils.js";
+import * as realDateUtils from "../lib/dateUtils.js";
 import * as realDishCache from "./services/dish-cache.service.js";
 
 interface World {
@@ -22,6 +23,14 @@ interface World {
   images: Map<string, string>;
   cacheReadFails: boolean;
   dishesLookedUp: string[][];
+  /** Stored rows by week id. Consulted before `record`, so a test that cares
+      which week was asked for can answer per week. */
+  rowsByWeek: Map<string, WeeklyMenuRecord>;
+  /** Every week id the read path requested, in order. `undefined` means the
+      implicit "whatever we should be showing" request. */
+  weeksRequested: Array<string | undefined>;
+  /** Pretend today is a weekend in Oslo. */
+  weekend: boolean;
 }
 
 let world: World;
@@ -32,6 +41,9 @@ function reset(overrides: Partial<World> = {}) {
     images: new Map(),
     cacheReadFails: false,
     dishesLookedUp: [],
+    rowsByWeek: new Map(),
+    weeksRequested: [],
+    weekend: false,
     ...overrides,
   };
 }
@@ -68,10 +80,28 @@ function record(weekId: string, canteens: Record<string, CanteenData>): WeeklyMe
 
 mock.module("./services/menu.service.js", {
   namedExports: {
-    getWeeklyMenuService: async () => world.record,
+    getWeeklyMenuService: async (weekId?: string) => {
+      world.weeksRequested.push(weekId);
+      if (world.rowsByWeek.size > 0) {
+        // An implicit request means the current week, the same as the real
+        // service resolves it.
+        return world.rowsByWeek.get(weekId ?? THIS_WEEK) ?? null;
+      }
+      return world.record;
+    },
     runWeeklyUpdateService: async () => {
       throw new Error("the read path must never run an update");
     },
+  },
+});
+
+// isOsloWeekend is the only thing standing between a weekday and a weekend
+// here, and the alternative to steering it is a test that passes on Tuesday
+// and fails on Saturday.
+mock.module("../lib/dateUtils.js", {
+  namedExports: {
+    ...realDateUtils,
+    isOsloWeekend: () => world.weekend,
   },
 });
 
@@ -93,6 +123,11 @@ mock.module("./services/dish-cache.service.js", {
 });
 
 const { getWeeklyMenu, MenuUnavailableError } = await import("./menu.js");
+
+/** Monday's first dish for a canteen — enough to tell two weeks apart. */
+function mondayDish(menu: { menuData: { canteens: Record<string, CanteenData> } }, canteenName: string) {
+  return menu.menuData.canteens[canteenName]?.menu[0]?.no?.items[0]?.dish;
+}
 
 test("a plate that dish_cache can address is served by dish, not by weekday slot", async () => {
   reset({ record: record(THIS_WEEK, { Flow: canteen({ Monday: ["Fiskesuppe"] }) }) });
@@ -191,4 +226,80 @@ test("no stored menu at all is still an error, not an empty week", async () => {
   reset({ record: null });
 
   await assert.rejects(getWeeklyMenu(), MenuUnavailableError);
+});
+
+// ── Which week a weekend gets ─────────────────────────────────────────────
+
+test("from Saturday the app is served next week, not the one that just ended", async () => {
+  // The regression this covers: every row holds canteens labelled with its own
+  // week, so a weekend request for *this* week can only ever put the client in
+  // weekend-recap. allCanteensAhead needs next week's labels to be in the
+  // payload at all, and only the read path can put them there.
+  reset({ weekend: true });
+  world.rowsByWeek.set(THIS_WEEK, record(THIS_WEEK, { Flow: canteen({ Monday: ["Gammel rett"] }) }));
+  world.rowsByWeek.set(NEXT_WEEK, record(NEXT_WEEK, { Flow: canteen({ Monday: ["Ny rett"] }) }));
+
+  const menu = await getWeeklyMenu();
+
+  assert.equal(mondayDish(menu, "Flow"),"Ny rett");
+  assert.equal(world.weeksRequested[0], NEXT_WEEK, "next week is asked for first");
+});
+
+test("a weekday is never given next week", async () => {
+  reset({ weekend: false });
+  world.rowsByWeek.set(THIS_WEEK, record(THIS_WEEK, { Flow: canteen({ Monday: ["Dagens rett"] }) }));
+  world.rowsByWeek.set(NEXT_WEEK, record(NEXT_WEEK, { Flow: canteen({ Monday: ["Ny rett"] }) }));
+
+  const menu = await getWeeklyMenu();
+
+  assert.equal(mondayDish(menu, "Flow"),"Dagens rett");
+  assert.ok(!world.weeksRequested.includes(NEXT_WEEK), "next week is not even looked at");
+});
+
+test("a weekend before the kitchens have published falls back to the week that just ended", async () => {
+  // Better a recap of Friday than an empty app. This is the common case on a
+  // Saturday morning — the kitchens publish at their own pace.
+  reset({ weekend: true });
+  world.rowsByWeek.set(THIS_WEEK, record(THIS_WEEK, { Flow: canteen({ Monday: ["Gammel rett"] }) }));
+
+  const menu = await getWeeklyMenu();
+
+  assert.equal(mondayDish(menu, "Flow"),"Gammel rett");
+});
+
+test("an empty next-week row does not count as published", async () => {
+  // A row can exist with no canteens in it. Serving that is a blank app, which
+  // is strictly worse than last week's food.
+  reset({ weekend: true });
+  world.rowsByWeek.set(THIS_WEEK, record(THIS_WEEK, { Flow: canteen({ Monday: ["Gammel rett"] }) }));
+  world.rowsByWeek.set(NEXT_WEEK, record(NEXT_WEEK, {}));
+
+  const menu = await getWeeklyMenu();
+
+  assert.equal(mondayDish(menu, "Flow"),"Gammel rett");
+});
+
+test("one canteen having published is enough to preview", async () => {
+  // Flow habitually rolls over a day or two after the others. Waiting for the
+  // slowest kitchen would mean the preview rarely appeared on a Saturday at
+  // all, which is the day it was asked for. The absent canteens are named in
+  // the banner instead.
+  reset({ weekend: true });
+  world.rowsByWeek.set(THIS_WEEK, record(THIS_WEEK, { Flow: canteen({ Monday: ["Gammel rett"] }) }));
+  world.rowsByWeek.set(NEXT_WEEK, record(NEXT_WEEK, { Fresh4you: canteen({ Monday: ["Ny rett"] }) }));
+
+  const menu = await getWeeklyMenu();
+
+  assert.deepEqual(Object.keys(menu.menuData.canteens), ["Fresh4you"]);
+});
+
+test("an explicitly requested week is never second-guessed, weekend or not", async () => {
+  reset({ weekend: true });
+  world.rowsByWeek.set(THIS_WEEK, record(THIS_WEEK, { Flow: canteen({ Monday: ["Gammel rett"] }) }));
+  world.rowsByWeek.set(NEXT_WEEK, record(NEXT_WEEK, { Flow: canteen({ Monday: ["Ny rett"] }) }));
+
+  const menu = await getWeeklyMenu(THIS_WEEK);
+
+  assert.equal(mondayDish(menu, "Flow"),"Gammel rett");
+  assert.deepEqual(world.weeksRequested, [THIS_WEEK], "asked once, for exactly what was requested");
 });

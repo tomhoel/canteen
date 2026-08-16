@@ -13,6 +13,9 @@ interface DaySelectorProps {
       Used to trigger the YOLO randomiser from the day bar itself. */
   onTodayPress?: () => void;
   cardsRef?: React.RefObject<HTMLElement | null>;
+  /** Canteens with no menu in the previewed week. Named in the banner so an
+      absent card reads as "not published yet" rather than as a missing card. */
+  pendingCanteens?: string[];
 }
 
 export default function DaySelector({
@@ -25,6 +28,7 @@ export default function DaySelector({
   onDaySelect,
   onTodayPress,
   cardsRef,
+  pendingCanteens = [],
 }: DaySelectorProps) {
   const selectorRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLElement>(null);
@@ -103,7 +107,19 @@ export default function DaySelector({
       {mode !== "weekday-current" && (
         <div className="day-bar-banner" role="status">
           {mode === "weekend-preview"
-            ? (lang === "no" ? "Forhåndsvisning av neste uke" : "Next week preview")
+            ? (lang === "no"
+                ? `Forhåndsvisning av neste uke${
+                    pendingCanteens.length
+                      ? ` — ${pendingCanteens.join(", ")} har ikke publisert ennå`
+                      : ""
+                  }`
+                : `Next week preview${
+                    pendingCanteens.length
+                      ? ` — ${pendingCanteens.join(", ")} ${
+                          pendingCanteens.length === 1 ? "has" : "have"
+                        } not published yet`
+                      : ""
+                  }`)
             : mode === "pinned-week"
             // A week reached by ?week=. Say so, or the dates in the strip look
             // like a bug rather than an answer to what was asked for.
