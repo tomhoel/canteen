@@ -40,23 +40,41 @@ export const CANTEEN_IMAGE_SLUGS: Record<string, string> = {
   "Eat the street": "eat_the_street", "Fresh4you": "fresh4you", "Flow": "flow"
 };
 
-// Hardcoded fallback matches src/lib/supabase.ts so client-side image URLs
-// work even when Vercel's NEXT_PUBLIC_SUPABASE_URL env var is missing at build time.
+// Hardcoded fallback so client-side image URLs work even when Vercel's
+// NEXT_PUBLIC_SUPABASE_URL env var is missing at build time.
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sloutnqpqfesyoycklgd.supabase.co';
 export const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
 
+/**
+ * Two different endpoints, and picking the wrong one silently costs 60× the bytes.
+ *
+ * `/object/public` serves the stored file and ignores `?width`/`?format`
+ * entirely — it answers 200 with the original, so nothing looks broken. Only
+ * `/render/image/public` applies the transformation. Every plate the app
+ * renders was asking for a 440px WebP and being handed the source PNG:
+ * 1,490,718 bytes against 24,298 transformed. Three cards on screen plus the
+ * adjacent-day preload made that ~13 MB per day browsed, on a phone.
+ *
+ * `resize=contain` is not optional. The render endpoint defaults to `cover`,
+ * and with a width but no height that crops rather than scales: the same plate
+ * comes back 440×1021 out of a 1024×1021 source — a vertical slice with the
+ * left and right thirds of the food cut off. With `contain` it is 440×439, the
+ * whole plate, and smaller again.
+ *
+ * Untransformed requests still go to `/object/public`, which is free and
+ * cacheable; only sized requests take the render path.
+ */
 export function getSupabaseImageUrl(bucket: string, path: string, options?: { width?: number; height?: number; format?: string; quality?: number }) {
-  const url = `${SUPABASE_STORAGE_URL}/${bucket}/${path}`;
-  if (!options) return url;
-
   const params = new URLSearchParams();
-  if (options.width) params.set('width', options.width.toString());
-  if (options.height) params.set('height', options.height.toString());
-  if (options.format) params.set('format', options.format);
-  if (options.quality) params.set('quality', options.quality.toString());
+  if (options?.width) params.set('width', options.width.toString());
+  if (options?.height) params.set('height', options.height.toString());
+  if (options?.format) params.set('format', options.format);
+  if (options?.quality) params.set('quality', options.quality.toString());
 
-  const queryString = params.toString();
-  return queryString ? `${url}?${queryString}` : url;
+  if ([...params.keys()].length === 0) return `${SUPABASE_STORAGE_URL}/${bucket}/${path}`;
+
+  params.set('resize', 'contain');
+  return `${SUPABASE_URL}/storage/v1/render/image/public/${bucket}/${path}?${params.toString()}`;
 }
 
 /**
