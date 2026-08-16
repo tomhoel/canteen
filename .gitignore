@@ -48,6 +48,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template, which is the only documentation of what these are.
+!.env.example
 
 # vercel
 .vercel
