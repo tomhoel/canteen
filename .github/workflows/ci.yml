@@ -48,11 +48,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # eslint exits non-zero on errors only. The repo currently carries 14
-      # warnings (unused vars, one exhaustive-deps); --max-warnings=0 would fail
-      # from day one, and cleaning those up is a separate piece of work.
+      # The repo is at zero warnings, so treat a new one as a failure. Without
+      # this, `npm run lint` only fails on errors and warnings accumulate until
+      # nobody reads the output — which is exactly how the previous 14 got
+      # there. If a warning is genuinely the right answer, an
+      # `eslint-disable-next-line` with a comment saying why is the way to say
+      # so, and the comment is the part that has value.
       - name: Lint
-        run: npm run lint
+        run: npm run lint -- --max-warnings=0
 
       - name: Test
         run: npm test

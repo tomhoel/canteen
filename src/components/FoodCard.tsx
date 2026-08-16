@@ -83,7 +83,6 @@ export default function FoodCard({
   const {
     canteenName,
     mainDish,
-    items,
     sideDishes,
     mainAllergens,
     imagePath,

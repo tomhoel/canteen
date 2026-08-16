@@ -103,11 +103,20 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         setSelectedDay(idx);
       }
     }
+    // Deliberately keyed on the search param alone. `selectedDay` is read above
+    // but must not be a dependency: selecting a day sets the state first and
+    // pushes `?day=` second, so a render exists where the two disagree — and an
+    // effect that re-ran on `selectedDay` would see that gap and put it back.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams?.day]);
 
   const [menuData] = useState<MenuData | null>(initialMenu);
-  const [lang, setLang] = useState<"no" | "en">("no");
-  const [langAnim, setLangAnim] = useState("");
+  // Norwegian only, for now. The cascade animation and the switcher that drove
+  // it were removed from the header at some point and the plumbing outlived
+  // them: nothing could call setLang, so `lang` could never change and the
+  // animation class could never be set. Both are in git if the switcher comes
+  // back; leaving them here only made the language look configurable.
+  const [lang] = useState<"no" | "en">("no");
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
@@ -134,9 +143,10 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [yoloWinner, setYoloWinner] = useState<number>(-1);
   const yoloTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Custom hooks — extracted state management
+  // Custom hooks — extracted state management. Everything below reaches voting
+  // state through `voting.x`; the destructure that used to sit here bound ten
+  // names nothing referenced.
   const voting = useVoting();
-  const { votes, hasVoted, votedCanteen, isVoting, voteSuccess, shareState, handleVote, handleShareSlack, setVoteSuccess, setShareState } = voting;
   const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe(lang);
   const { dealsView, handleDealsClick, closeDeals } = useDeals(lang);
   const { menyView, handleMenyClick, closeMeny } = useMenySearch(lang);
@@ -233,15 +243,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       replace: true,
     });
   }, [navigate]);
-
-  const langAnimBusy = useRef(false);
-  const handleLangSwitch = useCallback((newLang: "no" | "en") => {
-    if (newLang === lang || langAnimBusy.current) return;
-    langAnimBusy.current = true;
-    setLangAnim(`lang-cascade-${newLang}`);
-    setTimeout(() => setLang(newLang), 350);
-    setTimeout(() => { setLangAnim("lang-done"); langAnimBusy.current = false; }, 780);
-  }, [lang]);
 
   // Initial data loading + localStorage cleanup
   useEffect(() => {
@@ -728,7 +729,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       </header>
 
       {/* Cards */}
-      <main className={`cards-container${langAnim ? ` ${langAnim}` : ""}`} ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <main className="cards-container" ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         {showSwipeHint && (
           <>
             <span className="swipe-hint-left" aria-hidden="true">
