@@ -1,8 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { groupCanteensByPublishedWeek, mergeCanteensForWeek } from "./menu.service";
-import { weekIdForWeekNumber } from "../../lib/dateUtils";
+import { getWeekId, getWeekIdOffset, weekIdForWeekNumber } from "../../lib/dateUtils";
 import type { MenuData } from "../../lib/types";
+
+/**
+ * Week numbers taken from the calendar rather than written down.
+ *
+ * These tests were originally pinned to the real 2026-W33/W34 rollover, which
+ * was fine while grouping was a pure function of the label. It is not any more:
+ * routing now rejects a week more than two off the calendar week, so hardcoded
+ * "33"/"34" labels would have started failing three weeks after they were
+ * written and never recovered — which is exactly the kind of slow rot the new
+ * CI job exists to catch, so it must not be the thing CI trips over.
+ */
+const THIS_WEEK = Number(getWeekId().slice(-2));
+const NEXT_WEEK = Number(getWeekIdOffset(1).slice(-2));
 
 /** Minimal MenuData carrying only what the grouping actually reads. */
 function menuWith(weeks: Record<string, string>): MenuData {
@@ -15,33 +28,33 @@ function menuWith(weeks: Record<string, string>): MenuData {
 
 test("groupCanteensByPublishedWeek - one week when every canteen agrees", () => {
   const groups = groupCanteensByPublishedWeek(
-    menuWith({ Flow: "UKE/WEEK 33", Fresh4you: "UKE/WEEK 33" }),
-    "2026-W33"
+    menuWith({ Flow: `UKE/WEEK ${THIS_WEEK}`, Fresh4you: `UKE/WEEK ${THIS_WEEK}` }),
+    getWeekId()
   );
 
   assert.equal(groups.size, 1);
-  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(33))!).sort(), [
+  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(THIS_WEEK))!).sort(), [
     "Flow",
     "Fresh4you",
   ]);
 });
 
 test("groupCanteensByPublishedWeek - splits the real Friday rollover", () => {
-  // The exact labels observed on 2026-08-14: two kitchens had moved to week 34
-  // while Flow was still publishing 33. Filing all three under the calendar
-  // week is what wrote next week's food into this week's row.
+  // The shape observed on Friday 2026-08-14: two kitchens had moved to next
+  // week while Flow was still publishing this one. Filing all three under the
+  // calendar week is what wrote next week's food into this week's row.
   const groups = groupCanteensByPublishedWeek(
     menuWith({
-      Flow: "Bygg / Building M - Uke/Week 33",
-      Fresh4you: "Uke/week 34",
-      "Eat the street": "Uke/week 34",
+      Flow: `Bygg / Building M - Uke/Week ${THIS_WEEK}`,
+      Fresh4you: `Uke/week ${NEXT_WEEK}`,
+      "Eat the street": `Uke/week ${NEXT_WEEK}`,
     }),
-    "2026-W33"
+    getWeekId()
   );
 
   assert.equal(groups.size, 2);
-  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(33))!), ["Flow"]);
-  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(34))!).sort(), [
+  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(THIS_WEEK))!), ["Flow"]);
+  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(NEXT_WEEK))!).sort(), [
     "Eat the street",
     "Fresh4you",
   ]);
@@ -49,16 +62,30 @@ test("groupCanteensByPublishedWeek - splits the real Friday rollover", () => {
 
 test("groupCanteensByPublishedWeek - an unreadable label falls back, never drops", () => {
   const groups = groupCanteensByPublishedWeek(
-    menuWith({ Flow: "Unknown", Fresh4you: "Uke/week 34" }),
-    "2026-W33"
+    menuWith({ Flow: "Unknown", Fresh4you: `Uke/week ${NEXT_WEEK}` }),
+    getWeekId()
   );
 
-  assert.deepEqual(Object.keys(groups.get("2026-W33")!), ["Flow"]);
-  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(34))!), ["Fresh4you"]);
+  assert.deepEqual(Object.keys(groups.get(getWeekId())!), ["Flow"]);
+  assert.deepEqual(Object.keys(groups.get(weekIdForWeekNumber(NEXT_WEEK))!), ["Fresh4you"]);
 
   // Whatever the split, every canteen must still be filed somewhere.
   const filed = [...groups.values()].flatMap((c) => Object.keys(c));
   assert.deepEqual(filed.sort(), ["Flow", "Fresh4you"]);
+});
+
+test("groupCanteensByPublishedWeek - a week nowhere near the calendar is not trusted", () => {
+  // "Bygg 39" in August parses as week 39 with nothing to anchor it, and would
+  // otherwise mint a permanent row key nothing ever reads. Half a year out is
+  // the furthest anything can be, so this holds in every week of the year.
+  const implausible = ((THIS_WEEK + 25) % 52) + 1;
+  const groups = groupCanteensByPublishedWeek(
+    menuWith({ Flow: `Bygg ${implausible}`, Fresh4you: `Uke/week ${THIS_WEEK}` }),
+    getWeekId()
+  );
+
+  assert.equal(groups.size, 1);
+  assert.deepEqual(Object.keys(groups.get(getWeekId())!).sort(), ["Flow", "Fresh4you"]);
 });
 
 test("groupCanteensByPublishedWeek - no canteens yields no groups", () => {

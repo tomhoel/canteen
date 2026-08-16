@@ -1,7 +1,11 @@
 export interface Allergen { id: string; name: string; }
 export interface MenuItem { dish: string; allergens: Allergen[]; isMain: boolean; }
 export interface DayMenu { label: string; items: MenuItem[]; availabilityNotes?: string[]; }
-export interface DayEntry { day: string; no: DayMenu; en: DayMenu; }
+// `no` and `en` are optional because the widget genuinely publishes days in
+// only one language — see the scraper test of the same name. Declaring them
+// required made every `dayItem.no?.items` guard in the pipeline look like
+// defensive paranoia rather than the load-bearing check it is.
+export interface DayEntry { day: string; no?: DayMenu; en?: DayMenu; }
 export interface CanteenData { week: string; openingHours: string; menu: DayEntry[]; }
 export interface MenuData { scrapedAt: string; canteens: Record<string, CanteenData>; }
 

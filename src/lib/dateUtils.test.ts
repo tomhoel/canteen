@@ -7,7 +7,10 @@ import {
   compareWeeks,
   parseCanteenWeekNumber,
   weekIdForWeekNumber,
+  weekDistance,
   getWeekId,
+  getWeekIdOffset,
+  allCanteensAhead,
 } from "./dateUtils";
 
 test("getWeekNumberForDate - ordinary mid-year date", () => {
@@ -92,4 +95,63 @@ test("weekIdForWeekNumber - a canteen one week ahead stays in the same week-year
   if (next <= 52) {
     assert.equal(weekIdForWeekNumber(next), `${year}-W${String(next).padStart(2, "0")}`);
   }
+});
+
+test("parseCanteenWeekNumber - does not truncate a longer run of digits", () => {
+  // "Uke 2026" reading as week 20 is worse than reading as nothing: a plausible
+  // wrong number routes a canteen's whole menu into a row nothing displays,
+  // while null falls back to the calendar week and the menu still shows up.
+  assert.equal(parseCanteenWeekNumber("Uke 2026"), null);
+  assert.equal(parseCanteenWeekNumber("Uke/Week 335"), null);
+  assert.equal(parseCanteenWeekNumber("Uke 33 2026"), 33);
+});
+
+test("weekDistance - measures how far apart two week numbers are", () => {
+  assert.equal(weekDistance(33, 33), 0);
+  assert.equal(weekDistance(34, 33), 1);
+  assert.equal(weekDistance(32, 33), -1);
+  // Not "thirty weeks behind": week 3 in August is next year, and either way
+  // it is nowhere near a week a canteen could plausibly be publishing.
+  assert.ok(Math.abs(weekDistance(3, 33)) > 2);
+});
+
+test("weekDistance - week 1 is one week ahead of week 52, not fifty-one behind", () => {
+  assert.equal(weekDistance(1, 52), 1);
+  assert.equal(weekDistance(52, 1), -1);
+});
+
+test("weekDistance - two different weeks are never zero apart", () => {
+  // 2026 is a 53-week ISO year, so week 1 follows week 53. The wrap arithmetic
+  // does not know the year's length and would otherwise report them as the
+  // same week.
+  assert.equal(weekDistance(1, 53), 1);
+  assert.equal(weekDistance(53, 1), -1);
+  for (let a = 1; a <= 53; a++) {
+    for (let b = 1; b <= 53; b++) {
+      if (a === b) continue;
+      assert.notEqual(weekDistance(a, b), 0, `weekDistance(${a}, ${b}) collapsed to zero`);
+    }
+  }
+});
+
+test("getWeekIdOffset - zero is today's week, one is next week", () => {
+  assert.equal(getWeekIdOffset(0), getWeekId());
+  assert.notEqual(getWeekIdOffset(1), getWeekId());
+  assert.match(getWeekIdOffset(1), /^\d{4}-W\d{2}$/);
+});
+
+test("getWeekIdOffset - three consecutive weeks are three distinct, ordered ids", () => {
+  const ids = [getWeekIdOffset(-1), getWeekIdOffset(0), getWeekIdOffset(1)];
+  assert.equal(new Set(ids).size, 3);
+  // Not a lexical sort in general — week 52 → 1 crosses a year — but the ids
+  // carry their own week-year, so string order and calendar order agree.
+  assert.deepEqual([...ids].sort(), ids);
+});
+
+test("allCanteensAhead - needs every canteen, not just one early publisher", () => {
+  assert.equal(allCanteensAhead([34, 34, 34], 33), true);
+  assert.equal(allCanteensAhead([33, 34, 34], 33), false);
+  assert.equal(allCanteensAhead([], 33), false, "no data is not a preview");
+  // Year wrap: in week 52, a canteen showing week 1 is ahead.
+  assert.equal(allCanteensAhead([1, 1], 52), true);
 });

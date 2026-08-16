@@ -79,11 +79,11 @@ test("parseCanteenHtml - groups dishes under their day and language", () => {
   assert.equal(data.menu.length, 1);
   assert.equal(data.menu[0].day, "Monday");
   assert.deepEqual(
-    data.menu[0].no.items.map((i) => i.dish),
+    data.menu[0].no!.items.map((i) => i.dish),
     ["Torsk med sitron", "Tomatsuppe"]
   );
   assert.deepEqual(
-    data.menu[0].en.items.map((i) => i.dish),
+    data.menu[0].en!.items.map((i) => i.dish),
     ["Cod with lemon", "Tomato soup"]
   );
 });
@@ -98,7 +98,7 @@ test("parseCanteenHtml - recovers dishes the widget jams into an <h1>", () => {
     flow
   );
 
-  const items = data.menu[0].en.items.map((i) => i.dish);
+  const items = data.menu[0].en!.items.map((i) => i.dish);
   assert.deepEqual(items.sort(), [
     "Lentil curry with coconut milk",
     "Root vegetable soup",
@@ -125,7 +125,7 @@ test("parseCanteenHtml - returns days in Monday-to-Friday order", () => {
 test("parseCanteenHtml - a day published in only one language still appears", () => {
   const data = parseCanteenHtml(html(`<h1>Torsdag</h1><div>Kylling salsa med pasta</div>`), flow);
   assert.equal(data.menu.length, 1);
-  assert.equal(data.menu[0].no.items.length, 1);
+  assert.equal(data.menu[0].no!.items.length, 1);
   assert.equal(data.menu[0].en, undefined);
 });
 
@@ -134,7 +134,7 @@ test("parseCanteenHtml - marks exactly one main dish per language", () => {
     html(`<h1>Mandag</h1><div>Tomatsuppe</div><div>Kylling med ris</div><div>Couscous</div>`),
     flow
   );
-  const mains = data.menu[0].no.items.filter((i) => i.isMain);
+  const mains = data.menu[0].no!.items.filter((i) => i.isMain);
   assert.equal(mains.length, 1);
   assert.equal(mains[0].dish, "Kylling med ris");
 });
