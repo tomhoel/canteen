@@ -16,6 +16,10 @@ interface DaySelectorProps {
   /** Canteens with no menu in the previewed week. Named in the banner so an
       absent card reads as "not published yet" rather than as a missing card. */
   pendingCanteens?: string[];
+  /** Set while the menu is loading. The bar still renders — it holds the same
+      space and shows the same dates either way — but there is no day to change
+      to yet, and the selection would be thrown away when the data arrives. */
+  disabled?: boolean;
 }
 
 export default function DaySelector({
@@ -29,6 +33,7 @@ export default function DaySelector({
   onTodayPress,
   cardsRef,
   pendingCanteens = [],
+  disabled = false,
 }: DaySelectorProps) {
   const selectorRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLElement>(null);
@@ -146,6 +151,7 @@ export default function DaySelector({
             className={`day-btn ${selectedDay === i ? "active" : ""} ${i === todayIndex ? "today" : ""}`}
             aria-selected={selectedDay === i}
             aria-current={i === todayIndex ? "date" : undefined}
+            disabled={disabled}
             onClick={() => {
               // YOLO fires only on a second tap of Today (i.e. user is
               // already on today and tapped it again). First tap from

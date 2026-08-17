@@ -217,6 +217,34 @@ export function mondayOfWeekId(weekId: string | undefined | null): Date | null {
   return monday;
 }
 
+/**
+ * The five short date labels ("18.08") of the week starting at `anchorMonday`.
+ *
+ * Shared by the header, the day bar and the loading screen so the placeholder
+ * shell and the loaded app can never print different dates for the same week.
+ */
+export function weekDayLabels(anchorMonday: Date): string[] {
+  return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(anchorMonday);
+    d.setDate(anchorMonday.getDate() + i);
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+}
+
+/** The long-form date ("18. august") of day `dayIndex` of that same week. */
+export function formatLongDate(
+  anchorMonday: Date,
+  dayIndex: number,
+  lang: 'no' | 'en',
+): string {
+  const d = new Date(anchorMonday);
+  d.setDate(anchorMonday.getDate() + dayIndex);
+  return d.toLocaleDateString(lang === 'no' ? 'nb-NO' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
 export type DisplayMode = 'weekday-current' | 'weekend-preview' | 'weekend-recap' | 'pinned-week';
 
 export interface DisplayContext {

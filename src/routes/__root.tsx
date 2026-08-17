@@ -5,7 +5,6 @@ import {
   HeadContent,
 } from "@tanstack/react-router";
 import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
-import globalCss from "@/styles/globals.css?url";
 
 const TanStackRouterDevtools =
   process.env.NODE_ENV === "production"
@@ -46,28 +45,17 @@ export const Route = createRootRoute({
           "Daily lunch menus from The Hub, Telenor Expo, and Bygg B canteens at Telenor Fornebu.",
       },
     ],
-    links: [
-      { rel: "stylesheet", href: globalCss },
-      // These must mirror index.html. The router rewrites the head at runtime,
-      // so a stale entry here silently wins over the correct static one — which
-      // is how /favicon.ico came back after index.html stopped referencing it.
-      // There is no favicon.ico in public/, and the SPA rewrite answers the
-      // request with index.html, so the browser was parsing HTML as an icon.
-      { rel: "manifest", href: "/manifest.json" },
-      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
-      { rel: "icon", type: "image/svg+xml", href: "/icon.svg" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossOrigin: "anonymous",
-      },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap",
-      },
-    ],
+    // Deliberately no `links`. index.html is the single owner of them now.
+    //
+    // Every link this route used to declare — the stylesheet, the manifest, the
+    // icons, the font preconnects — was already in index.html, and repeating
+    // them here bought nothing but a second copy fetched late: the router can
+    // only add them once the JS bundle has booted, so /manifest.json was
+    // requested twice and the font stylesheet was not discovered until React's
+    // first render. HeadContent only ever appends, so removing them leaves the
+    // static tags in index.html untouched.
+    //
+    // Anything added back here must not already exist in index.html.
   }),
   component: RootComponent,
 });

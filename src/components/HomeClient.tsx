@@ -10,13 +10,16 @@ import {
   computeDisplayContext,
   compareWeeks,
   parseCanteenWeekNumber,
+  weekDayLabels,
+  formatLongDate,
 } from "@/lib/dateUtils";
 import { useVoting } from "@/lib/useVoting";
 import { useRecipe } from "@/lib/useRecipe";
 import { useDeals } from "@/lib/useDeals";
 import { useMenySearch } from "@/lib/useMenySearch";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import SkeletonCards from "@/components/SkeletonCard";
+import LoadingScreen from "@/components/LoadingScreen";
+import AppHeader from "@/components/AppHeader";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
 import VoteModal from "@/components/VoteModal";
@@ -436,21 +439,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => voting.votes[name] ?? 0)), [sortedCanteens, voting.votes]);
 
-  const weekLabel = `${lang === "no" ? "Uke" : "Week"} ${displayWeek}`;
-
-  const { dateStr, dayLabelsData } = useMemo(() => {
-    const t = new Date(displayMonday);
-    t.setDate(displayMonday.getDate() + selectedDay);
-    const dStr = t.toLocaleDateString(lang === "no" ? "nb-NO" : "en-GB", { day: "numeric", month: "long" });
-
-    const labels = fullDayLabels.map((_, i) => {
-      const dayDate = new Date(displayMonday);
-      dayDate.setDate(displayMonday.getDate() + i);
-      return `${dayDate.getDate().toString().padStart(2, "0")}.${(dayDate.getMonth() + 1).toString().padStart(2, "0")}`;
-    });
-
-    return { dateStr: dStr, dayLabelsData: labels };
-  }, [selectedDay, lang, fullDayLabels, displayMonday]);
+  // Shared with LoadingScreen so the shell shown while the menu loads and the
+  // header that replaces it cannot print different dates for the same week.
+  const { dateStr, dayLabelsData } = useMemo(() => ({
+    dateStr: formatLongDate(displayMonday, selectedDay, lang),
+    dayLabelsData: weekDayLabels(displayMonday),
+  }), [selectedDay, lang, displayMonday]);
 
   const allDaysData = useMemo((): CanteenDayItem[][] => {
     return DAY_KEYS.map(dk => {
@@ -643,12 +637,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     voting.handleShareSlack(canteenDayData, lang);
   }, [voting, canteenDayData, lang]);
 
-  if (!menuData || !mounted) {
-    return (
-      <div className="app-wrapper">
-        <SkeletonCards />
-      </div>
-    );
+  // `mounted` used to gate this too, which cost a painted frame of skeleton on
+  // every load for no benefit: it is a leftover from when this was a Next.js
+  // server component and the first client render had to match the server's.
+  // There is no SSR any more — `menuData` arrives from the route loader before
+  // this component exists — so the only thing left to wait for is the effect
+  // flush, and waiting for it just showed the placeholder one frame longer.
+  if (!menuData) {
+    return <LoadingScreen lang={lang} />;
   }
 
   const todayKey = getLocalDateKey();
@@ -680,66 +676,24 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   return (
     <div className="app-wrapper">
-      {/* Header */}
-      <header className="app-header">
-        <div className="hero-inline">
-          <h1 className="hero-title">
-            {mode === "weekday-current"
-              ? (lang === "no" ? "Dagens" : "Today's")
-              : mode === "weekend-preview"
-              ? (lang === "no" ? "Neste ukes" : "Next week's")
-              : mode === "pinned-week"
-              ? (lang === "no" ? `Uke ${displayWeek}s` : `Week ${displayWeek}'s`)
-              : (lang === "no" ? "Denne ukens" : "This week's")}{" "}
-            <span>{lang === "no" ? "Lunsj" : "Lunch"}</span>
-          </h1>
-          <p className="hero-subtitle">{weekLabel} &bull; {fullDayLabels[selectedDay]} {dateStr}</p>
-        </div>
-        <div className="header-actions">
-          <button className="info-btn" onClick={() => setInfoOpen(true)} title={lang === "no" ? "Om appen" : "About"}>
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.2"/><path d="M8 7v4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4.75" r="0.65" fill="currentColor"/></svg>
-          </button>
-          <button
-            className="info-btn"
-            onClick={() => setLeaderboardOpen(true)}
-            title={lang === "no" ? "Kantineseiere" : "Canteen wins"}
-            aria-label={lang === "no" ? "Kantineseiere" : "Canteen wins"}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-              <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-              <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>
-            </svg>
-          </button>
-          <button
-            className="info-btn"
-            onClick={() => setWeekOverviewOpen(true)}
-            aria-label={lang === "no" ? "Ukeoversikt" : "Week overview"}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-          </button>
-          <button
-            className="info-btn"
-            onClick={() => setFeedbackModalOpen(true)}
-            title="Ønsk en rett"
-            aria-label="Ønsk en rett"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
-        </div>
+      <AppHeader
+        mode={mode}
+        lang={lang}
+        displayWeek={displayWeek}
+        dayLabel={fullDayLabels[selectedDay]}
+        dateStr={dateStr}
+        actions={{
+          onInfo: () => setInfoOpen(true),
+          onLeaderboard: () => setLeaderboardOpen(true),
+          onWeekOverview: () => setWeekOverviewOpen(true),
+          onFeedback: () => setFeedbackModalOpen(true),
+        }}
+      >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
         {closedCanteens.length > 0 && openCanteens.length > 0 && (
           <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
         )}
-      </header>
+      </AppHeader>
 
       {/* Cards */}
       <main className="cards-container" ref={scrollRef} onScroll={handleScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
