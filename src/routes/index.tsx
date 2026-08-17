@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { getWeeklyMenu } from "@/lib/api-client";
 import HomeClient from "@/components/HomeClient";
-import SkeletonCard from "@/components/SkeletonCard";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const searchSchema = z.object({
   day: z.string().optional(),
@@ -18,29 +18,15 @@ export const Route = createFileRoute("/")({
   loader: async ({ deps }) => {
     return await getWeeklyMenu(deps.week);
   },
-  pendingComponent: PendingComponent,
+  // Not a bespoke placeholder: the same app shell HomeClient renders, with a
+  // SkeletonCard in each card slot. The screen that used to live here laid the
+  // cards out in its own inline-styled grid — and, because it rendered the
+  // *default* export of SkeletonCard.tsx (a group of three) three times over,
+  // put nine of them on screen inside three horizontally scrolling boxes.
+  pendingComponent: LoadingScreen,
   errorComponent: ErrorComponent,
   component: HomeComponent,
 });
-
-function PendingComponent() {
-  return (
-    <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-          gap: "1.5rem",
-          marginTop: "2rem",
-        }}
-      >
-        <SkeletonCard />
-        <SkeletonCard />
-        <SkeletonCard />
-      </div>
-    </div>
-  );
-}
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (

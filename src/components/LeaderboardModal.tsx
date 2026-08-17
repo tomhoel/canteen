@@ -69,8 +69,8 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
           <div className="leaderboard-skeleton">
             {[0, 1, 2].map(i => (
               <div key={i} className="leaderboard-skeleton-row">
-                <div className="skeleton-block" style={{ width: 100, height: 16, borderRadius: 6 }} />
-                <div className="skeleton-block" style={{ flex: 1, height: 28, borderRadius: 8, marginLeft: 12 }} />
+                <div className="skeleton-line" style={{ width: 100, height: 16, borderRadius: 6 }} />
+                <div className="skeleton-line" style={{ flex: 1, height: 28, borderRadius: 8, marginLeft: 12 }} />
               </div>
             ))}
           </div>

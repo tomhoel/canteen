@@ -18,6 +18,16 @@ export const queryClient = new QueryClient({
 const router = createRouter({
   routeTree,
   scrollRestoration: true,
+  // TanStack's defaults are 1000/500: hold everything back for a full second,
+  // then, once the placeholder is finally shown, keep it up for at least half a
+  // second more. That is tuned for a placeholder you would rather not see. Ours
+  // is the app's own shell — header, dates, day bar, three card outlines — so
+  // there is nothing to hide and no reason to make the user stare at an empty
+  // screen first. 200ms is long enough that a warm load goes straight to the
+  // menu without a flicker; a minimum of 0 lets the data replace the shell the
+  // instant it lands, since the two occupy the same layout either way.
+  defaultPendingMs: 200,
+  defaultPendingMinMs: 0,
   context: {
     queryClient,
   },

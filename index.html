@@ -10,6 +10,29 @@
     <meta name="theme-color" content="#f5f0e8" />
     <title>Canteen — Menus, Deals & Culinary Discovery</title>
 
+    <!-- The app's own background, inline, so the very first paint is already
+         the right colour. globals.css sets this too, but it is an 83 KB
+         render-blocking file: until it lands the page would otherwise be white,
+         which on a cold launch is a visible flash of the wrong colour. -->
+    <style>
+      html, body { background: #f5f0e8; margin: 0; }
+    </style>
+
+    <!-- Outfit is the app's only typeface. These used to be injected by
+         TanStack Router's <HeadContent> at runtime, which meant the request for
+         them could not start until the whole JS bundle had downloaded, parsed
+         and rendered — so the first screen of the day was drawn in a fallback
+         face and reflowed when the real one arrived. Declared here they are
+         discovered in the initial HTML instead. `display=swap` keeps text
+         visible throughout, so this blocks on a ~1 KB stylesheet, not on the
+         font files. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+    />
+
     <!-- public/manifest.json and the icons beside it already existed but were
          never linked, so the app could not be installed from any browser. -->
     <link rel="manifest" href="/manifest.json" />
