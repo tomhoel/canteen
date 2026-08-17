@@ -74,6 +74,7 @@ export default defineConfig([
       "validate-images.cjs",
       "scripts/rebuild-nobg.cjs",
       "scripts/upload-closed-plates.cjs",
+      "scripts/upload-master-plate.cjs",
     ],
     languageOptions: {
       // These used to inherit node globals from the generic **/*.js block; as

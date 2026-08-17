@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { MenuData } from "../../lib/types.js";
 import { pickMainDish } from "../../lib/dish-ranking.js";
+import { generatePlatingBrief } from "./ai.service.js";
 import {
   loadDishCache,
   saveDishCacheEntries,
@@ -41,6 +42,13 @@ function getStorageClient(): SupabaseClient {
 const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const IMAGE_SIZE_PX = 1024;
 const PLATE_RESIZE_PX = 880;
+
+/**
+ * The shared plate reference, in the `images` bucket. Kept under `reference/`
+ * so it can never be mistaken for a dish: everything else in these buckets is
+ * either `<day>/<canteen>.png` or `archive/<dish>.png`.
+ */
+const MASTER_PLATE_REF_PATH = "reference/master-plate-ref.png";
 
 /**
  * Image-capable Gemini model. A plain text model (e.g. gemini-2.5-flash) will
@@ -168,25 +176,108 @@ export async function copyInSupabaseBucket(
   }
 }
 
-export async function generateSingleAIImage(dishName: string): Promise<Buffer | null> {
+/**
+ * The one plate every dish is served on, as base64 PNG, or null if it cannot
+ * be fetched.
+ *
+ * Sending the model a picture of the plate is the only thing that actually held
+ * the crockery still. Describing it in words does not: a text-only prompt asking
+ * for "round warm beige stoneware with a visible raised rim" yields a different
+ * piece of stoneware every call — coupes, rimless plates, speckled bowls, a
+ * different beige each time. The pre-migration generator passed this reference
+ * and the plates matched; the rewrite dropped it and they drifted apart.
+ *
+ * It lives in Supabase rather than being read off disk because generation now
+ * runs inside the Vercel cron function, whose bundle does not include public/.
+ * Fetched once per process and cached: the cron draws a whole week per run.
+ */
+let cachedPlateRef: string | null | undefined;
+export async function getMasterPlateRef(): Promise<string | null> {
+  if (cachedPlateRef !== undefined) return cachedPlateRef;
+
+  try {
+    const { data, error } = await getStorageClient()
+      .storage.from("images")
+      .download(MASTER_PLATE_REF_PATH);
+    if (error || !data) throw error ?? new Error("no data");
+
+    // Downscaled before sending: the stored reference is 1024px / 1.4 MB, and
+    // the plate's shape, rim and colour survive 512 intact. This travels on
+    // every generation call, so the size is worth paying attention to.
+    const resized = await sharp(Buffer.from(await data.arrayBuffer()))
+      .resize(512, 512, { fit: "contain" })
+      .png()
+      .toBuffer();
+    cachedPlateRef = resized.toString("base64");
+  } catch (err: any) {
+    console.warn(
+      `⚠️  Master plate reference unavailable (${MASTER_PLATE_REF_PATH}): ${err?.message ?? err}. ` +
+        "Plates will be described in words only and will not match each other. " +
+        "Run scripts/upload-master-plate.cjs to restore it."
+    );
+    cachedPlateRef = null;
+  }
+  return cachedPlateRef;
+}
+
+/**
+ * Draws one dish.
+ *
+ * `platingBrief` is the chef's reading of the menu line (see
+ * generatePlatingBrief). It is what the model is asked to photograph; the raw
+ * dish name is still passed, but as the label of the dish rather than as the
+ * description of the picture, because the kitchens' run-on names get rendered
+ * word by word when they are the only thing on offer.
+ */
+export async function generateSingleAIImage(
+  dishName: string,
+  platingBrief?: string | null
+): Promise<Buffer | null> {
   const ai = getAIClient();
   if (!ai) return null;
 
-  const promptText = `Professional overhead food photography of "${dishName}".
+  const plateRef = await getMasterPlateRef();
+
+  const promptText = `Professional overhead food photography of a single Norwegian canteen lunch dish.
+
+THE DISH: ${platingBrief || dishName}
+${platingBrief ? `(The kitchen's menu line for it is "${dishName}".)\n` : ""}
+WHAT TO PHOTOGRAPH:
+- One finished, plated meal, composed and served the way a kitchen sends it out.
+- Cooked food only. Do NOT lay the components out separately, do NOT show raw
+  ingredients, and do NOT illustrate the menu line word by word — this is a
+  photograph of a meal, not a diagram of its name.
+- Every main component of the dish must be present and recognisable. Do not
+  substitute a different dish.
+- Realistic canteen portion covering 60-70% of the plate surface.
+
+THE PLATE:
+${plateRef
+  ? `- REFERENCE IMAGE PROVIDED: use the EXACT plate in the reference image —
+  identical shape, colour, texture, rim profile and proportions. Do not deviate
+  in any way. Only the food on it changes.`
+  : `- Round warm sandy-beige stoneware dinner plate (#E8D5B7) with a wide, flat,
+  clearly raised rim all the way around.`}
+- The complete plate with its full rim must be visible, never cropped.
 
 STRICT TECHNICAL SPECIFICATIONS:
-- Framing: Overhead 90° view, plate centered in 1:1 square frame.
-- Plate: Round warm beige/cream stoneware dinner plate (#E8D5B7) with visible raised rim.
-- Food: Professional restaurant plating, appetizing portion of "${dishName}".
+- Framing: Overhead 90° view, plate centred in a 1:1 square frame.
 - Lighting: Flat even lighting from all directions — ZERO shadows.
 - Background: Solid DARK GREY (#707070) seamless studio backdrop.
 
-Strict Exclusions: NO white plates, NO shadows, NO utensils, NO table text or garnishes outside plate.`;
+Strict Exclusions: NO white or grey plates, NO bowls, NO shadows of any kind,
+NO utensils, napkins, table surfaces, hands, text or watermarks, NO garnishes
+outside the plate, NO angled views.`;
+
+  const requestParts: Array<Record<string, unknown>> = [{ text: promptText }];
+  if (plateRef) {
+    requestParts.push({ inlineData: { mimeType: "image/png", data: plateRef } });
+  }
 
   try {
     const response = await ai.models.generateContent({
       model: IMAGE_MODEL,
-      contents: [{ role: "user", parts: [{ text: promptText }] }],
+      contents: [{ role: "user", parts: requestParts }],
       config: {
         responseModalities: ["Text", "Image"],
         imageConfig: { aspectRatio: "1:1" },
@@ -367,7 +458,14 @@ export async function processAllCanteenAIImages(
       continue;
     }
 
-    const aiBuffer = await generateSingleAIImage(job.dish);
+    // Read the menu line as a chef would before drawing it. Only reached on a
+    // genuine cache miss, so this text call rides along with an image call that
+    // costs far more. A null brief is survivable — the dish name alone is what
+    // the generator used to get.
+    const platingBrief = await generatePlatingBrief(job.dish);
+    if (platingBrief) console.log(`  🍽️  "${job.dish}" → ${platingBrief}`);
+
+    const aiBuffer = await generateSingleAIImage(job.dish, platingBrief);
     if (!aiBuffer) {
       result.failed++;
       continue;

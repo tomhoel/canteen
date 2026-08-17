@@ -223,6 +223,58 @@ Guidelines:
   return { values: result, fromModel };
 }
 
+/**
+ * Turns a canteen menu line into a short brief describing the dish as it would
+ * arrive on a plate.
+ *
+ * The image model is given the dish name, and the names the kitchens write are
+ * run-on ingredient lists in Norwegian — "Ovnsform storfekjøttdeig med
+ * potetgrateng", "Pølsesnadder med chorizo kjøttpølse creme fraiche estragon og
+ * hjemmelaget potetmos". Handed that directly, an image model illustrates the
+ * *words*: every noun rendered separately, raw components in heaps, sometimes
+ * the text itself. The result is recognisably about the right ingredients and
+ * not recognisably a meal.
+ *
+ * Resolving that ambiguity is a language problem, so it is solved in language
+ * before any pixels exist. One cheap text call converts the menu line into what
+ * a kitchen would actually serve, and the image model is asked to photograph
+ * *that*. It runs only when a plate is genuinely being drawn — which the
+ * dish-addressed archive already makes rare — so it costs a text call per new
+ * dish, alongside an image call that is orders of magnitude more expensive.
+ *
+ * Returns null if the model is unavailable, in which case the caller falls back
+ * to naming the dish alone.
+ */
+export async function generatePlatingBrief(dishName: string): Promise<string | null> {
+  const prompt = `You are a head chef describing how a dish is plated, for a food photographer.
+
+The dish is from a Norwegian workplace canteen. Its menu line is:
+"${dishName}"
+
+That line is written by the kitchen and is often a run-on list of components
+with no punctuation, sometimes with scraping artefacts or misspellings. Read it
+as a chef would and work out what the finished dish actually is.
+
+Reply with ONE English sentence, max 40 words, describing the plated dish:
+the main component and how it is cooked, what it is served with, any sauce, and
+the dominant colours. Describe a composed, finished plate — the way it leaves a
+canteen kitchen.
+
+Rules:
+- Name real, cooked food. Never describe raw ingredients laid out separately,
+  deconstructed components, or anything written/printed.
+- Every main component named in the menu line must appear in your sentence. Do
+  not substitute, drop or invent a different dish.
+- If the line is ambiguous, choose the most ordinary Norwegian canteen reading.
+- No adjectives about taste, no marketing language. Plain visual description.
+
+Return ONLY JSON: {"plating": "..."}`;
+
+  const parsed = await generateJson<{ plating?: string }>(prompt, `plating brief: ${dishName}`);
+  const plating = parsed?.plating?.trim();
+  return plating ? plating : null;
+}
+
 export async function generateAIRecipe(
   dishName: string,
   lang: "no" | "en"
