@@ -18,7 +18,10 @@ export default function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
     <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
       <article
         className="food-card closed"
-        style={{ animationDelay: `${cardIdx * 75}ms` }}
+        style={{
+          animationDelay: `${cardIdx * 55}ms`,
+          animationDuration: `${0.28 + cardIdx * 0.04}s`,
+        }}
         data-yolo-card-key={data.canteenName}
       >
         <div className="card-image-wrapper closed">

@@ -4,6 +4,7 @@ import {
   createRootRoute,
   HeadContent,
 } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
 
 const TanStackRouterDevtools =
@@ -45,17 +46,6 @@ export const Route = createRootRoute({
           "Daily lunch menus from The Hub, Telenor Expo, and Bygg B canteens at Telenor Fornebu.",
       },
     ],
-    // Deliberately no `links`. index.html is the single owner of them now.
-    //
-    // Every link this route used to declare — the stylesheet, the manifest, the
-    // icons, the font preconnects — was already in index.html, and repeating
-    // them here bought nothing but a second copy fetched late: the router can
-    // only add them once the JS bundle has booted, so /manifest.json was
-    // requested twice and the font stylesheet was not discovered until React's
-    // first render. HeadContent only ever appends, so removing them leaves the
-    // static tags in index.html untouched.
-    //
-    // Anything added back here must not already exist in index.html.
   }),
   component: RootComponent,
 });
@@ -71,6 +61,17 @@ function RootComponent() {
         color4="#e8d8c4"
       />
       <Outlet />
+      <Toaster
+        position="top-center"
+        richColors
+        toastOptions={{
+          style: {
+            fontFamily: "Outfit, sans-serif",
+            borderRadius: "16px",
+            boxShadow: "0 12px 32px rgba(60, 30, 0, 0.12)",
+          },
+        }}
+      />
       <Suspense fallback={null}>
         <TanStackRouterDevtools position="bottom-right" />
         <ReactQueryDevtools buttonPosition="bottom-left" />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Users, Sparkles, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
@@ -78,7 +79,6 @@ export default function FoodCard({
   yoloWinner = false,
 }: FoodCardProps) {
   const [imgError, setImgError] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
 
   const {
     canteenName,
@@ -101,16 +101,16 @@ export default function FoodCard({
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
       className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
-      style={{ animationDelay: `${cardIdx * 75}ms` }}
+      style={{
+        animationDelay: `${cardIdx * 55}ms`,
+        animationDuration: `${0.28 + cardIdx * 0.04}s`,
+      }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
       data-yolo-card-key={canteenName}
     >
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
-          <svg className="vote-pip-icon" viewBox="0 0 16 16" fill="currentColor">
-            <circle cx="8" cy="5" r="3" />
-            <path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-          </svg>
+          <Users size={12} strokeWidth={2.4} className="vote-pip-icon" />
           <span>{voteCount}</span>
         </div>
       )}
@@ -127,22 +127,15 @@ export default function FoodCard({
               {canteenName.charAt(0)}
             </div>
           ) : (
-            <>
-              <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
-              <img
-                // Remount per dish so the ref below re-runs and imgLoaded is
-                // never carried over from the previous day's plate.
-                key={imagePath}
-                src={imagePath}
-                alt={mainDish?.dish || "Matrett"}
-                className={`food-image${imgLoaded ? " loaded" : ""}`}
-                loading="eager"
-                decoding="async"
-                ref={el => { if (el?.complete && el.naturalWidth > 0) setImgLoaded(true); }}
-                onLoad={() => setImgLoaded(true)}
-                onError={() => setImgError(true)}
-              />
-            </>
+            <img
+              key={imagePath}
+              src={imagePath}
+              alt={mainDish?.dish || "Matrett"}
+              className="food-image"
+              loading="eager"
+              decoding="async"
+              onError={() => setImgError(true)}
+            />
           )}
         </div>
         {isOutdated && (
@@ -150,7 +143,7 @@ export default function FoodCard({
             {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
           </div>
         )}
-        <span className="click-hint">{lang === "no" ? "Klikk for st\u00F8rre" : "Click to enlarge"}</span>
+        <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
         {origin && mainDish && (
           <div className="origin-pip">
             <span className="emoji-flag">{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
@@ -165,7 +158,7 @@ export default function FoodCard({
             {canteenName}
             {isAhead && (
               <span className="ahead-tag">
-                {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} &#x2728;
+                {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} <Sparkles size={10} style={{ marginLeft: 3 }} />
               </span>
             )}
           </div>
@@ -203,7 +196,7 @@ export default function FoodCard({
 
       {isOutdated && (
         <div className="stale-banner">
-          <span className="stale-banner-icon">&#x23F0;</span>
+          <Clock size={16} className="stale-banner-icon" />
           <div className="stale-banner-text">
             <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
             <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>

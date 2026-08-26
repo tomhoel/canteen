@@ -243,12 +243,10 @@ export async function generateSingleAIImage(
 THE DISH: ${platingBrief || dishName}
 ${platingBrief ? `(The kitchen's menu line for it is "${dishName}".)\n` : ""}
 WHAT TO PHOTOGRAPH:
-- One finished, plated meal, composed and served the way a kitchen sends it out.
-- Cooked food only. Do NOT lay the components out separately, do NOT show raw
-  ingredients, and do NOT illustrate the menu line word by word — this is a
-  photograph of a meal, not a diagram of its name.
-- Every main component of the dish must be present and recognisable. Do not
-  substitute a different dish.
+- One finished, plated meal, composed and served the way a chef sends it out.
+- A complete, appetizing, cohesive dish where the main components, accompanying sides (e.g. potatoes, rice, vegetables), sauce, and natural garnishes form a balanced, harmonious single meal.
+- Cooked food only. Do NOT lay components out separately, do NOT show raw ingredients, and do NOT illustrate the menu line word by word — this is a photograph of a meal, not a diagram of its name.
+- Every main component of the dish must be present and recognisable. Do not substitute a different dish.
 - Realistic canteen portion covering 60-70% of the plate surface.
 
 THE PLATE:
@@ -379,13 +377,34 @@ function buildImageJobs(menuData: MenuData): ImageJob[] {
   return jobs;
 }
 
+/** Concurrency pool helper for parallel network and AI tasks. */
+async function asyncPool<T, R>(
+  concurrency: number,
+  items: T[],
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let currentIndex = 0;
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (currentIndex < items.length) {
+      const idx = currentIndex++;
+      results[idx] = await fn(items[idx]);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 /**
  * Ensures every main dish of the week has a plate image in its daily slot.
  *
  * Work is ordered cheap-first: dishes already in the archive are copied
- * (fast, free), and only genuine cache misses hit the image model. With a
- * budget set, unfinished generations are simply deferred — the next run picks
- * them up, because the archive check makes the whole pass idempotent.
+ * (fast, free, in parallel), and only genuine cache misses hit the image model
+ * in a concurrent worker pool (concurrency 2). With a budget set, unfinished
+ * generations are simply deferred — the next run picks them up, because the
+ * archive check makes the whole pass idempotent.
  */
 export async function processAllCanteenAIImages(
   menuData: MenuData,
@@ -411,83 +430,90 @@ export async function processAllCanteenAIImages(
     budgetExhausted: false,
   };
 
-  // One read tells us which of this week's dishes have been drawn before,
-  // instead of attempting a storage copy per dish and learning from the miss.
-  //
-  // A failed read is survivable here in a way it is not for enrichment: the
-  // archive path is a deterministic function of the dish name, so the copy
-  // still finds most plates without the cache. It does miss the ones stored
-  // under the older slug convention, which then get redrawn — worth a line in
-  // the log so an expensive run is explainable after the fact.
   const { rows: cache, failed: cacheUnreadable } = await loadDishCache(jobs.map((j) => j.dish));
   if (cacheUnreadable) {
     console.warn("⚠️  dish_cache unreadable — falling back to archive paths; some plates may be redrawn.");
   }
   const newlyDrawn: Array<{ dish: string; archivePath: string }> = [];
+  const needsGeneration: ImageJob[] = [];
 
-  for (const job of jobs) {
+  // Phase 1: Parallel slot sync & archive reuse (concurrency 5)
+  await asyncPool(5, jobs, async (job) => {
     const knownPath = cache.get(normalizeDishName(job.dish))?.imageNoBgPath ?? null;
 
-    // Cheap path: this exact dish has been drawn before, in any past week.
     if (!force) {
       if (writeSlots) {
         const source = knownPath ?? job.archivePath;
         const copied = await copyInSupabaseBucket("images_nobg", source, job.slotPath);
         if (copied) {
           result.reused++;
-          // A successful copy is proof the source object exists. Record it when
-          // the cache did not already know, because a plate nobody can address
-          // by dish name is a plate no other week can use — which is why 8 of
-          // the 29 stored main dishes had no resolvable image despite one
-          // sitting in the bucket.
           if (!knownPath) newlyDrawn.push({ dish: job.dish, archivePath: source });
           console.log(`  ♻️ Reused image for "${job.dish}" (${job.canteenName}/${job.dayKey})`);
-          continue;
+          return;
         }
       } else if (knownPath) {
-        // Archive-only: the plate is already addressable, so there is nothing
-        // to copy anywhere. This is the whole cost of a non-displayed week.
         result.reused++;
-        continue;
+        return;
       }
     }
 
+    needsGeneration.push(job);
+  });
+
+  // Phase 2: Deduplicate and generate missing dish images in parallel (concurrency 2)
+  const uniqueGenJobs: ImageJob[] = [];
+  const seenDishes = new Set<string>();
+  for (const job of needsGeneration) {
+    const norm = normalizeDishName(job.dish);
+    if (!seenDishes.has(norm)) {
+      seenDishes.add(norm);
+      uniqueGenJobs.push(job);
+    }
+  }
+
+  await asyncPool(2, uniqueGenJobs, async (job) => {
     if (outOfTime()) {
-      result.deferred++;
+      const remainingCount = needsGeneration.filter(
+        (j) => normalizeDishName(j.dish) === normalizeDishName(job.dish)
+      ).length;
+      result.deferred += remainingCount;
       result.budgetExhausted = true;
-      continue;
+      return;
     }
 
-    // Read the menu line as a chef would before drawing it. Only reached on a
-    // genuine cache miss, so this text call rides along with an image call that
-    // costs far more. A null brief is survivable — the dish name alone is what
-    // the generator used to get.
     const platingBrief = await generatePlatingBrief(job.dish);
     if (platingBrief) console.log(`  🍽️  "${job.dish}" → ${platingBrief}`);
 
     const aiBuffer = await generateSingleAIImage(job.dish, platingBrief);
     if (!aiBuffer) {
-      result.failed++;
-      continue;
+      const failCount = needsGeneration.filter(
+        (j) => normalizeDishName(j.dish) === normalizeDishName(job.dish)
+      ).length;
+      result.failed += failCount;
+      return;
     }
 
     const transparentBuffer = await removeBgBuffer(aiBuffer);
-    // Archive first: it is the durable, dish-addressed copy every future week
-    // resolves through, whereas the slot is overwritten weekly.
     const archiveOk = await uploadToSupabase("images_nobg", job.archivePath, transparentBuffer);
-    const slotOk = writeSlots
-      ? await uploadToSupabase("images_nobg", job.slotPath, transparentBuffer)
-      : false;
 
-    if (archiveOk || slotOk) {
-      result.generated++;
-      if (archiveOk) newlyDrawn.push({ dish: job.dish, archivePath: job.archivePath });
-      else console.warn(`  ⚠️ Archived copy of "${job.dish}" failed; only the weekly slot has it.`);
+    const matchingJobs = needsGeneration.filter(
+      (j) => normalizeDishName(j.dish) === normalizeDishName(job.dish)
+    );
+
+    if (writeSlots) {
+      for (const mJob of matchingJobs) {
+        await uploadToSupabase("images_nobg", mJob.slotPath, transparentBuffer);
+      }
+    }
+
+    if (archiveOk) {
+      result.generated += matchingJobs.length;
+      newlyDrawn.push({ dish: job.dish, archivePath: job.archivePath });
       console.log(`  ✨ Generated images_nobg/${job.archivePath} for "${job.dish}"`);
     } else {
-      result.failed++;
+      result.failed += matchingJobs.length;
     }
-  }
+  });
 
   // Record where each new plate landed so future weeks reuse it directly.
   if (newlyDrawn.length > 0) {

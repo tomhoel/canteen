@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
 import type { DisplayMode } from "@/lib/dateUtils";
 
 interface DaySelectorProps {
@@ -56,12 +56,12 @@ export default function DaySelector({
     });
   }, [selectedDay]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     updatePill();
-    if (!animated) {
-      requestAnimationFrame(() => setAnimated(true));
-    }
-  }, [selectedDay, fullDayLabels.length, lang, animated, updatePill]);
+    // Enable spring sliding transition immediately after first layout
+    const timer = requestAnimationFrame(() => setAnimated(true));
+    return () => cancelAnimationFrame(timer);
+  }, [selectedDay, fullDayLabels.length, lang, updatePill]);
 
   useEffect(() => {
     window.addEventListener("resize", updatePill);
@@ -135,10 +135,13 @@ export default function DaySelector({
       <div className="day-selector" role="tablist" ref={selectorRef}>
         {pill && (
           <div
-            className={`day-pill${animated ? " day-pill-animated" : ""}`}
+            className="day-pill"
             style={{
               transform: `translateX(${pill.left}px)`,
-              width: pill.width,
+              width: `${pill.width}px`,
+              transition: animated
+                ? "transform 0.45s cubic-bezier(0.32, 1.25, 0.48, 1), width 0.35s cubic-bezier(0.32, 1.25, 0.48, 1)"
+                : "none",
             }}
             aria-hidden="true"
           />

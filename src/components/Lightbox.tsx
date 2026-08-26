@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CanteenDayItem } from "@/lib/types";
 
 interface LightboxProps {
@@ -12,9 +14,6 @@ interface LightboxProps {
 export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose, onNavigate }: LightboxProps) {
   const touchStartRef = useRef<number | null>(null);
   const touchEndRef = useRef<number | null>(null);
-  // Every card has an onError placeholder; this was the one <img> without one,
-  // so a plate that has never been drawn showed the browser's broken-image
-  // glyph full-screen. Keyed by index so swiping to the next dish clears it.
   const [failedIndex, setFailedIndex] = useState<number | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
 
@@ -32,8 +31,6 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, currentIndex, canteenDayData.length, onClose, onNavigate]);
-
-  if (!isOpen || currentIndex < 0 || currentIndex >= canteenDayData.length) return null;
 
   const current = canteenDayData[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -59,57 +56,84 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
   };
 
   return (
-    <div className="lightbox-overlay" onClick={onClose}>
-      <div
-        className="lightbox-content"
-        onClick={e => e.stopPropagation()}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        <button className="lightbox-close" onClick={onClose}>&times;</button>
+    <AnimatePresence>
+      {isOpen && current && (
+        <motion.div
+          key="lightbox-overlay"
+          className="lightbox-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClose}
+        >
+          <motion.div
+            key="lightbox-content"
+            className="lightbox-content"
+            initial={{ scale: 0.92, y: 16, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.92, y: 16, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 28 }}
+            onClick={e => e.stopPropagation()}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            <button className="lightbox-close" onClick={onClose} aria-label="Lukk">
+              <X size={18} strokeWidth={2.5} />
+            </button>
 
-        {hasPrev && (
-          <button className="lightbox-nav lightbox-prev" onClick={() => onNavigate(currentIndex - 1)}>
-            &#x2039;
-          </button>
-        )}
-        {hasNext && (
-          <button className="lightbox-nav lightbox-next" onClick={() => onNavigate(currentIndex + 1)}>
-            &#x203A;
-          </button>
-        )}
+            {hasPrev && (
+              <button
+                className="lightbox-nav lightbox-prev"
+                onClick={() => onNavigate(currentIndex - 1)}
+                aria-label="Forrige"
+              >
+                <ChevronLeft size={24} strokeWidth={2.5} />
+              </button>
+            )}
+            {hasNext && (
+              <button
+                className="lightbox-nav lightbox-next"
+                onClick={() => onNavigate(currentIndex + 1)}
+                aria-label="Neste"
+              >
+                <ChevronRight size={24} strokeWidth={2.5} />
+              </button>
+            )}
 
-        <div className="lightbox-image-container">
-          {failedIndex === currentIndex || !current.highResImagePath ? (
-            <div className="image-placeholder">{current.canteenName.charAt(0)}</div>
-          ) : (
-            <img
-              key={current.highResImagePath}
-              src={current.highResImagePath}
-              alt={current.mainDish?.dish || ""}
-              className={`lightbox-image${imgLoaded ? " loaded" : ""}`}
-              decoding="async"
-              ref={el => { if (el?.complete && el.naturalWidth > 0) setImgLoaded(true); }}
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setFailedIndex(currentIndex)}
-            />
-          )}
-        </div>
-        <div className="lightbox-info">
-          <p className="lightbox-canteen">{current.canteenName}</p>
-          <h2 className="lightbox-dish-name">{current.mainDish?.dish || ""}</h2>
-          <div className="lightbox-dots">
-            {canteenDayData.map((_, i) => (
-              <span
-                key={i}
-                className={`lightbox-dot${i === currentIndex ? " active" : ""}`}
-                onClick={() => onNavigate(i)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+            <div className="lightbox-image-container">
+              {failedIndex === currentIndex || !current.highResImagePath ? (
+                <div className="image-placeholder">{current.canteenName.charAt(0)}</div>
+              ) : (
+                <img
+                  key={current.highResImagePath}
+                  src={current.highResImagePath}
+                  alt={current.mainDish?.dish || ""}
+                  className={`lightbox-image${imgLoaded ? " loaded" : ""}`}
+                  decoding="async"
+                  ref={el => { if (el?.complete && el.naturalWidth > 0) setImgLoaded(true); }}
+                  onLoad={() => setImgLoaded(true)}
+                  onError={() => setFailedIndex(currentIndex)}
+                />
+              )}
+            </div>
+            <div className="lightbox-info">
+              <p className="lightbox-canteen">{current.canteenName}</p>
+              <h2 className="lightbox-dish-name">{current.mainDish?.dish || ""}</h2>
+              <div className="lightbox-dots">
+                {canteenDayData.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`lightbox-dot${i === currentIndex ? " active" : ""}`}
+                    onClick={() => onNavigate(i)}
+                  />
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
