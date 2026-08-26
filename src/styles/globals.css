@@ -361,7 +361,6 @@ body {
   border: 1px solid rgba(236, 228, 216, 0.6);
   display: flex;
   flex-direction: column;
-  animation: cardReveal 0.5s var(--smooth) both;
 }
 
 .food-card.clickable {
@@ -870,13 +869,23 @@ body {
   object-fit: contain;
   animation: gentleFloat 5s ease-in-out infinite;
   filter: drop-shadow(0 8px 20px rgba(80, 40, 0, 0.15))
-    drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10));
-  transition: opacity 0.5s ease, filter 0.4s ease;
+    drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10))
+    blur(10px);
+  transform: scale(1.04);
+  transition:
+    opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 0;
+  will-change: opacity, filter, transform;
 }
 
 .food-image.loaded {
   opacity: 1;
+  filter: drop-shadow(0 8px 20px rgba(80, 40, 0, 0.15))
+    drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10))
+    blur(0px);
+  transform: scale(1);
 }
 
 /* Shimmer placeholder while image loads */
@@ -897,6 +906,12 @@ body {
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
+  transition: opacity 0.4s ease-out;
+  pointer-events: none;
+}
+
+.image-shimmer.loaded {
+  opacity: 0;
 }
 
 .card-image-wrapper:hover .food-image {
@@ -1267,7 +1282,23 @@ body {
   object-fit: contain;
   /* No border-radius: the transparent PNG already shows a round plate. */
   filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18))
-    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10));
+    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10))
+    blur(10px);
+  opacity: 0;
+  transform: scale(0.97);
+  transition:
+    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, filter, transform;
+}
+
+.lightbox-image.loaded {
+  opacity: 1;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18))
+    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10))
+    blur(0px);
+  transform: scale(1);
 }
 
 .lightbox-info {
@@ -1880,7 +1911,7 @@ body {
     justify-content: center;
     align-items: stretch;
     gap: clamp(6px, 1dvh, 14px);
-    padding: calc(64px + env(safe-area-inset-top)) 10px calc(84px + env(safe-area-inset-bottom));
+    padding: calc(64px + env(safe-area-inset-top, 0px)) 10px calc(92px + env(safe-area-inset-bottom, 0px));
     flex: 1;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -2197,11 +2228,11 @@ body {
   /* Day bar — liquid glass floating pill for mobile */
   .day-bar {
     position: fixed;
-    bottom: calc(6px + env(safe-area-inset-bottom));
-    left: 16px;
-    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: calc(16px + env(safe-area-inset-left, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
     transform: none;
-    padding: 5px;
+    padding: 6px 5px;
     /* Solid fallback — no backdrop-filter on mobile (expensive on iOS) */
     background: rgba(252, 248, 242, 0.97);
     backdrop-filter: none;
@@ -3054,12 +3085,20 @@ body {
   height: 100%;
   object-fit: contain;
   object-position: center;
-  animation: sheetImgReveal 0.5s var(--smooth) 0.15s both;
+  filter: drop-shadow(0 8px 24px rgba(60, 30, 0, 0.12)) blur(10px);
+  opacity: 0;
+  transform: scale(1.04);
+  transition:
+    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, filter, transform;
 }
 
-@keyframes sheetImgReveal {
-  from { opacity: 0; transform: scale(1.06); }
-  to   { opacity: 1; transform: scale(1); }
+.action-sheet-img.loaded {
+  opacity: 1;
+  filter: drop-shadow(0 8px 24px rgba(60, 30, 0, 0.12)) blur(0px);
+  transform: scale(1);
 }
 
 .action-sheet-hero-fade {
@@ -4971,6 +5010,7 @@ a.deals-card-link {
    the box at every breakpoint and only the stand-ins for text live here. */
 .skeleton-card {
   cursor: default;
+  animation: cardReveal 0.5s var(--smooth) both;
 }
 
 @keyframes skeletonShimmer {
