@@ -156,6 +156,7 @@ mock.module("./ai.service.js", {
       }
       return { values, fromModel };
     },
+    cleanDishTitles: async (_dishes: string[]) => ({}),
     fallbackOrigin: (dish: string) => ({ code: "fb", country: `fallback:${dish}` }),
     fallbackDescription: (dish: string) => ({ no: `fallback:${dish}`, en: `fallback:${dish}` }),
   },

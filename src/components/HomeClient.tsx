@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
+import { motion, AnimatePresence } from "motion/react";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
+import { Share2, ChefHat, Check, ChevronRight, X } from "lucide-react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
@@ -96,7 +100,15 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       const idx = DAY_KEYS.indexOf(searchParams.day.toLowerCase() as typeof DAY_KEYS[number]);
       if (idx >= 0) return idx;
     }
-    return 0;
+    const { defaultSelectedDay } = computeDisplayContext(
+      initialMenu
+        ? Object.values(initialMenu.canteens || {})
+            .map((c) => parseCanteenWeekNumber(c.week))
+            .filter((n): n is number => n !== null)
+        : [],
+      searchParams?.week
+    );
+    return defaultSelectedDay;
   });
 
   useEffect(() => {
@@ -597,6 +609,21 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               `[data-yolo-card-key="${CSS.escape(winnerName)}"]`
             );
             el?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            confetti({
+              particleCount: 75,
+              spread: 70,
+              origin: { y: 0.65 },
+              colors: ["#c8741a", "#e8a020", "#d9604a", "#4a9e55", "#fffaf0"],
+              disableForReducedMotion: true,
+            });
+
+            toast.success(
+              lang === "no"
+                ? `🎲 YOLO valgte ${winnerName} for deg i dag!`
+                : `🎲 YOLO chose ${winnerName} for you today!`,
+              { duration: 4000 }
+            );
           }
           // No auto-release. Winner state persists until the next YOLO spin
           // starts (which clears it at the top of runYolo) or selectedDay
@@ -606,7 +633,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       yoloTimersRef.current.push(t);
       cumulative += interval;
     }
-  }, [yoloSpinning, allDaysData]);
+  }, [yoloSpinning, allDaysData, lang]);
 
   // Clear the winner state when the user navigates to another day.
   useEffect(() => {
@@ -630,7 +657,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     const data = canteenDayData.find(c => c.canteenName === canteenName);
     // A new dish deserves a fresh attempt; without this, one missing plate
     // would leave every sheet opened afterwards showing the placeholder.
-    setSheetImageFailed(false);
     setSheetImageLoaded(false);
     setActionSheet({
       isOpen: true,
@@ -671,10 +697,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         ? "..."
         : (
           <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
+            <Share2 size={14} style={{ marginRight: 6 }} />
             {lang === "no" ? "Del resultater" : "Share results"}
           </>
         )
@@ -885,107 +908,131 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       />
 
       {/* Action Sheet */}
-      {actionSheet.isOpen && (() => {
-        const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); voting.setVoteSuccess(false); voting.setShareState("idle"); };
-        const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
-        const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
-        return (
-        <div className="action-sheet-overlay" onClick={closeSheet}>
-          <div className="action-sheet" onClick={e => e.stopPropagation()}>
-            <div className="action-sheet-handle" />
-            <button className="action-sheet-close" onClick={closeSheet} aria-label="Close">&#xD7;</button>
+      <AnimatePresence>
+        {actionSheet.isOpen && (() => {
+          const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); voting.setVoteSuccess(false); voting.setShareState("idle"); };
+          const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
+          const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
+          return (
+          <motion.div
+            key="action-sheet-overlay"
+            className="action-sheet-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={closeSheet}
+          >
+            <motion.div
+              key="action-sheet-sheet"
+              className="action-sheet"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 340 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="action-sheet-handle" />
+              <button className="action-sheet-close" onClick={closeSheet} aria-label="Lukk">
+                <X size={16} strokeWidth={2.5} />
+              </button>
 
-            {/* Hero image */}
-            <div className="action-sheet-hero">
-              {sheetImageFailed || !actionSheet.imagePath ? (
-                <div className="image-placeholder">{actionSheet.canteenName.charAt(0)}</div>
-              ) : (
-                <img
-                  key={actionSheet.imagePath}
-                  src={actionSheet.imagePath}
-                  alt={actionSheet.dishName}
-                  className={`action-sheet-img${sheetImageLoaded ? " loaded" : ""}`}
-                  decoding="async"
-                  ref={el => { if (el?.complete && el.naturalWidth > 0) setSheetImageLoaded(true); }}
-                  onLoad={() => setSheetImageLoaded(true)}
-                  onError={() => setSheetImageFailed(true)}
-                />
-              )}
-              <div className="action-sheet-hero-fade" />
-            </div>
-
-            {/* Header */}
-            <div className="action-sheet-header">
-              <span className="action-sheet-canteen">{actionSheet.canteenName}</span>
-              <h3 className="action-sheet-dish">{actionSheet.dishName}</h3>
-              {actionSheet.description && (
-                <p className="action-sheet-desc">{actionSheet.description}</p>
-              )}
-            </div>
-
-            {/* Actions */}
-            {voting.voteSuccess ? (
-              <div className="action-sheet-success">
-                <div className="vote-celebration">
-                  <span className="celebration-emoji celebration-1">&#x1F389;</span>
-                  <span className="celebration-emoji celebration-2">&#x2B50;</span>
-                  <span className="celebration-emoji celebration-3">&#x1F38A;</span>
-                  <span className="celebration-emoji celebration-4">&#x2728;</span>
-                  <span className="celebration-emoji celebration-5">&#x1F973;</span>
-                </div>
-                <div className="vote-success-check">&#x2714;</div>
-                <span className="vote-success-text">{lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}</span>
-                <span className="vote-success-sub">{actionSheet.canteenName}</span>
-                <ShareButton />
+              {/* Hero image */}
+              <div className="action-sheet-hero">
+                {sheetImageFailed || !actionSheet.imagePath ? (
+                  <div className="image-placeholder">{actionSheet.canteenName.charAt(0)}</div>
+                ) : (
+                  <img
+                    key={actionSheet.imagePath}
+                    src={actionSheet.imagePath}
+                    alt={actionSheet.dishName}
+                    className={`action-sheet-img${sheetImageLoaded ? " loaded" : ""}`}
+                    decoding="async"
+                    ref={el => { if (el?.complete && el.naturalWidth > 0) setSheetImageLoaded(true); }}
+                    onLoad={() => setSheetImageLoaded(true)}
+                    onError={() => setSheetImageFailed(true)}
+                  />
+                )}
+                <div className="action-sheet-hero-fade" />
               </div>
-            ) : (
-            <div className="action-sheet-actions">
-              {canVote && (
-              <button
-                className={`action-sheet-btn action-sheet-vote${voting.hasVoted ? " voted" : ""}${voting.isVoting ? " voting" : ""}`}
-                disabled={voting.hasVoted || voting.isVoting}
-                onClick={async () => {
-                  await voting.handleVote(actionSheet.canteenName);
-                }}
-              >
-                <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
-                  {voting.isVoting ? "\u23F3" : voting.hasVoted ? "\u2714" : "\uD83D\uDDF3\uFE0F"}
+
+              {/* Header */}
+              <div className="action-sheet-header">
+                <span className="action-sheet-canteen">{actionSheet.canteenName}</span>
+                <h3 className="action-sheet-dish">{actionSheet.dishName}</h3>
+                {actionSheet.description && (
+                  <p className="action-sheet-desc">{actionSheet.description}</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              {voting.voteSuccess ? (
+                <div className="action-sheet-success">
+                  <div className="vote-celebration">
+                    <span className="celebration-emoji celebration-1">&#x1F389;</span>
+                    <span className="celebration-emoji celebration-2">&#x2B50;</span>
+                    <span className="celebration-emoji celebration-3">&#x1F38A;</span>
+                    <span className="celebration-emoji celebration-4">&#x2728;</span>
+                    <span className="celebration-emoji celebration-5">&#x1F973;</span>
+                  </div>
+                  <div className="vote-success-check">
+                    <Check size={28} strokeWidth={3} />
+                  </div>
+                  <span className="vote-success-text">{lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}</span>
+                  <span className="vote-success-sub">{actionSheet.canteenName}</span>
+                  <ShareButton />
                 </div>
-                <div className="action-sheet-btn-text">
-                  <span className="action-sheet-btn-label">
-                    {voting.isVoting
-                      ? (lang === "no" ? "Stemmer..." : "Voting...")
-                      : voting.hasVoted
-                      ? (lang === "no" ? "Allerede stemt" : "Already voted")
-                      : (lang === "no" ? "Stem p\u00E5 denne" : "Vote for this")}
-                  </span>
-                  <span className="action-sheet-btn-sub">
-                    {voting.hasVoted
-                      ? (lang === "no" ? `Du stemte p\u00E5 ${voting.votedCanteen}` : `You voted for ${voting.votedCanteen}`)
-                      : (lang === "no" ? "Vis at du spiser her i dag" : "Show you\u2019re eating here today")}
-                  </span>
-                </div>
-                {!voting.hasVoted && !voting.isVoting && <span className="action-sheet-btn-arrow">&#x203A;</span>}
-              </button>
+              ) : (
+              <div className="action-sheet-actions">
+                {canVote && (
+                <button
+                  className={`action-sheet-btn action-sheet-vote${voting.hasVoted ? " voted" : ""}${voting.isVoting ? " voting" : ""}`}
+                  disabled={voting.hasVoted || voting.isVoting}
+                  onClick={async () => {
+                    await voting.handleVote(actionSheet.canteenName);
+                  }}
+                >
+                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
+                    {voting.isVoting ? "⏳" : voting.hasVoted ? "✔" : "🗳️"}
+                  </div>
+                  <div className="action-sheet-btn-text">
+                    <span className="action-sheet-btn-label">
+                      {voting.isVoting
+                        ? (lang === "no" ? "Stemmer..." : "Voting...")
+                        : voting.hasVoted
+                        ? (lang === "no" ? "Allerede stemt" : "Already voted")
+                        : (lang === "no" ? "Stem på denne" : "Vote for this")}
+                    </span>
+                    <span className="action-sheet-btn-sub">
+                      {voting.hasVoted
+                        ? (lang === "no" ? `Du stemte på ${voting.votedCanteen}` : `You voted for ${voting.votedCanteen}`)
+                        : (lang === "no" ? "Vis at du spiser her i dag" : "Show you’re eating here today")}
+                    </span>
+                  </div>
+                  {!voting.hasVoted && !voting.isVoting && <ChevronRight size={18} className="action-sheet-btn-arrow" />}
+                </button>
+                )}
+                <button
+                  className="action-sheet-btn action-sheet-recipe"
+                  onClick={() => { closeSheet(); handleRecipeClick(actionSheet.dishName, actionSheet.canteenName); }}
+                >
+                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-recipe">
+                    <ChefHat size={18} />
+                  </div>
+                  <div className="action-sheet-btn-text">
+                    <span className="action-sheet-btn-label">{lang === "no" ? "Lag hjemme" : "Make at home"}</span>
+                    <span className="action-sheet-btn-sub">{lang === "no" ? "Få AI-generert oppskrift" : "Get AI-generated recipe"}</span>
+                  </div>
+                  <ChevronRight size={18} className="action-sheet-btn-arrow" />
+                </button>
+                {canVote && <ShareButton />}
+              </div>
               )}
-              <button
-                className="action-sheet-btn action-sheet-recipe"
-                onClick={() => { closeSheet(); handleRecipeClick(actionSheet.dishName, actionSheet.canteenName); }}
-              >
-                <div className="action-sheet-btn-icon-wrap action-sheet-icon-recipe">&#x1F468;&#x200D;&#x1F373;</div>
-                <div className="action-sheet-btn-text">
-                  <span className="action-sheet-btn-label">{lang === "no" ? "Lag hjemme" : "Make at home"}</span>
-                  <span className="action-sheet-btn-sub">{lang === "no" ? "F\u00E5 AI-generert oppskrift" : "Get AI-generated recipe"}</span>
-                </div>
-                <span className="action-sheet-btn-arrow">&#x203A;</span>
-              </button>
-              {canVote && <ShareButton />}
-            </div>
-            )}
-          </div>
-        </div>
-        );
-      })()}
+            </motion.div>
+          </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Lightbox with canteen swipe */}
       <Lightbox

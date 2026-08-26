@@ -224,6 +224,134 @@ Guidelines:
 }
 
 /**
+ * Validates a proposed AI title correction against safety heuristics.
+ * Rejects translations and wholesale rewrites, accepting only compound fixes,
+ * small typo corrections, and high-overlap edits.
+ */
+export function validateTitleCorrection(original: string, corrected: string): boolean {
+  if (typeof corrected !== "string" || !corrected.trim() || corrected.trim() === original.trim()) {
+    return false;
+  }
+
+  const cleanOrig = original.trim();
+  const cleanCorr = corrected.trim();
+
+  const stripNonLetters = (s: string) => s.toLowerCase().replace(/[^a-zæøåäöü0-9]/gi, "");
+
+  const editDistance = (a: string, b: string): number => {
+    if (a === b) return 0;
+    const m = a.length;
+    const n = b.length;
+    if (Math.abs(m - n) > 6) return 7;
+    const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] =
+          a[i - 1] === b[j - 1]
+            ? dp[i - 1][j - 1]
+            : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+    return dp[m][n];
+  };
+
+  const strippedOrig = stripNonLetters(cleanOrig);
+  const strippedCorr = stripNonLetters(cleanCorr);
+
+  // 1. Compound-word fix: same letters, only whitespace/punctuation merged
+  if (strippedOrig === strippedCorr) {
+    return true;
+  }
+
+  // 2. Hard reject: Norwegian-only characters dropped (likely English translation)
+  const hadNoChar = /[æøåÆØÅ]/.test(cleanOrig);
+  const stillHasNoChar = /[æøåÆØÅ]/.test(cleanCorr);
+  if (hadNoChar && !stillHasNoChar) {
+    return false;
+  }
+
+  // 3. Small typo / combined compound fix: low edit distance on full string or stripped string
+  if (
+    editDistance(cleanOrig.toLowerCase(), cleanCorr.toLowerCase()) <= 3 ||
+    editDistance(strippedOrig, strippedCorr) <= 3
+  ) {
+    return true;
+  }
+
+  // 4. Multi-word: require significant word/token overlap (>= 50%)
+  const origWords = cleanOrig.toLowerCase().split(/\s+/).filter(Boolean);
+  const newWords = cleanCorr.toLowerCase().split(/\s+/).filter(Boolean);
+  let matched = 0;
+  for (const ow of origWords) {
+    if (
+      newWords.some(
+        (nw) => nw === ow || editDistance(ow, nw) <= 2 || nw.includes(ow) || ow.includes(nw)
+      )
+    ) {
+      matched++;
+    }
+  }
+  const denom = Math.max(origWords.length, newWords.length) || 1;
+  return matched / denom >= 0.5;
+}
+
+/**
+ * Proofreads Norwegian dish titles using Gemini to fix typos, compound words,
+ * and capitalization errors. Conservative validation rejects translations
+ * and wholesale rewrites.
+ */
+export async function cleanDishTitles(
+  dishes: string[]
+): Promise<Record<string, string>> {
+  if (dishes.length === 0) return {};
+
+  const result: Record<string, string> = {};
+
+  for (const batch of chunk(dishes, BATCH_SIZE)) {
+    const prompt = `You are a proofreader for a Norwegian workplace canteen menu. The titles below were scraped from a website and may contain errors.
+
+Fix ONLY these types of issues in Norwegian dish names:
+- Typos (e.g. "Ppork" → "Pork", "wiith" → "with", "ruccula" → "rucola", "grgrønnsaker" → "grønnsaker")
+- Norwegian compound words that must be joined (e.g. "tomat suppe" → "tomatsuppe", "karri saus" → "karrisaus", "sitron potet" → "sitronpotet", "pasta grateng" → "pastagrateng")
+- Capitalization errors (e.g. "Bbq" → "BBQ", random mid-word capitals)
+- Duplicate words (e.g. "og og ris" → "og ris")
+- Obviously missing small words (e.g. "Kikertgryte ris" → "Kikertgryte med ris")
+
+CRITICAL RULES:
+- Be CONSERVATIVE. Only fix clear, obvious errors.
+- Do NOT rephrase, rewrite, or improve wording.
+- Do NOT translate between Norwegian and English (keep Norwegian text in Norwegian).
+- Do NOT change dish names, cooking terms, or foreign words that are intentional (e.g. keep "Stracotta", "jalfrezi", "Dan Dan" as-is).
+- Do NOT change the overall structure or word order.
+- If a title has no errors, do NOT include it in the output.
+
+Titles to proofread:
+${batch.map((d, i) => `${i + 1}. "${d}"`).join("\n")}
+
+Respond with ONLY a JSON object containing entries where corrections were made.
+Format: {"original title": "corrected title"}
+If nothing needs fixing, respond with {}`;
+
+    const parsed = await generateJson<Record<string, string>>(
+      prompt,
+      "dish title proofreading"
+    );
+
+    if (parsed && typeof parsed === "object") {
+      const batchSet = new Set(batch);
+      for (const [original, corrected] of Object.entries(parsed)) {
+        if (batchSet.has(original) && validateTitleCorrection(original, corrected)) {
+          result[original] = corrected.trim();
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Turns a canteen menu line into a short brief describing the dish as it would
  * arrive on a plate.
  *
@@ -246,27 +374,18 @@ Guidelines:
  * to naming the dish alone.
  */
 export async function generatePlatingBrief(dishName: string): Promise<string | null> {
-  const prompt = `You are a head chef describing how a dish is plated, for a food photographer.
+  const prompt = `You are an expert executive chef describing how a complete, beautifully composed dish is plated for professional food photography.
 
-The dish is from a Norwegian workplace canteen. Its menu line is:
+The dish is from a Norwegian workplace canteen menu. The kitchen's raw menu line is:
 "${dishName}"
 
-That line is written by the kitchen and is often a run-on list of components
-with no punctuation, sometimes with scraping artefacts or misspellings. Read it
-as a chef would and work out what the finished dish actually is.
+That line is written by the kitchen and is often a run-on list of components, a dish title, or fragmented ingredients. Read it as a seasoned chef and determine the authentic, finished culinary meal.
 
-Reply with ONE English sentence, max 40 words, describing the plated dish:
-the main component and how it is cooked, what it is served with, any sauce, and
-the dominant colours. Describe a composed, finished plate — the way it leaves a
-canteen kitchen.
-
-Rules:
-- Name real, cooked food. Never describe raw ingredients laid out separately,
-  deconstructed components, or anything written/printed.
-- Every main component named in the menu line must appear in your sentence. Do
-  not substitute, drop or invent a different dish.
-- If the line is ambiguous, choose the most ordinary Norwegian canteen reading.
-- No adjectives about taste, no marketing language. Plain visual description.
+Reply with ONE English sentence, max 45 words, describing the finished plated dish:
+- Describe a cohesive, complete single-serving meal as served in a high-quality canteen/bistro.
+- Name the cooked main protein/element (how it is prepared, seared, roasted, braised, etc.), how the sauce/dressing is paired with it, and the accompanying cooked sides (e.g. potatoes, rice, steamed/roasted vegetables) plus subtle fresh garnishes (like herbs or lemon wedge) that naturally complete this specific dish.
+- Do NOT invent unmentioned meat/fish/mains, but ensure the plate feels like a complete, balanced, harmonious meal rather than disconnected raw or separate piles.
+- No adjectives about taste or marketing hype. Plain, vivid visual description of real cooked food.
 
 Return ONLY JSON: {"plating": "..."}`;
 

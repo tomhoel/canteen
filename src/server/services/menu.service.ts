@@ -13,6 +13,7 @@ import { scrapeAllCanteens, type ScrapeReport } from "./scraper.service.js";
 import {
   detectDishOrigins,
   generateDishDescriptions,
+  cleanDishTitles,
   fallbackOrigin,
   fallbackDescription,
 } from "./ai.service.js";
@@ -155,6 +156,43 @@ function extractAllDishes(menuData: MenuData): string[] {
     });
   });
   return Array.from(dishes);
+}
+
+/** Every distinct non-empty Norwegian dish name in a week. */
+export function extractNoDishes(menuData: MenuData): string[] {
+  const dishes = new Set<string>();
+  Object.values(menuData.canteens || {}).forEach((canteen) => {
+    (canteen.menu || []).forEach((dayItem) => {
+      (dayItem.no?.items ?? []).forEach((it) => {
+        if (it.dish?.trim()) dishes.add(it.dish.trim());
+      });
+    });
+  });
+  return Array.from(dishes);
+}
+
+/**
+ * Apply title corrections to all Norwegian menu items in place.
+ * Returns the total number of item instances updated.
+ */
+export function applyTitleCorrections(
+  menuData: MenuData,
+  corrections: Record<string, string>
+): number {
+  let count = 0;
+  if (!corrections || Object.keys(corrections).length === 0) return 0;
+
+  for (const canteen of Object.values(menuData.canteens || {})) {
+    for (const dayEntry of canteen.menu || []) {
+      for (const item of dayEntry.no?.items || []) {
+        if (item.dish && corrections[item.dish]) {
+          item.dish = corrections[item.dish];
+          count++;
+        }
+      }
+    }
+  }
+  return count;
 }
 
 /**
@@ -395,6 +433,23 @@ export async function runWeeklyUpdateService(
       `Scrape produced no menu items for any canteen (${fallbackWeekId}) — refusing to overwrite stored data. ` +
         scrape.results.map((r) => `${r.canteen.displayName}: ${r.error ?? "ok"}`).join("; ")
     );
+  }
+
+  // Proofread Norwegian dish titles (typos, compound words) before grouping & cache keys.
+  const rawNoDishes = extractNoDishes(menuData);
+  try {
+    const titleCorrections = await cleanDishTitles(rawNoDishes);
+    if (Object.keys(titleCorrections).length > 0) {
+      const updatedCount = applyTitleCorrections(menuData, titleCorrections);
+      console.log(
+        `✏️  Applied ${Object.keys(titleCorrections).length} Norwegian title correction(s) across ${updatedCount} dish item(s):`
+      );
+      for (const [orig, corr] of Object.entries(titleCorrections)) {
+        console.log(`   "${orig}" → "${corr}"`);
+      }
+    }
+  } catch (err: any) {
+    console.warn(`⚠️  Title proofreading failed: ${err?.message ?? err} — keeping raw titles.`);
   }
 
   // An explicit week id is a manual override ("rebuild 2026-W31"), so it wins

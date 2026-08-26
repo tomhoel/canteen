@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
 import { getLocalDateKey } from "@/lib/dateUtils";
 import type { CanteenDayItem } from "@/lib/types";
 import { submitVote, sendSlackNotification, getAttendanceHistory } from "@/lib/api-client";
@@ -84,6 +86,15 @@ export function useVoting(): UseVotingReturn {
         localStorage.setItem(`voted_${todayKey}`, canteenName);
       }
 
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.75 },
+        colors: ["#c8741a", "#e8a020", "#4a9e55", "#fffaf0"],
+        disableForReducedMotion: true,
+      });
+      toast.success(`Du stemte på ${canteenName}! 🗳️`, { duration: 3000 });
+
       return previous;
     },
     onSuccess: (data) => {
@@ -109,6 +120,7 @@ export function useVoting(): UseVotingReturn {
       if (typeof window !== "undefined") {
         localStorage.removeItem(`voted_${getLocalDateKey()}`);
       }
+      toast.error("Kunne ikke registrere stemmen din. Prøv igjen.");
     },
   });
 
@@ -148,9 +160,19 @@ export function useVoting(): UseVotingReturn {
           localStorage.setItem(`slack_shared_${todayKey}`, "1");
         }
         setShareState("sent");
+        toast.success(
+          lang === "no"
+            ? "Dagens lunsjvalg er delt på Slack! 🚀"
+            : "Lunch votes shared to Slack! 🚀"
+        );
         setTimeout(() => setShareState("idle"), 2000);
       } catch {
         setShareState("idle");
+        toast.error(
+          lang === "no"
+            ? "Kunne ikke dele til Slack."
+            : "Could not share to Slack."
+        );
       } finally {
         shareInFlightRef.current = false;
       }
