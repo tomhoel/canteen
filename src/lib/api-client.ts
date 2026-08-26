@@ -60,9 +60,73 @@ function post<T>(path: string, payload: unknown): Promise<T> {
   return request<T>(path, { method: "POST", body: JSON.stringify(payload) });
 }
 
-export function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> {
+const MENU_LOCAL_CACHE_PREFIX = "canteen_menu_cache_v2_";
+const MENU_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+export interface CachedWeeklyMenu {
+  timestamp: number;
+  week: string;
+  data: WeeklyMenuResponse;
+}
+
+export function getCachedWeeklyMenu(week?: string): WeeklyMenuResponse | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`${MENU_LOCAL_CACHE_PREFIX}${week || "current"}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedWeeklyMenu;
+    if (
+      parsed &&
+      parsed.data &&
+      parsed.data.menuData &&
+      Date.now() - parsed.timestamp < MENU_CACHE_MAX_AGE_MS
+    ) {
+      return parsed.data;
+    }
+  } catch {
+    /* ignore localStorage errors */
+  }
+  return null;
+}
+
+export function setCachedWeeklyMenu(data: WeeklyMenuResponse, week?: string) {
+  if (typeof window === "undefined" || !data?.menuData) return;
+  try {
+    const entry: CachedWeeklyMenu = {
+      timestamp: Date.now(),
+      week: week || "current",
+      data,
+    };
+    localStorage.setItem(`${MENU_LOCAL_CACHE_PREFIX}${week || "current"}`, JSON.stringify(entry));
+  } catch {
+    /* ignore storage quota errors */
+  }
+}
+
+export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> {
   const query = week ? `?week=${encodeURIComponent(week)}` : "";
-  return request<WeeklyMenuResponse>(`/api/menu${query}`);
+  const cached = getCachedWeeklyMenu(week);
+
+  // If cached data is available, return it immediately for a 0ms instant initial paint.
+  // Then revalidate in the background without blocking the UI.
+  if (cached) {
+    request<WeeklyMenuResponse>(`/api/menu${query}`)
+      .then((fresh) => {
+        if (fresh?.menuData) {
+          setCachedWeeklyMenu(fresh, week);
+        }
+      })
+      .catch(() => {
+        /* silent revalidation */
+      });
+    return cached;
+  }
+
+  const fresh = await request<WeeklyMenuResponse>(`/api/menu${query}`);
+  if (fresh?.menuData) {
+    setCachedWeeklyMenu(fresh, week);
+  }
+  return fresh;
 }
 
 export function fetchDeals(payload: {

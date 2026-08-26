@@ -138,7 +138,22 @@ async function readWeekForDisplay(weekId?: string) {
   return await getWeeklyMenuService();
 }
 
+let memoryCache: { key: string; data: WeeklyMenuResponse; expires: number } | null = null;
+
+export function clearMenuMemoryCache() {
+  memoryCache = null;
+}
+
 export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse> {
+  const cacheKey = weekId || "current";
+  const now = Date.now();
+
+  const isProd = Boolean(process.env.VERCEL || process.env.NODE_ENV === "production");
+
+  if (isProd && memoryCache && memoryCache.key === cacheKey && memoryCache.expires > now) {
+    return memoryCache.data;
+  }
+
   const record = await readWeekForDisplay(weekId);
 
   if (!record?.menuData) {
@@ -149,7 +164,7 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     );
   }
 
-  return {
+  const result: WeeklyMenuResponse = {
     menuData: record.menuData,
     dishOrigins: record.dishOrigins || {},
     dishDescriptions: record.dishDescriptions || {},
@@ -157,6 +172,13 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     // that was asked for: the read falls back to the most recent stored week.
     plateImages: await resolvePlateImages(record.menuData, record.weekId),
   };
+
+  if (isProd) {
+    // Keep in serverless instance memory for 5 minutes
+    memoryCache = { key: cacheKey, data: result, expires: now + 5 * 60 * 1000 };
+  }
+
+  return result;
 }
 
 export { runWeeklyUpdateService };
