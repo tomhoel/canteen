@@ -12,10 +12,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const menu = await getWeeklyMenu(queryParam(req, "week"));
 
-    // Menus change at most twice a day (see the cron schedule), so let the CDN
-    // absorb the traffic and serve stale copies while it refreshes in the
+    // Menus change at most twice a day (see the cron schedule), so let the browser
+    // and CDN absorb the traffic and serve stale copies while it refreshes in the
     // background rather than hitting Supabase for every visitor.
-    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=3600");
+    res.setHeader("Cache-Control", "public, max-age=120, s-maxage=600, stale-while-revalidate=86400");
     return res.status(200).json(menu);
   } catch (err: any) {
     if (err instanceof MenuUnavailableError) {

@@ -113,7 +113,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams?.day]);
 
-  const [menuData] = useState<MenuData | null>(initialMenu);
+  const [menuData, setMenuData] = useState<MenuData | null>(initialMenu);
   // Norwegian only, for now. The cascade animation and the switcher that drove
   // it were removed from the header at some point and the plumbing outlived
   // them: nothing could call setLang, so `lang` could never change and the
@@ -130,8 +130,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // never had a plate drawn opened the sheet onto a broken-image glyph.
   const [sheetImageFailed, setSheetImageFailed] = useState(false);
   const [sheetImageLoaded, setSheetImageLoaded] = useState(false);
-  const [dishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
-  const [dishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
+  const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
+  const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
+
+  useEffect(() => {
+    setMenuData(initialMenu);
+    setDishOrigins(initialOrigins);
+    setDishDescriptions(initialDescriptions);
+  }, [initialMenu, initialOrigins, initialDescriptions]);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
