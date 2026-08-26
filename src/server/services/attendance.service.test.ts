@@ -153,19 +153,21 @@ test("an unconfigured deployment throws rather than silently dropping votes", as
 // ── Reading the history ───────────────────────────────────────────────────
 
 test("history groups the flat rows into one entry per day, newest first", async () => {
+  const day1 = today();
+  const day2 = new Date(Date.parse(`${day1}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
   reset({
     rows: [
-      { vote_date: "2026-08-10", canteen_name: "Flow", vote_count: 3 },
-      { vote_date: "2026-08-10", canteen_name: "Fresh4you", vote_count: 1 },
-      { vote_date: "2026-08-11", canteen_name: "Flow", vote_count: 2 },
+      { vote_date: day2, canteen_name: "Flow", vote_count: 3 },
+      { vote_date: day2, canteen_name: "Fresh4you", vote_count: 1 },
+      { vote_date: day1, canteen_name: "Flow", vote_count: 2 },
     ],
   });
 
   const { entries } = await getAttendanceHistoryService();
 
   assert.deepEqual(entries, [
-    { date: "2026-08-11", canteens: { Flow: 2 } },
-    { date: "2026-08-10", canteens: { Flow: 3, Fresh4you: 1 } },
+    { date: day1, canteens: { Flow: 2 } },
+    { date: day2, canteens: { Flow: 3, Fresh4you: 1 } },
   ]);
 });
 
