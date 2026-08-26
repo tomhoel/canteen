@@ -25,12 +25,13 @@ export default function AllClosedCard({ closedCanteens, lang }: AllClosedCardPro
               <div className="image-placeholder">?</div>
             ) : (
               <>
-                {!imgLoaded && <div className="image-shimmer" />}
+                <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
                 <img
                   src={imagePath}
                   alt={lang === "no" ? "Stengt" : "Closed"}
                   className={`food-image${imgLoaded ? " loaded" : ""}`}
-                  loading="lazy"
+                  loading="eager"
+                  decoding="async"
                   onLoad={() => setImgLoaded(true)}
                   onError={() => setImgError(true)}
                 />

@@ -129,6 +129,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // The hero image was the other <img> with no onError, so a dish that has
   // never had a plate drawn opened the sheet onto a broken-image glyph.
   const [sheetImageFailed, setSheetImageFailed] = useState(false);
+  const [sheetImageLoaded, setSheetImageLoaded] = useState(false);
   const [dishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
   const [swipeDirection, setSwipeDirection] = useState<"swipe-left" | "swipe-right" | "">("");
@@ -399,11 +400,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     // Load selected day immediately
     preloadDay(selectedDay);
 
-    // Defer adjacent days by 1.5s
+    // Preload adjacent days shortly after mount
     const adjacentDays = daysToPreload.slice(1);
     const timer = setTimeout(() => {
       adjacentDays.forEach(preloadDay);
-    }, 1500);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [menuData, selectedDay, plateImages]);
@@ -624,6 +625,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     // A new dish deserves a fresh attempt; without this, one missing plate
     // would leave every sheet opened afterwards showing the placeholder.
     setSheetImageFailed(false);
+    setSheetImageLoaded(false);
     setActionSheet({
       isOpen: true,
       canteenName,
@@ -893,9 +895,13 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 <div className="image-placeholder">{actionSheet.canteenName.charAt(0)}</div>
               ) : (
                 <img
+                  key={actionSheet.imagePath}
                   src={actionSheet.imagePath}
                   alt={actionSheet.dishName}
-                  className="action-sheet-img"
+                  className={`action-sheet-img${sheetImageLoaded ? " loaded" : ""}`}
+                  decoding="async"
+                  ref={el => { if (el?.complete && el.naturalWidth > 0) setSheetImageLoaded(true); }}
+                  onLoad={() => setSheetImageLoaded(true)}
                   onError={() => setSheetImageFailed(true)}
                 />
               )}

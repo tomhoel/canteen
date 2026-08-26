@@ -16,6 +16,11 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
   // so a plate that has never been drawn showed the browser's broken-image
   // glyph full-screen. Keyed by index so swiping to the next dish clears it.
   const [failedIndex, setFailedIndex] = useState<number | null>(null);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  useEffect(() => {
+    setImgLoaded(false);
+  }, [currentIndex]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -80,9 +85,13 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
             <div className="image-placeholder">{current.canteenName.charAt(0)}</div>
           ) : (
             <img
+              key={current.highResImagePath}
               src={current.highResImagePath}
               alt={current.mainDish?.dish || ""}
-              className="lightbox-image"
+              className={`lightbox-image${imgLoaded ? " loaded" : ""}`}
+              decoding="async"
+              ref={el => { if (el?.complete && el.naturalWidth > 0) setImgLoaded(true); }}
+              onLoad={() => setImgLoaded(true)}
               onError={() => setFailedIndex(currentIndex)}
             />
           )}
