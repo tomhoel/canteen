@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import confetti from "canvas-confetti";
@@ -26,18 +26,29 @@ import LoadingScreen from "@/components/LoadingScreen";
 import AppHeader from "@/components/AppHeader";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
-import VoteModal from "@/components/VoteModal";
-import Lightbox from "@/components/Lightbox";
-import DealsView from "@/components/DealsView";
-import MenyView from "@/components/MenyView";
-import LeaderboardModal from "@/components/LeaderboardModal";
-import WeekOverview from "@/components/WeekOverview";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import ClosedCard from "@/components/ClosedCard";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useAppStore, setFeedbackModalOpen } from "@/store/useAppStore";
-import { CanteenFeedbackForm } from "@/components/CanteenFeedbackForm";
+
+// These only render once the user opens a modal or overlay — a recipe's
+// price comparison, the Meny search, the feedback form, the vote/leaderboard/
+// image-lightbox/week-overview overlays. Importing them eagerly put every one
+// of them (and their own dependencies, e.g. Lightbox's copy of `motion`) in
+// the same chunk the very first paint has to wait on. Splitting them out, and
+// only mounting each one once its own "open" condition is true (see the call
+// sites below), means a visitor who never opens any of these never pays for
+// their JS at all.
+const DealsView = lazy(() => import("@/components/DealsView"));
+const MenyView = lazy(() => import("@/components/MenyView"));
+const VoteModal = lazy(() => import("@/components/VoteModal"));
+const Lightbox = lazy(() => import("@/components/Lightbox"));
+const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
+const WeekOverview = lazy(() => import("@/components/WeekOverview"));
+const CanteenFeedbackForm = lazy(() =>
+  import("@/components/CanteenFeedbackForm").then((m) => ({ default: m.CanteenFeedbackForm }))
+);
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -873,39 +884,49 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         </div>
       )}
 
-      <LeaderboardModal
-        isOpen={leaderboardOpen}
-        lang={lang}
-        onClose={() => setLeaderboardOpen(false)}
-      />
+      {leaderboardOpen && (
+        <Suspense fallback={null}>
+          <LeaderboardModal
+            isOpen={leaderboardOpen}
+            lang={lang}
+            onClose={() => setLeaderboardOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {weekOverviewOpen && (
-        <WeekOverview
-          allDaysData={allDaysData}
-          selectedDay={selectedDay}
-          todayIndex={todayIndex}
-          dayLabelsData={dayLabelsData}
-          fullDayLabels={fullDayLabels}
-          lang={lang}
-          onDaySelect={(i) => { handleDaySelect(i); setWeekOverviewOpen(false); }}
-          onClose={() => setWeekOverviewOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <WeekOverview
+            allDaysData={allDaysData}
+            selectedDay={selectedDay}
+            todayIndex={todayIndex}
+            dayLabelsData={dayLabelsData}
+            fullDayLabels={fullDayLabels}
+            lang={lang}
+            onDaySelect={(i) => { handleDaySelect(i); setWeekOverviewOpen(false); }}
+            onClose={() => setWeekOverviewOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* Vote Modal */}
-      <VoteModal
-        isOpen={voteModal.isOpen}
-        canteenName={voteModal.canteenName}
-        hasVoted={voting.hasVoted}
-        votedCanteen={voting.votedCanteen}
-        canteenNames={openCanteens.filter(c => !c.isOutdated && !c.isAhead).map(c => c.canteenName)}
-        votes={voting.votes}
-        maxVotes={maxVotes}
-        lang={lang}
-        isVoting={voting.isVoting}
-        onVote={voting.handleVote}
-        onClose={() => setVoteModal({ isOpen: false, canteenName: "" })}
-      />
+      {voteModal.isOpen && (
+        <Suspense fallback={null}>
+          <VoteModal
+            isOpen={voteModal.isOpen}
+            canteenName={voteModal.canteenName}
+            hasVoted={voting.hasVoted}
+            votedCanteen={voting.votedCanteen}
+            canteenNames={openCanteens.filter(c => !c.isOutdated && !c.isAhead).map(c => c.canteenName)}
+            votes={voting.votes}
+            maxVotes={maxVotes}
+            lang={lang}
+            isVoting={voting.isVoting}
+            onVote={voting.handleVote}
+            onClose={() => setVoteModal({ isOpen: false, canteenName: "" })}
+          />
+        </Suspense>
+      )}
 
       {/* Action Sheet */}
       <AnimatePresence>
@@ -1035,13 +1056,17 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       </AnimatePresence>
 
       {/* Lightbox with canteen swipe */}
-      <Lightbox
-        isOpen={lightboxIndex >= 0}
-        currentIndex={lightboxIndex}
-        canteenDayData={openCanteens}
-        onClose={() => setLightboxIndex(-1)}
-        onNavigate={setLightboxIndex}
-      />
+      {lightboxIndex >= 0 && (
+        <Suspense fallback={null}>
+          <Lightbox
+            isOpen={lightboxIndex >= 0}
+            currentIndex={lightboxIndex}
+            canteenDayData={openCanteens}
+            onClose={() => setLightboxIndex(-1)}
+            onNavigate={setLightboxIndex}
+          />
+        </Suspense>
+      )}
 
       {/* Recipe Modal */}
       {recipeModal.isOpen && (
@@ -1073,11 +1098,13 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 )}
 
                 {menyView.data && (
-                  <MenyView
-                    meny={menyView.data}
-                    lang={lang}
-                    onBack={closeMeny}
-                  />
+                  <Suspense fallback={null}>
+                    <MenyView
+                      meny={menyView.data}
+                      lang={lang}
+                      onBack={closeMeny}
+                    />
+                  </Suspense>
                 )}
               </>
             ) : dealsView.isOpen ? (
@@ -1104,12 +1131,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 )}
 
                 {dealsView.deals && (
-                  <DealsView
-                    deals={dealsView.deals}
-                    lang={lang}
-                    isStreaming={dealsView.isStreaming}
-                    onBack={closeDeals}
-                  />
+                  <Suspense fallback={null}>
+                    <DealsView
+                      deals={dealsView.deals}
+                      lang={lang}
+                      isStreaming={dealsView.isStreaming}
+                      onBack={closeDeals}
+                    />
+                  </Suspense>
                 )}
               </>
             ) : (
@@ -1242,7 +1271,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           </div>
         </div>
       )}
-      {feedbackModalOpen && <CanteenFeedbackForm onClose={() => setFeedbackModalOpen(false)} />}
+      {feedbackModalOpen && (
+        <Suspense fallback={null}>
+          <CanteenFeedbackForm onClose={() => setFeedbackModalOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

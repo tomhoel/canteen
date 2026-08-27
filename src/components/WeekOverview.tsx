@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 import { isCanteenClosed } from "@/lib/canteen-utils";
+import "@/styles/week-overview.css";
 
 const DAYS_ABBR_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
 const DAYS_ABBR_EN = ["Mon", "Tue", "Wed", "Thu", "Fri"];

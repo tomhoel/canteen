@@ -16,24 +16,47 @@
          which on a cold launch is a visible flash of the wrong colour. -->
     <style>
       html, body { background: #f5f0e8; margin: 0; }
+
+      /* Outfit, self-hosted. This used to be a Google Fonts <link>, which cost
+         a second cross-origin connection (fonts.googleapis.com for the CSS,
+         then fonts.gstatic.com for the file itself) on top of every other
+         request the cold-launch critical path already makes. Google serves
+         this typeface as two variable-weight files split by unicode range
+         (latin, latin-ext); declaring the same two @font-face rules — same
+         bytes, `font-weight: 100 900` covering the whole variable axis in one
+         face instead of Google's seven discrete-weight duplicates of the same
+         file — but pointing at /fonts instead removes that whole round trip:
+         the file now shares its origin, TLS session and HTTP connection with
+         the document itself. `display=swap` is kept for the same reason it
+         was set before: text stays visible in the fallback face for the (now
+         shorter) time until the real one loads. */
+      @font-face {
+        font-family: 'Outfit';
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url(/fonts/outfit-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Outfit';
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url(/fonts/outfit-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
     </style>
 
-    <!-- Outfit is the app's only typeface. These used to be injected by
-         TanStack Router's <HeadContent> at runtime, which meant the request for
-         them could not start until the whole JS bundle had downloaded, parsed
-         and rendered — so the first screen of the day was drawn in a fallback
-         face and reflowed when the real one arrived. Declared here they are
-         discovered in the initial HTML instead. `display=swap` keeps text
-         visible throughout, so this blocks on a ~1 KB stylesheet, not on the
-         font files. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- The Norwegian/English UI text this app renders is entirely within the
+         "latin" subset above (no Cyrillic, Greek, etc. glyphs are needed), so
+         only that file is worth blocking on. `preload` starts the fetch the
+         instant the HTML is parsed, in parallel with the JS bundle, instead of
+         waiting for the CSSOM (and therefore this very <style>) to be built
+         first the way a plain @font-face reference would. -->
+    <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://sloutnqpqfesyoycklgd.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://sloutnqpqfesyoycklgd.supabase.co" />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
-    />
 
     <!-- public/manifest.json and the icons beside it already existed but were
          never linked, so the app could not be installed from any browser. -->

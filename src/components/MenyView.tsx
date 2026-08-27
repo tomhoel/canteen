@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { MenyResponse, MenyIngredientMatch } from "@/lib/types";
 import { PriceRanger } from "@/components/PriceRanger";
+import "@/styles/meny-view.css";
 
 interface MenyViewProps {
   meny: MenyResponse;
