@@ -1,0 +1,402 @@
+/**
+ * Split out of globals.css so it ships only alongside the lazy-loaded
+ * component that uses it, instead of blocking the initial paint. See
+ * globals.css's own note above .shop-card-deals/.shop-card-meny for the
+ * boundary: anything the loading placeholder shows before this component
+ * mounts (the cart/bag emoji animation, .shop-card-* accents) stays there;
+ * everything only this component itself renders lives here.
+ */
+
+/* ─── Meny View ─── */
+.mv {
+  padding: 0 0 24px;
+  animation: sheetContentReveal 0.3s var(--smooth) both;
+}
+
+.mv-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  width: 100%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  transition: color 0.2s ease;
+}
+
+.mv-back:hover {
+  color: var(--text-primary);
+}
+
+.mv-back-arrow {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+/* ─── Meny Header ─── */
+.mv-header {
+  padding: 16px 24px 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+  animation: recipeReveal 0.35s var(--smooth) both;
+}
+
+.mv-store {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+}
+
+.mv-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-green);
+  margin-top: 2px;
+  display: block;
+}
+
+.mv-count.partial {
+  color: var(--text-muted);
+}
+
+.mv-totals {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-right: 32px;
+}
+
+.mv-total {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mv-total-pantry {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+/* ─── Meny Product List ─── */
+.mv-list {
+  padding: 0 24px;
+}
+
+.mv-row {
+  border-bottom: 1px solid var(--border-light);
+  animation: recipeReveal 0.3s var(--smooth) both;
+}
+
+.mv-row:last-child {
+  border-bottom: none;
+}
+
+.mv-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.15s;
+}
+
+.mv-link:active {
+  opacity: 0.6;
+}
+
+/* ─── Product Card ─── */
+.mv-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.mv-card.mv-oos {
+  opacity: 0.45;
+}
+
+.mv-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-cream);
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mv-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 3px;
+}
+
+.mv-thumb-letter {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.mv-detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mv-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.mv-product {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mv-oos-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-coral);
+  margin-top: 1px;
+}
+
+/* ─── Right side: qty + price ─── */
+.mv-right {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.mv-qty {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--accent-orange);
+  letter-spacing: 0.2px;
+}
+
+.mv-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 46px;
+}
+
+.mv-kr {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* ─── Card Row + Expand Chevron ─── */
+.mv-card-row {
+  display: flex;
+  align-items: center;
+}
+
+.mv-card-row > .mv-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.mv-expand {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  transition: transform 0.25s var(--smooth), color 0.15s, opacity 0.15s;
+}
+
+.mv-expand:hover,
+.mv-expand:active {
+  color: var(--accent-orange);
+  opacity: 1;
+}
+
+.mv-expand.open {
+  transform: rotate(90deg);
+  color: var(--accent-orange);
+  opacity: 0.8;
+}
+
+.mv-expand-spacer {
+  width: 32px;
+  flex-shrink: 0;
+}
+
+/* ─── Alternatives List ─── */
+.mv-alts {
+  background: var(--bg-cream);
+  border-radius: 12px;
+  margin: 0 0 10px;
+  padding: 4px 12px;
+}
+
+.mv-alt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  animation: recipeReveal 0.25s var(--smooth) both;
+}
+
+.mv-alt:last-child {
+  border-bottom: none;
+}
+
+.mv-alt-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--card-white);
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mv-alt-detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mv-alt-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mv-alt-meta {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.mv-alt-price {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: right;
+}
+
+/* ─── Section (Pantry / Not Found) ─── */
+.mv-section {
+  padding-top: 8px;
+}
+
+.mv-section-label {
+  display: block;
+  padding: 8px 24px 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.mv-list--pantry .mv-card {
+  opacity: 0.5;
+}
+
+.mv-list--pantry .mv-alts {
+  opacity: 0.5;
+}
+
+.mv-list--pantry .mv-card.mv-oos {
+  opacity: 0.3;
+}
+
+.mv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 24px 0;
+}
+
+.mv-chip {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  background: var(--bg-cream);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+}
+
+/* ─── Meny Mobile ─── */
+@media (max-width: 768px) {
+  .mv-header {
+    padding: 14px 16px 12px;
+  }
+
+  .mv-list {
+    padding: 0 16px;
+  }
+
+  .mv-section-label {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .mv-chips {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .mv-back {
+    padding: 10px 16px;
+  }
+
+}
+

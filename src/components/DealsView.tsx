@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { DealsResponse, ProductOffer } from "@/lib/types";
 import { DealsTable } from "@/components/DealsTable";
 import { PriceRanger } from "@/components/PriceRanger";
+import "@/styles/deals-view.css";
 
 interface DealsViewProps {
   deals: DealsResponse;

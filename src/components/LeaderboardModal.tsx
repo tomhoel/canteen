@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { CANTEEN_ORDER } from "@/lib/constants";
 import { getAttendanceHistory, type AttendanceHistoryEntry as HistoryEntry } from "@/lib/api-client";
+import "@/styles/leaderboard-modal.css";
 
 interface CanteenStats {
   name: string;

@@ -129,5 +129,32 @@ export default defineConfig(({ mode }) => {
     resolve: {
       tsconfigPaths: true,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // React/TanStack change far less often than the app's own route and
+          // component code, so isolating them lets browsers cache them across
+          // deploys instead of re-downloading the framework on every release.
+          // `motion`, `lucide-react` and `sonner` are used on the very first
+          // paint (the action sheet, header icons, the toaster) so they still
+          // belong in the eager path — this only changes which file they ship
+          // in, not when they load. Rolldown (Vite 8's bundler) only accepts
+          // the function form of manualChunks, not the object shorthand.
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (/[\\/]node_modules[\\/](react|react-dom)[\\/]/.test(id)) {
+                return "vendor-react";
+              }
+              if (/[\\/]node_modules[\\/]@tanstack[\\/](react-router|react-query|react-store)[\\/]/.test(id)) {
+                return "vendor-tanstack";
+              }
+              if (/[\\/]node_modules[\\/](motion|lucide-react|sonner)[\\/]/.test(id)) {
+                return "vendor-ui";
+              }
+            }
+          },
+        },
+      },
+    },
   };
 });

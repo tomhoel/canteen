@@ -1,3 +1,5 @@
+import "@/styles/price-ranger.css";
+
 interface PriceRangerProps {
   min?: number;
   max?: number;

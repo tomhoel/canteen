@@ -1,0 +1,496 @@
+/**
+ * Split out of globals.css so it ships only alongside the lazy-loaded
+ * component that uses it, instead of blocking the initial paint. See
+ * globals.css's own note above .shop-card-deals/.shop-card-meny for the
+ * boundary: anything the loading placeholder shows before this component
+ * mounts (the cart/bag emoji animation, .shop-card-* accents) stays there;
+ * everything only this component itself renders lives here.
+ */
+
+/* ─── Deals View ─── */
+.deals-view {
+  padding: 0 0 24px;
+  animation: sheetContentReveal 0.3s var(--smooth) both;
+}
+
+/* Back button */
+.deals-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  width: 100%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  transition: color 0.2s ease;
+}
+
+.deals-back:hover {
+  color: var(--text-primary);
+}
+
+.deals-back-arrow {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+/* ─── Recommendation Card ─── */
+.deals-recommendation {
+  margin: 16px 24px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1.5px solid var(--border-light);
+  background: var(--card-white);
+  box-shadow: 0 4px 20px var(--shadow-soft);
+  animation: recipeReveal 0.4s var(--smooth) both;
+}
+
+.deals-rec-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.deals-rec-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--bg-cream);
+  padding: 4px;
+}
+
+.deals-rec-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deals-rec-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
+
+.deals-rec-store {
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.deals-rec-stats {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--border-light);
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+
+.deals-rec-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 4px 0;
+}
+
+.deals-rec-stat:not(:last-child) {
+  border-right: 1px solid var(--border-light);
+}
+
+.deals-rec-stat-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.deals-rec-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Other Stores ─── */
+.deals-other-stores {
+  padding: 0 24px;
+  margin-bottom: 16px;
+}
+
+.deals-other-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.deals-other-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.deals-other-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: var(--bg-cream);
+  border: 1px solid var(--border-light);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.deals-other-chip-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.deals-other-chip-count {
+  background: var(--accent-orange);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ─── Deals Ingredient Groups ─── */
+.deals-ingredient-group {
+  padding: 0 24px;
+  margin-bottom: 16px;
+}
+
+.deals-ingredient-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.deals-ingredient-group:first-of-type .deals-ingredient-title {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* ─── Deals Carousel ─── */
+.deals-carousel {
+  position: relative;
+}
+.deals-carousel-arrow {
+  display: none;
+}
+@media (min-width: 769px) {
+  .deals-carousel-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-light);
+    background: var(--card-white);
+    box-shadow: 0 2px 8px var(--shadow-soft);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .deals-carousel-arrow:hover {
+    background: var(--bg-cream);
+    box-shadow: 0 3px 12px var(--shadow-medium);
+  }
+  .deals-carousel-arrow-left { left: -6px; }
+  .deals-carousel-arrow-right { right: -6px; }
+}
+
+.deals-cards {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.deals-cards::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Deal Card ─── */
+.deals-card {
+  flex-shrink: 0;
+  width: 160px;
+  border-radius: 14px;
+  border: 1px solid var(--border-light);
+  background: var(--card-white);
+  overflow: hidden;
+  transition: all 0.2s var(--smooth);
+  animation: recipeReveal 0.35s var(--smooth) both;
+}
+
+.deals-card:hover {
+  box-shadow: 0 4px 16px var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+.deals-card-recommended {
+  border-width: 1.5px;
+  box-shadow: 0 2px 12px var(--shadow-soft);
+}
+
+.deals-card-img-wrap {
+  width: 100%;
+  height: 100px;
+  background: var(--bg-cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.deals-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.deals-card-content {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deals-card-store-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.deals-card-store-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.deals-card-store {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.deals-card-rec-badge {
+  font-size: 10px;
+  color: var(--accent-yellow);
+  margin-left: auto;
+}
+
+.deals-card-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deals-card-price-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.deals-card-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-orange);
+}
+
+.deals-card-qty {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+}
+
+.deals-card-brand {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+a.deals-card-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.deals-card-flyer-link {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  margin-top: 2px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.deals-card:hover .deals-card-flyer-link {
+  opacity: 1;
+}
+
+/* ─── Campaign Cards ─── */
+.deals-card-campaign { border-top: 3px solid var(--accent-coral); }
+.deals-card-campaign-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; color: white; background: var(--accent-coral); padding: 2px 6px; border-radius: 4px; }
+.deals-card-price-campaign { color: var(--accent-coral); }
+.deals-card-original-price { font-size: 12px; color: var(--text-muted); text-decoration: line-through; margin-left: 6px; }
+.deals-card-savings { font-size: 10px; font-weight: 800; color: var(--accent-green); background: rgba(74,158,85,0.1); padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+.deals-card-source { font-size: 9px; color: var(--text-muted); }
+
+/* ─── Streaming Indicator ─── */
+.deals-streaming {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+}
+.deals-streaming-icon { font-size: 18px; }
+.deals-streaming-text { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+/* ─── No Results ─── */
+.deals-no-results {
+  padding: 12px 24px;
+  margin-top: 4px;
+}
+
+.deals-no-results-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.deals-no-results-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.deals-no-results-item {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  background: var(--bg-cream);
+  border-radius: 8px;
+}
+
+/* ─── Empty State ─── */
+.deals-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  gap: 12px;
+  text-align: center;
+}
+
+.deals-empty-icon {
+  font-size: 40px;
+  opacity: 0.5;
+}
+
+.deals-empty-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.deals-empty-sub {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+
+/* ─── Deals Mobile ─── */
+@media (max-width: 768px) {
+  .deals-recommendation {
+    margin: 12px 16px;
+    padding: 14px 16px;
+  }
+
+  .deals-rec-logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .deals-rec-stats {
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+
+  .deals-ingredient-group {
+    padding: 0 16px;
+  }
+
+  .deals-other-stores {
+    padding: 0 16px;
+  }
+
+  .deals-card {
+    width: 148px;
+  }
+
+  .deals-card-img-wrap {
+    height: 90px;
+  }
+
+  .deals-no-results {
+    padding: 12px 16px;
+  }
+
+  .deals-back {
+    padding: 10px 16px;
+  }
+}
+
