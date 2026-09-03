@@ -78,6 +78,7 @@ export default function FoodCard({
   yoloHighlighted = false,
   yoloWinner = false,
 }: FoodCardProps) {
+  const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const {
@@ -127,15 +128,25 @@ export default function FoodCard({
               {canteenName.charAt(0)}
             </div>
           ) : (
-            <img
-              key={imagePath}
-              src={imagePath}
-              alt={mainDish?.dish || "Matrett"}
-              className="food-image"
-              loading="eager"
-              decoding="async"
-              onError={() => setImgError(true)}
-            />
+            <>
+              <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
+              <img
+                key={imagePath}
+                ref={(img) => {
+                  if (img && img.complete && img.naturalWidth > 0 && !imgLoaded) {
+                    setImgLoaded(true);
+                  }
+                }}
+                src={imagePath}
+                alt={mainDish?.dish || "Matrett"}
+                className={`food-image${imgLoaded ? " loaded" : ""}`}
+                loading="eager"
+                decoding="async"
+                fetchPriority={cardIdx === 0 ? "high" : undefined}
+                onLoad={() => setImgLoaded(true)}
+                onError={() => setImgError(true)}
+              />
+            </>
           )}
         </div>
         {isOutdated && (
@@ -147,7 +158,15 @@ export default function FoodCard({
         {origin && mainDish && (
           <div className="origin-pip">
             <span className="emoji-flag">{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
-            <img className="image-flag" src={`https://flagcdn.com/w20/${origin.code.toLowerCase()}.png`} alt={origin.country} />
+            <img
+              className="image-flag"
+              src={`https://flagcdn.com/w20/${origin.code.toLowerCase()}.png`}
+              alt={origin.country}
+              width={20}
+              height={15}
+              loading="lazy"
+              decoding="async"
+            />
             <span className="origin-pip-name">{getCountryAdjective(origin.country, lang)}</span>
           </div>
         )}

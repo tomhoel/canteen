@@ -122,6 +122,29 @@ export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> 
     return cached;
   }
 
+  // On initial cold visit without an explicit week param, reuse the eager fetch
+  // initiated in the document <head> to avoid waiting for a whole second round-trip.
+  if (!week && typeof window !== "undefined") {
+    const w = window as any;
+    if (w.__INITIAL_MENU_DATA__?.menuData) {
+      const data = w.__INITIAL_MENU_DATA__;
+      setCachedWeeklyMenu(data, week);
+      return data;
+    }
+    if (w.__MENU_FETCH_PROMISE__) {
+      try {
+        const early = await w.__MENU_FETCH_PROMISE__;
+        w.__MENU_FETCH_PROMISE__ = undefined;
+        if (early?.menuData) {
+          setCachedWeeklyMenu(early, week);
+          return early;
+        }
+      } catch {
+        /* fall through to standard request */
+      }
+    }
+  }
+
   const fresh = await request<WeeklyMenuResponse>(`/api/menu${query}`);
   if (fresh?.menuData) {
     setCachedWeeklyMenu(fresh, week);
