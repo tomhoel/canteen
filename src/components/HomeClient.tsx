@@ -399,55 +399,21 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
 
-  // Image preloading — tracks loaded URLs to avoid duplicates (#5)
-  useEffect(() => {
-    if (!menuData) return;
+  // On-demand image preloader for other days — warms a day when hovered or touched
+  const preloadDay = useCallback((dayIdx: number) => {
+    const dk = DAY_KEYS[dayIdx];
+    if (!dk) return;
+    CANTEEN_ORDER.forEach(name => {
+      const plateImage = plateImages[`${dk}|${name}`];
+      if (!plateImage) return;
+      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: 440, format: "webp" });
 
-    const daysToPreload = [selectedDay];
-    if (selectedDay > 0) daysToPreload.push(selectedDay - 1);
-    if (selectedDay < 4) daysToPreload.push(selectedDay + 1);
-
-    const preloadDay = (dayIdx: number) => {
-      const dk = DAY_KEYS[dayIdx];
-      if (!dk) return;
-      CANTEEN_ORDER.forEach(name => {
-        // Same server-resolved map the cards use. Building the path here
-        // independently is what let the preloader warm a URL the card never
-        // requested — and now that a card can legitimately have no image,
-        // guessing one would fetch 404s on every day change.
-        const plateImage = plateImages[`${dk}|${name}`];
-        if (!plateImage) return;
-        const src = getSupabaseImageUrl("images_nobg", plateImage, { width: 440, format: "webp" });
-
-        if (preloadedRef.current.has(src)) return;
-        preloadedRef.current.add(src);
-        const img = new window.Image();
-        img.src = src;
-      });
-    };
-
-    // Do not preload adjacent days if Save-Data is enabled to conserve bandwidth
-    const isSaveData = Boolean(
-      (typeof navigator !== "undefined" && (navigator as any)?.connection?.saveData)
-    );
-    if (isSaveData) return;
-
-    // Defer adjacent days preloading so initial cards get 100% network priority
-    const adjacentDays = daysToPreload.slice(1);
-    if (adjacentDays.length === 0) return;
-
-    const timer = setTimeout(() => {
-      const schedule = typeof window !== "undefined" && (window as any).requestIdleCallback
-        ? (cb: () => void) => (window as any).requestIdleCallback(cb, { timeout: 3000 })
-        : (cb: () => void) => setTimeout(cb, 500);
-
-      schedule(() => {
-        adjacentDays.forEach(preloadDay);
-      });
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [menuData, selectedDay, plateImages]);
+      if (preloadedRef.current.has(src)) return;
+      preloadedRef.current.add(src);
+      const img = new window.Image();
+      img.src = src;
+    });
+  }, [plateImages]);
 
   // Disable vertical scrolling when content fits viewport
   useEffect(() => {
@@ -816,6 +782,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         lang={lang}
         mode={mode}
         onDaySelect={handleDaySelect}
+        onDayHover={preloadDay}
         onTodayPress={mode === "weekday-current" ? () => runYolo(todayIndex) : undefined}
         cardsRef={scrollRef}
         pendingCanteens={pendingCanteens}
