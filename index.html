@@ -83,7 +83,7 @@
                   if (plate) {
                     var enc = plate.split("/").map(encodeURIComponent).join("/");
                     var url = "https://sloutnqpqfesyoycklgd.supabase.co/storage/v1/render/image/public/images_nobg/" +
-                      enc + "?width=440&format=webp&resize=contain";
+                      enc + "?width=340&format=webp&quality=75&resize=contain";
                     var link = document.createElement("link");
                     link.rel = "preload";
                     link.as = "image";
@@ -121,7 +121,72 @@
          one they get now. Adding it means generating the full device set. -->
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="app-wrapper">
+        <header class="app-header">
+          <div class="header-top">
+            <div class="header-title-row">
+              <h1 class="header-title">🍽️ Dagens <span>Lunsj</span></h1>
+            </div>
+            <div class="date-row">
+              <span class="day-label" id="initial-day-label">Dagens lunsj</span>
+              <span class="date-text">Telenor Fornebu</span>
+            </div>
+          </div>
+        </header>
+        <main class="cards-container" role="status" aria-busy="true">
+          <div class="cards-animated-wrapper">
+            <div class="food-card-3d-wrapper">
+              <article class="food-card skeleton-card">
+                <div class="card-image-wrapper"><div class="card-image-circle"><div class="image-shimmer"></div></div></div>
+                <div class="card-content">
+                  <div class="card-header"><div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div><h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3></div>
+                  <div class="dish-meta-row"><div class="allergens-row"><span class="skeleton-line skeleton-line-chip"></span><span class="skeleton-line skeleton-line-chip"></span></div></div>
+                </div>
+                <div class="card-bottom">
+                  <div class="side-dishes-header"><span class="side-dishes-title"><span class="skeleton-line skeleton-line-label"></span></span></div>
+                  <div class="side-dish-list"><div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div><div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div></div>
+                </div>
+              </article>
+            </div>
+            <div class="food-card-3d-wrapper">
+              <article class="food-card skeleton-card">
+                <div class="card-image-wrapper"><div class="card-image-circle"><div class="image-shimmer"></div></div></div>
+                <div class="card-content">
+                  <div class="card-header"><div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div><h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3></div>
+                  <div class="dish-meta-row"><div class="allergens-row"><span class="skeleton-line skeleton-line-chip"></span><span class="skeleton-line skeleton-line-chip"></span></div></div>
+                </div>
+                <div class="card-bottom">
+                  <div class="side-dishes-header"><span class="side-dishes-title"><span class="skeleton-line skeleton-line-label"></span></span></div>
+                  <div class="side-dish-list"><div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div><div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div></div>
+                </div>
+              </article>
+            </div>
+            <div class="food-card-3d-wrapper">
+              <article class="food-card skeleton-card">
+                <div class="card-image-wrapper"><div class="card-image-circle"><div class="image-shimmer"></div></div></div>
+                <div class="card-content">
+                  <div class="card-header"><div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div><h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3></div>
+                  <div class="dish-meta-row"><div class="allergens-row"><span class="skeleton-line skeleton-line-chip"></span><span class="skeleton-line skeleton-line-chip"></span></div></div>
+                </div>
+                <div class="card-bottom">
+                  <div class="side-dishes-header"><span class="side-dishes-title"><span class="skeleton-line skeleton-line-label"></span></span></div>
+                  <div class="side-dish-list"><div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div><div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div></div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script>
+      try {
+        var dayNames = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
+        var d = new Date().getDay();
+        var el = document.getElementById("initial-day-label");
+        if (el) el.textContent = dayNames[d];
+      } catch (e) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

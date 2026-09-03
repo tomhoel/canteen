@@ -148,7 +148,10 @@ export default defineConfig(({ mode }) => {
               if (/[\\/]node_modules[\\/]@tanstack[\\/](react-router|react-query|react-store)[\\/]/.test(id)) {
                 return "vendor-tanstack";
               }
-              if (/[\\/]node_modules[\\/](motion|lucide-react|sonner)[\\/]/.test(id)) {
+              if (/[\\/]node_modules[\\/]motion[\\/]/.test(id)) {
+                return "vendor-motion";
+              }
+              if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) {
                 return "vendor-ui";
               }
             }

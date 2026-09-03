@@ -4,8 +4,11 @@ import {
   createRootRoute,
   HeadContent,
 } from "@tanstack/react-router";
-import { Toaster } from "sonner";
 import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
+
+const Toaster = React.lazy(() =>
+  import("sonner").then((m) => ({ default: m.Toaster }))
+);
 
 const TanStackRouterDevtools =
   process.env.NODE_ENV === "production"
@@ -61,17 +64,19 @@ function RootComponent() {
         color4="#e8d8c4"
       />
       <Outlet />
-      <Toaster
-        position="top-center"
-        richColors
-        toastOptions={{
-          style: {
-            fontFamily: "Outfit, sans-serif",
-            borderRadius: "16px",
-            boxShadow: "0 12px 32px rgba(60, 30, 0, 0.12)",
-          },
-        }}
-      />
+      <Suspense fallback={null}>
+        <Toaster
+          position="top-center"
+          richColors
+          toastOptions={{
+            style: {
+              fontFamily: "Outfit, sans-serif",
+              borderRadius: "16px",
+              boxShadow: "0 12px 32px rgba(60, 30, 0, 0.12)",
+            },
+          }}
+        />
+      </Suspense>
       <Suspense fallback={null}>
         <TanStackRouterDevtools position="bottom-right" />
         <ReactQueryDevtools buttonPosition="bottom-left" />
