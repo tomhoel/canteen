@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "motion/react";
-import confetti from "canvas-confetti";
-import { toast } from "sonner";
+import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { Share2, ChefHat, Check, ChevronRight, X } from "lucide-react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
@@ -406,7 +404,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     CANTEEN_ORDER.forEach(name => {
       const plateImage = plateImages[`${dk}|${name}`];
       if (!plateImage) return;
-      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: 440, format: "webp" });
+      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: 340, format: "webp", quality: 75 });
 
       if (preloadedRef.current.has(src)) return;
       preloadedRef.current.add(src);
@@ -495,9 +493,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         // backdrop instead of the studio dark-grey from the bg version.
         const plateImage = plateImages[`${dk}|${canteenName}`];
         const imagePath = isClosed
-          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 440, format: "webp" })
+          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 340, format: "webp", quality: 75 })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 440, format: "webp" })
+            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 340, format: "webp", quality: 75 })
             : "";
         const highResImagePath = isClosed
           ? getClosedPlateUrl(`${canteenName}-${dk}`)
@@ -598,7 +596,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
             );
             el?.scrollIntoView({ behavior: "smooth", block: "center" });
 
-            confetti({
+            fireConfetti({
               particleCount: 75,
               spread: 70,
               origin: { y: 0.65 },
@@ -606,7 +604,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               disableForReducedMotion: true,
             });
 
-            toast.success(
+            showToast(
+              "success",
               lang === "no"
                 ? `🎲 YOLO valgte ${winnerName} for deg i dag!`
                 : `🎲 YOLO chose ${winnerName} for you today!`,
@@ -907,30 +906,21 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       )}
 
       {/* Action Sheet */}
-      <AnimatePresence>
-        {actionSheet.isOpen && (() => {
-          const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); voting.setVoteSuccess(false); voting.setShareState("idle"); };
-          const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
-          const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
-          return (
-          <motion.div
-            key="action-sheet-overlay"
-            className="action-sheet-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={closeSheet}
+      {actionSheet.isOpen && (() => {
+        const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); voting.setVoteSuccess(false); voting.setShareState("idle"); };
+        const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
+        const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
+        return (
+        <div
+          key="action-sheet-overlay"
+          className="action-sheet-overlay"
+          onClick={closeSheet}
+        >
+          <div
+            key="action-sheet-sheet"
+            className="action-sheet"
+            onClick={e => e.stopPropagation()}
           >
-            <motion.div
-              key="action-sheet-sheet"
-              className="action-sheet"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 340 }}
-              onClick={e => e.stopPropagation()}
-            >
               <div className="action-sheet-handle" />
               <button className="action-sheet-close" onClick={closeSheet} aria-label="Lukk">
                 <X size={16} strokeWidth={2.5} />
@@ -1027,11 +1017,10 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 {canVote && <ShareButton />}
               </div>
               )}
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
           );
         })()}
-      </AnimatePresence>
 
       {/* Lightbox with canteen swipe */}
       {lightboxIndex >= 0 && (
