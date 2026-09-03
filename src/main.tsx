@@ -25,8 +25,9 @@ const router = createRouter({
   // there is nothing to hide and no reason to make the user stare at an empty
   // screen first. 200ms is long enough that a warm load goes straight to the
   // menu without a flicker; a minimum of 0 lets the data replace the shell the
-  // instant it lands, since the two occupy the same layout either way.
-  defaultPendingMs: 200,
+  // Render the skeleton shell immediately with 0ms delay if data is in flight;
+  // with defaultPendingMinMs: 0, the real content replaces it the instant it resolves.
+  defaultPendingMs: 0,
   defaultPendingMinMs: 0,
   context: {
     queryClient,

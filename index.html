@@ -55,8 +55,51 @@
          waiting for the CSSOM (and therefore this very <style>) to be built
          first the way a plain @font-face reference would. -->
     <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- Preconnect to Supabase Storage for both credentials and image requests -->
+    <link rel="preconnect" href="https://sloutnqpqfesyoycklgd.supabase.co" />
     <link rel="preconnect" href="https://sloutnqpqfesyoycklgd.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://sloutnqpqfesyoycklgd.supabase.co" />
+
+    <!-- Preload the critical menu API endpoint on first visit so fetch overlaps with JS bundle loading -->
+    <link rel="preload" href="/api/menu" as="fetch" crossorigin="anonymous" />
+    <script>
+      (function() {
+        try {
+          window.__MENU_FETCH_PROMISE__ = fetch('/api/menu')
+            .then(function(res) {
+              return res.ok ? res.json() : null;
+            })
+            .then(function(data) {
+              if (!data || !data.menuData) return data;
+              window.__INITIAL_MENU_DATA__ = data;
+              // Discover and preload today's primary LCP plate image immediately
+              if (data.plateImages) {
+                var dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+                var d = new Date().getDay();
+                var dayKey = (d === 0 || d === 6) ? "monday" : dayNames[d];
+                var canteens = ["Eat the street", "Fresh4you", "Flow"];
+                for (var i = 0; i < canteens.length; i++) {
+                  var plate = data.plateImages[dayKey + "|" + canteens[i]];
+                  if (plate) {
+                    var enc = plate.split("/").map(encodeURIComponent).join("/");
+                    var url = "https://sloutnqpqfesyoycklgd.supabase.co/storage/v1/render/image/public/images_nobg/" +
+                      enc + "?width=440&format=webp&resize=contain";
+                    var link = document.createElement("link");
+                    link.rel = "preload";
+                    link.as = "image";
+                    link.href = url;
+                    if (i === 0) link.fetchPriority = "high";
+                    document.head.appendChild(link);
+                    if (i >= 1) break;
+                  }
+                }
+              }
+              return data;
+            })
+            .catch(function() { return null; });
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- public/manifest.json and the icons beside it already existed but were
          never linked, so the app could not be installed from any browser. -->

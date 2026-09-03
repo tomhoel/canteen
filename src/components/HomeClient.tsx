@@ -426,14 +426,25 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       });
     };
 
-    // Load selected day immediately
-    preloadDay(selectedDay);
+    // Do not preload adjacent days if Save-Data is enabled to conserve bandwidth
+    const isSaveData = Boolean(
+      (typeof navigator !== "undefined" && (navigator as any)?.connection?.saveData)
+    );
+    if (isSaveData) return;
 
-    // Preload adjacent days shortly after mount
+    // Defer adjacent days preloading so initial cards get 100% network priority
     const adjacentDays = daysToPreload.slice(1);
+    if (adjacentDays.length === 0) return;
+
     const timer = setTimeout(() => {
-      adjacentDays.forEach(preloadDay);
-    }, 250);
+      const schedule = typeof window !== "undefined" && (window as any).requestIdleCallback
+        ? (cb: () => void) => (window as any).requestIdleCallback(cb, { timeout: 3000 })
+        : (cb: () => void) => setTimeout(cb, 500);
+
+      schedule(() => {
+        adjacentDays.forEach(preloadDay);
+      });
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [menuData, selectedDay, plateImages]);

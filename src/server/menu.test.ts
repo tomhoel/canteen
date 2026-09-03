@@ -13,9 +13,12 @@
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import type { WeeklyMenuRecord, CanteenData, MenuItem } from "../lib/types.js";
-import { getWeekId, getWeekIdOffset } from "../lib/dateUtils.js";
-import * as realDateUtils from "../lib/dateUtils.js";
-import * as realDishCache from "./services/dish-cache.service.js";
+// @ts-expect-error query string isolates real module from mock in Node 20
+import { getWeekId, getWeekIdOffset } from "../lib/dateUtils.js?real";
+// @ts-expect-error query string isolates real module from mock in Node 20
+import * as realDateUtils from "../lib/dateUtils.js?real";
+// @ts-expect-error query string isolates real module from mock in Node 20
+import * as realDishCache from "./services/dish-cache.service.js?real";
 
 interface World {
   record: WeeklyMenuRecord | null;

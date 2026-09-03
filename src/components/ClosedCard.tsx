@@ -32,11 +32,17 @@ export default function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
               <>
                 <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
                 <img
+                  ref={(img) => {
+                    if (img && img.complete && img.naturalWidth > 0 && !imgLoaded) {
+                      setImgLoaded(true);
+                    }
+                  }}
                   src={data.imagePath}
                   alt={lang === "no" ? "Stengt" : "Closed"}
                   className={`food-image${imgLoaded ? " loaded" : ""}`}
                   loading="eager"
                   decoding="async"
+                  fetchPriority={cardIdx === 0 ? "high" : undefined}
                   onLoad={() => setImgLoaded(true)}
                   onError={() => setImgError(true)}
                 />

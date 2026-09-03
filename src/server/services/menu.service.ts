@@ -561,6 +561,7 @@ export async function runWeeklyUpdateService(
     if (redis) {
       try {
         await redis.set(`menu:${weekId}`, record, { ex: MENU_CACHE_TTL_SECONDS });
+        await redis.del(`response:menu:${weekId}`, "response:menu:current");
       } catch (err) {
         console.error("Redis menu write error:", err);
         console.warn(
