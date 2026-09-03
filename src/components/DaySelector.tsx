@@ -9,6 +9,8 @@ interface DaySelectorProps {
   lang: "no" | "en";
   mode: DisplayMode;
   onDaySelect: (i: number) => void;
+  /** Preload pictures for a day when hovered or touched */
+  onDayHover?: (i: number) => void;
   /** Tapping the Today button always fires this in addition to onDaySelect.
       Used to trigger the YOLO randomiser from the day bar itself. */
   onTodayPress?: () => void;
@@ -30,6 +32,7 @@ export default function DaySelector({
   lang,
   mode,
   onDaySelect,
+  onDayHover,
   onTodayPress,
   cardsRef,
   pendingCanteens = [],
@@ -155,6 +158,8 @@ export default function DaySelector({
             aria-selected={selectedDay === i}
             aria-current={i === todayIndex ? "date" : undefined}
             disabled={disabled}
+            onMouseEnter={() => onDayHover?.(i)}
+            onTouchStart={() => onDayHover?.(i)}
             onClick={() => {
               // YOLO fires only on a second tap of Today (i.e. user is
               // already on today and tapped it again). First tap from
