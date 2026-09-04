@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 
@@ -14,6 +15,14 @@ interface CanteenFeedbackFormProps {
 
 export function CanteenFeedbackForm({ onClose }: CanteenFeedbackFormProps) {
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const form = useForm({
     defaultValues: {
@@ -33,7 +42,13 @@ export function CanteenFeedbackForm({ onClose }: CanteenFeedbackFormProps) {
   });
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onClose}
+      role="presentation"
       style={{
         position: "fixed",
         inset: 0,
@@ -46,7 +61,15 @@ export function CanteenFeedbackForm({ onClose }: CanteenFeedbackFormProps) {
         padding: "1rem",
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 28, stiffness: 340 }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-form-title"
         style={{
           background: "#ffffff",
           borderRadius: "16px",
@@ -57,7 +80,7 @@ export function CanteenFeedbackForm({ onClose }: CanteenFeedbackFormProps) {
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h3 style={{ fontFamily: "Outfit, sans-serif", fontSize: "1.2rem", fontWeight: 700 }}>
+          <h3 id="feedback-form-title" style={{ fontFamily: "Outfit, sans-serif", fontSize: "1.2rem", fontWeight: 700 }}>
             💡 Ønsk en rett / Tilbakemelding
           </h3>
           <button
@@ -175,7 +198,7 @@ export function CanteenFeedbackForm({ onClose }: CanteenFeedbackFormProps) {
             </button>
           </form>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "motion/react";
 import { CANTEEN_ORDER } from "@/lib/constants";
-import { getAttendanceHistory, type AttendanceHistoryEntry as HistoryEntry } from "@/lib/api-client";
+import { getAttendanceHistory } from "@/lib/api-client";
 import "@/styles/leaderboard-modal.css";
 
 interface CanteenStats {
@@ -16,26 +18,23 @@ interface LeaderboardModalProps {
 }
 
 export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardModalProps) {
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
   useEffect(() => {
     if (!isOpen) return;
-    const controller = new AbortController();
-    setIsLoading(true);
-    setEntries([]);
-    getAttendanceHistory(controller.signal)
-      .then(data => { setEntries(data.entries || []); setIsLoading(false); })
-      .catch(err => {
-        if (err.name === 'AbortError') return;
-        // The empty state below says "no votes in the last 14 days", which is a
-        // lie when the request failed. Say so in the console at least — this
-        // modal spent its whole life rendering that line against a 404.
-        console.error('Leaderboard history could not be loaded:', err);
-        setIsLoading(false);
-      });
-    return () => controller.abort();
-  }, [isOpen]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["attendance-history"],
+    queryFn: ({ signal }) => getAttendanceHistory(signal),
+    enabled: isOpen,
+    staleTime: 60_000,
+  });
+
+  const entries = data?.entries || [];
 
   if (!isOpen) return null;
 
@@ -58,8 +57,26 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
   });
 
   return (
-    <div className="leaderboard-overlay" role="presentation" onClick={onClose}>
-      <div className="leaderboard-modal" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title-id" onClick={e => e.stopPropagation()}>
+    <motion.div
+      className="leaderboard-overlay"
+      role="presentation"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="leaderboard-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leaderboard-title-id"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 28, stiffness: 340 }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="info-close" onClick={onClose} aria-label="Close">&times;</button>
 
         <h2 id="leaderboard-title-id" className="leaderboard-title">
@@ -137,7 +154,7 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
             </p>
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -57,6 +57,20 @@ body {
   overscroll-behavior: none;
 }
 
+/* Disable 300ms tap delay and accidental text selection on interactive elements */
+.day-btn,
+.info-btn,
+.vote-btn,
+.action-sheet-btn,
+.action-sheet-close,
+.recipe-servings-btn,
+.food-card {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* ─── Stripe-style animated gradient ─── */
 .animated-gradient-root {
   position: fixed;
@@ -367,12 +381,14 @@ body {
   cursor: pointer;
 }
 
-.food-card:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 4px 8px rgba(60, 30, 0, 0.04),
-    0 12px 24px rgba(60, 30, 0, 0.07),
-    0 24px 48px rgba(60, 30, 0, 0.08);
+@media (hover: hover) and (pointer: fine) {
+  .food-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 4px 8px rgba(60, 30, 0, 0.04),
+      0 12px 24px rgba(60, 30, 0, 0.07),
+      0 24px 48px rgba(60, 30, 0, 0.08);
+  }
 }
 
 .food-card.clickable:active {
@@ -404,11 +420,13 @@ body {
     0 16px 40px rgba(60, 30, 0, 0.08);
 }
 
-.food-card.voteable:hover {
-  box-shadow:
-    0 4px 10px rgba(200, 116, 26, 0.06),
-    0 14px 28px rgba(200, 116, 26, 0.08),
-    0 28px 56px rgba(60, 30, 0, 0.10);
+@media (hover: hover) and (pointer: fine) {
+  .food-card.voteable:hover {
+    box-shadow:
+      0 4px 10px rgba(200, 116, 26, 0.06),
+      0 14px 28px rgba(200, 116, 26, 0.08),
+      0 28px 56px rgba(60, 30, 0, 0.10);
+  }
 }
 
 .food-card.voteable .food-image {
@@ -878,14 +896,14 @@ body {
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 245, 235, 0.3) 40%,
-    rgba(255, 230, 205, 0.12) 65%,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 245, 235, 0.2) 40%,
+    rgba(255, 230, 205, 0.08) 65%,
     transparent 80%
   );
   filter: blur(8px);
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
 /* Slowly burning warm flame / ember glow (soft & seamless) */
@@ -933,16 +951,23 @@ body {
   70%       { transform: translateY(-3px) rotate(-0.3deg); }
 }
 
+.plate-float-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: gentleFloat 5s ease-in-out infinite;
+}
+
 .food-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  animation: gentleFloat 5s ease-in-out infinite;
   filter: drop-shadow(0 8px 20px rgba(80, 40, 0, 0.15))
     drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10));
-  transform: scale(1);
-  opacity: 0;
-  transition: opacity 0.25s ease-out;
   position: relative;
   z-index: 2;
   will-change: transform, opacity;
@@ -992,35 +1017,37 @@ body {
   animation: none;
 }
 
-.card-image-wrapper:hover .food-image {
-  animation-play-state: paused;
-}
+@media (hover: hover) and (pointer: fine) {
+  .card-image-wrapper:hover .food-image {
+    animation-play-state: paused;
+  }
 
-/* ─── Image floating hologram effect ─── */
-/* Image counter-parallaxes against the card tilt — appears to float on a separate Z-plane */
-.food-card-3d-wrapper .card-image-circle {
-  transition: transform 0.12s ease-out;
-  will-change: transform;
-}
+  /* ─── Image floating hologram effect ─── */
+  /* Image counter-parallaxes against the card tilt — appears to float on a separate Z-plane */
+  .food-card-3d-wrapper .card-image-circle {
+    transition: transform 0.12s ease-out;
+    will-change: transform;
+  }
 
-.food-card-3d-wrapper.card-returning .card-image-circle {
-  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-}
+  .food-card-3d-wrapper.card-returning .card-image-circle {
+    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  }
 
-.food-card-3d-wrapper:hover .card-image-circle {
-  transform:
-    translateX(calc(var(--card-mx, 0) * -22px))
-    translateY(calc(var(--card-my, 0) * -18px))
-    scale(1.09);
-}
+  .food-card-3d-wrapper:hover .card-image-circle {
+    transform:
+      translateX(calc(var(--card-mx, 0) * -22px))
+      translateY(calc(var(--card-my, 0) * -18px))
+      scale(1.09);
+  }
 
-.food-card-3d-wrapper:hover .food-image.loaded {
-  filter:
-    drop-shadow(0 28px 56px rgba(80, 40, 0, 0.32))
-    drop-shadow(0 8px 20px rgba(80, 40, 0, 0.20))
-    saturate(1.12)
-    brightness(1.04);
-  transition: filter 0.25s ease;
+  .food-card-3d-wrapper:hover .food-image.loaded {
+    filter:
+      drop-shadow(0 28px 56px rgba(80, 40, 0, 0.32))
+      drop-shadow(0 8px 20px rgba(80, 40, 0, 0.20))
+      saturate(1.12)
+      brightness(1.04);
+    transition: filter 0.25s ease;
+  }
 }
 
 /* #8 — Image placeholder / error fallback */
@@ -1704,6 +1731,10 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 0;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   will-change: transform, width;
 }
 
@@ -1923,9 +1954,10 @@ body {
   }
 
   /* Stop food image float animation — 3 simultaneous transforms hurt scroll perf */
+  .plate-float-container,
   .food-image,
   .image-placeholder {
-    animation: none;
+    animation: none !important;
   }
 
   /* Allergen section - hidden on mobile */
@@ -1933,10 +1965,17 @@ body {
     display: none;
   }
 
-  /* #5 — Mobile card press feedback */
+  /* #5 — Mobile card press feedback (translate/opacity only, no scale to avoid Safari rasterization) */
   .food-card:active {
-    transform: scale(0.97);
-    transition: transform 0.1s ease;
+    transform: translateY(1px);
+    opacity: 0.96;
+    transition: opacity 0.08s ease, transform 0.08s ease;
+  }
+
+  /* Stop allergen chip & tag scale animations on mobile to prevent CPU rasterization */
+  .allergen-chip,
+  .ahead-tag {
+    animation: none !important;
   }
 
   /* Description — compact for mobile */
@@ -1961,16 +2000,28 @@ body {
     gap: clamp(6px, 1dvh, 14px);
     padding: calc(64px + env(safe-area-inset-top, 0px)) 10px calc(92px + env(safe-area-inset-bottom, 0px));
     flex: 1;
-    overflow-y: hidden;
+    overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
 
   /* Animated wrapper — fills parent, distributes space to cards */
   .cards-animated-wrapper {
     min-height: 0;
     flex: 1;
+    display: flex;
+    flex-direction: column;
     align-items: stretch;
+    justify-content: space-between;
+    gap: clamp(6px, 1dvh, 14px);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform, opacity;
   }
 
   /* Card layout - horizontal, grows to fill viewport */
@@ -1989,10 +2040,17 @@ body {
     overflow: visible;
     background: var(--card-white);
     border-color: rgba(236, 228, 216, 0.5);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 
   .food-card-3d-wrapper {
     width: 100%;
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
   }
 
   .food-card:hover {
@@ -2023,7 +2081,7 @@ body {
     position: relative;
     left: auto;
     top: auto;
-    transform: none;
+    transform: none !important;
     width: clamp(125px, 19dvh, 210px);
     height: clamp(125px, 19dvh, 210px);
     margin: clamp(-24px, -3dvh, -14px) 0 clamp(-16px, -2dvh, -8px) -22px;
@@ -2032,16 +2090,45 @@ body {
   }
 
   .card-image-wrapper:hover {
-    transform: none;
+    transform: none !important;
   }
 
   .card-image-circle {
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     overflow: visible;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* Disable heavy infinite blur flame animation on mobile — saves GPU & battery */
+  .card-image-circle::after {
+    display: none !important;
+  }
+
+  /* Prevent sticky hover from keeping food image enlarged / glowing */
+  .food-card-3d-wrapper:hover .card-image-circle {
+    transform: none !important;
+  }
+
+  .food-card-3d-wrapper:hover .food-image.loaded,
+  .food-image.loaded {
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
+  }
+
+  .stale-image-badge {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(40, 25, 15, 0.88);
   }
 
   .food-image {
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+    animation: none;
   }
 
   .click-hint {
@@ -2109,15 +2196,11 @@ body {
     letter-spacing: 0.2px;
   }
 
-  /* Disable float animation on mobile (touch interactions conflict) */
-  .food-image {
-    animation: none;
-  }
-
   /* Disable image counter-parallax on touch devices */
   .food-card-3d-wrapper .card-image-circle {
     transition: none;
     will-change: auto;
+    transform: none !important;
   }
 
   /* Stale banner — absolutely positioned overlay at card bottom, no height impact */
@@ -2130,12 +2213,10 @@ body {
     margin: 0;
     padding: 10px 14px;
     gap: 8px;
-    border-radius: 0 0 14px 14px;
+    border-radius: 0 0 18px 18px;
     border: none;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
     background: linear-gradient(135deg, rgba(245, 242, 238, 0.98) 0%, rgba(240, 237, 232, 0.98) 100%);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
     z-index: 5;
     box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.08);
   }
@@ -2371,45 +2452,14 @@ body {
   display: none;
 }
 
-/* ─── Swipe & Page Animations (Independent Staggered Card Wave) ─── */
+/* ─── Cards Animated Wrapper (Powered by Motion) ─── */
 .cards-animated-wrapper {
   display: flex;
   flex-direction: inherit;
   justify-content: inherit;
   gap: inherit;
   width: 100%;
-}
-
-.swipe-left .food-card,
-.swipe-left .all-closed-card {
-  animation: cardSlideInLeft cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.swipe-right .food-card,
-.swipe-right .all-closed-card {
-  animation: cardSlideInRight cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes cardSlideInLeft {
-  0% {
-    opacity: 0.35;
-    transform: translateX(24px) scale(0.985);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes cardSlideInRight {
-  0% {
-    opacity: 0.35;
-    transform: translateX(-24px) scale(0.985);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+  will-change: transform, opacity;
 }
 
 /* ─── Header Actions ─── */
@@ -2458,7 +2508,6 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  animation: fadeIn 0.2s ease;
 }
 
 .info-modal {
@@ -2468,7 +2517,6 @@ body {
   max-height: 85vh;
   overflow-y: auto;
   position: relative;
-  animation: scaleIn 0.25s cubic-bezier(0.34, 1.1, 0.64, 1);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -2741,7 +2789,13 @@ body {
     font-size: 10px;
     padding: 3px 9px 3px 7px;
     gap: 2px;
-    animation-name: votePipInMobile;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(255, 255, 255, 0.94);
+    animation: none !important;
+  }
+  .vote-pip.leader {
+    background: rgba(255, 243, 220, 0.96) !important;
   }
   .vote-pip-icon {
     width: 11px;
@@ -2765,7 +2819,6 @@ body {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  animation: fadeIn 0.2s ease;
 }
 
 .vote-modal {
@@ -2775,7 +2828,6 @@ body {
   max-width: 320px;
   width: 100%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: center;
 }
 
@@ -2917,9 +2969,14 @@ body {
     top: clamp(14px, 3dvh, 24px);
     bottom: auto;
     right: 4px;
+    left: auto;
     font-size: 10px;
     padding: 3px 7px 3px 5px;
     gap: 2px;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(255, 255, 255, 0.94);
+    animation: none !important;
   }
   /* Show emoji flag on mobile, hide image flag */
   .emoji-flag {
@@ -3039,29 +3096,16 @@ body {
   }
 }
 
-@keyframes sheetOverlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes sheetSlideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
 /* ─── Action Sheet ─── */
 .action-sheet-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 21, 17, 0.45);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: rgba(26, 21, 17, 0.55);
   z-index: 1100;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 0;
-  animation: sheetOverlayFadeIn 0.2s ease-out;
 }
 
 .action-sheet {
@@ -3078,7 +3122,12 @@ body {
     0 -16px 60px rgba(60, 30, 0, 0.12);
   position: relative;
   overflow: hidden;
-  animation: sheetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: pan-y;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .action-sheet-handle {
@@ -3092,6 +3141,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
+  touch-action: none;
 }
 
 .action-sheet-close {
@@ -3103,9 +3153,7 @@ body {
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: rgba(0, 0, 0, 0.25);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.38);
   color: white;
   font-size: 1.2rem;
   line-height: 1;
@@ -3437,11 +3485,6 @@ body {
   50%      { transform: scale(0.92); }
 }
 
-@keyframes sheetSlideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
 /* Desktop: center the sheet as a floating card */
 @media (min-width: 769px) {
   .action-sheet-overlay {
@@ -3450,7 +3493,6 @@ body {
   .action-sheet {
     border-radius: 24px;
     max-width: 380px;
-    animation-name: scaleIn;
     box-shadow:
       0 8px 30px rgba(60, 30, 0, 0.10),
       0 30px 80px rgba(60, 30, 0, 0.15);
@@ -3483,7 +3525,6 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  animation: fadeIn 0.2s ease;
 }
 
 /* ─── Recipe Modal Container ─── */
@@ -3498,7 +3539,6 @@ body {
   box-shadow:
     0 32px 64px rgba(26, 21, 17, 0.18),
     0 4px 16px rgba(26, 21, 17, 0.06);
-  animation: scaleIn 0.3s cubic-bezier(0.34, 1.1, 0.64, 1);
 }
 
 /* Hide scrollbar on recipe modal */
