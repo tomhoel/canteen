@@ -366,14 +366,59 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // High-performance touch swipe detection with velocity thresholding from mutu-web
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
+  /**
+   * Which way this gesture turned out to be going, decided once and then kept.
+   *
+   * Without it a swipe is only ever measured at its two ends, so for the whole
+   * gesture in between the browser does whatever it likes — and what it likes
+   * is to scroll `.cards-container`, because a sideways flick is never
+   * perfectly level. That vertical drift is what drags the phone browser's
+   * bottom bar back over the day strip mid-swipe.
+   */
+  const swipeAxis = useRef<"undecided" | "x" | "y">("undecided");
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
+      swipeAxis.current = "undecided";
       touchStartRef.current = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
         time: performance.now(),
       };
     }
+  }, []);
+
+  /**
+   * Attached by hand rather than as onTouchMove, because React registers
+   * touchmove as a passive listener and preventDefault is ignored on those.
+   * Cancelling the horizontal case is the whole point: it stops the day swipe
+   * from scrolling the page, so the browser chrome stays where it is and the
+   * gesture does one thing instead of two.
+   */
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onTouchMove = (e: TouchEvent) => {
+      const start = touchStartRef.current;
+      if (!start || e.touches.length !== 1) return;
+
+      const dx = e.touches[0].clientX - start.x;
+      const dy = e.touches[0].clientY - start.y;
+
+      if (swipeAxis.current === "undecided") {
+        // Wait for enough movement to tell the two apart. Deciding on the
+        // first pixel makes a deliberate scroll that starts with a wobble get
+        // locked to the wrong axis.
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        swipeAxis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+
+      if (swipeAxis.current === "x" && e.cancelable) e.preventDefault();
+    };
+
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
   }, []);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
@@ -385,14 +430,18 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     const vx = deltaX / dt;
     const width = typeof window !== "undefined" ? window.innerWidth : 360;
     touchStartRef.current = null;
+    const axis = swipeAxis.current;
+    swipeAxis.current = "undecided";
 
     // Do not switch day if an overlay or modal is active
     if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || lightboxIndex >= 0) {
       return;
     }
 
-    // Must be horizontally dominant to avoid triggering on vertical scroll
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 28) {
+    // Must be horizontally dominant to avoid triggering on vertical scroll.
+    // The axis lock has usually already decided this; the check stays for the
+    // gesture too short to have tripped it.
+    if (axis !== "y" && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 28) {
       if (shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.08, velocity: 0.25 })) {
         if (deltaX < 0 && selectedDay < 4) {
           handleDaySelect(selectedDay + 1);
@@ -727,7 +776,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                     ...(isDesktop ? { scale: 1 } : {}),
                     transition: {
                       x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
-                      opacity: { duration: isDesktop ? 0.28 : 0.2, ease: "linear" },
+                      opacity: { duration: isDesktop ? 0.28 : 0.24 },
                       scale: { duration: 0.28 },
                     },
                   },
@@ -737,7 +786,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                     ...(isDesktop ? { scale: 0.98 } : {}),
                     transition: {
                       x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
-                      opacity: { duration: isDesktop ? 0.2 : 0.16, ease: "linear" },
+                      opacity: { duration: isDesktop ? 0.2 : 0.18 },
                       scale: { duration: 0.2 },
                     },
                   }),
