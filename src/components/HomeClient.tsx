@@ -32,7 +32,6 @@ import ClosedCard from "@/components/ClosedCard";
 import ActionSheet from "@/components/ActionSheet";
 import { shouldTurnPage } from "@/lib/sheet-drag";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
-import { useAppStore, setFeedbackModalOpen } from "@/store/useAppStore";
 
 // These only render once the user opens a modal or overlay — a recipe's
 // price comparison, the Meny search, the feedback form, the vote/leaderboard/
@@ -44,13 +43,9 @@ import { useAppStore, setFeedbackModalOpen } from "@/store/useAppStore";
 // their JS at all.
 const DealsView = lazy(() => import("@/components/DealsView"));
 const MenyView = lazy(() => import("@/components/MenyView"));
-const VoteModal = lazy(() => import("@/components/VoteModal"));
 const Lightbox = lazy(() => import("@/components/Lightbox"));
 const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
 const WeekOverview = lazy(() => import("@/components/WeekOverview"));
-const CanteenFeedbackForm = lazy(() =>
-  import("@/components/CanteenFeedbackForm").then((m) => ({ default: m.CanteenFeedbackForm }))
-);
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -149,7 +144,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
   const [dateTick, setDateTick] = useState(0);
-  const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: "" });
   const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
   const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
@@ -163,7 +157,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const feedbackModalOpen = useAppStore((state) => state.feedbackModalOpen);
 
   // YOLO randomiser: cycles a glow through the open canteens for ~5s then
   // settles on one. yoloHighlight is the currently-lit card during the spin;
@@ -316,20 +309,19 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           setLeaderboardOpen(false);
         } else {
           setLightboxIndex(-1);
-          setVoteModal({ isOpen: false, canteenName: "" });
           setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
           closeRecipe();
         }
       } else if (e.key === "ArrowLeft" && !isInput) {
-        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
+        if (selectedDay > 0 && lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
           handleDaySelect(selectedDay - 1);
         }
       } else if (e.key === "ArrowRight" && !isInput) {
-        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
+        if (selectedDay < 4 && lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
           handleDaySelect(selectedDay + 1);
         }
       } else if (e.key === " " && !isInput) {
-        if (lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen && !infoOpen) {
+        if (lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen && !infoOpen) {
           e.preventDefault();
           handleDaySelect(todayIndex >= 0 ? todayIndex : 0);
         }
@@ -337,7 +329,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
+  }, [selectedDay, todayIndex, lightboxIndex, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
 
   // On-demand image preloader for other days — warms a day when hovered or touched
   const preloadDay = useCallback((dayIdx: number) => {
@@ -395,7 +387,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     touchStartRef.current = null;
 
     // Do not switch day if an overlay or modal is active
-    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || feedbackModalOpen || lightboxIndex >= 0 || voteModal.isOpen) {
+    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || lightboxIndex >= 0) {
       return;
     }
 
@@ -409,7 +401,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         }
       }
     }
-  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, feedbackModalOpen, lightboxIndex, voteModal.isOpen]);
+  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, lightboxIndex]);
 
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
 
@@ -678,7 +670,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           onInfo: () => setInfoOpen(true),
           onLeaderboard: () => setLeaderboardOpen(true),
           onWeekOverview: () => setWeekOverviewOpen(true),
-          onFeedback: () => setFeedbackModalOpen(true),
         }}
       >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
@@ -927,26 +918,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
 
 
-      {/* Vote Modal */}
-      <AnimatePresence>
-        {voteModal.isOpen && (
-          <Suspense fallback={null}>
-            <VoteModal
-              isOpen={voteModal.isOpen}
-              canteenName={voteModal.canteenName}
-              hasVoted={voting.hasVoted}
-              votedCanteen={voting.votedCanteen}
-              canteenNames={openCanteens.filter(c => !c.isOutdated && !c.isAhead).map(c => c.canteenName)}
-              votes={voting.votes}
-              maxVotes={maxVotes}
-              lang={lang}
-              isVoting={voting.isVoting}
-              onVote={voting.handleVote}
-              onClose={() => setVoteModal({ isOpen: false, canteenName: "" })}
-            />
-          </Suspense>
-        )}
-      </AnimatePresence>
 
       {/*
         Action sheet, with the 120Hz native GPU compositor transform.
@@ -1232,11 +1203,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {feedbackModalOpen && (
-          <Suspense fallback={null}>
-            <CanteenFeedbackForm onClose={() => setFeedbackModalOpen(false)} />
-          </Suspense>
-        )}
       </AnimatePresence>
     </div>
   );

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DisplayMode } from "@/lib/dateUtils";
-import { Info, Trophy, CalendarDays, MessageSquarePlus } from "lucide-react";
+import { Info, Trophy, CalendarDays } from "lucide-react";
 
 interface AppHeaderProps {
   mode: DisplayMode;
@@ -23,7 +23,6 @@ interface AppHeaderProps {
     onInfo: () => void;
     onLeaderboard: () => void;
     onWeekOverview: () => void;
-    onFeedback: () => void;
   };
   /** The closed-canteens pill, which only exists once the menu is known. */
   children?: ReactNode;
@@ -93,16 +92,6 @@ export default function AppHeader({
           aria-label={lang === "no" ? "Ukeoversikt" : "Week overview"}
         >
           <CalendarDays size={16} strokeWidth={2} />
-        </button>
-
-        <button
-          className="info-btn"
-          onClick={actions?.onFeedback}
-          disabled={disabled}
-          title="Ønsk en rett"
-          aria-label="Ønsk en rett"
-        >
-          <MessageSquarePlus size={16} strokeWidth={2} />
         </button>
       </div>
       {children}
