@@ -62,10 +62,10 @@ export function CanteenFeedbackForm({ onClose }: CanteenFeedbackFormProps) {
       }}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 12 }}
-        transition={{ type: "spring", damping: 25, stiffness: 320 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 28, stiffness: 340 }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

@@ -54,10 +54,10 @@ export default function VoteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="vote-modal-title-id"
-        initial={{ opacity: 0, scale: 0.95, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 12 }}
-        transition={{ type: "spring", damping: 25, stiffness: 320 }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 16 }}
+        transition={{ type: "spring", damping: 28, stiffness: 340 }}
         onClick={(e) => e.stopPropagation()}
       >
         <h3 id="vote-modal-title-id" className="vote-modal-title">{canteenName}</h3>

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useState, memo } from "react";
 import { Users, Sparkles, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
@@ -67,7 +66,7 @@ interface FoodCardProps {
   yoloWinner?: boolean;
 }
 
-export default function FoodCard({
+const FoodCard = memo(function FoodCard({
   data,
   cardIdx,
   lang,
@@ -103,10 +102,6 @@ export default function FoodCard({
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
       className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
-      style={{
-        animationDelay: `${cardIdx * 55}ms`,
-        animationDuration: `${0.28 + cardIdx * 0.04}s`,
-      }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
       data-yolo-card-key={canteenName}
     >
@@ -127,29 +122,16 @@ export default function FoodCard({
             </div>
           ) : (
             <div className="plate-float-container">
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.img
-                  key={imagePath}
-                  src={imagePath}
-                  alt={mainDish?.dish || "Matrett"}
-                  className="food-image loaded"
-                  initial={{ opacity: 0, scale: 1.1, x: 28 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.88, x: -24 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 240,
-                    damping: 24,
-                    mass: 0.7,
-                    opacity: { duration: 0.28 },
-                  }}
-                  loading="eager"
-                  decoding="async"
-                  fetchPriority={cardIdx === 0 ? "high" : undefined}
-                  onLoad={() => markImageCached(imagePath)}
-                  onError={() => setImgError(true)}
-                />
-              </AnimatePresence>
+              <img
+                src={imagePath}
+                alt={mainDish?.dish || "Matrett"}
+                className="food-image loaded"
+                loading="eager"
+                decoding="async"
+                fetchPriority={cardIdx === 0 ? "high" : undefined}
+                onLoad={() => markImageCached(imagePath)}
+                onError={() => setImgError(true)}
+              />
             </div>
           )}
         </div>
@@ -175,18 +157,7 @@ export default function FoodCard({
           </div>
         )}
       </div>
-      <motion.div
-        key={selectedDay}
-        initial={{ opacity: 0.5, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          type: "spring",
-          stiffness: 320,
-          damping: 30,
-          mass: 0.6,
-        }}
-        className="card-content"
-      >
+      <div className="card-content">
         <div className="card-header">
           <div className="canteen-name">
             {canteenName}
@@ -226,7 +197,7 @@ export default function FoodCard({
         {description && (
           <p className="dish-description">{description}</p>
         )}
-      </motion.div>
+      </div>
 
       {isOutdated && (
         <div className="stale-banner">
@@ -266,4 +237,6 @@ export default function FoodCard({
     </article>
     </Wrapper3D>
   );
-}
+});
+
+export default FoodCard;

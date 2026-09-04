@@ -57,6 +57,20 @@ body {
   overscroll-behavior: none;
 }
 
+/* Disable 300ms tap delay and accidental text selection on interactive elements */
+.day-btn,
+.info-btn,
+.vote-btn,
+.action-sheet-btn,
+.action-sheet-close,
+.recipe-servings-btn,
+.food-card {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* ─── Stripe-style animated gradient ─── */
 .animated-gradient-root {
   position: fixed;
@@ -1717,6 +1731,10 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 0;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   will-change: transform, width;
 }
 
@@ -1936,9 +1954,10 @@ body {
   }
 
   /* Stop food image float animation — 3 simultaneous transforms hurt scroll perf */
+  .plate-float-container,
   .food-image,
   .image-placeholder {
-    animation: none;
+    animation: none !important;
   }
 
   /* Allergen section - hidden on mobile */
@@ -1946,11 +1965,17 @@ body {
     display: none;
   }
 
-  /* #5 — Mobile card press feedback */
-  /* #5 — Mobile card press feedback */
+  /* #5 — Mobile card press feedback (translate/opacity only, no scale to avoid Safari rasterization) */
   .food-card:active {
-    transform: scale(0.985);
-    transition: transform 0.08s ease;
+    transform: translateY(1px);
+    opacity: 0.96;
+    transition: opacity 0.08s ease, transform 0.08s ease;
+  }
+
+  /* Stop allergen chip & tag scale animations on mobile to prevent CPU rasterization */
+  .allergen-chip,
+  .ahead-tag {
+    animation: none !important;
   }
 
   /* Description — compact for mobile */
@@ -1979,6 +2004,8 @@ body {
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
 
   /* Animated wrapper — fills parent, distributes space to cards */
@@ -1990,6 +2017,11 @@ body {
     align-items: stretch;
     justify-content: space-between;
     gap: clamp(6px, 1dvh, 14px);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform, opacity;
   }
 
   /* Card layout - horizontal, grows to fill viewport */
@@ -2008,6 +2040,10 @@ body {
     overflow: visible;
     background: var(--card-white);
     border-color: rgba(236, 228, 216, 0.5);
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 
   .food-card-3d-wrapper {
@@ -2078,8 +2114,17 @@ body {
 
   .food-card-3d-wrapper:hover .food-image.loaded,
   .food-image.loaded {
-    transform: none !important;
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
+  }
+
+  .stale-image-badge {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(40, 25, 15, 0.88);
   }
 
   .food-image {
@@ -2172,8 +2217,6 @@ body {
     border: none;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
     background: linear-gradient(135deg, rgba(245, 242, 238, 0.98) 0%, rgba(240, 237, 232, 0.98) 100%);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
     z-index: 5;
     box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.08);
   }
@@ -2746,7 +2789,13 @@ body {
     font-size: 10px;
     padding: 3px 9px 3px 7px;
     gap: 2px;
-    animation-name: votePipInMobile;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(255, 255, 255, 0.94);
+    animation: none !important;
+  }
+  .vote-pip.leader {
+    background: rgba(255, 243, 220, 0.96) !important;
   }
   .vote-pip-icon {
     width: 11px;
@@ -2924,6 +2973,10 @@ body {
     font-size: 10px;
     padding: 3px 7px 3px 5px;
     gap: 2px;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(255, 255, 255, 0.94);
+    animation: none !important;
   }
   /* Show emoji flag on mobile, hide image flag */
   .emoji-flag {
@@ -3043,29 +3096,16 @@ body {
   }
 }
 
-@keyframes sheetOverlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes sheetSlideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
 /* ─── Action Sheet ─── */
 .action-sheet-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 21, 17, 0.45);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: rgba(26, 21, 17, 0.55);
   z-index: 1100;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 0;
-  animation: sheetOverlayFadeIn 0.2s ease-out;
 }
 
 .action-sheet {
@@ -3082,7 +3122,12 @@ body {
     0 -16px 60px rgba(60, 30, 0, 0.12);
   position: relative;
   overflow: hidden;
-  animation: sheetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: pan-y;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .action-sheet-handle {
@@ -3096,6 +3141,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
+  touch-action: none;
 }
 
 .action-sheet-close {
@@ -3107,9 +3153,7 @@ body {
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: rgba(0, 0, 0, 0.25);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.38);
   color: white;
   font-size: 1.2rem;
   line-height: 1;
@@ -3441,11 +3485,6 @@ body {
   50%      { transform: scale(0.92); }
 }
 
-@keyframes sheetSlideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
 /* Desktop: center the sheet as a floating card */
 @media (min-width: 769px) {
   .action-sheet-overlay {
@@ -3454,7 +3493,6 @@ body {
   .action-sheet {
     border-radius: 24px;
     max-width: 380px;
-    animation-name: scaleIn;
     box-shadow:
       0 8px 30px rgba(60, 30, 0, 0.10),
       0 30px 80px rgba(60, 30, 0, 0.15);

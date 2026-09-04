@@ -369,6 +369,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     const deltaY = touch.clientY - touchStartRef.current.y;
     touchStartRef.current = null;
 
+    // Do not switch day if an overlay or modal is active
+    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || feedbackModalOpen || lightboxIndex >= 0 || voteModal.isOpen) {
+      return;
+    }
+
     // Only switch day if swipe is deliberately horizontal (> 50px and horizontally dominant)
     if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
       if (deltaX < 0 && selectedDay < 4) {
@@ -377,7 +382,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         handleDaySelect(selectedDay - 1);
       }
     }
-  }, [selectedDay, handleDaySelect]);
+  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, feedbackModalOpen, lightboxIndex, voteModal.isOpen]);
 
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
 
@@ -685,34 +690,29 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+          <AnimatePresence mode="wait" custom={direction} initial={false}>
             <motion.div
               key={selectedDay}
               custom={direction}
               variants={{
                 enter: (dir: number) => ({
-                  x: dir > 0 ? 80 : dir < 0 ? -80 : 0,
+                  x: dir > 0 ? 30 : dir < 0 ? -30 : 0,
                   opacity: 0,
-                  scale: 0.98,
                 }),
                 center: {
                   x: 0,
                   opacity: 1,
-                  scale: 1,
                   transition: {
-                    x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
-                    opacity: { duration: 0.28 },
-                    scale: { duration: 0.28 },
+                    x: { duration: 0.2, ease: [0.25, 1, 0.5, 1] },
+                    opacity: { duration: 0.15, ease: "linear" },
                   },
                 },
                 exit: (dir: number) => ({
-                  x: dir < 0 ? 80 : -80,
+                  x: dir < 0 ? 25 : -25,
                   opacity: 0,
-                  scale: 0.98,
                   transition: {
-                    x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
-                    opacity: { duration: 0.2 },
-                    scale: { duration: 0.2 },
+                    x: { duration: 0.08, ease: "easeIn" },
+                    opacity: { duration: 0.08, ease: "linear" },
                   },
                 }),
               }}
@@ -797,10 +797,10 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               role="dialog"
               aria-modal="true"
               aria-labelledby="info-title-id"
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              transition={{ type: "spring", damping: 26, stiffness: 320 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 28, stiffness: 340 }}
               onClick={e => e.stopPropagation()}
             >
               <button className="info-close" onClick={() => setInfoOpen(false)} aria-label="Lukk">&times;</button>
@@ -1096,10 +1096,10 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               role="dialog"
               aria-modal="true"
               aria-labelledby="recipe-dish-title"
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              transition={{ type: "spring", damping: 26, stiffness: 320 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 28, stiffness: 340 }}
               onClick={e => e.stopPropagation()}
             >
               <button className="recipe-close" onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }} aria-label="Lukk">&#xD7;</button>

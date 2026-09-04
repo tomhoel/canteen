@@ -71,10 +71,10 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
         role="dialog"
         aria-modal="true"
         aria-labelledby="leaderboard-title-id"
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        transition={{ type: "spring", damping: 26, stiffness: 320 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 28, stiffness: 340 }}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="info-close" onClick={onClose} aria-label="Close">&times;</button>

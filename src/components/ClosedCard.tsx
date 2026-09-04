@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useState, memo } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
@@ -12,17 +11,13 @@ interface ClosedCardProps {
   lang: "no" | "en";
 }
 
-export default function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
+const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
   const [imgError, setImgError] = useState(false);
 
   return (
     <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
       <article
         className="food-card closed"
-        style={{
-          animationDelay: `${cardIdx * 55}ms`,
-          animationDuration: `${0.28 + cardIdx * 0.04}s`,
-        }}
         data-yolo-card-key={data.canteenName}
       >
         <div className="card-image-wrapper closed">
@@ -31,29 +26,16 @@ export default function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
               <div className="image-placeholder">?</div>
             ) : (
               <div className="plate-float-container">
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.img
-                    key={data.imagePath}
-                    src={data.imagePath}
-                    alt={lang === "no" ? "Stengt" : "Closed"}
-                    className="food-image loaded"
-                    initial={{ opacity: 0, scale: 1.1, x: 28 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.88, x: -24 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 240,
-                      damping: 24,
-                      mass: 0.7,
-                      opacity: { duration: 0.28 },
-                    }}
-                    loading="eager"
-                    decoding="async"
-                    fetchPriority={cardIdx === 0 ? "high" : undefined}
-                    onLoad={() => markImageCached(data.imagePath)}
-                    onError={() => setImgError(true)}
-                  />
-                </AnimatePresence>
+                <img
+                  src={data.imagePath}
+                  alt={lang === "no" ? "Stengt" : "Closed"}
+                  className="food-image loaded"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority={cardIdx === 0 ? "high" : undefined}
+                  onLoad={() => markImageCached(data.imagePath)}
+                  onError={() => setImgError(true)}
+                />
               </div>
             )}
           </div>
@@ -80,4 +62,6 @@ export default function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
       </article>
     </Wrapper3D>
   );
-}
+});
+
+export default ClosedCard;

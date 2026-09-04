@@ -11,24 +11,13 @@ interface Wrapper3DProps {
   className?: string
 }
 
-export function Wrapper3D({
+function DesktopTiltWrapper({
   children,
   maxRotation = 8,
   translateZ = 16,
   perspective = true,
   className,
 }: Wrapper3DProps) {
-  const [canHover, setCanHover] = useState(false)
-
-  useEffect(() => {
-    // Only enable 3D mouse tilt on desktop devices with fine pointer (mouse/trackpad)
-    const mql = window.matchMedia("(hover: hover) and (pointer: fine)")
-    setCanHover(mql.matches)
-    const handler = (e: MediaQueryListEvent) => setCanHover(e.matches)
-    mql.addEventListener("change", handler)
-    return () => mql.removeEventListener("change", handler)
-  }, [])
-
   const ref = useRef<HTMLDivElement>(null)
 
   const x = useMotionValue(0)
@@ -42,7 +31,6 @@ export function Wrapper3D({
   const rotateY = useTransform(mouseX, [-0.5, 0.5], [`-${maxRotation}deg`, `${maxRotation}deg`])
 
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!canHover) return
     const el = ref.current
     if (!el) return
     const { left, top, width, height } = el.getBoundingClientRect()
@@ -52,7 +40,7 @@ export function Wrapper3D({
     y.set(normY)
     el.style.setProperty("--card-mx", normX.toFixed(3))
     el.style.setProperty("--card-my", normY.toFixed(3))
-  }, [canHover, x, y])
+  }, [x, y])
 
   const onLeave = useCallback(() => {
     x.set(0)
@@ -63,10 +51,6 @@ export function Wrapper3D({
       el.style.setProperty("--card-my", "0")
     }
   }, [x, y])
-
-  if (!canHover) {
-    return <div className={className}>{children}</div>
-  }
 
   return (
     <motion.div
@@ -85,4 +69,25 @@ export function Wrapper3D({
       {children}
     </motion.div>
   )
+}
+
+export function Wrapper3D(props: Wrapper3DProps) {
+  const [canHover, setCanHover] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(hover: hover) and (pointer: fine)").matches : false
+  )
+
+  useEffect(() => {
+    // Only enable 3D mouse tilt on desktop devices with fine pointer (mouse/trackpad)
+    const mql = window.matchMedia("(hover: hover) and (pointer: fine)")
+    setCanHover(mql.matches)
+    const handler = (e: MediaQueryListEvent) => setCanHover(e.matches)
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [])
+
+  if (!canHover) {
+    return <div className={props.className}>{props.children}</div>
+  }
+
+  return <DesktopTiltWrapper {...props} />
 }
