@@ -174,6 +174,35 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const { dealsView, handleDealsClick, closeDeals } = useDeals();
   const { menyView, handleMenyClick, closeMeny } = useMenySearch();
 
+  /**
+   * Is anything layered over the day view?
+   *
+   * There were four separate hand-written versions of this question — one per
+   * ArrowLeft, ArrowRight, Space and the touch guard — and no two of them
+   * listed the same overlays. The arrow keys did not know about the
+   * leaderboard, the week overview, the Meny search or the deals view, and the
+   * touch guard did not know about the last two either. So the day changed
+   * underneath an open overlay: arrow keys with the leaderboard up, a swipe
+   * with the deals view up.
+   *
+   * One derived value instead. Adding an overlay now means adding it here,
+   * once, rather than remembering four lists.
+   *
+   * The Escape handler deliberately does NOT use this: it is a priority chain
+   * ("close the innermost thing first"), and the order it walks is a real
+   * decision — Escape inside the Meny sub-view returns to the recipe rather
+   * than closing everything.
+   */
+  const anyOverlayOpen =
+    infoOpen ||
+    leaderboardOpen ||
+    weekOverviewOpen ||
+    actionSheet.isOpen ||
+    recipeModal.isOpen ||
+    menyView.isOpen ||
+    dealsView.isOpen ||
+    lightboxIndex >= 0;
+
   const scrollRef = useRef<HTMLElement>(null);
 
   // Debounced scroll position save
@@ -325,15 +354,15 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           closeRecipe();
         }
       } else if (e.key === "ArrowLeft" && !isInput) {
-        if (selectedDay > 0 && lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
+        if (selectedDay > 0 && !anyOverlayOpen) {
           handleDaySelect(selectedDay - 1);
         }
       } else if (e.key === "ArrowRight" && !isInput) {
-        if (selectedDay < 4 && lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
+        if (selectedDay < 4 && !anyOverlayOpen) {
           handleDaySelect(selectedDay + 1);
         }
       } else if (e.key === " " && !isInput) {
-        if (lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen && !infoOpen) {
+        if (!anyOverlayOpen) {
           e.preventDefault();
           handleDaySelect(todayIndex >= 0 ? todayIndex : 0);
         }
@@ -341,7 +370,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, todayIndex, lightboxIndex, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
+  }, [selectedDay, todayIndex, anyOverlayOpen, lightboxIndex, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
 
   // On-demand image preloader for other days — warms a day when hovered or touched
   const preloadDay = useCallback((dayIdx: number) => {
@@ -510,9 +539,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     if (axis === "x") settleDrag();
 
     // Do not switch day if an overlay or modal is active
-    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || lightboxIndex >= 0) {
-      return;
-    }
+    if (anyOverlayOpen) return;
 
     // Must be horizontally dominant to avoid triggering on vertical scroll.
     // The axis lock has usually already decided this; the check stays for the
@@ -526,7 +553,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         }
       }
     }
-  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, lightboxIndex, settleDrag]);
+  }, [selectedDay, handleDaySelect, anyOverlayOpen, settleDrag]);
 
   useEffect(() => {
     dayRef.current = selectedDay;
