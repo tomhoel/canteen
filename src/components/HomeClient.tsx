@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
-import { Share2, ChefHat, Check, ChevronRight, X } from "lucide-react";
+import { Share2 } from "lucide-react";
 import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
@@ -29,6 +29,8 @@ import FoodCard from "@/components/FoodCard";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import ClosedCard from "@/components/ClosedCard";
+import ActionSheet from "@/components/ActionSheet";
+import { shouldTurnPage } from "@/lib/sheet-drag";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useAppStore, setFeedbackModalOpen } from "@/store/useAppStore";
 
@@ -46,6 +48,7 @@ const VoteModal = lazy(() => import("@/components/VoteModal"));
 const Lightbox = lazy(() => import("@/components/Lightbox"));
 const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
 const WeekOverview = lazy(() => import("@/components/WeekOverview"));
+const CampusMapModal = lazy(() => import("@/components/CampusMapModal"));
 const CanteenFeedbackForm = lazy(() =>
   import("@/components/CanteenFeedbackForm").then((m) => ({ default: m.CanteenFeedbackForm }))
 );
@@ -149,10 +152,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [dateTick, setDateTick] = useState(0);
   const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: "" });
   const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-  // The hero image was the other <img> with no onError, so a dish that has
-  // never had a plate drawn opened the sheet onto a broken-image glyph.
-  const [sheetImageFailed, setSheetImageFailed] = useState(false);
-  const [sheetImageLoaded, setSheetImageLoaded] = useState(false);
   const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
 
@@ -164,8 +163,15 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [direction, setDirection] = useState(0);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapTargetLocation, setMapTargetLocation] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const feedbackModalOpen = useAppStore((state) => state.feedbackModalOpen);
+
+  const handleOpenMap = useCallback((locationId?: string) => {
+    setMapTargetLocation(locationId ?? null);
+    setMapOpen(true);
+  }, []);
 
   // YOLO randomiser: cycles a glow through the open canteens for ~5s then
   // settles on one. yoloHighlight is the currently-lit card during the spin;
@@ -353,12 +359,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     });
   }, [plateImages]);
 
-  // Lightweight native touch swipe detection for day switching without blocking vertical scroll
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  // High-performance touch swipe detection with velocity thresholding from mutu-web
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
-      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        time: performance.now(),
+      };
     }
   }, []);
 
@@ -367,22 +377,27 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     const touch = e.changedTouches[0];
     const deltaX = touch.clientX - touchStartRef.current.x;
     const deltaY = touch.clientY - touchStartRef.current.y;
+    const dt = Math.max(1, performance.now() - touchStartRef.current.time);
+    const vx = deltaX / dt;
+    const width = typeof window !== "undefined" ? window.innerWidth : 360;
     touchStartRef.current = null;
 
     // Do not switch day if an overlay or modal is active
-    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || feedbackModalOpen || lightboxIndex >= 0 || voteModal.isOpen) {
+    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || feedbackModalOpen || lightboxIndex >= 0 || voteModal.isOpen || mapOpen) {
       return;
     }
 
-    // Only switch day if swipe is deliberately horizontal (> 50px and horizontally dominant)
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-      if (deltaX < 0 && selectedDay < 4) {
-        handleDaySelect(selectedDay + 1);
-      } else if (deltaX > 0 && selectedDay > 0) {
-        handleDaySelect(selectedDay - 1);
+    // Must be horizontally dominant to avoid triggering on vertical scroll
+    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      if (shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.15, velocity: 0.4 })) {
+        if (deltaX < 0 && selectedDay < 4) {
+          handleDaySelect(selectedDay + 1);
+        } else if (deltaX > 0 && selectedDay > 0) {
+          handleDaySelect(selectedDay - 1);
+        }
       }
     }
-  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, feedbackModalOpen, lightboxIndex, voteModal.isOpen]);
+  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, feedbackModalOpen, lightboxIndex, voteModal.isOpen, mapOpen]);
 
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
 
@@ -578,29 +593,38 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     yoloTimersRef.current = [];
   }, []);
 
-  // Close any active modal or sheet on Escape key
+  // Close any active modal or sheet on Escape key, or toggle Map on 'm'
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (infoOpen) {
-        setInfoOpen(false);
-      } else if (actionSheet.isOpen) {
-        setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-        voting.setVoteSuccess(false);
-        voting.setShareState("idle");
-      } else if (recipeModal.isOpen) {
-        closeRecipe();
-        closeDeals();
-        closeMeny();
-      } else if (weekOverviewOpen) {
-        setWeekOverviewOpen(false);
-      } else if (lightboxIndex >= 0) {
-        setLightboxIndex(-1);
+      if (e.key === "Escape") {
+        if (mapOpen) {
+          setMapOpen(false);
+        } else if (infoOpen) {
+          setInfoOpen(false);
+        } else if (actionSheet.isOpen) {
+          setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+          voting.setVoteSuccess(false);
+          voting.setShareState("idle");
+        } else if (recipeModal.isOpen) {
+          closeRecipe();
+          closeDeals();
+          closeMeny();
+        } else if (weekOverviewOpen) {
+          setWeekOverviewOpen(false);
+        } else if (lightboxIndex >= 0) {
+          setLightboxIndex(-1);
+        }
+      } else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+        if (tag !== "input" && tag !== "textarea" && tag !== "select") {
+          e.preventDefault();
+          setMapOpen((prev) => !prev);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, lightboxIndex, voting, closeRecipe, closeDeals, closeMeny]);
+  }, [mapOpen, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, lightboxIndex, voting, closeRecipe, closeDeals, closeMeny]);
 
   // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
@@ -610,9 +634,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   const handleCardClick = useCallback((canteenName: string) => {
     const data = canteenDayData.find(c => c.canteenName === canteenName);
-    // A new dish deserves a fresh attempt; without this, one missing plate
-    // would leave every sheet opened afterwards showing the placeholder.
-    setSheetImageLoaded(false);
     setActionSheet({
       isOpen: true,
       canteenName,
@@ -673,6 +694,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           onLeaderboard: () => setLeaderboardOpen(true),
           onWeekOverview: () => setWeekOverviewOpen(true),
           onFeedback: () => setFeedbackModalOpen(true),
+          onMap: () => handleOpenMap(),
         }}
       >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
@@ -690,28 +712,28 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={selectedDay}
               custom={direction}
               variants={{
                 enter: (dir: number) => ({
-                  x: dir > 0 ? 30 : dir < 0 ? -30 : 0,
+                  x: dir > 0 ? 20 : dir < 0 ? -20 : 0,
                   opacity: 0,
                 }),
                 center: {
                   x: 0,
                   opacity: 1,
                   transition: {
-                    x: { duration: 0.2, ease: [0.25, 1, 0.5, 1] },
-                    opacity: { duration: 0.15, ease: "linear" },
+                    x: { duration: 0.16, ease: [0.16, 1, 0.3, 1] },
+                    opacity: { duration: 0.12, ease: "linear" },
                   },
                 },
                 exit: (dir: number) => ({
-                  x: dir < 0 ? 25 : -25,
+                  x: dir < 0 ? 20 : -20,
                   opacity: 0,
                   transition: {
-                    x: { duration: 0.08, ease: "easeIn" },
+                    x: { duration: 0.1, ease: "easeIn" },
                     opacity: { duration: 0.08, ease: "linear" },
                   },
                 }),
@@ -737,6 +759,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                         data={data}
                         cardIdx={cardIdx}
                         lang={lang}
+                        onOpenMap={handleOpenMap}
                       />
                     ) : (
                       <FoodCard
@@ -750,6 +773,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                         maxVotes={maxVotes}
                         onImageClick={handleImageClick}
                         onCardClick={handleCardClick}
+                        onOpenMap={handleOpenMap}
                         yoloHighlighted={yoloHighlight === cardIdx}
                         yoloWinner={yoloWinner === cardIdx}
                       />
@@ -903,6 +927,27 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {mapOpen && (
+          <Suspense fallback={null}>
+            <CampusMapModal
+              isOpen={mapOpen}
+              onClose={() => setMapOpen(false)}
+              initialTargetId={mapTargetLocation}
+              menuData={menuData}
+              selectedDayIndex={selectedDay}
+              lang={lang}
+              onSelectCanteen={(canteenKey) => {
+                const el = document.querySelector(`[data-yolo-card-key="${canteenKey}"]`);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+              }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+
       {/* Vote Modal */}
       <AnimatePresence>
         {voteModal.isOpen && (
@@ -924,143 +969,36 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
 
-      {/* Action Sheet */}
-      <AnimatePresence>
-        {actionSheet.isOpen && (() => {
-          const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); voting.setVoteSuccess(false); voting.setShareState("idle"); };
-          const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
-          const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
-          return (
-          <motion.div
-            key="action-sheet-overlay"
-            className="action-sheet-overlay"
-            role="presentation"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={closeSheet}
-          >
-            <motion.div
-              key="action-sheet-sheet"
-              className="action-sheet"
-              role="dialog"
-              aria-modal="true"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0.05, bottom: 0.5 }}
-              onDragEnd={(_e, info) => {
-                if (info.offset.y > 80 || info.velocity.y > 400) {
-                  closeSheet();
-                }
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="action-sheet-handle" />
-              <button className="action-sheet-close" onClick={closeSheet} aria-label="Lukk">
-                <X size={16} strokeWidth={2.5} />
-              </button>
+      {/* Action Sheet with 120Hz native GPU compositor transform */}
+      {(() => {
+        const closeSheet = () => {
+          setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+          voting.setVoteSuccess(false);
+          voting.setShareState("idle");
+        };
+        const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
+        const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
 
-              {/* Hero image */}
-              <div className="action-sheet-hero">
-                {sheetImageFailed || !actionSheet.imagePath ? (
-                  <div className="image-placeholder">{actionSheet.canteenName.charAt(0)}</div>
-                ) : (
-                  <img
-                    key={actionSheet.imagePath}
-                    src={actionSheet.imagePath}
-                    alt={actionSheet.dishName}
-                    className={`action-sheet-img${sheetImageLoaded ? " loaded" : ""}`}
-                    decoding="async"
-                    ref={el => { if (el?.complete && el.naturalWidth > 0) setSheetImageLoaded(true); }}
-                    onLoad={() => setSheetImageLoaded(true)}
-                    onError={() => setSheetImageFailed(true)}
-                  />
-                )}
-                <div className="action-sheet-hero-fade" />
-              </div>
-
-              {/* Header */}
-              <div className="action-sheet-header">
-                <span className="action-sheet-canteen">{actionSheet.canteenName}</span>
-                <h3 className="action-sheet-dish">{actionSheet.dishName}</h3>
-                {actionSheet.description && (
-                  <p className="action-sheet-desc">{actionSheet.description}</p>
-                )}
-              </div>
-
-              {/* Actions */}
-              {voting.voteSuccess ? (
-                <div className="action-sheet-success">
-                  <div className="vote-celebration">
-                    <span className="celebration-emoji celebration-1">&#x1F389;</span>
-                    <span className="celebration-emoji celebration-2">&#x2B50;</span>
-                    <span className="celebration-emoji celebration-3">&#x1F38A;</span>
-                    <span className="celebration-emoji celebration-4">&#x2728;</span>
-                    <span className="celebration-emoji celebration-5">&#x1F973;</span>
-                  </div>
-                  <div className="vote-success-check">
-                    <Check size={28} strokeWidth={3} />
-                  </div>
-                  <span className="vote-success-text">{lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}</span>
-                  <span className="vote-success-sub">{actionSheet.canteenName}</span>
-                  <ShareButton />
-                </div>
-              ) : (
-              <div className="action-sheet-actions">
-                {canVote && (
-                <button
-                  className={`action-sheet-btn action-sheet-vote${voting.hasVoted ? " voted" : ""}${voting.isVoting ? " voting" : ""}`}
-                  disabled={voting.hasVoted || voting.isVoting}
-                  onClick={async () => {
-                    await voting.handleVote(actionSheet.canteenName);
-                  }}
-                >
-                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
-                    {voting.isVoting ? "⏳" : voting.hasVoted ? "✔" : "🗳️"}
-                  </div>
-                  <div className="action-sheet-btn-text">
-                    <span className="action-sheet-btn-label">
-                      {voting.isVoting
-                        ? (lang === "no" ? "Stemmer..." : "Voting...")
-                        : voting.hasVoted
-                        ? (lang === "no" ? "Allerede stemt" : "Already voted")
-                        : (lang === "no" ? "Stem på denne" : "Vote for this")}
-                    </span>
-                    <span className="action-sheet-btn-sub">
-                      {voting.hasVoted
-                        ? (lang === "no" ? `Du stemte på ${voting.votedCanteen}` : `You voted for ${voting.votedCanteen}`)
-                        : (lang === "no" ? "Vis at du spiser her i dag" : "Show you’re eating here today")}
-                    </span>
-                  </div>
-                  {!voting.hasVoted && !voting.isVoting && <ChevronRight size={18} className="action-sheet-btn-arrow" />}
-                </button>
-                )}
-                <button
-                  className="action-sheet-btn action-sheet-recipe"
-                  onClick={() => { closeSheet(); handleRecipeClick(actionSheet.dishName, actionSheet.canteenName); }}
-                >
-                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-recipe">
-                    <ChefHat size={18} />
-                  </div>
-                  <div className="action-sheet-btn-text">
-                    <span className="action-sheet-btn-label">{lang === "no" ? "Lag hjemme" : "Make at home"}</span>
-                    <span className="action-sheet-btn-sub">{lang === "no" ? "Få AI-generert oppskrift" : "Get AI-generated recipe"}</span>
-                  </div>
-                  <ChevronRight size={18} className="action-sheet-btn-arrow" />
-                </button>
-                {canVote && <ShareButton />}
-              </div>
-              )}
-            </motion.div>
-          </motion.div>
-          );
-        })()}
-      </AnimatePresence>
+        return (
+          <ActionSheet
+            isOpen={actionSheet.isOpen}
+            canteenName={actionSheet.canteenName}
+            dishName={actionSheet.dishName}
+            imagePath={actionSheet.imagePath}
+            description={actionSheet.description}
+            lang={lang}
+            canVote={!!canVote}
+            hasVoted={voting.hasVoted}
+            isVoting={voting.isVoting}
+            votedCanteen={voting.votedCanteen}
+            voteSuccess={voting.voteSuccess}
+            onVote={voting.handleVote}
+            onRecipeClick={handleRecipeClick}
+            onClose={closeSheet}
+            shareButton={<ShareButton />}
+          />
+        );
+      })()}
 
       {/* Lightbox with canteen swipe */}
       <AnimatePresence>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 import { isCanteenClosed } from "@/lib/canteen-utils";
+import { getCanteenMetadata } from "@/lib/constants";
 import "@/styles/week-overview.css";
 
 const DAYS_ABBR_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
@@ -87,15 +88,18 @@ export default function WeekOverview({
           /* ── Narrow phones: canteen tabs + day list ── */
           <div className="week-mobile">
             <div className="week-tabs">
-              {canteenNames.map((name, ci) => (
-                <button
-                  key={name}
-                  className={`week-tab${ci === activeCanteenTab ? " active" : ""}`}
-                  onClick={() => setActiveCanteenTab(ci)}
-                >
-                  {name}
-                </button>
-              ))}
+              {canteenNames.map((name, ci) => {
+                const meta = getCanteenMetadata(name);
+                return (
+                  <button
+                    key={name}
+                    className={`week-tab${ci === activeCanteenTab ? " active" : ""}`}
+                    onClick={() => setActiveCanteenTab(ci)}
+                  >
+                    {meta.name}
+                  </button>
+                );
+              })}
             </div>
             <div className="week-day-list">
               {allDaysData.map((dayItems, di) => {
@@ -147,22 +151,29 @@ export default function WeekOverview({
                 </div>
               ))}
             </div>
-            {canteenNames.map((canteenName, ci) => (
-              <div
-                key={canteenName}
-                className="week-row"
-                style={{ "--row-idx": ci } as React.CSSProperties}
-              >
-                <div className="week-canteen-label">{canteenName}</div>
-                {allDaysData.map((dayItems, di) => {
-                  const item = dayItems[ci];
-                  if (!item) return (
-                    <div
-                      key={di}
-                      className="week-cell closed"
-                      style={{ "--col-idx": di } as React.CSSProperties}
-                    />
-                  );
+            {canteenNames.map((canteenName, ci) => {
+              const meta = getCanteenMetadata(canteenName);
+              return (
+                <div
+                  key={canteenName}
+                  className="week-row"
+                  style={{ "--row-idx": ci } as React.CSSProperties}
+                >
+                  <div className="week-canteen-label">
+                    <span>{meta.name}</span>
+                    <span className="week-canteen-sub" style={{ display: "block", fontSize: "10px", color: "var(--text-muted)", fontWeight: 500 }}>
+                      {meta.buildingShort}
+                    </span>
+                  </div>
+                  {allDaysData.map((dayItems, di) => {
+                    const item = dayItems[ci];
+                    if (!item) return (
+                      <div
+                        key={di}
+                        className="week-cell closed"
+                        style={{ "--col-idx": di } as React.CSSProperties}
+                      />
+                    );
                   const closed = isClosed(item);
                   const outdated = item.isOutdated || item.isAhead || closed;
                   const isToday = di === todayIndex;
@@ -184,7 +195,8 @@ export default function WeekOverview({
                   );
                 })}
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </div>

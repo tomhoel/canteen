@@ -1,6 +1,6 @@
 import { useState, memo } from "react";
-import { Users, Sparkles, Clock } from "lucide-react";
-import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO } from "@/lib/constants";
+import { Users, Sparkles, Clock, MapPin } from "lucide-react";
+import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
@@ -60,6 +60,7 @@ interface FoodCardProps {
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
+  onOpenMap?: (canteenId: string) => void;
   /** True while the YOLO spinner has the cycling highlight on this card. */
   yoloHighlighted?: boolean;
   /** True after YOLO landed and this card is the chosen one. */
@@ -76,6 +77,7 @@ const FoodCard = memo(function FoodCard({
   maxVotes,
   onImageClick,
   onCardClick,
+  onOpenMap,
   yoloHighlighted = false,
   yoloWinner = false,
 }: FoodCardProps) {
@@ -159,14 +161,39 @@ const FoodCard = memo(function FoodCard({
       </div>
       <div className="card-content">
         <div className="card-header">
-          <div className="canteen-name">
-            {canteenName}
-            {isAhead && (
-              <span className="ahead-tag">
-                {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} <Sparkles size={10} style={{ marginLeft: 3 }} />
-              </span>
-            )}
-          </div>
+          {(() => {
+            const meta = getCanteenMetadata(canteenName);
+            return (
+              <div className="canteen-header-row">
+                <span className="canteen-name">
+                  {meta.name}
+                  {meta.subName && (
+                    <span className="canteen-subtag"> ({meta.subName})</span>
+                  )}
+                </span>
+                {isAhead && (
+                  <span className="ahead-tag">
+                    {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} <Sparkles size={10} style={{ marginLeft: 3 }} />
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="canteen-location-chip"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenMap?.(meta.id);
+                  }}
+                  title={lang === "no" ? `Se ${meta.building} på kart` : `View ${meta.building} on map`}
+                  aria-label={lang === "no" ? `Se ${meta.building} på kart` : `View ${meta.building} on map`}
+                >
+                  <MapPin size={10} strokeWidth={2.4} />
+                  <span>{meta.buildingShort}</span>
+                  <span className="location-chip-sep">&bull;</span>
+                  <span>{meta.hours}</span>
+                </button>
+              </div>
+            );
+          })()}
           <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
         </div>
 
