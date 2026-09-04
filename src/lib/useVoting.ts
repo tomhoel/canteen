@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { getLocalDateKey } from "@/lib/dateUtils";
 import type { CanteenDayItem } from "@/lib/types";
@@ -30,6 +30,7 @@ export function useVoting(): UseVotingReturn {
     "idle"
   );
 
+  const queryClient = useQueryClient();
   const shareInFlightRef = useRef(false);
 
   useEffect(() => {
@@ -104,6 +105,7 @@ export function useVoting(): UseVotingReturn {
       if (data.canteens && Object.keys(data.canteens).length > 0) {
         setVotes(data.canteens);
       }
+      queryClient.invalidateQueries({ queryKey: ["attendance-history"] });
     },
     onError: (err, _canteenName, previous) => {
       // Roll the optimistic vote back. Leaving it up marks you as having voted

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import type { MenyResponse, MenyIngredientMatch } from "@/lib/types";
 import { PriceRanger } from "@/components/PriceRanger";
 import "@/styles/meny-view.css";
@@ -64,31 +65,40 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
         )}
       </div>
 
-      {hasAlts && showAlts && (
-        <div className="mv-alts">
-          {(match.alternatives || []).map((alt, ai) => (
-            <ProductLink key={alt.ean} url={alt.productUrl}>
-              <div className="mv-alt" style={{ animationDelay: `${ai * 50}ms` }}>
-                <div className="mv-alt-thumb">
-                  {alt.imageUrl ? (
-                    <img src={alt.imageUrl} alt={alt.name} className="mv-thumb-img" loading="lazy"
-                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  ) : (
-                    <span className="mv-thumb-letter">{alt.name.charAt(0).toUpperCase()}</span>
-                  )}
+      <AnimatePresence initial={false}>
+        {hasAlts && showAlts && (
+          <motion.div
+            className="mv-alts"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            {(match.alternatives || []).map((alt, ai) => (
+              <ProductLink key={alt.ean} url={alt.productUrl}>
+                <div className="mv-alt" style={{ animationDelay: `${ai * 50}ms` }}>
+                  <div className="mv-alt-thumb">
+                    {alt.imageUrl ? (
+                      <img src={alt.imageUrl} alt={alt.name} className="mv-thumb-img" loading="lazy"
+                        onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    ) : (
+                      <span className="mv-thumb-letter">{alt.name.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="mv-alt-detail">
+                    <span className="mv-alt-name">{alt.name}</span>
+                    <span className="mv-alt-meta">
+                      {alt.brand || ""}{alt.brand && alt.weight ? " \u00B7 " : ""}{alt.weight || ""}
+                    </span>
+                  </div>
+                  <span className="mv-alt-price">{alt.price} <span className="mv-kr">kr</span></span>
                 </div>
-                <div className="mv-alt-detail">
-                  <span className="mv-alt-name">{alt.name}</span>
-                  <span className="mv-alt-meta">
-                    {alt.brand || ""}{alt.brand && alt.weight ? " \u00B7 " : ""}{alt.weight || ""}
-                  </span>
-                </div>
-                <span className="mv-alt-price">{alt.price} <span className="mv-kr">kr</span></span>
-              </div>
-            </ProductLink>
-          ))}
-        </div>
-      )}
+              </ProductLink>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

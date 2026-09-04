@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Users, Sparkles, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
+import { markImageCached } from "@/lib/imageCache";
 
 const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   turkey: { no: "Tyrkisk", en: "Turkish" },
@@ -78,9 +80,6 @@ export default function FoodCard({
   yoloHighlighted = false,
   yoloWinner = false,
 }: FoodCardProps) {
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
-
   const {
     canteenName,
     mainDish,
@@ -94,6 +93,8 @@ export default function FoodCard({
     description,
     availabilityNotes,
   } = data;
+
+  const [imgError, setImgError] = useState(false);
 
   const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
@@ -120,33 +121,36 @@ export default function FoodCard({
         onClick={e => { e.stopPropagation(); if (mainDish) onImageClick(data); }}
       >
         <div className="card-image-circle">
-          {/* An empty path means the server found no plate for this dish. Go
-              straight to the placeholder rather than letting the browser
-              request the document URL and fail. */}
           {imgError || !imagePath ? (
             <div className="image-placeholder">
               {canteenName.charAt(0)}
             </div>
           ) : (
-            <>
-              <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
-              <img
-                key={imagePath}
-                ref={(img) => {
-                  if (img && img.complete && img.naturalWidth > 0 && !imgLoaded) {
-                    setImgLoaded(true);
-                  }
-                }}
-                src={imagePath}
-                alt={mainDish?.dish || "Matrett"}
-                className={`food-image${imgLoaded ? " loaded" : ""}`}
-                loading="eager"
-                decoding="async"
-                fetchPriority={cardIdx === 0 ? "high" : undefined}
-                onLoad={() => setImgLoaded(true)}
-                onError={() => setImgError(true)}
-              />
-            </>
+            <div className="plate-float-container">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.img
+                  key={imagePath}
+                  src={imagePath}
+                  alt={mainDish?.dish || "Matrett"}
+                  className="food-image loaded"
+                  initial={{ opacity: 0, scale: 1.1, x: 28 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.88, x: -24 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 240,
+                    damping: 24,
+                    mass: 0.7,
+                    opacity: { duration: 0.28 },
+                  }}
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority={cardIdx === 0 ? "high" : undefined}
+                  onLoad={() => markImageCached(imagePath)}
+                  onError={() => setImgError(true)}
+                />
+              </AnimatePresence>
+            </div>
           )}
         </div>
         {isOutdated && (
@@ -171,7 +175,18 @@ export default function FoodCard({
           </div>
         )}
       </div>
-      <div className="card-content">
+      <motion.div
+        key={selectedDay}
+        initial={{ opacity: 0.5, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          type: "spring",
+          stiffness: 320,
+          damping: 30,
+          mass: 0.6,
+        }}
+        className="card-content"
+      >
         <div className="card-header">
           <div className="canteen-name">
             {canteenName}
@@ -211,7 +226,7 @@ export default function FoodCard({
         {description && (
           <p className="dish-description">{description}</p>
         )}
-      </div>
+      </motion.div>
 
       {isOutdated && (
         <div className="stale-banner">

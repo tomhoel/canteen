@@ -17,7 +17,6 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  animation: fadeIn 0.2s ease;
 }
 
 .leaderboard-modal {
@@ -30,7 +29,6 @@
   box-shadow:
     0 8px 32px rgba(60, 30, 0, 0.12),
     0 2px 8px rgba(60, 30, 0, 0.06);
-  animation: slideUp 0.25s var(--smooth);
 }
 
 .leaderboard-title {

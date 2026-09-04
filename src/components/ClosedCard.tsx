@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
+import { markImageCached } from "@/lib/imageCache";
 
 interface ClosedCardProps {
   data: CanteenDayItem;
@@ -11,7 +13,6 @@ interface ClosedCardProps {
 }
 
 export default function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
-  const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   return (
@@ -26,27 +27,34 @@ export default function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
       >
         <div className="card-image-wrapper closed">
           <div className="card-image-circle">
-            {imgError ? (
+            {imgError || !data.imagePath ? (
               <div className="image-placeholder">?</div>
             ) : (
-              <>
-                <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
-                <img
-                  ref={(img) => {
-                    if (img && img.complete && img.naturalWidth > 0 && !imgLoaded) {
-                      setImgLoaded(true);
-                    }
-                  }}
-                  src={data.imagePath}
-                  alt={lang === "no" ? "Stengt" : "Closed"}
-                  className={`food-image${imgLoaded ? " loaded" : ""}`}
-                  loading="eager"
-                  decoding="async"
-                  fetchPriority={cardIdx === 0 ? "high" : undefined}
-                  onLoad={() => setImgLoaded(true)}
-                  onError={() => setImgError(true)}
-                />
-              </>
+              <div className="plate-float-container">
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.img
+                    key={data.imagePath}
+                    src={data.imagePath}
+                    alt={lang === "no" ? "Stengt" : "Closed"}
+                    className="food-image loaded"
+                    initial={{ opacity: 0, scale: 1.1, x: 28 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.88, x: -24 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 240,
+                      damping: 24,
+                      mass: 0.7,
+                      opacity: { duration: 0.28 },
+                    }}
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority={cardIdx === 0 ? "high" : undefined}
+                    onLoad={() => markImageCached(data.imagePath)}
+                    onError={() => setImgError(true)}
+                  />
+                </AnimatePresence>
+              </div>
             )}
           </div>
         </div>

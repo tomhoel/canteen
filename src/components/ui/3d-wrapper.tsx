@@ -1,6 +1,7 @@
 "use client"
 
-import { useRef, useCallback } from "react"
+import { useRef, useCallback, useState, useEffect } from "react"
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react"
 
 interface Wrapper3DProps {
   children: React.ReactNode
@@ -12,60 +13,76 @@ interface Wrapper3DProps {
 
 export function Wrapper3D({
   children,
-  maxRotation = 10,
-  translateZ = 20,
+  maxRotation = 8,
+  translateZ = 16,
   perspective = true,
   className,
 }: Wrapper3DProps) {
+  const [canHover, setCanHover] = useState(false)
+
+  useEffect(() => {
+    // Only enable 3D mouse tilt on desktop devices with fine pointer (mouse/trackpad)
+    const mql = window.matchMedia("(hover: hover) and (pointer: fine)")
+    setCanHover(mql.matches)
+    const handler = (e: MediaQueryListEvent) => setCanHover(e.matches)
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [])
+
   const ref = useRef<HTMLDivElement>(null)
 
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+
+  // Fluid, organic spring physics for interactive 3D tilt
+  const mouseX = useSpring(x, { stiffness: 260, damping: 24, mass: 0.6 })
+  const mouseY = useSpring(y, { stiffness: 260, damping: 24, mass: 0.6 })
+
+  const rotateX = useTransform(mouseY, [-0.5, 0.5], [`${maxRotation}deg`, `-${maxRotation}deg`])
+  const rotateY = useTransform(mouseX, [-0.5, 0.5], [`-${maxRotation}deg`, `${maxRotation}deg`])
+
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!canHover) return
     const el = ref.current
     if (!el) return
     const { left, top, width, height } = el.getBoundingClientRect()
-    const x = (e.clientX - left) / width - 0.5   // -0.5 to 0.5
-    const y = (e.clientY - top) / height - 0.5
-    const rotY = x * maxRotation
-    const rotX = -y * maxRotation
-    const persp = perspective ? `perspective(800px) ` : ""
-    el.style.transform = `${persp}rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(${translateZ}px)`
-    el.style.setProperty("--card-mx", x.toFixed(3))
-    el.style.setProperty("--card-my", y.toFixed(3))
-  }, [maxRotation, translateZ, perspective])
+    const normX = (e.clientX - left) / width - 0.5
+    const normY = (e.clientY - top) / height - 0.5
+    x.set(normX)
+    y.set(normY)
+    el.style.setProperty("--card-mx", normX.toFixed(3))
+    el.style.setProperty("--card-my", normY.toFixed(3))
+  }, [canHover, x, y])
 
   const onLeave = useCallback(() => {
+    x.set(0)
+    y.set(0)
     const el = ref.current
-    if (!el) return
-    el.classList.add("card-returning")
-    el.style.transition = "transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)"
-    el.style.transform = "rotateX(0deg) rotateY(0deg) translateZ(0px)"
-    el.style.setProperty("--card-mx", "0")
-    el.style.setProperty("--card-my", "0")
-    setTimeout(() => {
-      if (ref.current) {
-        ref.current.style.transition = ""
-        ref.current.classList.remove("card-returning")
-      }
-    }, 500)
-  }, [])
+    if (el) {
+      el.style.setProperty("--card-mx", "0")
+      el.style.setProperty("--card-my", "0")
+    }
+  }, [x, y])
 
-  const onEnter = useCallback(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.transition = "transform 0.1s ease-out"
-    setTimeout(() => { if (ref.current) ref.current.style.transition = "" }, 100)
-  }, [])
+  if (!canHover) {
+    return <div className={className}>{children}</div>
+  }
 
   return (
-    <div
+    <motion.div
       ref={ref}
       className={className}
-      style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+      style={{
+        transformStyle: "preserve-3d",
+        perspective: perspective ? 800 : undefined,
+        rotateX,
+        rotateY,
+        z: translateZ,
+      }}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      onMouseEnter={onEnter}
     >
       {children}
-    </div>
+    </motion.div>
   )
 }
