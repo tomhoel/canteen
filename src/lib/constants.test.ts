@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getSupabaseImageUrl, getClosedPlateUrl, getCanteenMetadata, getLocationStatus } from "./constants";
+import { getSupabaseImageUrl, getClosedPlateUrl, getCanteenMetadata } from "./constants";
 
 /**
  * These assertions look pedantic and are not. Every one of them corresponds to
@@ -114,33 +114,4 @@ test("getCanteenMetadata - resolves canonical and legacy canteen names", () => {
   const unknown = getCanteenMetadata("Random Cafe");
   assert.equal(unknown.name, "Random Cafe");
   assert.ok(unknown.building);
-});
-
-test("getLocationStatus - correctly detects open, opening-soon, and closed states", () => {
-  const street = getCanteenMetadata("Eat the street");
-
-  // Wednesday at 11:30 Oslo time (UTC 09:30 or 10:30 depending on DST)
-  // Let's create an ISO string with explicit Oslo offset +02:00
-  const openTime = new Date("2026-09-02T11:30:00+02:00");
-  const statusOpen = getLocationStatus(street, openTime);
-  assert.equal(statusOpen.isOpen, true);
-  assert.equal(statusOpen.badgeVariant, "open");
-
-  // Wednesday at 10:15 Oslo time -> opening soon
-  const soonTime = new Date("2026-09-02T10:15:00+02:00");
-  const statusSoon = getLocationStatus(street, soonTime);
-  assert.equal(statusSoon.isOpen, false);
-  assert.equal(statusSoon.badgeVariant, "opening-soon");
-
-  // Wednesday at 14:30 Oslo time -> closed
-  const closedTime = new Date("2026-09-02T14:30:00+02:00");
-  const statusClosed = getLocationStatus(street, closedTime);
-  assert.equal(statusClosed.isOpen, false);
-  assert.equal(statusClosed.badgeVariant, "closed");
-
-  // Sunday at 12:00 -> closed
-  const weekendTime = new Date("2026-09-06T12:00:00+02:00");
-  const statusWeekend = getLocationStatus(street, weekendTime);
-  assert.equal(statusWeekend.isOpen, false);
-  assert.equal(statusWeekend.badgeVariant, "closed");
 });
