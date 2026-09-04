@@ -60,7 +60,6 @@ body {
 /* Disable 300ms tap delay and accidental text selection on interactive elements */
 .day-btn,
 .info-btn,
-.vote-btn,
 .action-sheet-btn,
 .action-sheet-close,
 .recipe-servings-btn,
@@ -2942,123 +2941,6 @@ body {
 .food-card.voteable,
 .food-card.clickable {
   cursor: pointer;
-}
-
-.vote-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
-.vote-modal {
-  background: white;
-  border-radius: 20px;
-  padding: 28px 24px;
-  max-width: 320px;
-  width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  text-align: center;
-}
-
-.vote-modal-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-
-.vote-modal-subtitle {
-  font-size: clamp(12px, 2.5vw, 14px);
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-}
-
-.vote-btn {
-  width: 100%;
-  background: linear-gradient(
-    135deg,
-    var(--accent-yellow) 0%,
-    var(--accent-orange) 100%
-  );
-  color: white;
-  border: none;
-  border-radius: 50px;
-  padding: 14px 24px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.35);
-  margin-bottom: 10px;
-}
-
-.vote-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 149, 0, 0.45);
-}
-
-.vote-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.vote-cancel {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: clamp(12px, 2.5vw, 14px);
-  cursor: pointer;
-  padding: 8px 16px;
-  transition: color 0.2s ease;
-  width: 100%;
-}
-
-.vote-cancel:hover {
-  color: var(--text-secondary);
-}
-
-.vote-count-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  background: var(--bg-cream);
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 600;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.vote-count-row.voted {
-  background: rgba(255, 149, 0, 0.1);
-  color: var(--accent-orange);
-  border: 1px solid rgba(255, 149, 0, 0.25);
-}
-
-
-.vote-count-row.leader {
-  background: rgba(255, 149, 0, 0.08);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.vote-count-row.voted.leader {
-  background: rgba(255, 149, 0, 0.15);
-  font-weight: 700;
-}
-
-.vote-count-number {
-  font-weight: 700;
-  font-size: clamp(12px, 2.5vw, 14px);
 }
 
 
