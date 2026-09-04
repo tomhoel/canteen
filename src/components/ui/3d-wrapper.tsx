@@ -73,12 +73,15 @@ function DesktopTiltWrapper({
 
 export function Wrapper3D(props: Wrapper3DProps) {
   const [canHover, setCanHover] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(hover: hover) and (pointer: fine)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 769px) and (hover: hover) and (pointer: fine)").matches : false
   )
 
   useEffect(() => {
-    // Only enable 3D mouse tilt on desktop devices with fine pointer (mouse/trackpad)
-    const mql = window.matchMedia("(hover: hover) and (pointer: fine)")
+    // The width term matters as much as the pointer one. The card layout
+    // switches to the phone design at 768px, but the tilt only asked about
+    // the pointer — so a desktop window dragged narrow got the phone layout
+    // with three live 3D springs still mounted on top of it.
+    const mql = window.matchMedia("(min-width: 769px) and (hover: hover) and (pointer: fine)")
     setCanHover(mql.matches)
     const handler = (e: MediaQueryListEvent) => setCanHover(e.matches)
     mql.addEventListener("change", handler)

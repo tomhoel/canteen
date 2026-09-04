@@ -1813,8 +1813,8 @@ body {
   transform: translateX(-50%);
   right: auto;
   background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
   -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
+  backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top-color: rgba(255, 255, 255, 0.6);
   padding: 6px;
@@ -4327,4 +4327,44 @@ body {
 .share-btn.disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+
+/* ─── Phone: no full-screen blurs ───────────────────────────────────────────
+   A backdrop-filter over a full viewport is one of the most expensive things
+   a phone GPU can be asked to do, and it is paid every frame the overlay is
+   up — not once when it opens.
+
+   Five smaller decorative blurs were already turned off here (the pips, the
+   stale badge, the day bar, the day buttons); the animated gradient is
+   display:none. These four were the ones left running, and they are the four
+   biggest: every one of them covers the entire screen.
+
+   Each loses its blur and gains enough opacity to obscure on its own, since
+   the blur was doing part of that work. Desktop keeps all four — it has the
+   GPU budget and it is where the glass actually reads.                      */
+@media (max-width: 768px) {
+  .lightbox-overlay {
+    background: rgba(0, 0, 0, 0.88);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .info-overlay {
+    background: rgba(0, 0, 0, 0.62);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .recipe-overlay {
+    background: rgba(26, 21, 17, 0.74);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .allergen-panel {
+    background: rgb(255, 255, 255);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
