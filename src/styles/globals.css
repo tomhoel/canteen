@@ -200,41 +200,6 @@ body {
   box-shadow: 0 3px 16px rgba(200, 116, 26, 0.55);
 }
 
-/* ─── Language switch cascade ─── */
-@keyframes langCascadeToEn {
-  0%   { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-  22%  { opacity: 0; transform: translateX(-20px) scale(0.96) rotate(-1deg); }
-  65%  { opacity: 0; transform: translateX(35px) scale(0.96) rotate(1.5deg); }
-  100% { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-}
-@keyframes langCascadeToNo {
-  0%   { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-  22%  { opacity: 0; transform: translateX(20px) scale(0.96) rotate(1deg); }
-  65%  { opacity: 0; transform: translateX(-35px) scale(0.96) rotate(-1.5deg); }
-  100% { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-}
-
-/* Stagger index per card */
-.cards-container[class*="lang-"] .food-card { --i: 0; }
-.cards-container[class*="lang-"] .food-card:nth-child(2) { --i: 1; }
-.cards-container[class*="lang-"] .food-card:nth-child(3) { --i: 2; }
-
-/* Single continuous animation — no class swap, no flash */
-/* !important on delay overrides the inline animationDelay from cardReveal stagger */
-.cards-container.lang-cascade-en .food-card {
-  animation: langCascadeToEn 650ms ease-in-out both;
-  animation-delay: calc(var(--i) * 50ms) !important;
-}
-.cards-container.lang-cascade-no .food-card {
-  animation: langCascadeToNo 650ms ease-in-out both;
-  animation-delay: calc(var(--i) * 50ms) !important;
-}
-
-/* Suppress base cardReveal from replaying after cascade completes */
-.cards-container.lang-done .food-card {
-  animation: none;
-}
-
 /* ─── Hero (inline with header) ─── */
 .hero-inline {
   display: flex;
@@ -289,6 +254,13 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* The day transition slides a whole day's cards in from 80px away, and for
+     the length of that animation the incoming block genuinely sticks out past
+     the right edge. Without this the browser answers with a real horizontal
+     scrollbar across the bottom of the page, appearing and disappearing on
+     every single swipe. The mobile block already had this; the desktop one
+     never did. */
+  overflow-x: hidden;
   width: 100%;
 }
 
@@ -328,6 +300,12 @@ body {
 }
 
 .food-card {
+  /* The three cards do not arrive together. Each one is handed its own
+     animation-delay and animation-duration inline by FoodCard, keyed on its
+     index, so they rise 55ms apart and at slightly different speeds — 0.28s,
+     0.32s, 0.36s. That difference in rate across the row is the cascade, and
+     losing it is what made the day change land as one flat block. */
+  animation: cardReveal 0.28s var(--smooth) both;
   background: linear-gradient(180deg, #fffaf0 0%, #fef3e2 38%, var(--card-white) 52%);
   border-radius: 24px;
   width: 100%;
@@ -361,6 +339,24 @@ body {
 .food-card.clickable:active {
   transform: translateY(-1px) scale(0.99);
   transition-duration: 0.12s;
+}
+
+/* The phone's cut of cardReveal: the same rise and fade with the scale taken
+   out. Scaling a card is scaling the text inside it, which WebKit has to
+   re-rasterise glyph by glyph; the translate and the opacity are both
+   compositor-only and cost nothing. */
+@keyframes cardRevealFlat {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes cardReveal {
@@ -4074,5 +4070,18 @@ body {
     background: rgba(26, 21, 17, 0.74);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Same cascade, without the glyph re-rasterisation. */
+  .food-card {
+    animation-name: cardRevealFlat;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .food-card {
+    animation: none;
   }
 }
