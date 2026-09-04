@@ -60,7 +60,6 @@ interface FoodCardProps {
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
-  onOpenMap?: (canteenId: string) => void;
   /** True while the YOLO spinner has the cycling highlight on this card. */
   yoloHighlighted?: boolean;
   /** True after YOLO landed and this card is the chosen one. */
@@ -77,7 +76,6 @@ const FoodCard = memo(function FoodCard({
   maxVotes,
   onImageClick,
   onCardClick,
-  onOpenMap,
   yoloHighlighted = false,
   yoloWinner = false,
 }: FoodCardProps) {
@@ -166,20 +164,6 @@ const FoodCard = memo(function FoodCard({
             return (
               <div className="canteen-name">
                 <span>{meta.name}</span>
-                {meta.buildingCode && (
-                  <button
-                    type="button"
-                    className="canteen-building-tag"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenMap?.(meta.id);
-                    }}
-                    title={lang === "no" ? `Se Bygg ${meta.buildingCode} på kart` : `View Building ${meta.buildingCode} on map`}
-                    aria-label={lang === "no" ? `Se Bygg ${meta.buildingCode} på kart` : `View Building ${meta.buildingCode} on map`}
-                  >
-                    {meta.buildingCode}
-                  </button>
-                )}
                 {isAhead && (
                   <span className="ahead-tag">
                     {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} <Sparkles size={10} style={{ marginLeft: 3 }} />

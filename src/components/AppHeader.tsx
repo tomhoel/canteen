@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DisplayMode } from "@/lib/dateUtils";
-import { Info, Trophy, CalendarDays, MessageSquarePlus, MapPin } from "lucide-react";
+import { Info, Trophy, CalendarDays, MessageSquarePlus } from "lucide-react";
 
 interface AppHeaderProps {
   mode: DisplayMode;
@@ -24,7 +24,6 @@ interface AppHeaderProps {
     onLeaderboard: () => void;
     onWeekOverview: () => void;
     onFeedback: () => void;
-    onMap?: () => void;
   };
   /** The closed-canteens pill, which only exists once the menu is known. */
   children?: ReactNode;
@@ -95,15 +94,7 @@ export default function AppHeader({
         >
           <CalendarDays size={16} strokeWidth={2} />
         </button>
-        <button
-          className="info-btn map-btn"
-          onClick={actions?.onMap}
-          disabled={disabled || !actions?.onMap}
-          title={lang === "no" ? "Hvor er kantinene? (M)" : "Campus canteen map (M)"}
-          aria-label={lang === "no" ? "Hvor er kantinene?" : "Campus canteen map"}
-        >
-          <MapPin size={16} strokeWidth={2} />
-        </button>
+
         <button
           className="info-btn"
           onClick={actions?.onFeedback}

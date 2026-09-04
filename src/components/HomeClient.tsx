@@ -48,7 +48,6 @@ const VoteModal = lazy(() => import("@/components/VoteModal"));
 const Lightbox = lazy(() => import("@/components/Lightbox"));
 const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
 const WeekOverview = lazy(() => import("@/components/WeekOverview"));
-const CampusMapModal = lazy(() => import("@/components/CampusMapModal"));
 const CanteenFeedbackForm = lazy(() =>
   import("@/components/CanteenFeedbackForm").then((m) => ({ default: m.CanteenFeedbackForm }))
 );
@@ -163,15 +162,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [direction, setDirection] = useState(0);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
-  const [mapTargetLocation, setMapTargetLocation] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const feedbackModalOpen = useAppStore((state) => state.feedbackModalOpen);
-
-  const handleOpenMap = useCallback((locationId?: string) => {
-    setMapTargetLocation(locationId ?? null);
-    setMapOpen(true);
-  }, []);
 
   // YOLO randomiser: cycles a glow through the open canteens for ~5s then
   // settles on one. yoloHighlight is the currently-lit card during the spin;
@@ -312,9 +304,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       const isInput = tag === "input" || tag === "textarea" || tag === "select";
 
       if (e.key === "Escape") {
-        if (mapOpen) {
-          setMapOpen(false);
-        } else if (infoOpen) {
+        if (infoOpen) {
           setInfoOpen(false);
         } else if (menyView.isOpen) {
           closeMeny();
@@ -330,19 +320,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
           closeRecipe();
         }
-      } else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey && !e.altKey && !isInput) {
-        e.preventDefault();
-        setMapOpen(prev => !prev);
       } else if (e.key === "ArrowLeft" && !isInput) {
-        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !mapOpen && !infoOpen) {
+        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
           handleDaySelect(selectedDay - 1);
         }
       } else if (e.key === "ArrowRight" && !isInput) {
-        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !mapOpen && !infoOpen) {
+        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
           handleDaySelect(selectedDay + 1);
         }
       } else if (e.key === " " && !isInput) {
-        if (lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen && !mapOpen && !infoOpen) {
+        if (lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen && !infoOpen) {
           e.preventDefault();
           handleDaySelect(todayIndex >= 0 ? todayIndex : 0);
         }
@@ -350,7 +337,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, mapOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
+  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
 
   // On-demand image preloader for other days — warms a day when hovered or touched
   const preloadDay = useCallback((dayIdx: number) => {
@@ -408,7 +395,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     touchStartRef.current = null;
 
     // Do not switch day if an overlay or modal is active
-    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || feedbackModalOpen || lightboxIndex >= 0 || voteModal.isOpen || mapOpen) {
+    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || feedbackModalOpen || lightboxIndex >= 0 || voteModal.isOpen) {
       return;
     }
 
@@ -422,7 +409,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         }
       }
     }
-  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, feedbackModalOpen, lightboxIndex, voteModal.isOpen, mapOpen]);
+  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, feedbackModalOpen, lightboxIndex, voteModal.isOpen]);
 
   const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
 
@@ -696,7 +683,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           onLeaderboard: () => setLeaderboardOpen(true),
           onWeekOverview: () => setWeekOverviewOpen(true),
           onFeedback: () => setFeedbackModalOpen(true),
-          onMap: () => handleOpenMap(),
         }}
       >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
@@ -763,7 +749,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                           data={data}
                           cardIdx={cardIdx}
                           lang={lang}
-                          onOpenMap={handleOpenMap}
                         />
                       ) : (
                         <FoodCard
@@ -777,7 +762,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                           maxVotes={maxVotes}
                           onImageClick={handleImageClick}
                           onCardClick={handleCardClick}
-                          onOpenMap={handleOpenMap}
                           yoloHighlighted={yoloHighlight === cardIdx}
                           yoloWinner={yoloWinner === cardIdx}
                         />
@@ -932,26 +916,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {mapOpen && (
-          <Suspense fallback={null}>
-            <CampusMapModal
-              isOpen={mapOpen}
-              onClose={() => setMapOpen(false)}
-              initialTargetId={mapTargetLocation}
-              menuData={menuData}
-              selectedDayIndex={selectedDay}
-              lang={lang}
-              onSelectCanteen={(canteenKey) => {
-                const el = document.querySelector(`[data-yolo-card-key="${canteenKey}"]`);
-                if (el) {
-                  el.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-              }}
-            />
-          </Suspense>
-        )}
-      </AnimatePresence>
+
 
       {/* Vote Modal */}
       <AnimatePresence>

@@ -10,10 +10,9 @@ interface ClosedCardProps {
   data: CanteenDayItem;
   cardIdx: number;
   lang: "no" | "en";
-  onOpenMap?: (canteenId: string) => void;
 }
 
-const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang, onOpenMap }: ClosedCardProps) {
+const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
   const [imgError, setImgError] = useState(false);
   const meta = getCanteenMetadata(data.canteenName);
 
@@ -47,20 +46,6 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang, onOpenMap }: 
         <div className="closed-card-body">
           <div className="closed-card-eyebrow">
             <span>{meta.name}</span>
-            {meta.buildingCode && (
-              <button
-                type="button"
-                className="canteen-building-tag"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenMap?.(meta.id);
-                }}
-                title={lang === "no" ? `Se Bygg ${meta.buildingCode} på kart` : `View Building ${meta.buildingCode} on map`}
-                aria-label={lang === "no" ? `Se Bygg ${meta.buildingCode} på kart` : `View Building ${meta.buildingCode} on map`}
-              >
-                {meta.buildingCode}
-              </button>
-            )}
           </div>
           <h3 className="closed-card-heading">
             {lang === "no" ? "Ingen servering" : "Not serving"}
