@@ -13,11 +13,10 @@ interface CanteenStats {
 
 interface LeaderboardModalProps {
   isOpen: boolean;
-  lang: "no" | "en";
   onClose: () => void;
 }
 
-export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardModalProps) {
+export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,7 +79,7 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
         <button className="info-close" onClick={onClose} aria-label="Close">&times;</button>
 
         <h2 id="leaderboard-title-id" className="leaderboard-title">
-          {lang === "no" ? "Kantineseiere — siste 2 uker" : "Canteen wins — last 2 weeks"}
+          {"Kantineseiere — siste 2 uker"}
         </h2>
 
         {isLoading ? (
@@ -94,7 +93,7 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
           </div>
         ) : entries.length === 0 ? (
           <p className="leaderboard-empty">
-            {lang === "no" ? "Ingen stemmer de siste 14 dagene" : "No votes in the last 14 days"}
+            {"Ingen stemmer de siste 14 dagene"}
           </p>
         ) : (
           <>
@@ -111,7 +110,7 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
                       />
                     </div>
                     <span className="leaderboard-win-count">
-                      {s.wins}&nbsp;{lang === "no" ? (s.wins === 1 ? "seier" : "seiere") : (s.wins === 1 ? "win" : "wins")}
+                      {s.wins}&nbsp;{(s.wins === 1 ? "seier" : "seiere")}
                     </span>
                   </div>
                 );
@@ -156,7 +155,7 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
             )}
 
             <p className="leaderboard-footer">
-              {lang === "no" ? "Basert på daglige stemmer" : "Based on daily votes"}
+              {"Basert på daglige stemmer"}
             </p>
           </>
         )}

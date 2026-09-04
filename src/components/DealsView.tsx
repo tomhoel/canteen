@@ -5,7 +5,6 @@ import "@/styles/deals-view.css";
 
 interface DealsViewProps {
   deals: DealsResponse;
-  lang: "no" | "en";
   onBack: () => void;
   isStreaming?: boolean;
 }
@@ -57,7 +56,7 @@ function DealsCarousel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function DealsView({ deals, lang, onBack, isStreaming }: DealsViewProps) {
+export default function DealsView({ deals, onBack, isStreaming }: DealsViewProps) {
   const { recommendation, allStores, searchedIngredients } = deals;
   const [maxPrice, setMaxPrice] = useState(250);
 
@@ -88,7 +87,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
         <button className="deals-back" onClick={onBack}>
           <span className="deals-back-arrow">{"\u2039"}</span>
-          <span>{lang === "no" ? "Tilbake til oppskrift" : "Back to recipe"}</span>
+          <span>{"Tilbake til oppskrift"}</span>
         </button>
       </div>
 
@@ -104,7 +103,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
                 )}
                 <div>
                   <span className="deals-rec-badge">
-                    {lang === "no" ? "Anbefalt butikk" : "Recommended Store"}
+                    {"Anbefalt butikk"}
                   </span>
                   <h3 className="deals-rec-store" style={{ color: recommendation.storeColor }}>
                     {recommendation.store}
@@ -115,7 +114,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
                 <div className="deals-rec-stat">
                   <span className="deals-rec-stat-value">{recommendation.totalPrice.toFixed(2)} kr</span>
                   <span className="deals-rec-stat-label">
-                    {lang === "no" ? "Totalpris" : "Total price"}
+                    {"Totalpris"}
                   </span>
                 </div>
                 <div className="deals-rec-stat">
@@ -123,7 +122,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
                     {recommendation.keyIngredientsCovered} / {searchedIngredients.length}
                   </span>
                   <span className="deals-rec-stat-label">
-                    {lang === "no" ? "Dekket" : "Covered"}
+                    {"Dekket"}
                   </span>
                 </div>
               </div>
@@ -176,7 +175,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
         </>
       ) : (
         <div className="deals-empty">
-          <p>{lang === "no" ? "Ingen tilbud funnet for disse ingrediensene." : "No deals found."}</p>
+          <p>{"Ingen tilbud funnet for disse ingrediensene."}</p>
         </div>
       )}
     </div>

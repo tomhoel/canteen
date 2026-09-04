@@ -13,10 +13,7 @@ interface UseVotingReturn {
   voteSuccess: boolean;
   shareState: "idle" | "loading" | "sent";
   handleVote: (canteenName: string) => Promise<void>;
-  handleShareSlack: (
-    canteenDayData: CanteenDayItem[],
-    lang: "no" | "en"
-  ) => Promise<void>;
+  handleShareSlack: (canteenDayData: CanteenDayItem[]) => Promise<void>;
   setVoteSuccess: (v: boolean) => void;
   setShareState: (v: "idle" | "loading" | "sent") => void;
 }
@@ -140,7 +137,7 @@ export function useVoting(): UseVotingReturn {
   );
 
   const handleShareSlack = useCallback(
-    async (canteenDayData: CanteenDayItem[], lang: "no" | "en") => {
+    async (canteenDayData: CanteenDayItem[]) => {
       if (shareInFlightRef.current) return;
       const todayKey = getLocalDateKey();
       if (
@@ -156,25 +153,21 @@ export function useVoting(): UseVotingReturn {
       );
 
       try {
-        await sendSlackNotification({ canteens: votes, dishes, date: todayKey, lang });
+        await sendSlackNotification({ canteens: votes, dishes, date: todayKey, lang: "no" });
         if (typeof window !== "undefined") {
           localStorage.setItem(`slack_shared_${todayKey}`, "1");
         }
         setShareState("sent");
         showToast(
           "success",
-          lang === "no"
-            ? "Dagens lunsjvalg er delt på Slack! 🚀"
-            : "Lunch votes shared to Slack! 🚀"
+          "Dagens lunsjvalg er delt på Slack! 🚀"
         );
         setTimeout(() => setShareState("idle"), 2000);
       } catch {
         setShareState("idle");
         showToast(
           "error",
-          lang === "no"
-            ? "Kunne ikke dele til Slack."
-            : "Could not share to Slack."
+          "Kunne ikke dele til Slack."
         );
       } finally {
         shareInFlightRef.current = false;

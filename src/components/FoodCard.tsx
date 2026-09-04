@@ -1,6 +1,6 @@
 import { useState, memo } from "react";
 import { Users, Sparkles, Clock } from "lucide-react";
-import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
+import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
@@ -44,15 +44,14 @@ const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   barbados: { no: "Barbadisk", en: "Barbadian" },
 };
 
-function getCountryAdjective(country: string, lang: "no" | "en"): string {
+function getCountryAdjective(country: string): string {
   const key = country.toLowerCase().trim();
-  return COUNTRY_ADJECTIVES[key]?.[lang] || country;
+  return COUNTRY_ADJECTIVES[key]?.["no"] || country;
 }
 
 interface FoodCardProps {
   data: CanteenDayItem;
   cardIdx: number;
-  lang: "no" | "en";
   selectedDay: number;
   /** -1 on weekends; voteable styling hides automatically. */
   todayIndex: number;
@@ -69,7 +68,6 @@ interface FoodCardProps {
 const FoodCard = memo(function FoodCard({
   data,
   cardIdx,
-  lang,
   selectedDay,
   todayIndex,
   voteCount,
@@ -137,10 +135,10 @@ const FoodCard = memo(function FoodCard({
         </div>
         {isOutdated && (
           <div className="stale-image-badge">
-            {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`}
+            {`Uke ${canteenWeekNum}`}
           </div>
         )}
-        <span className="click-hint">{lang === "no" ? "Klikk for større" : "Click to enlarge"}</span>
+        <span className="click-hint">{"Klikk for større"}</span>
         {origin && mainDish && (
           <div className="origin-pip">
             <span className="emoji-flag">{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
@@ -153,7 +151,7 @@ const FoodCard = memo(function FoodCard({
               loading="lazy"
               decoding="async"
             />
-            <span className="origin-pip-name">{getCountryAdjective(origin.country, lang)}</span>
+            <span className="origin-pip-name">{getCountryAdjective(origin.country)}</span>
           </div>
         )}
       </div>
@@ -166,20 +164,20 @@ const FoodCard = memo(function FoodCard({
                 <span>{meta.name}</span>
                 {isAhead && (
                   <span className="ahead-tag">
-                    {lang === "no" ? `Uke ${canteenWeekNum}` : `Wk ${canteenWeekNum}`} <Sparkles size={10} style={{ marginLeft: 3 }} />
+                    {`Uke ${canteenWeekNum}`} <Sparkles size={10} style={{ marginLeft: 3 }} />
                   </span>
                 )}
               </div>
             );
           })()}
-          <h3 className="dish-name">{mainDish?.dish || (lang === "no" ? "Ingen meny" : "No menu")}</h3>
+          <h3 className="dish-name">{mainDish?.dish || ("Ingen meny")}</h3>
         </div>
 
         {mainAllergens && mainAllergens.length > 0 && (
           <div className="dish-meta-row">
             <div className="allergens-row">
               {mainAllergens.map((a, aIdx) => {
-                const displayName = lang === "no" ? (ALLERGEN_NAMES_NO[a.name] || a.name) : a.name;
+                const displayName = (ALLERGEN_NAMES_NO[a.name] || a.name);
                 return (
                 <span
                   key={a.id}
@@ -208,14 +206,14 @@ const FoodCard = memo(function FoodCard({
         <div className="stale-banner">
           <Clock size={16} className="stale-banner-icon" />
           <div className="stale-banner-text">
-            <strong>{lang === "no" ? "Ikke oppdatert" : "Not updated"}</strong>
-            <span>{lang === "no" ? `Viser meny for uke ${canteenWeekNum}` : `Showing menu from week ${canteenWeekNum}`}</span>
+            <strong>{"Ikke oppdatert"}</strong>
+            <span>{`Viser meny for uke ${canteenWeekNum}`}</span>
           </div>
         </div>
       )}
       <div className="card-bottom">
         <div className="side-dishes-header">
-          <span className="side-dishes-title">{lang === "no" ? "Andre retter" : "Other dishes"}</span>
+          <span className="side-dishes-title">{"Andre retter"}</span>
           {availabilityNotes && availabilityNotes.length > 0 && (
             <span className="availability-pills">
               {availabilityNotes.map((note, i) => (
@@ -229,12 +227,12 @@ const FoodCard = memo(function FoodCard({
             <div key={idx} className="side-dish-item">
               <span className="side-dish-text">{item.dish}</span>
               {item.allergens?.length > 0 && (
-                <span className="side-allergens">{item.allergens.map(a => lang === "no" ? (ALLERGEN_ABBREV_NO[a.name] || a.name.slice(0, 2)) : (ALLERGEN_ABBREV[a.name] || a.name.slice(0, 2))).join(" ")}</span>
+                <span className="side-allergens">{item.allergens.map(a => (ALLERGEN_ABBREV_NO[a.name] || a.name.slice(0, 2))).join(" ")}</span>
               )}
             </div>
           )) : (
             <div className="side-dish-item" style={{ justifyContent: "center", color: "var(--text-muted)" }}>
-              {lang === "no" ? "Ingen andre retter" : "No other dishes"}
+              {"Ingen andre retter"}
             </div>
           )}
         </div>

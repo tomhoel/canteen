@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useSearch } from "@tanstack/react-router";
-import { DAY_KEYS, FULL_DAYS_NO, FULL_DAYS_EN } from "@/lib/constants";
+import { DAY_KEYS, FULL_DAYS_NO } from "@/lib/constants";
 import {
   computeDisplayContext,
   weekDayLabels,
@@ -35,7 +35,7 @@ const CARD_COUNT = 3;
  * depends on whether the canteens have published next week — and that swaps
  * text inside boxes that keep their size.
  */
-export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
+export default function LoadingScreen() {
   const search = useSearch({ strict: false }) as { day?: string; week?: string };
   const cardsRef = useRef<HTMLElement>(null);
 
@@ -50,16 +50,15 @@ export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
     : -1;
   const selectedDay = dayFromSearch >= 0 ? dayFromSearch : defaultSelectedDay;
 
-  const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
+  const fullDayLabels = FULL_DAYS_NO;
 
   return (
     <div className="app-wrapper">
       <AppHeader
         mode={mode}
-        lang={lang}
         displayWeek={weekNumber}
         dayLabel={fullDayLabels[selectedDay]}
-        dateStr={formatLongDate(anchor, selectedDay, lang)}
+        dateStr={formatLongDate(anchor, selectedDay, "no")}
       />
 
       <main
@@ -67,7 +66,7 @@ export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
         ref={cardsRef}
         role="status"
         aria-busy="true"
-        aria-label={lang === "no" ? "Laster menyer" : "Loading menus"}
+        aria-label={"Laster menyer"}
       >
         {/*
           `.cards-track` is not decoration. Every sizing rule for the wrapper
@@ -94,7 +93,6 @@ export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
         dayLabelsData={weekDayLabels(anchor)}
         selectedDay={selectedDay}
         todayIndex={todayIndex}
-        lang={lang}
         mode={mode}
         onDaySelect={() => {}}
         cardsRef={cardsRef}
