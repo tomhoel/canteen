@@ -76,6 +76,7 @@ test("getCanteenMetadata - resolves canonical and legacy canteen names", () => {
   const m = getCanteenMetadata("Flow");
   assert.equal(m.name, "Kantine M");
   assert.equal(m.building, "Bygg M, 2. etasje");
+  assert.equal(m.buildingCode, "M");
   assert.equal(m.hours, "10:30 – 13:00");
   assert.equal(m.subName, "Tidligere Flow");
 
@@ -83,12 +84,14 @@ test("getCanteenMetadata - resolves canonical and legacy canteen names", () => {
   const street = getCanteenMetadata("Eat the street");
   assert.equal(street.name, "Eat The Street");
   assert.equal(street.building, "Bygg J/K");
+  assert.equal(street.buildingCode, "J/K");
   assert.equal(street.hours, "10:30 – 14:00");
 
   // Fresh4you -> Fresh 4 You
   const fresh = getCanteenMetadata("Fresh4you");
   assert.equal(fresh.name, "Fresh 4 You");
   assert.equal(fresh.building, "Bygg C/D");
+  assert.equal(fresh.buildingCode, "C/D");
   assert.equal(fresh.hours, "10:30 – 13:00");
 
   // Bakern

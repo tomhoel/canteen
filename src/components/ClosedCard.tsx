@@ -5,7 +5,6 @@ import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
 import { getCanteenMetadata } from "@/lib/constants";
-import { MapPin } from "lucide-react";
 
 interface ClosedCardProps {
   data: CanteenDayItem;
@@ -46,21 +45,22 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang, onOpenMap }: 
         </div>
 
         <div className="closed-card-body">
-          <div className="canteen-header-row">
-            <span className="closed-card-eyebrow">{meta.name}</span>
-            <button
-              type="button"
-              className="canteen-location-chip"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenMap?.(meta.id);
-              }}
-              title={lang === "no" ? `Se ${meta.building} på kart` : `View ${meta.building} on map`}
-              aria-label={lang === "no" ? `Se ${meta.building} på kart` : `View ${meta.building} on map`}
-            >
-              <MapPin size={10} strokeWidth={2.4} />
-              <span>{meta.buildingShort}</span>
-            </button>
+          <div className="closed-card-eyebrow">
+            <span>{meta.name}</span>
+            {meta.buildingCode && (
+              <button
+                type="button"
+                className="canteen-building-tag"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenMap?.(meta.id);
+                }}
+                title={lang === "no" ? `Se Bygg ${meta.buildingCode} på kart` : `View Building ${meta.buildingCode} on map`}
+                aria-label={lang === "no" ? `Se Bygg ${meta.buildingCode} på kart` : `View Building ${meta.buildingCode} on map`}
+              >
+                {meta.buildingCode}
+              </button>
+            )}
           </div>
           <h3 className="closed-card-heading">
             {lang === "no" ? "Ingen servering" : "Not serving"}

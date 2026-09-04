@@ -48,6 +48,7 @@ export interface CanteenLocationInfo {
   subName?: string;
   building: string;
   buildingShort: string;
+  buildingCode: string;
   floor: string;
   hours: string;
   lunchHours?: string;
@@ -70,6 +71,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     shortName: "Eat The Street",
     building: "Bygg J/K",
     buildingShort: "J/K",
+    buildingCode: "J/K",
     floor: "1. etasje",
     hours: "10:30 – 14:00",
     type: "canteen",
@@ -95,6 +97,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     shortName: "Fresh 4 You",
     building: "Bygg C/D",
     buildingShort: "C/D",
+    buildingCode: "C/D",
     floor: "1. etasje",
     hours: "10:30 – 13:00",
     type: "canteen",
@@ -117,6 +120,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     subName: "Tidligere Flow",
     building: "Bygg M, 2. etasje",
     buildingShort: "M (2. etg)",
+    buildingCode: "M",
     floor: "2. etasje",
     hours: "10:30 – 13:00",
     type: "canteen",
@@ -138,6 +142,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     shortName: "Bakern",
     building: "Bygg C",
     buildingShort: "C",
+    buildingCode: "C",
     floor: "1. etasje",
     hours: "07:00 – 15:00",
     lunchHours: "10:30 – 13:00",
@@ -164,6 +169,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     shortName: "Café Expo",
     building: "Bygg A / Expo",
     buildingShort: "A / Expo",
+    buildingCode: "A",
     floor: "1. etasje",
     hours: "08:00 – 15:00",
     type: "cafe",
@@ -189,6 +195,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     shortName: "Hot Spot",
     building: "Bygg G",
     buildingShort: "G",
+    buildingCode: "G",
     floor: "1. etasje",
     hours: "07:30 – 14:30",
     type: "cafe",
@@ -210,6 +217,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     shortName: "Cafe M",
     building: "Bygg M",
     buildingShort: "M (1. etg)",
+    buildingCode: "M",
     floor: "1. etasje",
     hours: "08:30 – 15:30",
     type: "cafe",
@@ -231,6 +239,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     shortName: "Middag",
     building: "Bygg J/K",
     buildingShort: "J/K",
+    buildingCode: "J/K",
     floor: "1. etasje",
     hours: "15:00 – 17:00",
     type: "dinner",
@@ -301,6 +310,7 @@ export function getCanteenMetadata(rawName?: string): CanteenLocationInfo {
     shortName: rawName,
     building: "Snarøyveien 30",
     buildingShort: "FBU",
+    buildingCode: "",
     floor: "1. etasje",
     hours: "10:30 – 13:00",
     type: "canteen",
