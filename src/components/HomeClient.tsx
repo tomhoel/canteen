@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useMotionValue, animate } from "motion/react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
@@ -377,6 +377,35 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
    */
   const swipeAxis = useRef<"undecided" | "x" | "y">("undecided");
 
+  /**
+   * How far the finger has dragged the day strip, in pixels.
+   *
+   * Until now the gesture produced nothing at all until it ended: you dragged,
+   * the screen sat still, you let go, and only then did a spring play. That
+   * dead interval is most of what "the swipe feels slow" means — it is
+   * latency, not frame rate, and no amount of shaving animation cost touches
+   * it. The strip now moves with the finger.
+   *
+   * It rides on `.cards-track` rather than on the day wrapper because the
+   * wrapper's own `x` belongs to the enter/exit variants. Keeping them on
+   * separate elements means the drag and the day change compose instead of
+   * fighting over one property.
+   */
+  const dragX = useMotionValue(0);
+
+  /**
+   * The selected day, readable from the touchmove listener.
+   *
+   * That listener is attached once with an empty dependency list — it has to
+   * be, because re-registering a non-passive listener on every day change
+   * would drop the gesture in progress — so it cannot close over state.
+   */
+  const dayRef = useRef(0);
+
+  const settleDrag = useCallback(() => {
+    animate(dragX, 0, { type: "spring", stiffness: 380, damping: 40, mass: 0.7 });
+  }, [dragX]);
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       swipeAxis.current = "undecided";
@@ -421,12 +450,28 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       // on the main thread for each touchmove before it can act on the
       // gesture, which is a real cost paid on every finger movement including
       // the vertical ones we have no interest in.
-      if (swipeAxis.current === "x" && e.cancelable) e.preventDefault();
+      if (swipeAxis.current !== "x") return;
+      if (e.cancelable) e.preventDefault();
+
+      // Resistance at the two ends. Monday dragged rightwards and Friday
+      // dragged leftwards have nowhere to go, so they follow at a quarter
+      // speed — the strip still answers the finger, but it tells you there is
+      // nothing there. Writing straight to a MotionValue keeps this off
+      // React's render path: no state, no reconciliation, one style write per
+      // frame.
+      const atStart = dayRef.current <= 0 && dx > 0;
+      const atEnd = dayRef.current >= 4 && dx < 0;
+      const resisted = atStart || atEnd ? dx * 0.25 : dx;
+      const limit = window.innerWidth * 0.55;
+      dragX.set(Math.max(-limit, Math.min(limit, resisted)));
     };
 
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => el.removeEventListener("touchmove", onTouchMove);
-  }, []);
+    // dragX is a MotionValue and never changes identity; it is listed so the
+    // dependency rule holds, not because the listener needs re-registering —
+    // and it must not, or a re-render mid-gesture would drop the swipe.
+  }, [dragX]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (!touchStartRef.current) return;
@@ -439,6 +484,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     touchStartRef.current = null;
     const axis = swipeAxis.current;
     swipeAxis.current = "undecided";
+    // Whether or not this becomes a day change, the strip returns to rest. If
+    // it does, the incoming day's own spring plays on top of this one and the
+    // two read as a single movement; if it does not, this is the snap-back
+    // that tells you the swipe was not enough.
+    if (axis === "x") settleDrag();
 
     // Do not switch day if an overlay or modal is active
     if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || lightboxIndex >= 0) {
@@ -457,7 +507,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         }
       }
     }
-  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, lightboxIndex]);
+  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, lightboxIndex, settleDrag]);
+
+  useEffect(() => {
+    dayRef.current = selectedDay;
+  }, [selectedDay]);
 
   const fullDayLabels = FULL_DAYS_NO;
 
@@ -745,7 +799,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <div className="cards-track">
+          <motion.div className="cards-track" style={{ x: dragX }}>
             {/*
               Day switch.
 
@@ -839,7 +893,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 )}
               </motion.div>
             </AnimatePresence>
-          </div>
+          </motion.div>
         </ErrorBoundary>
       </main>
 
