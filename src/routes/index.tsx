@@ -1,19 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod";
 import { getWeeklyMenu } from "@/lib/api-client";
 import HomeClient from "@/components/HomeClient";
 import LoadingScreen from "@/components/LoadingScreen";
 
-const searchSchema = z.object({
-  day: z.string().optional(),
-  canteen: z.string().optional(),
-  tab: z.enum(["meny", "deals"]).optional(),
-  week: z.string().optional(),
-  q: z.string().optional(),
-});
+/**
+ * The URL search params, validated by hand.
+ *
+ * This was a five-field zod schema — three optional strings, one optional
+ * string enum — and zod is 13 KB brotli on the critical path of a page whose
+ * whole job is to show three lunches. Nothing else in the app uses it.
+ *
+ * Behaviour is deliberately identical: unknown keys are dropped, absent keys
+ * stay absent (rather than becoming undefined-valued keys, which would put
+ * empty params in the URL), and `tab` only survives if it is one of the two
+ * values the app knows.
+ */
+type Search = {
+  day?: string;
+  canteen?: string;
+  tab?: "meny" | "deals";
+  week?: string;
+  q?: string;
+};
+
+const TABS = ["meny", "deals"] as const;
+
+function validateSearch(search: Record<string, unknown>): Search {
+  const out: Search = {};
+
+  for (const key of ["day", "canteen", "week", "q"] as const) {
+    const value = search[key];
+    if (typeof value === "string") out[key] = value;
+  }
+
+  const tab = search.tab;
+  if (typeof tab === "string" && (TABS as readonly string[]).includes(tab)) {
+    out.tab = tab as Search["tab"];
+  }
+
+  return out;
+}
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search) => searchSchema.parse(search),
+  validateSearch,
   loaderDeps: ({ search }) => ({ week: search.week }),
   loader: async ({ deps }) => {
     return await getWeeklyMenu(deps.week);

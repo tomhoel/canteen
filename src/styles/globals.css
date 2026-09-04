@@ -21,6 +21,24 @@
   --font-serif: "Outfit", sans-serif;
   --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ─── Stacking order ───────────────────────────────────────────────────────
+     Four layers, named, so nothing has to be inferred from a bare number.
+
+     Before this the app had eleven distinct z-index values across the overlay
+     layer and two real problems. The leaderboard sat at 200 — below the fixed
+     header and day bar at 1000 — so on a phone it opened behind the chrome.
+     And four things shared 1000 (lightbox, recipe, header, day bar), which
+     meant their order was decided by where they happen to appear in the JSX
+     rather than by any decision.
+
+     Card-level z-indexes are left alone: `.cards-container` is positioned with
+     its own z-index, so everything inside it is scoped to that stacking
+     context and never competes with these.                                  */
+  --z-chrome: 1000;
+  --z-overlay: 1500;
+  --z-sheet: 2100;
+
 }
 
 /* ─── Reset ─── */
@@ -289,6 +307,11 @@ body {
 /* ─── Food Card ─── */
 .food-card-3d-wrapper {
   width: 380px;
+  /* A flex item's min-width defaults to `auto`, which is its content size — so
+     this refused to shrink and three cards needed ~1000px whatever the window
+     was. Below that the leftmost card was clipped with no way to scroll to it,
+     which is every half-screen window and every zoomed 1280 laptop. */
+  min-width: 0;
 }
 
 /* Disable 3D tilt on touch devices */
@@ -1294,7 +1317,7 @@ body {
   background: rgba(0, 0, 0, 0.65);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
-  z-index: 1000;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1809,9 +1832,6 @@ body {
     padding: 20px 20px;
   }
 
-  .food-card {
-    width: 320px;
-  }
 
   .card-image-wrapper {
     width: 220px;
@@ -1845,7 +1865,7 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 1000;
+    z-index: var(--z-chrome);
     background: linear-gradient(
       to bottom,
       var(--bg-cream) 0%,
@@ -2298,7 +2318,7 @@ body {
       0 8px 32px rgba(60, 30, 0, 0.10),
       0 2px 8px rgba(60, 30, 0, 0.06),
       inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    z-index: 1000;
+    z-index: var(--z-chrome);
   }
 
   .day-pill {
@@ -2418,7 +2438,7 @@ body {
   background: rgba(0, 0, 0, 0.35);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  z-index: 2000;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3252,7 +3272,7 @@ body {
   background: rgba(26, 21, 17, 0.45);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
-  z-index: 1000;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
