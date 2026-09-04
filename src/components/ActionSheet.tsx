@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChefHat, ChevronRight, Check } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { getCanteenMetadata } from "@/lib/constants";
 
 export interface ActionSheetProps {
   isOpen: boolean;
@@ -84,7 +85,17 @@ export default function ActionSheet({
 
         {/* Header */}
         <div className="action-sheet-header">
-          <span className="action-sheet-canteen">{canteenName}</span>
+          {(() => {
+            const meta = getCanteenMetadata(canteenName);
+            return (
+              <div className="action-sheet-canteen">
+                <span>{meta.name}</span>
+                {meta.buildingCode && (
+                  <span className="canteen-building-tag">{meta.buildingCode}</span>
+                )}
+              </div>
+            );
+          })()}
           <h3 className="action-sheet-dish">{dishName}</h3>
           {description && <p className="action-sheet-desc">{description}</p>}
         </div>
