@@ -34,6 +34,32 @@ type SheetContextValue = {
 
 const SheetContext = React.createContext<SheetContextValue | null>(null);
 
+/**
+ * The same 769px breakpoint the stylesheet uses.
+ *
+ * This component positions and shapes the panel with inline styles, which no
+ * media query can reach — so the desktop treatment has to be a branch in here
+ * rather than CSS. It used to be CSS ("Desktop: center the sheet as a floating
+ * card"), and when this component replaced the CSS-driven overlay the rule
+ * stopped applying and the desktop got a phone's bottom sheet.
+ */
+function useIsDesktop(): boolean {
+  const query = "(min-width: 769px)";
+  const [isDesktop, setIsDesktop] = React.useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches
+  );
+
+  React.useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return isDesktop;
+}
+
 export function useSheet(): SheetContextValue {
   const ctx = React.useContext(SheetContext);
   if (!ctx) throw new Error("Sheet subcomponents must be used within <Sheet>");
@@ -105,6 +131,7 @@ export function SheetContent({
 }: SheetContentProps) {
   const { open, setOpen, panel: panelRef } = useSheet();
   const keyboardInset = useKeyboardInset(open);
+  const isDesktop = useIsDesktop();
 
   const [rendered, setRendered] = React.useState(open);
   const [shown, setShown] = React.useState(false);
@@ -247,6 +274,10 @@ export function SheetContent({
       axis: "y",
       filterTaps: true,
       eventOptions: { passive: false },
+      // Drag-to-dismiss is a touch affordance. On a desktop the panel is a
+      // centred card with nowhere to be flung, and a click-drag on it would
+      // just smear it off the bottom of the screen.
+      enabled: !isDesktop,
     }
   );
 
@@ -262,7 +293,10 @@ export function SheetContent({
         zIndex: 2100,
         display: "flex",
         flexDirection: "column",
-        justifyContent: "flex-end",
+        // Bottom sheet on a phone, centred card on a desktop — the treatment
+        // the stylesheet used to describe before this component took the
+        // positioning inline.
+        justifyContent: isDesktop ? "center" : "flex-end",
         alignItems: "center",
         pointerEvents: "auto",
       }}
@@ -298,20 +332,34 @@ export function SheetContent({
         style={{
           position: "relative",
           width: "100%",
-          maxWidth: 440,
+          maxWidth: isDesktop ? 380 : 440,
           backgroundColor: "var(--card-white)",
+          // A phone sheet is anchored to the bottom edge, so only its top
+          // corners are round and the shadow is cast upward. A desktop card
+          // floats, so it is round all the way and casts downward.
+          borderRadius: isDesktop ? 24 : undefined,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          boxShadow: "0 100px 0 0 var(--card-white), 0 -4px 24px rgba(60, 30, 0, 0.12), 0 -16px 60px rgba(60, 30, 0, 0.16)",
-          maxHeight:
-            detent === "medium"
+          boxShadow: isDesktop
+            ? "0 8px 30px rgba(60, 30, 0, 0.10), 0 30px 80px rgba(60, 30, 0, 0.15)"
+            : "0 100px 0 0 var(--card-white), 0 -4px 24px rgba(60, 30, 0, 0.12), 0 -16px 60px rgba(60, 30, 0, 0.16)",
+          maxHeight: isDesktop
+            ? "min(80dvh, 720px)"
+            : detent === "medium"
               ? `min(62dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 34px - ${keyboardInset}px))`
               : `calc(100dvh - env(safe-area-inset-top, 0px) - 34px - ${keyboardInset}px)`,
-          transform: shown
-            ? `translateY(calc(${keyboardInset ? `-${keyboardInset}px` : "0px"} + var(--sheet-drag, 0px)))`
-            : "translateY(100%)",
+          // Sliding up from the bottom edge is the phone gesture. A centred
+          // card has no edge to come from, so it scales in on the spot.
+          transform: isDesktop
+            ? shown
+              ? "scale(1)"
+              : "scale(0.96)"
+            : shown
+              ? `translateY(calc(${keyboardInset ? `-${keyboardInset}px` : "0px"} + var(--sheet-drag, 0px)))`
+              : "translateY(100%)",
+          opacity: isDesktop ? (shown ? 1 : 0) : 1,
           transition,
-          willChange: "transform",
+          willChange: "transform, opacity",
           outline: "none",
           display: "flex",
           flexDirection: "column",
@@ -319,7 +367,7 @@ export function SheetContent({
           touchAction: "pan-y",
         }}
       >
-        {showHandle && (
+        {showHandle && !isDesktop && (
           <div
             style={{
               position: "absolute",
