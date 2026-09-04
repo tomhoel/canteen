@@ -153,6 +153,20 @@ body {
   visibility: visible;
 }
 
+/* The second half of the shell gate, and the one that cannot be argued with.
+   index.html marks its two shell roots `style="visibility: hidden"` — an
+   inline attribute, so no stylesheet order, specificity accident, parse error
+   or injected extension CSS can reveal them early. Only an !important rule
+   outranks an inline style, so that is what un-hides them, and it lives here
+   in the same file as the rules that dress them.
+
+   Belt and braces on purpose: `#root` above is the clean mechanism, this is
+   the one that holds when something unexpected defeats it. Only the static
+   shell carries `data-shell`; React's own markup never does. */
+[data-shell] {
+  visibility: visible !important;
+}
+
 .app-wrapper {
   height: 100vh;
   height: 100dvh;

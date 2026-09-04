@@ -217,13 +217,13 @@
       their text arrives with the first commit.
     -->
     <div id="root">
-      <div class="animated-gradient-root" aria-hidden="true">
+      <div class="animated-gradient-root" data-shell style="visibility: hidden" aria-hidden="true">
         <div class="animated-gradient-blob blob-1" style="background: #f0d090"></div>
         <div class="animated-gradient-blob blob-2" style="background: #d4a090"></div>
         <div class="animated-gradient-blob blob-3" style="background: #f0bfa0"></div>
         <div class="animated-gradient-blob blob-4" style="background: #e8d8c4"></div>
       </div>
-      <div class="app-wrapper">
+      <div class="app-wrapper" data-shell style="visibility: hidden">
         <header class="app-header">
           <div class="hero-inline">
             <h1 class="hero-title">Dagens <span>Lunsj</span></h1>
@@ -312,6 +312,38 @@
         </nav>
       </div>
     </div>
+    <script>
+      // TEMPORARY DIAGNOSTIC — paint timing vs stylesheet arrival
+      (function () {
+        var log = { styleAt: null, rootVisibleAt: null, paints: [], sheetsAtFirstPaint: null };
+        var mo = new MutationObserver(function (recs) {
+          for (var r of recs) for (var n of r.addedNodes) {
+            if (n.tagName === "STYLE" || (n.tagName === "LINK" && n.rel === "stylesheet")) {
+              if (log.styleAt === null && (n.textContent || "").indexOf("day-btn") !== -1) {
+                log.styleAt = Math.round(performance.now());
+                log.rootVisibleAt = getComputedStyle(document.getElementById("root")).visibility;
+              }
+            }
+          }
+        });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+        new PerformanceObserver(function (l) {
+          for (var e of l.getEntries()) {
+            log.paints.push({ name: e.name, t: Math.round(e.startTime) });
+            if (log.sheetsAtFirstPaint === null) {
+              log.sheetsAtFirstPaint = document.styleSheets.length;
+              var r = document.getElementById("root");
+              log.rootVisAtFirstPaint = r ? getComputedStyle(r).visibility : null;
+              var b = document.querySelector(".day-btn");
+              log.btnVisAtFirstPaint = b ? getComputedStyle(b).visibility : null;
+              log.btnBorderAtFirstPaint = b ? getComputedStyle(b).borderTopWidth : null;
+            }
+          }
+          sessionStorage.setItem("__paintlog", JSON.stringify(log));
+        }).observe({ type: "paint", buffered: true });
+        setTimeout(function () { sessionStorage.setItem("__paintlog", JSON.stringify(log)); }, 3000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

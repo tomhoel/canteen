@@ -174,6 +174,22 @@ test("the shell cannot be painted without its stylesheet", () => {
     /#root\s*\{\s*visibility:\s*visible/,
     "globals.css no longer reveals #root, so the app would never become visible"
   );
+
+  // Second, independent gate: an inline style attribute outranks every
+  // stylesheet, so the shell stays hidden even if the <style> block never
+  // applies. Both shell roots must carry it, and only an !important rule can
+  // lift it.
+  const shellRoots = shell.match(/data-shell style="visibility: hidden"/g) ?? [];
+  assert.equal(shellRoots.length, 2, "both shell roots must be inline-hidden");
+  assert.match(
+    read("src/styles/globals.css"),
+    /\[data-shell\]\s*\{\s*visibility:\s*visible\s*!important/,
+    "nothing lifts the inline hide, so the shell would never appear"
+  );
+  assert.ok(
+    !read("src/components/LoadingScreen.tsx").includes("data-shell"),
+    "data-shell belongs to the static shell only — React's markup must never carry it"
+  );
 });
 
 test("the tab is not renamed a moment after it opens", () => {
