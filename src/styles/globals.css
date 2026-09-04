@@ -1923,6 +1923,11 @@ body {
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    /* Declares that only vertical panning is the browser's to handle, so a
+       sideways flick is never taken as a scroll gesture in the first place.
+       The touchmove handler cancels the rest; this is the half that works
+       before any JavaScript has had a chance to run. */
+    touch-action: pan-y;
     -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
   }

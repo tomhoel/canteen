@@ -1,4 +1,5 @@
 import { useState, memo } from "react";
+import { motion } from "motion/react";
 import { Users, Sparkles, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
@@ -120,10 +121,33 @@ const FoodCard = memo(function FoodCard({
             </div>
           ) : (
             <div className="plate-float-container">
-              <img
+              {/*
+                The plate carries its own spring, softer and slower than the
+                one moving the day around it (240/24 against 300/30), and it
+                travels a shorter distance in the same time. That difference in
+                rate is the whole effect: the picture lags fractionally behind
+                the card it sits in, so the two read as separate depths rather
+                than one flat sheet sliding.
+
+                Scaling an <img> is a compositor operation — the glyph
+                re-rasterisation that made scale expensive on cards full of
+                text does not apply to a picture, so this runs on the phone
+                too.
+              */}
+              <motion.img
+                key={imagePath}
                 src={imagePath}
                 alt={mainDish?.dish || "Matrett"}
                 className="food-image loaded"
+                initial={{ opacity: 0, scale: 1.1, x: 28 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 240,
+                  damping: 24,
+                  mass: 0.7,
+                  opacity: { duration: 0.28 },
+                }}
                 loading="eager"
                 decoding="async"
                 fetchPriority={cardIdx === 0 ? "high" : undefined}
@@ -155,7 +179,21 @@ const FoodCard = memo(function FoodCard({
           </div>
         )}
       </div>
-      <div className="card-content">
+      {/*
+        The third rate. Text rises 8px and fades the last of the way in on a
+        stiffer, lighter spring than either the card or the plate, so it
+        settles first. No scale here, deliberately — scaling a box of text is
+        the one thing WebKit has to re-rasterise glyph by glyph, and it is why
+        this motion was removed rather than tuned. y and opacity are both
+        compositor properties and cost the phone nothing.
+      */}
+      <motion.div
+        key={selectedDay}
+        initial={{ opacity: 0.5, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.6 }}
+        className="card-content"
+      >
         <div className="card-header">
           {(() => {
             const meta = getCanteenMetadata(canteenName);
@@ -200,7 +238,7 @@ const FoodCard = memo(function FoodCard({
         {description && (
           <p className="dish-description">{description}</p>
         )}
-      </div>
+      </motion.div>
 
       {isOutdated && (
         <div className="stale-banner">
