@@ -4,7 +4,33 @@
  * Uses Europe/Oslo timezone consistently across client and server.
  */
 
-import { getISOWeek, getISOWeekYear, addDays, format } from "date-fns";
+import { getISOWeek, getISOWeekYear } from "date-fns";
+
+/**
+ * `addDays` and `format` used to come from date-fns too. They were the only
+ * reason the bundle carried a date-formatting locale, for one `dd.MM` and some
+ * day arithmetic — so they are local now.
+ *
+ * getISOWeek and getISOWeekYear stay. ISO week numbering has genuinely awkward
+ * edges (week 53, the days either side of New Year belonging to the other
+ * year's week) and a week id, once written, is a permanent primary key in this
+ * codebase with no delete path. That is not arithmetic worth hand-rolling to
+ * save a few kilobytes.
+ */
+
+/** Local-noon day arithmetic, so a DST transition cannot shift the date. */
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** The "dd.MM" the day strip prints. */
+function formatDayMonth(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}.${mm}`;
+}
 
 const TZ = 'Europe/Oslo';
 
@@ -233,7 +259,7 @@ export function mondayOfWeekId(weekId: string | undefined | null): Date | null {
  * shell and the loaded app can never print different dates for the same week.
  */
 export function weekDayLabels(anchorMonday: Date): string[] {
-  return Array.from({ length: 5 }, (_, i) => format(addDays(anchorMonday, i), 'dd.MM'));
+  return Array.from({ length: 5 }, (_, i) => formatDayMonth(addDays(anchorMonday, i)));
 }
 
 /** The long-form date ("18. august") of day `dayIndex` of that same week. */
