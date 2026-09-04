@@ -1,6 +1,5 @@
-import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { DealsResponse, ProductOffer } from "@/lib/types";
-import { DealsTable } from "@/components/DealsTable";
 import { PriceRanger } from "@/components/PriceRanger";
 import "@/styles/deals-view.css";
 
@@ -61,14 +60,7 @@ function DealsCarousel({ children }: { children: React.ReactNode }) {
 export default function DealsView({ deals, lang, onBack, isStreaming }: DealsViewProps) {
   const { recommendation, allStores, searchedIngredients } = deals;
   const [maxPrice, setMaxPrice] = useState(250);
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
-  // Collect all flat offers
-  const flatOffers = useMemo(() => {
-    const list: ProductOffer[] = [];
-    allStores.forEach((s) => list.push(...s.deals));
-    return list.filter((item) => item.price <= maxPrice);
-  }, [allStores, maxPrice]);
 
   const dealsByIngredient = new Map<string, ProductOffer[]>();
   for (const store of allStores) {
@@ -98,45 +90,11 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
           <span className="deals-back-arrow">{"\u2039"}</span>
           <span>{lang === "no" ? "Tilbake til oppskrift" : "Back to recipe"}</span>
         </button>
-        <div style={{ display: "flex", gap: "6px" }}>
-          <button
-            onClick={() => setViewMode("cards")}
-            style={{
-              padding: "4px 10px",
-              borderRadius: "6px",
-              border: "1px solid #ece4d8",
-              background: viewMode === "cards" ? "#c8741a" : "#ffffff",
-              color: viewMode === "cards" ? "#ffffff" : "#6b6158",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
-          >
-            Kort
-          </button>
-          <button
-            onClick={() => setViewMode("table")}
-            style={{
-              padding: "4px 10px",
-              borderRadius: "6px",
-              border: "1px solid #ece4d8",
-              background: viewMode === "table" ? "#c8741a" : "#ffffff",
-              color: viewMode === "table" ? "#ffffff" : "#6b6158",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
-          >
-            Tabell (TanStack Table)
-          </button>
-        </div>
       </div>
 
       <PriceRanger min={0} max={250} value={maxPrice} onChange={setMaxPrice} />
 
-      {viewMode === "table" ? (
-        <DealsTable deals={flatOffers} />
-      ) : hasDeals || isStreaming ? (
+      {hasDeals || isStreaming ? (
         <>
           {showRecommendation && (
             <div className="deals-recommendation" style={{ borderColor: recommendation.storeColor + "30" }}>
