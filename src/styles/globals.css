@@ -60,7 +60,6 @@ body {
 /* Disable 300ms tap delay and accidental text selection on interactive elements */
 .day-btn,
 .info-btn,
-.vote-btn,
 .action-sheet-btn,
 .action-sheet-close,
 .recipe-servings-btn,
@@ -146,6 +145,28 @@ body {
 }
 
 /* ─── Decorative Background Elements ─── */
+/* Reveals the static shell in index.html, which is hidden until this file is
+   parsed. Keep the pair together: index.html hides #root, this shows it, and
+   the point is that the markup cannot be seen without the rules that dress it.
+   See index.static-shell.test.ts, which fails if either half goes missing. */
+#root {
+  visibility: visible;
+}
+
+/* The second half of the shell gate, and the one that cannot be argued with.
+   index.html marks its two shell roots `style="visibility: hidden"` — an
+   inline attribute, so no stylesheet order, specificity accident, parse error
+   or injected extension CSS can reveal them early. Only an !important rule
+   outranks an inline style, so that is what un-hides them, and it lives here
+   in the same file as the rules that dress them.
+
+   Belt and braces on purpose: `#root` above is the clean mechanism, this is
+   the one that holds when something unexpected defeats it. Only the static
+   shell carries `data-shell`; React's own markup never does. */
+[data-shell] {
+  visibility: visible !important;
+}
+
 .app-wrapper {
   height: 100vh;
   height: 100dvh;
@@ -154,53 +175,6 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-.decorative-leaf {
-  position: fixed;
-  pointer-events: none;
-  opacity: 0.08;
-  z-index: 0;
-}
-
-.leaf-1 {
-  top: 5%;
-  left: 3%;
-  width: 100px;
-  height: 100px;
-  background: #4caf50;
-  border-radius: 0 80% 0 80%;
-  transform: rotate(-20deg);
-}
-
-.leaf-2 {
-  top: 15%;
-  right: 5%;
-  width: 80px;
-  height: 80px;
-  background: #ff6b4a;
-  border-radius: 80% 0 80% 0;
-  transform: rotate(30deg);
-}
-
-.leaf-3 {
-  bottom: 30%;
-  left: 5%;
-  width: 90px;
-  height: 90px;
-  background: #ffb800;
-  border-radius: 50% 50% 0 50%;
-  transform: rotate(45deg);
-}
-
-.leaf-4 {
-  bottom: 20%;
-  right: 8%;
-  width: 70px;
-  height: 70px;
-  background: #4caf50;
-  border-radius: 50% 0 50% 50%;
-  transform: rotate(-15deg);
 }
 
 /* ─── Header ─── */
@@ -218,72 +192,12 @@ body {
 }
 
 /* Language Switcher */
-.lang-switcher {
-  display: flex;
-  background: var(--card-white);
-  border-radius: 50px;
-  padding: 4px;
-  box-shadow: 0 2px 8px var(--shadow-soft);
-  border: 1px solid var(--border-light);
-}
-
-.lang-btn {
-  border: none;
-  outline: none;
-  background: transparent;
-  padding: 8px 20px;
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-radius: 50px;
-  cursor: pointer;
-  transform: scale(1.0);
-  transition: background 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-              color 0.25s ease,
-              transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.25s ease;
-}
 
 .lang-btn.active {
   background: var(--accent-orange);
   color: white;
   transform: scale(1.08);
   box-shadow: 0 3px 16px rgba(200, 116, 26, 0.55);
-}
-
-/* ─── Language switch cascade ─── */
-@keyframes langCascadeToEn {
-  0%   { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-  22%  { opacity: 0; transform: translateX(-20px) scale(0.96) rotate(-1deg); }
-  65%  { opacity: 0; transform: translateX(35px) scale(0.96) rotate(1.5deg); }
-  100% { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-}
-@keyframes langCascadeToNo {
-  0%   { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-  22%  { opacity: 0; transform: translateX(20px) scale(0.96) rotate(1deg); }
-  65%  { opacity: 0; transform: translateX(-35px) scale(0.96) rotate(-1.5deg); }
-  100% { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
-}
-
-/* Stagger index per card */
-.cards-container[class*="lang-"] .food-card { --i: 0; }
-.cards-container[class*="lang-"] .food-card:nth-child(2) { --i: 1; }
-.cards-container[class*="lang-"] .food-card:nth-child(3) { --i: 2; }
-
-/* Single continuous animation — no class swap, no flash */
-/* !important on delay overrides the inline animationDelay from cardReveal stagger */
-.cards-container.lang-cascade-en .food-card {
-  animation: langCascadeToEn 650ms ease-in-out both;
-  animation-delay: calc(var(--i) * 50ms) !important;
-}
-.cards-container.lang-cascade-no .food-card {
-  animation: langCascadeToNo 650ms ease-in-out both;
-  animation-delay: calc(var(--i) * 50ms) !important;
-}
-
-/* Suppress base cardReveal from replaying after cascade completes */
-.cards-container.lang-done .food-card {
-  animation: none;
 }
 
 /* ─── Hero (inline with header) ─── */
@@ -332,19 +246,44 @@ body {
 .cards-container {
   display: flex;
   justify-content: center;
-  gap: 24px;
   padding: 20px 48px 140px;
   max-width: 1400px;
   margin: 0 auto;
   position: relative;
   z-index: 10;
-  flex-wrap: wrap;
-  align-content: center;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* The day transition slides a whole day's cards in from 80px away, and for
+     the length of that animation the incoming block genuinely sticks out past
+     the right edge. Without this the browser answers with a real horizontal
+     scrollbar across the bottom of the page, appearing and disappearing on
+     every single swipe. The mobile block already had this; the desktop one
+     never did. */
+  overflow-x: hidden;
   width: 100%;
-  transition: opacity 0.25s ease;
+}
+
+/* ─── Cards Track (CSS Grid Stack to prevent height jumping during transitions) ─── */
+.cards-track {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: center;
+}
+
+.cards-track > .cards-animated-wrapper {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  will-change: transform, opacity;
 }
 
 /* ─── Food Card ─── */
@@ -361,6 +300,12 @@ body {
 }
 
 .food-card {
+  /* The three cards do not arrive together. Each one is handed its own
+     animation-delay and animation-duration inline by FoodCard, keyed on its
+     index, so they rise 55ms apart and at slightly different speeds — 0.28s,
+     0.32s, 0.36s. That difference in rate across the row is the cascade, and
+     losing it is what made the day change land as one flat block. */
+  animation: cardReveal 0.28s var(--smooth) both;
   background: linear-gradient(180deg, #fffaf0 0%, #fef3e2 38%, var(--card-white) 52%);
   border-radius: 24px;
   width: 100%;
@@ -394,6 +339,24 @@ body {
 .food-card.clickable:active {
   transform: translateY(-1px) scale(0.99);
   transition-duration: 0.12s;
+}
+
+/* The phone's cut of cardReveal: the same rise and fade with the scale taken
+   out. Scaling a card is scaling the text inside it, which WebKit has to
+   re-rasterise glyph by glyph; the translate and the opacity are both
+   compositor-only and cost nothing. */
+@keyframes cardRevealFlat {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes cardReveal {
@@ -516,6 +479,10 @@ body {
 }
 
 .closed-card-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -832,8 +799,6 @@ body {
 }
 
 /* Legacy stale-notice — kept for backwards compat, hidden */
-.stale-notice { display: none; }
-.stale-notice-icon { display: none; }
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
 
@@ -1103,20 +1068,54 @@ body {
 }
 
 .canteen-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
   color: var(--accent-orange);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
-.week-label {
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text-muted);
-  font-size: 10px;
+.canteen-building-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted, #a09890);
+  background: var(--bg-warm, #ede7db);
+  border: 1px solid var(--border-light, #ece4d8);
+  border-radius: 4px;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  font-family: var(--font-body, "Outfit", sans-serif);
+}
+
+.canteen-building-tag:hover {
+  color: var(--accent-orange);
+  background: rgba(200, 116, 26, 0.1);
+  border-color: rgba(200, 116, 26, 0.25);
+}
+
+[data-theme="dark"] .canteen-building-tag {
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .canteen-building-tag:hover {
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.14);
+  border-color: rgba(251, 146, 60, 0.3);
 }
 
 .dish-name {
@@ -1154,20 +1153,6 @@ body {
   flex-wrap: wrap;
 }
 
-.allergen-badge {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  flex-shrink: 0;
-}
-
 /* Full-name allergen chip — used on cards */
 .allergen-chip {
   display: inline-flex;
@@ -1195,7 +1180,7 @@ body {
   font-size: 12px;
   font-weight: 400;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.45;
   text-align: center;
   margin: 2px 0 4px;
   padding: 0 4px;
@@ -1205,6 +1190,12 @@ body {
   margin-left: auto;
   margin-right: auto;
   opacity: 0.75;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Bottom Section */
@@ -1417,67 +1408,9 @@ body {
 }
 
 /* ─── Allergen Section ─── */
-.allergen-section {
-  position: fixed;
-  bottom: 90px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  width: 90%;
-  max-width: 800px;
-}
-
-.allergen-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: white;
-  padding: 12px 24px;
-  border-radius: 50px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-light);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 0 auto;
-  width: fit-content;
-}
-
-.allergen-toggle:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-}
-
-.allergen-toggle-icon {
-  font-size: 18px;
-}
-
-.allergen-toggle-text {
-  font-size: clamp(11px, 2.5vw, 13px);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.allergen-toggle-arrow {
-  font-size: 12px;
-  color: var(--text-muted);
-  transition: transform 0.3s ease;
-}
 
 .allergen-toggle-arrow.open {
   transform: rotate(180deg);
-}
-
-.allergen-panel {
-  background: rgba(255, 255, 255, 0.96);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border-radius: 20px;
-  padding: 20px;
-  margin-top: 12px;
-  box-shadow: 0 12px 40px rgba(60, 30, 0, 0.14), 0 2px 8px rgba(60, 30, 0, 0.06);
-  border: 1px solid var(--border-light);
-  animation: panelReveal 0.35s var(--spring) both;
 }
 
 @keyframes panelReveal {
@@ -1487,21 +1420,6 @@ body {
 
 .allergen-panel .allergen-item {
   animation: chipPop 0.3s var(--spring) both;
-}
-
-.allergen-panel-title {
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 16px;
-  text-align: center;
-}
-
-.allergen-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
 }
 
 .allergen-item {
@@ -1515,19 +1433,6 @@ body {
   font-weight: 500;
   color: var(--text-secondary);
   border: 1px solid var(--border-light);
-}
-
-.allergen-item-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
-  flex-shrink: 0;
 }
 
 .allergen-item-name {
@@ -1684,6 +1589,50 @@ body {
   100% { text-shadow: 0 0 0 rgba(255, 220, 120, 0); }
 }
 
+/* The static shell in index.html carries a copy of this bar so the page is not
+   missing a chunk of itself before React boots. On mobile that copy is exactly
+   right, because the position below is the real one.
+
+   On desktop it is not: DaySelector centres the bar in the gap between the
+   last card and the bottom of the viewport, which is a measurement of rendered
+   content and not something plain HTML can know. Painting the shell's copy at
+   the fallback below and letting React move it is the bar visibly dropping and
+   snapping back on every reload. So on desktop the shell's copy holds its space
+   and stays invisible — it is position: fixed, so this costs no layout — and
+   the bar appears once, already in the right place. */
+@media (min-width: 769px) {
+  .day-bar-unmeasured {
+    visibility: hidden;
+  }
+
+  /* Having hidden the shell's copy, React's bar would otherwise simply appear.
+     It rises into place instead — which is what the bar did before, except
+     that then it was rising from the wrong position to the right one rather
+     than being an entrance. Same feel, no jump. Mobile is left alone: there
+     the shell's copy is already correct and visible, so animating React's
+     would be a second entrance for a bar that never left. */
+  .day-bar:not(.day-bar-unmeasured) {
+    animation: dayBarRise 0.42s var(--smooth) both;
+  }
+}
+
+@keyframes dayBarRise {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-bar:not(.day-bar-unmeasured) {
+    animation: none;
+  }
+}
+
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
 .day-bar {
   position: fixed;
@@ -1692,8 +1641,8 @@ body {
   transform: translateX(-50%);
   right: auto;
   background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
   -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
+  backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top-color: rgba(255, 255, 255, 0.6);
   padding: 6px;
@@ -1731,8 +1680,6 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 0;
-  -webkit-transform: translate3d(0, 0, 0);
-  transform: translate3d(0, 0, 0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   will-change: transform, width;
@@ -1871,25 +1818,9 @@ body {
     height: 220px;
     margin-top: -60px;
   }
-
-  .allergen-section {
-    bottom: 85px;
-  }
 }
 
 /* ─── Main Content Wrapper ─── */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-@media (min-width: 769px) {
-  .main-content {
-    display: contents; /* On desktop, don't create a flex container */
-  }
-}
 
 /* ─── Mobile - iPhone Horizontal Layout ─── */
 @media (max-width: 768px) {
@@ -1931,22 +1862,7 @@ body {
     font-size: 11px;
   }
 
-  .lang-switcher {
-    padding: 2px;
-  }
-
-  .lang-btn {
-    padding: 6px 14px;
-    font-size: clamp(11px, 2.5vw, 13px);
-  }
-
   /* Main content */
-  .main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
 
   /* #3 — Kill animated blobs entirely on mobile: blur(80px) + animation = jank */
   .animated-gradient-root {
@@ -1961,9 +1877,6 @@ body {
   }
 
   /* Allergen section - hidden on mobile */
-  .allergen-section {
-    display: none;
-  }
 
   /* #5 — Mobile card press feedback (translate/opacity only, no scale to avoid Safari rasterization) */
   .food-card:active {
@@ -1997,28 +1910,43 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
-    gap: clamp(6px, 1dvh, 14px);
+    gap: 0;
     padding: calc(64px + env(safe-area-inset-top, 0px)) 10px calc(92px + env(safe-area-inset-bottom, 0px));
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
+    /* Declares that only vertical panning is the browser's to handle, so a
+       sideways flick is never taken as a scroll gesture in the first place.
+       The touchmove handler cancels the rest; this is the half that works
+       before any JavaScript has had a chance to run. */
+    touch-action: pan-y;
+  }
+
+  /* Cards track — mobile grid stack ensuring enter and exit share same bounds */
+  .cards-track {
+    display: grid;
+    grid-template-columns: 100%;
+    grid-template-rows: 100%;
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
   }
 
   /* Animated wrapper — fills parent, distributes space to cards */
-  .cards-animated-wrapper {
+  .cards-track > .cards-animated-wrapper {
+    grid-column: 1;
+    grid-row: 1;
     min-height: 0;
-    flex: 1;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: space-between;
     gap: clamp(6px, 1dvh, 14px);
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     will-change: transform, opacity;
@@ -2040,8 +1968,6 @@ body {
     overflow: visible;
     background: var(--card-white);
     border-color: rgba(236, 228, 216, 0.5);
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
@@ -2112,10 +2038,18 @@ body {
     transform: none !important;
   }
 
+  /* The transform declarations that used to sit here were `!important`, which
+     outranks an inline style and an animation alike — so every transform
+     Motion wrote to the plate on a phone was silently discarded. The spring
+     ran, allocated and wrote to element.style every frame, and moved nothing.
+     Proved at 390px: setting translateX(50px) scale(1.2) inline on
+     .food-image computes to matrix(1, 0, 0, 1, 0, 0).
+
+     FoodCard no longer asks for that transform on a phone, so there is nothing
+     left to block. The drop-shadow stays: it is the plate's only shadow and
+     the thing that makes the food read as sitting above the card. */
   .food-card-3d-wrapper:hover .food-image.loaded,
   .food-image.loaded {
-    transform: translate3d(0, 0, 0) !important;
-    -webkit-transform: translate3d(0, 0, 0) !important;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
@@ -2182,12 +2116,6 @@ body {
     gap: 4px;
     flex-wrap: wrap;
     flex: 1;
-  }
-
-  .allergen-badge {
-    width: 18px;
-    height: 18px;
-    font-size: 8px;
   }
 
   .allergen-chip {
@@ -2286,9 +2214,6 @@ body {
   }
 
   /* Closed canteens mobile text — adjust position above day bar */
-  .closed-canteens-text {
-    font-size: clamp(10px, 1.2dvh, 12px);
-  }
 
   .stale-banner-icon {
     font-size: 14px;
@@ -2437,20 +2362,10 @@ body {
     white-space: normal;
   }
 
-  .decorative-leaf {
-    display: none;
-  }
-
   /* Feedback button - hidden on mobile */
-  .feedback-btn {
-    display: none;
-  }
 }
 
 /* Hide pagination dots completely */
-.pagination-dots {
-  display: none;
-}
 
 /* ─── Cards Animated Wrapper (Powered by Motion) ─── */
 .cards-animated-wrapper {
@@ -2808,123 +2723,6 @@ body {
   cursor: pointer;
 }
 
-.vote-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
-.vote-modal {
-  background: white;
-  border-radius: 20px;
-  padding: 28px 24px;
-  max-width: 320px;
-  width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  text-align: center;
-}
-
-.vote-modal-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-
-.vote-modal-subtitle {
-  font-size: clamp(12px, 2.5vw, 14px);
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-}
-
-.vote-btn {
-  width: 100%;
-  background: linear-gradient(
-    135deg,
-    var(--accent-yellow) 0%,
-    var(--accent-orange) 100%
-  );
-  color: white;
-  border: none;
-  border-radius: 50px;
-  padding: 14px 24px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.35);
-  margin-bottom: 10px;
-}
-
-.vote-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 149, 0, 0.45);
-}
-
-.vote-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.vote-cancel {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: clamp(12px, 2.5vw, 14px);
-  cursor: pointer;
-  padding: 8px 16px;
-  transition: color 0.2s ease;
-  width: 100%;
-}
-
-.vote-cancel:hover {
-  color: var(--text-secondary);
-}
-
-.vote-count-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  background: var(--bg-cream);
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 600;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.vote-count-row.voted {
-  background: rgba(255, 149, 0, 0.1);
-  color: var(--accent-orange);
-  border: 1px solid rgba(255, 149, 0, 0.25);
-}
-
-
-.vote-count-row.leader {
-  background: rgba(255, 149, 0, 0.08);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.vote-count-row.voted.leader {
-  background: rgba(255, 149, 0, 0.15);
-  font-weight: 700;
-}
-
-.vote-count-number {
-  font-weight: 700;
-  font-size: clamp(12px, 2.5vw, 14px);
-}
-
 
 /* ─── Dish Origin Pip ─── */
 .origin-pip {
@@ -2992,35 +2790,10 @@ body {
 }
 
 /* ─── #7 Vote Progress Bar ─── */
-.vote-progress-track {
-  width: 100%;
-  height: 4px;
-  background: var(--bg-cream);
-  border-radius: 2px;
-  overflow: hidden;
-  margin: 4px 0 6px;
-}
-
-.vote-progress-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--accent-coral);
-  opacity: 0.5;
-  transition: width 0.6s var(--smooth);
-  min-width: 0;
-}
 
 .vote-progress-fill.leader {
   background: linear-gradient(90deg, var(--accent-yellow), var(--accent-orange));
   opacity: 0.8;
-}
-
-@media (max-width: 768px) {
-  .vote-progress-track {
-    height: 3px;
-    margin: 2px 0 4px;
-    flex-basis: 100%;
-  }
 }
 
 /* ─── #6 Lightbox Navigation ─── */
@@ -3097,16 +2870,6 @@ body {
 }
 
 /* ─── Action Sheet ─── */
-.action-sheet-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(26, 21, 17, 0.55);
-  z-index: 1100;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0;
-}
 
 .action-sheet {
   width: 100%;
@@ -3123,25 +2886,9 @@ body {
   position: relative;
   overflow: hidden;
   touch-action: pan-y;
-  -webkit-transform: translate3d(0, 0, 0);
-  transform: translate3d(0, 0, 0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   will-change: transform;
-}
-
-.action-sheet-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.5);
-  margin: 10px auto 0;
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  touch-action: none;
 }
 
 .action-sheet-close {
@@ -3208,6 +2955,10 @@ body {
 }
 
 .action-sheet-canteen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -3485,26 +3236,7 @@ body {
   50%      { transform: scale(0.92); }
 }
 
-/* Desktop: center the sheet as a floating card */
-@media (min-width: 769px) {
-  .action-sheet-overlay {
-    align-items: center;
-  }
-  .action-sheet {
-    border-radius: 24px;
-    max-width: 380px;
-    box-shadow:
-      0 8px 30px rgba(60, 30, 0, 0.10),
-      0 30px 80px rgba(60, 30, 0, 0.15);
-  }
-  .action-sheet-handle {
-    display: none;
-  }
-  .action-sheet-hero {
-    height: 180px;
-    border-radius: 24px 24px 0 0;
-  }
-}
+
 
 @media (prefers-reduced-motion: reduce) {
   .action-sheet { animation: none; }
@@ -4237,19 +3969,6 @@ body {
 .skeleton-line-side-short { width: 62%; }
 
 /* ─── Swipe Gesture Hint ─── */
-.swipe-hint-left,
-.swipe-hint-right {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(200, 116, 26, 0.55);
-  pointer-events: none;
-  z-index: 10;
-  animation: swipeHintPulse 2.5s ease-out forwards;
-}
-
-.swipe-hint-left  { left: 12px; }
-.swipe-hint-right { right: 12px; }
 
 @keyframes swipeHintPulse {
   0%   { opacity: 0; transform: translateY(-50%) scale(0.8); }
@@ -4257,14 +3976,6 @@ body {
   50%  { opacity: 1; transform: translateY(-50%) scale(1.15); }
   70%  { opacity: 1; transform: translateY(-50%) scale(1.0); }
   100% { opacity: 0; transform: translateY(-50%) scale(0.8); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .swipe-hint-left,
-  .swipe-hint-right {
-    animation: none;
-    opacity: 0.55;
-  }
 }
 
 /* ─── Reduced Motion ─── */
@@ -4326,4 +4037,51 @@ body {
 .share-btn.disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+
+/* ─── Phone: no full-screen blurs ───────────────────────────────────────────
+   A backdrop-filter over a full viewport is one of the most expensive things
+   a phone GPU can be asked to do, and it is paid every frame the overlay is
+   up — not once when it opens.
+
+   Five smaller decorative blurs were already turned off here (the pips, the
+   stale badge, the day bar, the day buttons); the animated gradient is
+   display:none. These four were the ones left running, and they are the four
+   biggest: every one of them covers the entire screen.
+
+   Each loses its blur and gains enough opacity to obscure on its own, since
+   the blur was doing part of that work. Desktop keeps all four — it has the
+   GPU budget and it is where the glass actually reads.                      */
+@media (max-width: 768px) {
+  .lightbox-overlay {
+    background: rgba(0, 0, 0, 0.88);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .info-overlay {
+    background: rgba(0, 0, 0, 0.62);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .recipe-overlay {
+    background: rgba(26, 21, 17, 0.74);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Same cascade, without the glyph re-rasterisation. */
+  .food-card {
+    animation-name: cardRevealFlat;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .food-card {
+    animation: none;
+  }
 }

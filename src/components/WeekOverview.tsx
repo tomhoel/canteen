@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 import { isCanteenClosed } from "@/lib/canteen-utils";
+import { getCanteenMetadata } from "@/lib/constants";
 import "@/styles/week-overview.css";
 
 const DAYS_ABBR_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
-const DAYS_ABBR_EN = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 interface WeekOverviewProps {
   allDaysData: CanteenDayItem[][];   // [dayIndex][canteenIndex]
@@ -14,7 +14,6 @@ interface WeekOverviewProps {
   todayIndex: number;
   dayLabelsData: string[];           // ["17.03", "18.03", ...]
   fullDayLabels: string[];           // ["Mandag", ...] or ["Monday", ...]
-  lang: "no" | "en";
   onDaySelect: (i: number) => void;
   onClose: () => void;
 }
@@ -27,7 +26,6 @@ export default function WeekOverview({
   todayIndex,
   dayLabelsData,
   fullDayLabels,
-  lang,
   onDaySelect,
   onClose,
 }: WeekOverviewProps) {
@@ -47,7 +45,7 @@ export default function WeekOverview({
     onClose();
   }, [onDaySelect, onClose]);
 
-  const daysAbbr = lang === "no" ? DAYS_ABBR_NO : DAYS_ABBR_EN;
+  const daysAbbr = DAYS_ABBR_NO;
 
   // Gather canteen names from first day that has data
   const canteenNames: string[] = [];
@@ -66,18 +64,18 @@ export default function WeekOverview({
         className="week-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={lang === "no" ? "Ukeoversikt" : "Week overview"}
+        aria-label={"Ukeoversikt"}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="week-modal-header">
           <span className="week-modal-title">
-            {lang === "no" ? "Ukeoversikt" : "Week overview"}
+            {"Ukeoversikt"}
           </span>
           <button
             className="info-close"
             onClick={onClose}
-            aria-label={lang === "no" ? "Lukk" : "Close"}
+            aria-label={"Lukk"}
           >
             &times;
           </button>
@@ -87,15 +85,18 @@ export default function WeekOverview({
           /* ── Narrow phones: canteen tabs + day list ── */
           <div className="week-mobile">
             <div className="week-tabs">
-              {canteenNames.map((name, ci) => (
-                <button
-                  key={name}
-                  className={`week-tab${ci === activeCanteenTab ? " active" : ""}`}
-                  onClick={() => setActiveCanteenTab(ci)}
-                >
-                  {name}
-                </button>
-              ))}
+              {canteenNames.map((name, ci) => {
+                const meta = getCanteenMetadata(name);
+                return (
+                  <button
+                    key={name}
+                    className={`week-tab${ci === activeCanteenTab ? " active" : ""}`}
+                    onClick={() => setActiveCanteenTab(ci)}
+                  >
+                    {meta.name}
+                  </button>
+                );
+              })}
             </div>
             <div className="week-day-list">
               {allDaysData.map((dayItems, di) => {
@@ -119,13 +120,13 @@ export default function WeekOverview({
                       <span className="week-day-item-name">
                         {fullDayLabels[di]}
                         {isToday && (
-                          <span className="week-today-badge">{lang === "no" ? "I dag" : "Today"}</span>
+                          <span className="week-today-badge">{"I dag"}</span>
                         )}
                       </span>
                       <span className="week-day-item-date">{dayLabelsData[di]}</span>
                     </div>
                     <div className="week-day-item-dish">
-                      {item.mainDish?.dish || (closed ? (lang === "no" ? "Stengt" : "Closed") : "")}
+                      {item.mainDish?.dish || (closed ? ("Stengt") : "")}
                     </div>
                   </div>
                 );
@@ -147,22 +148,29 @@ export default function WeekOverview({
                 </div>
               ))}
             </div>
-            {canteenNames.map((canteenName, ci) => (
-              <div
-                key={canteenName}
-                className="week-row"
-                style={{ "--row-idx": ci } as React.CSSProperties}
-              >
-                <div className="week-canteen-label">{canteenName}</div>
-                {allDaysData.map((dayItems, di) => {
-                  const item = dayItems[ci];
-                  if (!item) return (
-                    <div
-                      key={di}
-                      className="week-cell closed"
-                      style={{ "--col-idx": di } as React.CSSProperties}
-                    />
-                  );
+            {canteenNames.map((canteenName, ci) => {
+              const meta = getCanteenMetadata(canteenName);
+              return (
+                <div
+                  key={canteenName}
+                  className="week-row"
+                  style={{ "--row-idx": ci } as React.CSSProperties}
+                >
+                  <div className="week-canteen-label">
+                    <span>{meta.name}</span>
+                    <span className="week-canteen-sub" style={{ display: "block", fontSize: "10px", color: "var(--text-muted)", fontWeight: 500 }}>
+                      {meta.buildingShort}
+                    </span>
+                  </div>
+                  {allDaysData.map((dayItems, di) => {
+                    const item = dayItems[ci];
+                    if (!item) return (
+                      <div
+                        key={di}
+                        className="week-cell closed"
+                        style={{ "--col-idx": di } as React.CSSProperties}
+                      />
+                    );
                   const closed = isClosed(item);
                   const outdated = item.isOutdated || item.isAhead || closed;
                   const isToday = di === todayIndex;
@@ -178,13 +186,14 @@ export default function WeekOverview({
                       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") handleCellClick(di); }}
                     >
                       <div className="week-cell-dish">
-                        {item.mainDish?.dish || (closed ? (lang === "no" ? "Stengt" : "Closed") : "")}
+                        {item.mainDish?.dish || (closed ? ("Stengt") : "")}
                       </div>
                     </div>
                   );
                 })}
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </div>

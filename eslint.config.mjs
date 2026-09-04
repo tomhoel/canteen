@@ -68,10 +68,7 @@ export default defineConfig([
   // one of them died on `require is not defined in ES module scope`.
   {
     files: [
-      "fix-image-sizes.cjs",
       "generate-icon.cjs",
-      "remove-grey-bg.cjs",
-      "validate-images.cjs",
       "scripts/rebuild-nobg.cjs",
       "scripts/upload-closed-plates.cjs",
       "scripts/upload-master-plate.cjs",

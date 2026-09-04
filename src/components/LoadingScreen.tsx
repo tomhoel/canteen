@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useSearch } from "@tanstack/react-router";
-import { DAY_KEYS, FULL_DAYS_NO, FULL_DAYS_EN } from "@/lib/constants";
+import { DAY_KEYS, FULL_DAYS_NO } from "@/lib/constants";
 import {
   computeDisplayContext,
   weekDayLabels,
@@ -35,7 +35,7 @@ const CARD_COUNT = 3;
  * depends on whether the canteens have published next week — and that swaps
  * text inside boxes that keep their size.
  */
-export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
+export default function LoadingScreen() {
   const search = useSearch({ strict: false }) as { day?: string; week?: string };
   const cardsRef = useRef<HTMLElement>(null);
 
@@ -50,16 +50,15 @@ export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
     : -1;
   const selectedDay = dayFromSearch >= 0 ? dayFromSearch : defaultSelectedDay;
 
-  const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
+  const fullDayLabels = FULL_DAYS_NO;
 
   return (
     <div className="app-wrapper">
       <AppHeader
         mode={mode}
-        lang={lang}
         displayWeek={weekNumber}
         dayLabel={fullDayLabels[selectedDay]}
-        dateStr={formatLongDate(anchor, selectedDay, lang)}
+        dateStr={formatLongDate(anchor, selectedDay, "no")}
       />
 
       <main
@@ -67,12 +66,25 @@ export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
         ref={cardsRef}
         role="status"
         aria-busy="true"
-        aria-label={lang === "no" ? "Laster menyer" : "Loading menus"}
+        aria-label={"Laster menyer"}
       >
-        <div className="cards-animated-wrapper">
-          {Array.from({ length: CARD_COUNT }, (_, i) => (
-            <SkeletonCard key={i} delay={i * 75} />
-          ))}
+        {/*
+          `.cards-track` is not decoration. Every sizing rule for the wrapper
+          below is scoped as `.cards-track > .cards-animated-wrapper`
+          (globals.css:357 and :2093); rendered outside a track the wrapper
+          falls back to the `gap: inherit` / `flex-direction: inherit` rule,
+          which resolves to no gap on desktop and no height on mobile. The
+          skeleton row then comes out content-height while the loaded row
+          fills the viewport — the exact card jump this component and
+          SkeletonCard both exist to prevent. HomeClient renders the track, so
+          the loading shell has to as well.
+        */}
+        <div className="cards-track">
+          <div className="cards-animated-wrapper">
+            {Array.from({ length: CARD_COUNT }, (_, i) => (
+              <SkeletonCard key={i} delay={i * 75} />
+            ))}
+          </div>
         </div>
       </main>
 
@@ -81,7 +93,6 @@ export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
         dayLabelsData={weekDayLabels(anchor)}
         selectedDay={selectedDay}
         todayIndex={todayIndex}
-        lang={lang}
         mode={mode}
         onDaySelect={() => {}}
         cardsRef={cardsRef}

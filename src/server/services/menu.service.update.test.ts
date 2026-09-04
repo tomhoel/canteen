@@ -26,8 +26,11 @@
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import type { MenuData, CanteenData } from "../../lib/types.js";
-import type { ScrapeReport } from "./scraper.service.js";
-import { getWeekId, getWeekIdOffset } from "../../lib/dateUtils.js";
+import type { ScrapeReport, DailyScrapeResult } from "./scraper.service.js";
+// @ts-expect-error query string isolates real module from mock in Node 20
+import { getWeekId, getWeekIdOffset } from "../../lib/dateUtils.js?real";
+// @ts-expect-error query string isolates real module from mock in Node 20
+import * as realDateUtils from "../../lib/dateUtils.js?real";
 
 // ── Test doubles ──────────────────────────────────────────────────────────
 
@@ -66,6 +69,16 @@ interface World {
   redisGets: string[];
   redisConstructed: number;
   trace: string[];
+
+  /**
+   * Today's slot in the Mon-Fri strip, or -1 for a weekend.
+   *
+   * Steered rather than read, because the daily-board override keys off it and
+   * the alternative is a suite that behaves differently on a Saturday.
+   */
+  todayIndex: number;
+  /** What the daily "DAGENS LUNSJ" boards answer with. */
+  dailyBoards: DailyScrapeResult[];
 }
 
 let world: World;
@@ -110,6 +123,8 @@ function reset(overrides: Partial<World> = {}) {
     redisGets: [],
     redisConstructed: 0,
     trace: [],
+    todayIndex: 0,
+    dailyBoards: [],
     ...overrides,
   };
 
@@ -131,6 +146,19 @@ mock.module("./scraper.service.js", {
       world.trace.push("scrape");
       return world.scrape;
     },
+    scrapeAllDailyMenus: async (dayKey: string) => {
+      world.trace.push(`daily:${dayKey}`);
+      return world.dailyBoards;
+    },
+  },
+});
+
+// osloWeekdayIndex decides whether today's board is read at all, and the
+// alternative to steering it is a suite that skips the override every weekend.
+mock.module("../../lib/dateUtils.js", {
+  namedExports: {
+    ...realDateUtils,
+    osloWeekdayIndex: () => world.todayIndex,
   },
 });
 
@@ -590,7 +618,11 @@ test("a missing service-role key refuses to write with the anon key", async () =
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   await assert.rejects(runWeeklyUpdateService(), /refusing to write with the anon key/);
-  assert.deepEqual(world.trace, ["scrape"], "the refusal comes after the scrape, before any read");
+  assert.deepEqual(
+    world.trace,
+    ["scrape", "daily:monday"],
+    "the refusal comes after both widget reads, before any stored row is touched"
+  );
 
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
 });
@@ -897,4 +929,147 @@ test("displayedWeekUnchanged is about the displayed week, not the whole run", as
     true,
     "yet the displayed week has nothing to regenerate"
   );
+});
+
+// ── The daily "DAGENS LUNSJ" override ─────────────────────────────────────
+
+/** A daily board for one canteen, in Norwegian. */
+function dailyBoard(displayName: string, dishes: string[]): DailyScrapeResult {
+  return {
+    canteen: {
+      name: displayName,
+      token: "weekly-token",
+      dailyToken: "daily-token",
+      hours: "10:30 - 13:00",
+      displayName,
+    },
+    daily: {
+      no: {
+        label: "MANDAG",
+        items: dishes.map((d, i) => ({ dish: d, isMain: i === 0, allergens: [] })),
+      },
+    },
+    error: null,
+  };
+}
+
+/** The Monday menu that landed in the upsert for a given week. */
+function upsertedMonday(weekId: string, canteen: string): string[] {
+  const upsert = world.upserts.find((u) => u.weekId === weekId);
+  const day = upsert?.payload?.menu_data?.canteens?.[canteen]?.menu?.find(
+    (d: any) => d.day?.toLowerCase() === "monday"
+  );
+  return (day?.no?.items ?? []).map((i: any) => i.dish);
+}
+
+test("today's board replaces what the weekly widget planned", async () => {
+  reset({
+    todayIndex: 0,
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Planlagt rett"]) }),
+    dailyBoards: [dailyBoard("Flow", ["Faktisk servert"])],
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.deepEqual(upsertedMonday(W_NOW, "Flow"), ["Faktisk servert"]);
+});
+
+test("the overridden dish is enriched, not filed past the model", async () => {
+  // The override runs before extractAllDishes, so today's real food gets an
+  // origin and a description like any other dish. If it ran after, the card
+  // would show the right dish with the wrong (or no) description.
+  reset({
+    todayIndex: 0,
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Planlagt rett"]) }),
+    dailyBoards: [dailyBoard("Flow", ["Faktisk servert"])],
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.ok(
+    world.originsAsked.flat().includes("Faktisk servert"),
+    `expected the served dish to be enriched, asked: ${JSON.stringify(world.originsAsked)}`
+  );
+});
+
+test("the board is not read at all on a weekend", async () => {
+  // Saturday and Sunday have no lunch, so the board is either yesterday's or
+  // nobody's — and reading it would splice it into a weekday slot.
+  reset({
+    todayIndex: -1,
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Planlagt rett"]) }),
+    dailyBoards: [dailyBoard("Flow", ["Skal ikke brukes"])],
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.deepEqual(
+    world.trace.filter((t) => t.startsWith("daily:")),
+    [],
+    "no daily fetch on a weekend"
+  );
+  assert.deepEqual(upsertedMonday(W_NOW, "Flow"), ["Planlagt rett"]);
+});
+
+test("a board that could not be read leaves the weekly menu alone", async () => {
+  reset({
+    todayIndex: 0,
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Planlagt rett"]) }),
+    dailyBoards: [{ ...dailyBoard("Flow", []), daily: null, error: "HTTP 500" }],
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.deepEqual(upsertedMonday(W_NOW, "Flow"), ["Planlagt rett"]);
+});
+
+test("the board only touches the week the app is showing", async () => {
+  // Flow has rolled over to next week, so this run writes both weeks. Today is
+  // in this week only, and next week's Monday must keep its planned menu.
+  reset({
+    todayIndex: 0,
+    scrape: makeScrape({
+      Flow: makeCanteen(label(1), ["Neste ukes plan"]),
+      Fresh4you: makeCanteen(label(0), ["Planlagt rett"]),
+    }),
+    dailyBoards: [dailyBoard("Fresh4you", ["Faktisk servert"])],
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.deepEqual(upsertedMonday(W_NOW, "Fresh4you"), ["Faktisk servert"]);
+  assert.deepEqual(upsertedMonday(W_B, "Flow"), ["Neste ukes plan"]);
+});
+
+test("the displayed week gets a row even when every canteen published ahead", async () => {
+  // The case that started this: all three kitchens flip their weekly widget to
+  // next week, so nothing routes to the week the app is showing — and today's
+  // real menu would have had nowhere to land.
+  reset({
+    todayIndex: 0,
+    scrape: makeScrape({ Flow: makeCanteen(label(1), ["Neste ukes plan"]) }),
+    rows: new Map([[W_NOW, storedRow({ Flow: makeCanteen(label(0), ["Gammel plan"]) })]]),
+    dailyBoards: [dailyBoard("Flow", ["Faktisk servert"])],
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.ok(
+    world.upserts.some((u) => u.weekId === W_NOW),
+    `expected ${W_NOW} to be written, got ${world.upserts.map((u) => u.weekId).join(", ")}`
+  );
+  assert.deepEqual(upsertedMonday(W_NOW, "Flow"), ["Faktisk servert"]);
+});
+
+test("a board for a canteen the week has never seen is ignored", async () => {
+  reset({
+    todayIndex: 0,
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Planlagt rett"]) }),
+    dailyBoards: [dailyBoard("Ghost Kitchen", ["Spøkelsesmat"])],
+  });
+
+  await runWeeklyUpdateService();
+
+  const upsert = world.upserts.find((u) => u.weekId === W_NOW);
+  assert.deepEqual(Object.keys(upsert?.payload?.menu_data?.canteens ?? {}), ["Flow"]);
 });

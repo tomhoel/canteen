@@ -31,17 +31,15 @@ const ReactQueryDevtools =
 export const Route = createRootRoute({
   head: () => ({
     meta: [
-      { charSet: "utf-8" },
-      {
-        name: "viewport",
-        content:
-          "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
-      },
-      { name: "theme-color", content: "#f5f0e8" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "Dagens Lunsj" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      // charSet, viewport, theme-color and the four apple-*/mobile-web-app tags
+      // are not repeated here. index.html already ships them, and it has to:
+      // they have to be in the document the browser parses, not added by React
+      // several hundred milliseconds later. Declaring them twice produced two
+      // of each tag in the live DOM.
+      //
+      // The title stays, because a route may want to change it — but it must
+      // match index.html's exactly or the tab renames itself on mount.
+      // index.static-shell.test.ts checks that.
       { title: "🍽️ Dagens Lunsj | Telenor Fornebu" },
       {
         name: "description",

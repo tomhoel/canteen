@@ -6,10 +6,9 @@ import { Wrapper3D } from "@/components/ui/3d-wrapper";
 
 interface AllClosedCardProps {
   closedCanteens: CanteenDayItem[];
-  lang: "no" | "en";
 }
 
-export default function AllClosedCard({ closedCanteens, lang }: AllClosedCardProps) {
+export default function AllClosedCard({ closedCanteens }: AllClosedCardProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   // Use the first canteen's image path for the plate photo
@@ -28,7 +27,7 @@ export default function AllClosedCard({ closedCanteens, lang }: AllClosedCardPro
                 <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
                 <img
                   src={imagePath}
-                  alt={lang === "no" ? "Stengt" : "Closed"}
+                  alt={"Stengt"}
                   className={`food-image${imgLoaded ? " loaded" : ""}`}
                   loading="eager"
                   decoding="async"
@@ -42,10 +41,10 @@ export default function AllClosedCard({ closedCanteens, lang }: AllClosedCardPro
 
         {/* Heading */}
         <h3 className="all-closed-heading">
-          {lang === "no" ? "Ingen servering i dag" : "Not serving today"}
+          {"Ingen servering i dag"}
         </h3>
         <p className="all-closed-sub">
-          {lang === "no" ? "Alle kantiner holder stengt" : "All canteens are closed"}
+          {"Alle kantiner holder stengt"}
         </p>
 
         {/* Canteen hours list */}
@@ -57,7 +56,7 @@ export default function AllClosedCard({ closedCanteens, lang }: AllClosedCardPro
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                 </svg>
-                {lang === "no" ? "Vanligvis åpen" : "Usually open"} <strong>{c.canteen.openingHours}</strong>
+                {"Vanligvis åpen"} <strong>{c.canteen.openingHours}</strong>
               </span>
             </div>
           ))}

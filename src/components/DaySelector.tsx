@@ -7,7 +7,6 @@ interface DaySelectorProps {
   dayLabelsData: string[];
   selectedDay: number;
   todayIndex: number;
-  lang: "no" | "en";
   mode: DisplayMode;
   onDaySelect: (i: number) => void;
   /** Preload pictures for a day when hovered or touched */
@@ -30,7 +29,6 @@ export default function DaySelector({
   dayLabelsData,
   selectedDay,
   todayIndex,
-  lang,
   mode,
   onDaySelect,
   onDayHover,
@@ -61,7 +59,7 @@ export default function DaySelector({
 
   useLayoutEffect(() => {
     updatePill();
-  }, [selectedDay, fullDayLabels.length, lang, updatePill]);
+  }, [selectedDay, fullDayLabels.length, updatePill]);
 
   useEffect(() => {
     window.addEventListener("resize", updatePill);
@@ -89,8 +87,22 @@ export default function DaySelector({
     }
   }, [cardsRef]);
 
-  useEffect(() => {
+  // Layout effect, not effect: this runs before the browser paints, so the bar
+  // is never shown at the CSS fallback and then moved. With a plain useEffect
+  // React committed the bar at `bottom: 120px`, painted it, and only then
+  // applied the measurement — one frame of the bar sitting visibly too low on
+  // every single mount.
+  useLayoutEffect(() => {
     updateDynamicBottom();
+  }, [updateDynamicBottom]);
+
+  // The measurement is desktop-only, so the listeners are too. A capture-phase
+  // window scroll listener fires on every frame of every scroll a phone makes,
+  // and this one existed to run a matchMedia check and return — plus a
+  // ResizeObserver on the card container that no phone ever acts on.
+  useEffect(() => {
+    if (!window.matchMedia("(min-width: 769px)").matches) return;
+
     window.addEventListener("resize", updateDynamicBottom);
     window.addEventListener("scroll", updateDynamicBottom, true);
     const observer = cardsRef?.current ? new ResizeObserver(updateDynamicBottom) : null;
@@ -106,30 +118,22 @@ export default function DaySelector({
     <nav
       ref={barRef}
       className={`day-bar day-bar-${mode}`}
-      aria-label={lang === "no" ? "Velg dag" : "Day selection"}
+      aria-label={"Velg dag"}
       style={dynamicBottom != null ? { bottom: dynamicBottom } : undefined}
     >
       {mode !== "weekday-current" && (
         <div className="day-bar-banner" role="status">
           {mode === "weekend-preview"
-            ? (lang === "no"
-                ? `Forhåndsvisning av neste uke${
+            ? (`Forhåndsvisning av neste uke${
                     pendingCanteens.length
                       ? ` — ${pendingCanteens.join(", ")} har ikke publisert ennå`
-                      : ""
-                  }`
-                : `Next week preview${
-                    pendingCanteens.length
-                      ? ` — ${pendingCanteens.join(", ")} ${
-                          pendingCanteens.length === 1 ? "has" : "have"
-                        } not published yet`
                       : ""
                   }`)
             : mode === "pinned-week"
             // A week reached by ?week=. Say so, or the dates in the strip look
             // like a bug rather than an answer to what was asked for.
-            ? (lang === "no" ? "Du ser på en annen uke" : "Viewing another week")
-            : (lang === "no" ? "Helg — kantinene er stengt" : "Weekend — canteens closed")}
+            ? ("Du ser på en annen uke")
+            : ("Helg — kantinene er stengt")}
         </div>
       )}
       <div className="day-selector" role="tablist" ref={selectorRef}>

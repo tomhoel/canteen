@@ -27,6 +27,7 @@
 public/images/*
 !public/images/master-plate-ref.png
 !public/images/closed-plates/
+!public/images/fornebu-campus.webp
 public/images_nobg/*
 public/history/*
 
