@@ -98,7 +98,13 @@ export default function DaySelector({
     updateDynamicBottom();
   }, [updateDynamicBottom]);
 
+  // The measurement is desktop-only, so the listeners are too. A capture-phase
+  // window scroll listener fires on every frame of every scroll a phone makes,
+  // and this one existed to run a matchMedia check and return — plus a
+  // ResizeObserver on the card container that no phone ever acts on.
   useEffect(() => {
+    if (!window.matchMedia("(min-width: 769px)").matches) return;
+
     window.addEventListener("resize", updateDynamicBottom);
     window.addEventListener("scroll", updateDynamicBottom, true);
     const observer = cardsRef?.current ? new ResizeObserver(updateDynamicBottom) : null;

@@ -460,10 +460,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           : plateImage
             ? getSupabaseImageUrl("images_nobg", plateImage, { width: 340, format: "webp", quality: 75 })
             : "";
+        // Sized, not untransformed. The bare URL serves the original PNG —
+        // 1.66 MB for a picture no phone screen can show more than a fraction
+        // of, downloaded the moment anyone taps a plate. 1080px WebP is wider
+        // than the largest phone viewport and about 5% of the bytes, and the
+        // transparency the gradient backdrop depends on survives it: WebP has
+        // an alpha channel and `images_nobg` is the cut-out bucket.
         const highResImagePath = isClosed
-          ? getClosedPlateUrl(`${canteenName}-${dk}`)
+          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 1080, format: "webp", quality: 85 })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage)
+            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 1080, format: "webp", quality: 85 })
             : "";
         // CanteenDayItem models "no usable week label" as undefined, not null.
         const canteenWeekNum = parseCanteenWeekNumber(canteen.week) ?? undefined;
