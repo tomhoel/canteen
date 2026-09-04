@@ -266,6 +266,9 @@ export function SheetContent({
       style={{
         position: "fixed",
         inset: 0,
+        // The sheet is the topmost layer, matching --z-sheet in globals.css.
+        // It is inline because this element is portalled outside .app-wrapper
+        // and builds its own positioning; the stylesheet cannot reach it.
         zIndex: 2100,
         display: "flex",
         flexDirection: "column",
