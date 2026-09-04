@@ -89,8 +89,16 @@ export default function DaySelector({
     }
   }, [cardsRef]);
 
-  useEffect(() => {
+  // Layout effect, not effect: this runs before the browser paints, so the bar
+  // is never shown at the CSS fallback and then moved. With a plain useEffect
+  // React committed the bar at `bottom: 120px`, painted it, and only then
+  // applied the measurement — one frame of the bar sitting visibly too low on
+  // every single mount.
+  useLayoutEffect(() => {
     updateDynamicBottom();
+  }, [updateDynamicBottom]);
+
+  useEffect(() => {
     window.addEventListener("resize", updateDynamicBottom);
     window.addEventListener("scroll", updateDynamicBottom, true);
     const observer = cardsRef?.current ? new ResizeObserver(updateDynamicBottom) : null;
