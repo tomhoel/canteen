@@ -8,7 +8,10 @@
     />
     <!-- Tints the iOS status bar and Safari's chrome even before install. -->
     <meta name="theme-color" content="#f5f0e8" />
-    <title>Canteen — Menus, Deals & Culinary Discovery</title>
+    <!-- Must stay identical to the title in src/routes/__root.tsx, which
+         replaces it on mount; a different string here renames the tab a
+         moment after the page opens. -->
+    <title>🍽️ Dagens Lunsj | Telenor Fornebu</title>
 
     <!-- The app's own background, inline, so the very first paint is already
          the right colour. globals.css sets this too, but it is an 83 KB
@@ -16,6 +19,21 @@
          which on a cold launch is a visible flash of the wrong colour. -->
     <style>
       html, body { background: #f5f0e8; margin: 0; }
+
+      /* The shell below is markup with no stylesheet of its own, so it must
+         never be painted before globals.css has landed — unstyled, it is a
+         browser-default heading, a row of bare buttons and a strip of text.
+
+         The release build blocks rendering on the stylesheet, so there this
+         costs nothing: both rules are in the first CSSOM and the shell paints
+         styled on the first frame. The dev server is the case that needs it —
+         Vite serves CSS through JS there, with no <link> at all, so without
+         this the shell is guaranteed to flash bare on every reload.
+
+         The reveal deliberately lives in globals.css rather than in a script:
+         it makes "visible" and "styled" the same condition, so this cannot
+         come apart again. */
+      #root { visibility: hidden; }
 
       /* Outfit, self-hosted. This used to be a Google Fonts <link>, which cost
          a second cross-origin connection (fonts.googleapis.com for the CSS,
@@ -60,42 +78,96 @@
     <link rel="preconnect" href="https://sloutnqpqfesyoycklgd.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://sloutnqpqfesyoycklgd.supabase.co" />
 
-    <!-- Preload the critical menu API endpoint on first visit so fetch overlaps with JS bundle loading -->
-    <link rel="preload" href="/api/menu" as="fetch" crossorigin="anonymous" />
+    <!-- Starts the menu request in parallel with the JS bundle, so the app has
+         its data before React has finished booting. api-client picks the result
+         up off window.__INITIAL_MENU_DATA__ / __MENU_FETCH_PROMISE__.
+
+         No `crossorigin` on the preload: this is a same-origin URL, and the
+         attribute would put the link in CORS mode with credentials omitted
+         while the `fetch()` below runs in the default same-origin credentials
+         mode. The two would not match, the preload would go unused, and every
+         cold load would pay for the response twice. -->
+    <link rel="preload" href="/api/menu" as="fetch" />
     <script>
-      (function() {
+      (function () {
         try {
-          window.__MENU_FETCH_PROMISE__ = fetch('/api/menu')
-            .then(function(res) {
+          var params = new URLSearchParams(location.search);
+
+          // A ?week= load ignores all of this: api-client only consults the
+          // eager fetch when no week is pinned, and the plates below belong to
+          // the current week, not the requested one. Firing it there buys a
+          // wasted round trip and three preloads of the wrong pictures.
+          if (params.get("week")) return;
+
+          var DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+
+          // Which day's plate is the LCP image.
+          //
+          // Resolved in Europe/Oslo rather than from the device clock, because
+          // that is where the rest of the app resolves "today" (dateUtils'
+          // todayOsloParts). A phone an hour the other side of midnight would
+          // otherwise warm yesterday's or tomorrow's picture and leave the real
+          // one to load cold.
+          function daysToWarm() {
+            var pinned = (params.get("day") || "").toLowerCase();
+            if (DAY_KEYS.indexOf(pinned) >= 0) return [pinned];
+
+            var short = null;
+            try {
+              short = new Intl.DateTimeFormat("en-US", {
+                timeZone: "Europe/Oslo",
+                weekday: "short",
+              }).format(new Date());
+            } catch (e) {}
+
+            var index = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(short);
+            if (index >= 0) return [DAY_KEYS[index]];
+
+            // Weekend. The app lands on next week's Monday when the kitchens
+            // have published ahead and on the Friday just gone when they have
+            // not, and which one it is depends on menu data this script has not
+            // received yet. Warm both — one of the two is the LCP image, and the
+            // other is a single cached picture.
+            return ["monday", "friday"];
+          }
+
+          window.__MENU_FETCH_PROMISE__ = fetch("/api/menu")
+            .then(function (res) {
               return res.ok ? res.json() : null;
             })
-            .then(function(data) {
+            .then(function (data) {
               if (!data || !data.menuData) return data;
               window.__INITIAL_MENU_DATA__ = data;
-              // Discover and preload today's primary LCP plate image immediately
+
               if (data.plateImages) {
-                var dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-                var d = new Date().getDay();
-                var dayKey = (d === 0 || d === 6) ? "monday" : dayNames[d];
                 var canteens = ["Eat the street", "Fresh4you", "Flow"];
-                for (var i = 0; i < canteens.length; i++) {
-                  var plate = data.plateImages[dayKey + "|" + canteens[i]];
-                  if (plate) {
+                var days = daysToWarm();
+                var first = true;
+                for (var d = 0; d < days.length; d++) {
+                  for (var i = 0; i < canteens.length; i++) {
+                    var plate = data.plateImages[days[d] + "|" + canteens[i]];
+                    if (!plate) continue;
                     var enc = plate.split("/").map(encodeURIComponent).join("/");
-                    var url = "https://sloutnqpqfesyoycklgd.supabase.co/storage/v1/render/image/public/images_nobg/" +
-                      enc + "?width=340&format=webp&quality=75&resize=contain";
                     var link = document.createElement("link");
                     link.rel = "preload";
                     link.as = "image";
-                    link.href = url;
-                    if (i === 0) link.fetchPriority = "high";
+                    link.href =
+                      "https://sloutnqpqfesyoycklgd.supabase.co/storage/v1/render/image/public/images_nobg/" +
+                      enc +
+                      "?width=340&format=webp&quality=75&resize=contain";
+                    if (first) {
+                      link.fetchPriority = "high";
+                      first = false;
+                    }
                     document.head.appendChild(link);
                   }
                 }
               }
               return data;
             })
-            .catch(function() { return null; });
+            .catch(function () {
+              return null;
+            });
         } catch (e) {}
       })();
     </script>
