@@ -403,17 +403,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       const start = touchStartRef.current;
       if (!start || e.touches.length !== 1) return;
 
-      // The mobile layout sizes three cards to fill the viewport, so there is
-      // normally nothing here to scroll — measured on a phone-sized window,
-      // scrollHeight and clientHeight are equal. When that is true the browser
-      // has no business interpreting this gesture at all: the only thing it
-      // can move is its own chrome, which slides up over the day strip
-      // mid-swipe. Cancel everything and the bar stays put.
-      if (el.scrollHeight <= el.clientHeight + 1) {
-        if (e.cancelable) e.preventDefault();
-        return;
-      }
-
       const dx = e.touches[0].clientX - start.x;
       const dy = e.touches[0].clientY - start.y;
 
@@ -426,6 +415,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         swipeAxis.current = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
       }
 
+      // Only the horizontal case is cancelled, and only once the axis is
+      // known. Cancelling every move — which an earlier version did whenever
+      // the container had nothing to scroll — makes iOS block the compositor
+      // on the main thread for each touchmove before it can act on the
+      // gesture, which is a real cost paid on every finger movement including
+      // the vertical ones we have no interest in.
       if (swipeAxis.current === "x" && e.cancelable) e.preventDefault();
     };
 

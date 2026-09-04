@@ -5,6 +5,7 @@ import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetad
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 
 const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   turkey: { no: "Tyrkisk", en: "Turkish" },
@@ -93,6 +94,7 @@ const FoodCard = memo(function FoodCard({
   } = data;
 
   const [imgError, setImgError] = useState(false);
+  const isDesktop = useIsDesktop();
 
   const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
@@ -128,25 +130,27 @@ const FoodCard = memo(function FoodCard({
           ) : (
             <div className="plate-float-container">
               {/*
-                The plate carries its own spring, softer and slower than the
-                one moving the day around it (240/24 against 300/30), and it
-                travels a shorter distance in the same time. That difference in
-                rate is the whole effect: the picture lags fractionally behind
-                the card it sits in, so the two read as separate depths rather
-                than one flat sheet sliding.
+                On a desktop the plate carries its own spring, softer and
+                slower than the one moving the day around it (240/24 against
+                300/30), so the picture lags fractionally behind the card it
+                sits in and the two read as separate depths.
 
-                Scaling an <img> is a compositor operation — the glyph
-                re-rasterisation that made scale expensive on cards full of
-                text does not apply to a picture, so this runs on the phone
-                too.
+                On a phone it only fades. Not a new concession — the mobile
+                stylesheet has been discarding this transform all along with an
+                `!important`, so the parallax has never once rendered on a
+                phone. What is new is that we stop paying for it: three plates
+                x two animated values is six spring integrators writing to
+                element.style every frame of every swipe, for a movement that
+                was thrown away. Asking for nothing looks identical and costs
+                nothing.
               */}
               <motion.img
                 key={imagePath}
                 src={imagePath}
                 alt={mainDish?.dish || "Matrett"}
                 className="food-image loaded"
-                initial={{ opacity: 0, scale: 1.1, x: 28 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
+                initial={isDesktop ? { opacity: 0, scale: 1.1, x: 28 } : { opacity: 0 }}
+                animate={isDesktop ? { opacity: 1, scale: 1, x: 0 } : { opacity: 1 }}
                 transition={{
                   type: "spring",
                   stiffness: 240,

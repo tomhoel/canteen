@@ -1680,8 +1680,6 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 0;
-  -webkit-transform: translate3d(0, 0, 0);
-  transform: translate3d(0, 0, 0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   will-change: transform, width;
@@ -1924,8 +1922,6 @@ body {
        The touchmove handler cancels the rest; this is the half that works
        before any JavaScript has had a chance to run. */
     touch-action: pan-y;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
   }
 
   /* Cards track — mobile grid stack ensuring enter and exit share same bounds */
@@ -1951,8 +1947,6 @@ body {
     align-items: stretch;
     justify-content: space-between;
     gap: clamp(6px, 1dvh, 14px);
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     will-change: transform, opacity;
@@ -1974,8 +1968,6 @@ body {
     overflow: visible;
     background: var(--card-white);
     border-color: rgba(236, 228, 216, 0.5);
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
@@ -2046,10 +2038,18 @@ body {
     transform: none !important;
   }
 
+  /* The transform declarations that used to sit here were `!important`, which
+     outranks an inline style and an animation alike — so every transform
+     Motion wrote to the plate on a phone was silently discarded. The spring
+     ran, allocated and wrote to element.style every frame, and moved nothing.
+     Proved at 390px: setting translateX(50px) scale(1.2) inline on
+     .food-image computes to matrix(1, 0, 0, 1, 0, 0).
+
+     FoodCard no longer asks for that transform on a phone, so there is nothing
+     left to block. The drop-shadow stays: it is the plate's only shadow and
+     the thing that makes the food read as sitting above the card. */
   .food-card-3d-wrapper:hover .food-image.loaded,
   .food-image.loaded {
-    transform: translate3d(0, 0, 0) !important;
-    -webkit-transform: translate3d(0, 0, 0) !important;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
