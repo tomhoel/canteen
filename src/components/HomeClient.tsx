@@ -282,13 +282,25 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   // Seed selectedDay once menu data is ready, so the user lands on the
   // mode-appropriate day (today / Monday-preview / Friday-recap).
+  //
+  // Unless the URL asked for a day. This used to seed unconditionally, which
+  // quietly undid `?day=`: the initial state reads it and the effect above
+  // re-applies it, and then this fired as soon as the menu arrived and put the
+  // default back. The app writes `?day=` into the URL on every day change, so
+  // every link anyone shared opened on today instead of the day they were
+  // looking at.
   const seededSelectedDayRef = useRef(false);
   useEffect(() => {
-    if (menuData && !seededSelectedDayRef.current) {
-      setSelectedDay(displayContext.defaultSelectedDay);
-      seededSelectedDayRef.current = true;
-    }
-  }, [menuData, displayContext.defaultSelectedDay]);
+    if (!menuData || seededSelectedDayRef.current) return;
+    seededSelectedDayRef.current = true;
+
+    const requested = searchParams?.day
+      ? DAY_KEYS.indexOf(searchParams.day.toLowerCase() as (typeof DAY_KEYS)[number])
+      : -1;
+    if (requested >= 0) return;
+
+    setSelectedDay(displayContext.defaultSelectedDay);
+  }, [menuData, displayContext.defaultSelectedDay, searchParams?.day]);
 
   // Keyboard navigation
   useEffect(() => {
