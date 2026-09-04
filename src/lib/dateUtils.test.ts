@@ -13,6 +13,8 @@ import {
   allCanteensAhead,
   mondayOfWeekId,
   computeDisplayContext,
+  weekDayLabels,
+  formatLongDate,
 } from "./dateUtils";
 
 test("getWeekNumberForDate - ordinary mid-year date", () => {
@@ -210,3 +212,18 @@ test("computeDisplayContext - an unparseable week param is ignored, not obeyed",
   assert.equal(junk.mode, plain.mode);
   assert.equal(junk.weekNumber, plain.weekNumber);
 });
+
+test("weekDayLabels - produces 5 zero-padded day.month strings", () => {
+  const monday = new Date(2026, 7, 17, 12, 0, 0); // 17 Aug 2026
+  const labels = weekDayLabels(monday);
+  assert.deepEqual(labels, ["17.08", "18.08", "19.08", "20.08", "21.08"]);
+});
+
+test("formatLongDate - formats long date for Norwegian and English", () => {
+  const monday = new Date(2026, 7, 17, 12, 0, 0); // 17 Aug 2026
+  const no = formatLongDate(monday, 1, "no"); // Tuesday 18 August
+  const en = formatLongDate(monday, 1, "en");
+  assert.match(no, /18\.\s*august/i);
+  assert.match(en, /18\s*August/i);
+});
+

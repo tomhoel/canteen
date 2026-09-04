@@ -104,10 +104,10 @@ export async function sendSlackNotification(data: NotifyPayload) {
   const maxVotes = Math.max(0, ...Object.values(canteens));
   const totalVotes = Object.values(canteens).reduce((a, b) => a + b, 0);
 
-  const d = new Date(date);
+  const d = new Date(date.includes("T") ? date : `${date}T12:00:00`);
   const formattedDate = d.toLocaleDateString(
     lang === "no" ? "nb-NO" : "en-GB",
-    { weekday: "long", day: "numeric", month: "long" }
+    { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Oslo" }
   );
 
   const lines = sorted.map(([name, count]) => {

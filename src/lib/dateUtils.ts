@@ -4,6 +4,8 @@
  * Uses Europe/Oslo timezone consistently across client and server.
  */
 
+import { getISOWeek, getISOWeekYear, addDays, format } from "date-fns";
+
 const TZ = 'Europe/Oslo';
 
 /** Returns today's date as YYYY-MM-DD in Europe/Oslo timezone. */
@@ -26,13 +28,9 @@ function todayOsloParts(): { year: number; month: number; day: number } {
   };
 }
 
-/** ISO 8601 week number for a given calendar date. */
+/** ISO 8601 week number for a given calendar date (Europe/Oslo noon anchor). */
 export function getWeekNumberForDate(year: number, month: number, day: number): number {
-  const d = new Date(year, month - 1, day);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return getISOWeek(new Date(year, month - 1, day, 12, 0, 0));
 }
 
 /** Returns the ISO 8601 week number for today (Europe/Oslo timezone). */
@@ -49,11 +47,7 @@ export function getWeekNumber(): number {
  * those boundary days.
  */
 export function getIsoWeekYearForDate(year: number, month: number, day: number): number {
-  const d = new Date(year, month - 1, day);
-  d.setHours(0, 0, 0, 0);
-  // Step to the Thursday of this ISO week; its calendar year is the week-year.
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-  return d.getFullYear();
+  return getISOWeekYear(new Date(year, month - 1, day, 12, 0, 0));
 }
 
 /**
@@ -224,11 +218,7 @@ export function mondayOfWeekId(weekId: string | undefined | null): Date | null {
  * shell and the loaded app can never print different dates for the same week.
  */
 export function weekDayLabels(anchorMonday: Date): string[] {
-  return Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(anchorMonday);
-    d.setDate(anchorMonday.getDate() + i);
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-  });
+  return Array.from({ length: 5 }, (_, i) => format(addDays(anchorMonday, i), 'dd.MM'));
 }
 
 /** The long-form date ("18. august") of day `dayIndex` of that same week. */
@@ -237,8 +227,7 @@ export function formatLongDate(
   dayIndex: number,
   lang: 'no' | 'en',
 ): string {
-  const d = new Date(anchorMonday);
-  d.setDate(anchorMonday.getDate() + dayIndex);
+  const d = addDays(anchorMonday, dayIndex);
   return d.toLocaleDateString(lang === 'no' ? 'nb-NO' : 'en-GB', {
     day: 'numeric',
     month: 'long',

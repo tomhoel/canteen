@@ -1,4 +1,5 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
+import { motion } from "motion/react";
 import type { DisplayMode } from "@/lib/dateUtils";
 
 interface DaySelectorProps {
@@ -42,7 +43,6 @@ export default function DaySelector({
   const barRef = useRef<HTMLElement>(null);
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
-  const [animated, setAnimated] = useState(false);
   const [dynamicBottom, setDynamicBottom] = useState<number | null>(null);
 
   const updatePill = useCallback(() => {
@@ -61,9 +61,6 @@ export default function DaySelector({
 
   useLayoutEffect(() => {
     updatePill();
-    // Enable spring sliding transition immediately after first layout
-    const timer = requestAnimationFrame(() => setAnimated(true));
-    return () => cancelAnimationFrame(timer);
   }, [selectedDay, fullDayLabels.length, lang, updatePill]);
 
   useEffect(() => {
@@ -137,14 +134,18 @@ export default function DaySelector({
       )}
       <div className="day-selector" role="tablist" ref={selectorRef}>
         {pill && (
-          <div
+          <motion.div
             className="day-pill"
-            style={{
-              transform: `translateX(${pill.left}px)`,
-              width: `${pill.width}px`,
-              transition: animated
-                ? "transform 0.45s cubic-bezier(0.32, 1.25, 0.48, 1), width 0.35s cubic-bezier(0.32, 1.25, 0.48, 1)"
-                : "none",
+            initial={false}
+            animate={{
+              x: pill.left,
+              width: pill.width,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 380,
+              damping: 34,
+              mass: 0.65,
             }}
             aria-hidden="true"
           />

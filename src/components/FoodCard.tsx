@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Users, Sparkles, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV, ALLERGEN_ABBREV_NO } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
+import { markImageCached } from "@/lib/imageCache";
 
 const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
   turkey: { no: "Tyrkisk", en: "Turkish" },
@@ -65,7 +66,7 @@ interface FoodCardProps {
   yoloWinner?: boolean;
 }
 
-export default function FoodCard({
+const FoodCard = memo(function FoodCard({
   data,
   cardIdx,
   lang,
@@ -78,9 +79,6 @@ export default function FoodCard({
   yoloHighlighted = false,
   yoloWinner = false,
 }: FoodCardProps) {
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
-
   const {
     canteenName,
     mainDish,
@@ -95,6 +93,8 @@ export default function FoodCard({
     availabilityNotes,
   } = data;
 
+  const [imgError, setImgError] = useState(false);
+
   const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
 
@@ -102,10 +102,6 @@ export default function FoodCard({
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
       className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
-      style={{
-        animationDelay: `${cardIdx * 55}ms`,
-        animationDuration: `${0.28 + cardIdx * 0.04}s`,
-      }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
       data-yolo-card-key={canteenName}
     >
@@ -120,33 +116,23 @@ export default function FoodCard({
         onClick={e => { e.stopPropagation(); if (mainDish) onImageClick(data); }}
       >
         <div className="card-image-circle">
-          {/* An empty path means the server found no plate for this dish. Go
-              straight to the placeholder rather than letting the browser
-              request the document URL and fail. */}
           {imgError || !imagePath ? (
             <div className="image-placeholder">
               {canteenName.charAt(0)}
             </div>
           ) : (
-            <>
-              <div className={`image-shimmer${imgLoaded ? " loaded" : ""}`} aria-hidden="true" />
+            <div className="plate-float-container">
               <img
-                key={imagePath}
-                ref={(img) => {
-                  if (img && img.complete && img.naturalWidth > 0 && !imgLoaded) {
-                    setImgLoaded(true);
-                  }
-                }}
                 src={imagePath}
                 alt={mainDish?.dish || "Matrett"}
-                className={`food-image${imgLoaded ? " loaded" : ""}`}
+                className="food-image loaded"
                 loading="eager"
                 decoding="async"
                 fetchPriority={cardIdx === 0 ? "high" : undefined}
-                onLoad={() => setImgLoaded(true)}
+                onLoad={() => markImageCached(imagePath)}
                 onError={() => setImgError(true)}
               />
-            </>
+            </div>
           )}
         </div>
         {isOutdated && (
@@ -251,4 +237,6 @@ export default function FoodCard({
     </article>
     </Wrapper3D>
   );
-}
+});
+
+export default FoodCard;

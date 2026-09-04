@@ -70,9 +70,9 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
           <motion.div
             key="lightbox-content"
             className="lightbox-content"
-            initial={{ scale: 0.92, y: 16, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.92, y: 16, opacity: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 340, damping: 28 }}
             onClick={e => e.stopPropagation()}
             onTouchStart={onTouchStart}
