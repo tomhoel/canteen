@@ -125,9 +125,9 @@ export function CanteenFeedbackForm({ onClose }: CanteenFeedbackFormProps) {
                       fontFamily: "Outfit, sans-serif",
                     }}
                   >
-                    <option value="Fresh4you">Fresh4you (Telenor Expo)</option>
-                    <option value="Eat the street">Eat the street (The Hub)</option>
-                    <option value="Flow">Flow (Bygg M)</option>
+                    <option value="Eat the street">Eat The Street (Bygg J/K)</option>
+                    <option value="Fresh4you">Fresh 4 You (Bygg C/D)</option>
+                    <option value="Flow">Kantine M (Bygg M, 2. etg)</option>
                   </select>
                 </div>
               )}

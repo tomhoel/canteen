@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { CANTEEN_ORDER } from "@/lib/constants";
+import { CANTEEN_ORDER, getCanteenMetadata } from "@/lib/constants";
 import { getAttendanceHistory } from "@/lib/api-client";
 import "@/styles/leaderboard-modal.css";
 
@@ -99,20 +99,23 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
         ) : (
           <>
             <div className="leaderboard-bars">
-              {stats.map(s => (
-                <div key={s.name} className="leaderboard-bar-row">
-                  <span className="leaderboard-canteen-name">{s.name}</span>
-                  <div className="leaderboard-bar-track">
-                    <div
-                      className="leaderboard-bar"
-                      style={{ width: `${(s.wins / maxWins) * 100}%` }}
-                    />
+              {stats.map(s => {
+                const meta = getCanteenMetadata(s.name);
+                return (
+                  <div key={s.name} className="leaderboard-bar-row">
+                    <span className="leaderboard-canteen-name">{meta.name}</span>
+                    <div className="leaderboard-bar-track">
+                      <div
+                        className="leaderboard-bar"
+                        style={{ width: `${(s.wins / maxWins) * 100}%` }}
+                      />
+                    </div>
+                    <span className="leaderboard-win-count">
+                      {s.wins}&nbsp;{lang === "no" ? (s.wins === 1 ? "seier" : "seiere") : (s.wins === 1 ? "win" : "wins")}
+                    </span>
                   </div>
-                  <span className="leaderboard-win-count">
-                    {s.wins}&nbsp;{lang === "no" ? (s.wins === 1 ? "seier" : "seiere") : (s.wins === 1 ? "win" : "wins")}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {dotData.length > 0 && (
@@ -132,20 +135,23 @@ export default function LeaderboardModal({ isOpen, lang, onClose }: LeaderboardM
                     })}
                   </div>
                 </div>
-                {CANTEEN_ORDER.map(name => (
-                  <div key={name} className="leaderboard-dots-row">
-                    <span className="leaderboard-dots-label">{name.split(" ").slice(0, 2).join(" ")}</span>
-                    <div className="leaderboard-dots">
-                      {dotData.map(({ date, winners }) => (
-                        <span
-                          key={date}
-                          className={`leaderboard-dot ${winners.includes(name) ? "won" : "lost"}`}
-                          title={date}
-                        />
-                      ))}
+                {CANTEEN_ORDER.map(name => {
+                  const meta = getCanteenMetadata(name);
+                  return (
+                    <div key={name} className="leaderboard-dots-row">
+                      <span className="leaderboard-dots-label">{meta.shortName}</span>
+                      <div className="leaderboard-dots">
+                        {dotData.map(({ date, winners }) => (
+                          <span
+                            key={date}
+                            className={`leaderboard-dot ${winners.includes(name) ? "won" : "lost"}`}
+                            title={date}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

@@ -4,15 +4,19 @@ import { useState, memo } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
+import { getCanteenMetadata } from "@/lib/constants";
+import { MapPin } from "lucide-react";
 
 interface ClosedCardProps {
   data: CanteenDayItem;
   cardIdx: number;
   lang: "no" | "en";
+  onOpenMap?: (canteenId: string) => void;
 }
 
-const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
+const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang, onOpenMap }: ClosedCardProps) {
   const [imgError, setImgError] = useState(false);
+  const meta = getCanteenMetadata(data.canteenName);
 
   return (
     <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
@@ -42,7 +46,22 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardP
         </div>
 
         <div className="closed-card-body">
-          <span className="closed-card-eyebrow">{data.canteenName}</span>
+          <div className="canteen-header-row">
+            <span className="closed-card-eyebrow">{meta.name}</span>
+            <button
+              type="button"
+              className="canteen-location-chip"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenMap?.(meta.id);
+              }}
+              title={lang === "no" ? `Se ${meta.building} på kart` : `View ${meta.building} on map`}
+              aria-label={lang === "no" ? `Se ${meta.building} på kart` : `View ${meta.building} on map`}
+            >
+              <MapPin size={10} strokeWidth={2.4} />
+              <span>{meta.buildingShort}</span>
+            </button>
+          </div>
           <h3 className="closed-card-heading">
             {lang === "no" ? "Ingen servering" : "Not serving"}
           </h3>
@@ -55,7 +74,7 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardP
             </svg>
             <span>
               {lang === "no" ? "Vanligvis åpen" : "Usually open"}{" "}
-              <strong>{data.canteen.openingHours}</strong>
+              <strong>{meta.hours || data.canteen.openingHours}</strong>
             </span>
           </div>
         </div>

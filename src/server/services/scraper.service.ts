@@ -17,19 +17,19 @@ export const CANTEENS: CanteenConfig[] = [
   {
     name: "The Hub",
     token: "6e5cc038-e918-4f97-9a59-d2afa0456abf",
-    hours: "11:00 - 13:30",
+    hours: "10:30 - 14:00",
     displayName: "Eat the street",
   },
   {
     name: "Telenor Expo",
     token: "a8923cdb-9d92-46bc-b6a4-d026c2cf9a89",
-    hours: "11:00 - 13:30",
+    hours: "10:30 - 13:00",
     displayName: "Fresh4you",
   },
   {
     name: "Bygg M",
     token: "756a5aa2-a95f-4d15-ad5a-59829741075b",
-    hours: "11:00 - 13:00",
+    hours: "10:30 - 13:00",
     displayName: "Flow",
   },
 ];
