@@ -403,15 +403,27 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       const start = touchStartRef.current;
       if (!start || e.touches.length !== 1) return;
 
+      // The mobile layout sizes three cards to fill the viewport, so there is
+      // normally nothing here to scroll — measured on a phone-sized window,
+      // scrollHeight and clientHeight are equal. When that is true the browser
+      // has no business interpreting this gesture at all: the only thing it
+      // can move is its own chrome, which slides up over the day strip
+      // mid-swipe. Cancel everything and the bar stays put.
+      if (el.scrollHeight <= el.clientHeight + 1) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+
       const dx = e.touches[0].clientX - start.x;
       const dy = e.touches[0].clientY - start.y;
 
+      // Decide early. Chrome commits to a scroll within a few pixels, and once
+      // it has, every following touchmove arrives with cancelable already
+      // false — preventDefault then does nothing at all. Waiting for a
+      // comfortable 10px of travel means losing the race on most swipes.
       if (swipeAxis.current === "undecided") {
-        // Wait for enough movement to tell the two apart. Deciding on the
-        // first pixel makes a deliberate scroll that starts with a wobble get
-        // locked to the wrong axis.
-        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-        swipeAxis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+        swipeAxis.current = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
       }
 
       if (swipeAxis.current === "x" && e.cancelable) e.preventDefault();
