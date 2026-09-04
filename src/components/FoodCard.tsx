@@ -101,6 +101,12 @@ const FoodCard = memo(function FoodCard({
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
       className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
+      style={{
+        // The row cascades: card 0 leads, each following card starts 55ms
+        // later and takes 40ms longer, so they do not move at the same rate.
+        animationDelay: `${cardIdx * 55}ms`,
+        animationDuration: `${0.28 + cardIdx * 0.04}s`,
+      }}
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
       data-yolo-card-key={canteenName}
     >
