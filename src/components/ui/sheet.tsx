@@ -6,6 +6,7 @@ import { useDrag } from "@use-gesture/react";
 import { X } from "lucide-react";
 import { shouldDismiss, shouldEngage } from "@/lib/sheet-drag";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 
 /**
  * Bottom Sheet — animated with PURE CSS TRANSFORMS (translateY + opacity) so
@@ -34,31 +35,6 @@ type SheetContextValue = {
 
 const SheetContext = React.createContext<SheetContextValue | null>(null);
 
-/**
- * The same 769px breakpoint the stylesheet uses.
- *
- * This component positions and shapes the panel with inline styles, which no
- * media query can reach — so the desktop treatment has to be a branch in here
- * rather than CSS. It used to be CSS ("Desktop: center the sheet as a floating
- * card"), and when this component replaced the CSS-driven overlay the rule
- * stopped applying and the desktop got a phone's bottom sheet.
- */
-function useIsDesktop(): boolean {
-  const query = "(min-width: 769px)";
-  const [isDesktop, setIsDesktop] = React.useState(
-    () => typeof window !== "undefined" && window.matchMedia(query).matches
-  );
-
-  React.useEffect(() => {
-    const mq = window.matchMedia(query);
-    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    setIsDesktop(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  return isDesktop;
-}
 
 export function useSheet(): SheetContextValue {
   const ctx = React.useContext(SheetContext);
