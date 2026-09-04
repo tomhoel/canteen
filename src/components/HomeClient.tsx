@@ -308,8 +308,15 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isInput = tag === "input" || tag === "textarea" || tag === "select";
+
       if (e.key === "Escape") {
-        if (menyView.isOpen) {
+        if (mapOpen) {
+          setMapOpen(false);
+        } else if (infoOpen) {
+          setInfoOpen(false);
+        } else if (menyView.isOpen) {
           closeMeny();
         } else if (dealsView.isOpen) {
           closeDeals();
@@ -323,16 +330,19 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
           closeRecipe();
         }
-      } else if (e.key === "ArrowLeft") {
-        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
+      } else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey && !e.altKey && !isInput) {
+        e.preventDefault();
+        setMapOpen(prev => !prev);
+      } else if (e.key === "ArrowLeft" && !isInput) {
+        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !mapOpen && !infoOpen) {
           handleDaySelect(selectedDay - 1);
         }
-      } else if (e.key === "ArrowRight") {
-        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
+      } else if (e.key === "ArrowRight" && !isInput) {
+        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !mapOpen && !infoOpen) {
           handleDaySelect(selectedDay + 1);
         }
-      } else if (e.key === " ") {
-        if (lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen) {
+      } else if (e.key === " " && !isInput) {
+        if (lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen && !mapOpen && !infoOpen) {
           e.preventDefault();
           handleDaySelect(todayIndex >= 0 ? todayIndex : 0);
         }
@@ -340,7 +350,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
+  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, mapOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
 
   // On-demand image preloader for other days — warms a day when hovered or touched
   const preloadDay = useCallback((dayIdx: number) => {
@@ -358,6 +368,21 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       img.src = src;
     });
   }, [plateImages]);
+
+  // Trackpad horizontal swipe detection
+  const lastWheelTimeRef = useRef(0);
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (Math.abs(e.deltaX) > 35 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+      const now = performance.now();
+      if (now - lastWheelTimeRef.current < 350) return;
+      lastWheelTimeRef.current = now;
+      if (e.deltaX > 0 && selectedDay < 4) {
+        handleDaySelect(selectedDay + 1);
+      } else if (e.deltaX < 0 && selectedDay > 0) {
+        handleDaySelect(selectedDay - 1);
+      }
+    }
+  }, [selectedDay, handleDaySelect]);
 
   // High-performance touch swipe detection with velocity thresholding from mutu-web
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -388,8 +413,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     }
 
     // Must be horizontally dominant to avoid triggering on vertical scroll
-    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
-      if (shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.15, velocity: 0.4 })) {
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 28) {
+      if (shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.08, velocity: 0.25 })) {
         if (deltaX < 0 && selectedDay < 4) {
           handleDaySelect(selectedDay + 1);
         } else if (deltaX > 0 && selectedDay > 0) {
@@ -593,39 +618,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     yoloTimersRef.current = [];
   }, []);
 
-  // Close any active modal or sheet on Escape key, or toggle Map on 'm'
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (mapOpen) {
-          setMapOpen(false);
-        } else if (infoOpen) {
-          setInfoOpen(false);
-        } else if (actionSheet.isOpen) {
-          setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-          voting.setVoteSuccess(false);
-          voting.setShareState("idle");
-        } else if (recipeModal.isOpen) {
-          closeRecipe();
-          closeDeals();
-          closeMeny();
-        } else if (weekOverviewOpen) {
-          setWeekOverviewOpen(false);
-        } else if (lightboxIndex >= 0) {
-          setLightboxIndex(-1);
-        }
-      } else if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-        if (tag !== "input" && tag !== "textarea" && tag !== "select") {
-          e.preventDefault();
-          setMapOpen((prev) => !prev);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mapOpen, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, lightboxIndex, voting, closeRecipe, closeDeals, closeMeny]);
-
   // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
     const idx = openCanteens.findIndex(c => c.canteenName === data.canteenName);
@@ -633,15 +625,25 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   }, [openCanteens]);
 
   const handleCardClick = useCallback((canteenName: string) => {
-    const data = canteenDayData.find(c => c.canteenName === canteenName);
-    setActionSheet({
-      isOpen: true,
-      canteenName,
-      dishName: data?.mainDish?.dish || "",
-      imagePath: data?.imagePath || "",
-      description: data?.description || null,
-    });
-  }, [canteenDayData]);
+    const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+    if (isMobile) {
+      const data = canteenDayData.find(c => c.canteenName === canteenName);
+      setActionSheet({
+        isOpen: true,
+        canteenName,
+        dishName: data?.mainDish?.dish || "",
+        imagePath: data?.imagePath || "",
+        description: data?.description || null,
+      });
+    } else {
+      // Desktop: clicking card directly opens VoteModal if today is voteable (NO bottom sheet on desktop!)
+      const data = canteenDayData.find(c => c.canteenName === canteenName);
+      const isVoteable = mode === "weekday-current" && selectedDay === todayIndex && data && !data.isOutdated && !data.isAhead;
+      if (isVoteable) {
+        setVoteModal({ isOpen: true, canteenName });
+      }
+    }
+  }, [canteenDayData, mode, selectedDay, todayIndex]);
 
   const handleShareSlackWrapped = useCallback(() => {
     voting.handleShareSlack(canteenDayData, lang);
@@ -708,81 +710,84 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         className="cards-container"
         ref={scrollRef}
         onScroll={handleScroll}
+        onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <AnimatePresence initial={false} custom={direction}>
-            <motion.div
-              key={selectedDay}
-              custom={direction}
-              variants={{
-                enter: (dir: number) => ({
-                  x: dir > 0 ? 20 : dir < 0 ? -20 : 0,
-                  opacity: 0,
-                }),
-                center: {
-                  x: 0,
-                  opacity: 1,
-                  transition: {
-                    x: { duration: 0.16, ease: [0.16, 1, 0.3, 1] },
-                    opacity: { duration: 0.12, ease: "linear" },
+          <div className="cards-track">
+            <AnimatePresence initial={false} custom={direction}>
+              <motion.div
+                key={selectedDay}
+                custom={direction}
+                variants={{
+                  enter: (dir: number) => ({
+                    x: dir > 0 ? 32 : dir < 0 ? -32 : 0,
+                    opacity: 0,
+                  }),
+                  center: {
+                    x: 0,
+                    opacity: 1,
+                    transition: {
+                      x: { duration: 0.18, ease: [0.16, 1, 0.3, 1] },
+                      opacity: { duration: 0.14, ease: "linear" },
+                    },
                   },
-                },
-                exit: (dir: number) => ({
-                  x: dir < 0 ? 20 : -20,
-                  opacity: 0,
-                  transition: {
-                    x: { duration: 0.1, ease: "easeIn" },
-                    opacity: { duration: 0.08, ease: "linear" },
-                  },
-                }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="cards-animated-wrapper"
-            >
-              {openCanteens.length === 0 ? (
-                <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
-              ) : (
-                <>
-                  {closedCanteens.length > 0 && (
-                    <div className="closed-pill-mobile">
-                      <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
-                    </div>
-                  )}
-                  {canteenDayData.map((data, cardIdx) => (
-                    isCanteenClosed(data) ? (
-                      <ClosedCard
-                        key={data.canteenName}
-                        data={data}
-                        cardIdx={cardIdx}
-                        lang={lang}
-                        onOpenMap={handleOpenMap}
-                      />
-                    ) : (
-                      <FoodCard
-                        key={data.canteenName}
-                        data={data}
-                        cardIdx={cardIdx}
-                        lang={lang}
-                        selectedDay={selectedDay}
-                        todayIndex={todayIndex}
-                        voteCount={voting.votes[data.canteenName] ?? 0}
-                        maxVotes={maxVotes}
-                        onImageClick={handleImageClick}
-                        onCardClick={handleCardClick}
-                        onOpenMap={handleOpenMap}
-                        yoloHighlighted={yoloHighlight === cardIdx}
-                        yoloWinner={yoloWinner === cardIdx}
-                      />
-                    )
-                  ))}
-                </>
-              )}
-            </motion.div>
-          </AnimatePresence>
+                  exit: (dir: number) => ({
+                    x: dir > 0 ? -32 : dir < 0 ? 32 : 0,
+                    opacity: 0,
+                    transition: {
+                      x: { duration: 0.14, ease: "easeIn" },
+                      opacity: { duration: 0.10, ease: "linear" },
+                    },
+                  }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="cards-animated-wrapper"
+              >
+                {openCanteens.length === 0 ? (
+                  <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
+                ) : (
+                  <>
+                    {closedCanteens.length > 0 && (
+                      <div className="closed-pill-mobile">
+                        <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+                      </div>
+                    )}
+                    {canteenDayData.map((data, cardIdx) => (
+                      isCanteenClosed(data) ? (
+                        <ClosedCard
+                          key={data.canteenName}
+                          data={data}
+                          cardIdx={cardIdx}
+                          lang={lang}
+                          onOpenMap={handleOpenMap}
+                        />
+                      ) : (
+                        <FoodCard
+                          key={data.canteenName}
+                          data={data}
+                          cardIdx={cardIdx}
+                          lang={lang}
+                          selectedDay={selectedDay}
+                          todayIndex={todayIndex}
+                          voteCount={voting.votes[data.canteenName] ?? 0}
+                          maxVotes={maxVotes}
+                          onImageClick={handleImageClick}
+                          onCardClick={handleCardClick}
+                          onOpenMap={handleOpenMap}
+                          yoloHighlighted={yoloHighlight === cardIdx}
+                          yoloWinner={yoloWinner === cardIdx}
+                        />
+                      )
+                    ))}
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </ErrorBoundary>
       </main>
 
@@ -969,8 +974,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
 
-      {/* Action Sheet with 120Hz native GPU compositor transform */}
+      {/* Action Sheet with 120Hz native GPU compositor transform — MOBILE ONLY */}
       {(() => {
+        if (!actionSheet.isOpen) return null;
+        const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+        if (!isMobile) return null;
+
         const closeSheet = () => {
           setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
           voting.setVoteSuccess(false);
