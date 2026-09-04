@@ -1777,6 +1777,33 @@ body {
   .day-bar-unmeasured {
     visibility: hidden;
   }
+
+  /* Having hidden the shell's copy, React's bar would otherwise simply appear.
+     It rises into place instead — which is what the bar did before, except
+     that then it was rising from the wrong position to the right one rather
+     than being an entrance. Same feel, no jump. Mobile is left alone: there
+     the shell's copy is already correct and visible, so animating React's
+     would be a second entrance for a bar that never left. */
+  .day-bar:not(.day-bar-unmeasured) {
+    animation: dayBarRise 0.42s var(--smooth) both;
+  }
+}
+
+@keyframes dayBarRise {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-bar:not(.day-bar-unmeasured) {
+    animation: none;
+  }
 }
 
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */

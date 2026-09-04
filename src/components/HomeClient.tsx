@@ -703,24 +703,37 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 key={selectedDay}
                 custom={direction}
                 variants={{
+                  // A spring, not a fixed 180ms curve.
+                  //
+                  // A duration-based tween arrives at exactly the same moment
+                  // however hard the day was flicked, which is what makes the
+                  // day change read as stiff: the motion has no relationship
+                  // to the gesture that caused it. A spring settles instead of
+                  // stopping, so the cards arrive with a little weight behind
+                  // them and the strip feels like it is being pushed rather
+                  // than being redrawn.
+                  //
+                  // Exit stays a short tween. The outgoing day is already
+                  // fading and nobody is watching it settle; springing it out
+                  // only keeps a dead element on screen longer.
                   enter: (dir: number) => ({
-                    x: dir > 0 ? 32 : dir < 0 ? -32 : 0,
+                    x: dir > 0 ? 28 : dir < 0 ? -28 : 0,
                     opacity: 0,
                   }),
                   center: {
                     x: 0,
                     opacity: 1,
                     transition: {
-                      x: { duration: 0.18, ease: [0.16, 1, 0.3, 1] },
-                      opacity: { duration: 0.14, ease: "linear" },
+                      x: { type: "spring", stiffness: 320, damping: 32, mass: 0.7 },
+                      opacity: { duration: 0.16, ease: "linear" },
                     },
                   },
                   exit: (dir: number) => ({
-                    x: dir > 0 ? -32 : dir < 0 ? 32 : 0,
+                    x: dir > 0 ? -24 : dir < 0 ? 24 : 0,
                     opacity: 0,
                     transition: {
-                      x: { duration: 0.14, ease: "easeIn" },
-                      opacity: { duration: 0.10, ease: "linear" },
+                      x: { duration: 0.16, ease: [0.4, 0, 1, 1] },
+                      opacity: { duration: 0.12, ease: "linear" },
                     },
                   }),
                 }}
