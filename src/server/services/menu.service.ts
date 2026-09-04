@@ -1,15 +1,28 @@
 import { createHash } from "node:crypto";
 import { getRedis } from "./redis.service.js";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { MenuData, WeeklyMenuRecord, DishOrigin, DishDescription } from "../../lib/types.js";
+import type {
+  MenuData,
+  DayEntry,
+  WeeklyMenuRecord,
+  DishOrigin,
+  DishDescription,
+} from "../../lib/types.js";
 import {
   getWeekId,
   getWeekNumber,
+  osloWeekdayIndex,
   parseCanteenWeekNumber,
   weekDistance,
   weekIdForWeekNumber,
 } from "../../lib/dateUtils.js";
-import { scrapeAllCanteens, type ScrapeReport } from "./scraper.service.js";
+import { DAY_KEYS } from "../../lib/constants.js";
+import {
+  scrapeAllCanteens,
+  scrapeAllDailyMenus,
+  type ScrapeReport,
+  type DailyScrapeResult,
+} from "./scraper.service.js";
 import {
   detectDishOrigins,
   generateDishDescriptions,
@@ -384,6 +397,102 @@ export function mergeCanteensForWeek(
   return Object.assign(merged, thisWeek);
 }
 
+/** "friday" -> "Friday", matching the day names the weekly scraper writes. */
+function dayEntryName(dayKey: string): string {
+  return dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+}
+
+/**
+ * Reshapes the daily boards into a `MenuData` so the rest of the pipeline can
+ * treat them like any other scrape.
+ *
+ * The only reason this exists is `applyTitleCorrections`, which walks a
+ * `MenuData`. Giving today's dishes that shape means they go through the same
+ * Norwegian proofreading pass as the weekly menu instead of bypassing it — and
+ * bypassing it would matter twice over, because the corrected title is also
+ * the dish-cache key that enrichment and the plate images are looked up by.
+ */
+export function buildDailyMenuData(
+  results: DailyScrapeResult[],
+  todayKey: string
+): MenuData {
+  const canteens: MenuData["canteens"] = {};
+
+  for (const result of results) {
+    if (!result.daily) continue;
+    const { no, en } = result.daily;
+    canteens[result.canteen.displayName] = {
+      // No week label: the daily board does not carry one, and inventing one
+      // would feed `groupCanteensByPublishedWeek` a number it did not publish.
+      week: "",
+      openingHours: result.canteen.hours,
+      menu: [{ day: dayEntryName(todayKey), ...(no ? { no } : {}), ...(en ? { en } : {}) }],
+    };
+  }
+
+  return { scrapedAt: new Date().toISOString(), canteens };
+}
+
+/**
+ * Replaces today's slot with what the kitchen actually served.
+ *
+ * Returns the canteens it changed, for the log.
+ *
+ * Three things it deliberately does not do:
+ *
+ * - It never adds a canteen. If the week's row has never heard of a canteen,
+ *   a single day's dishes are not enough to introduce it — the card would have
+ *   one day of food and four blanks.
+ * - It never drops a language. A board published only in Norwegian overrides
+ *   the Norwegian column and leaves the English weekly menu in place, rather
+ *   than blanking a column the kitchen simply did not fill in that morning.
+ * - It never mutates in place. The `CanteenData` objects here are shared with
+ *   the raw scrape, which the write loop reuses for every other week in the
+ *   run, so an in-place edit for this week would leak into the next one.
+ */
+export function applyDailyOverride(
+  weekMenuData: MenuData,
+  daily: MenuData,
+  todayKey: string
+): string[] {
+  const overridden: string[] = [];
+
+  for (const [name, dailyCanteen] of Object.entries(daily.canteens || {})) {
+    const target = weekMenuData.canteens?.[name];
+    if (!target) continue;
+
+    const source = dailyCanteen.menu?.[0];
+    if (!source || (!source.no && !source.en)) continue;
+
+    const menu = [...(target.menu ?? [])];
+    const index = menu.findIndex((d) => d.day?.toLowerCase() === todayKey);
+    const existing = index >= 0 ? menu[index] : undefined;
+
+    const replacement: DayEntry = {
+      day: existing?.day ?? dayEntryName(todayKey),
+      ...(source.no ? { no: source.no } : existing?.no ? { no: existing.no } : {}),
+      ...(source.en ? { en: source.en } : existing?.en ? { en: existing.en } : {}),
+    };
+
+    if (index >= 0) {
+      menu[index] = replacement;
+    } else {
+      // The weekly widget never published today at all — a real case when a
+      // kitchen rolls over mid-week. Keep Monday-to-Friday order.
+      menu.push(replacement);
+      menu.sort(
+        (a, b) =>
+          DAY_KEYS.indexOf(a.day.toLowerCase()) - DAY_KEYS.indexOf(b.day.toLowerCase())
+      );
+    }
+
+    weekMenuData.canteens[name] = { ...target, menu };
+    overridden.push(name);
+  }
+
+  return overridden;
+}
+
 /**
  * Thrown when a multi-week run fails after some weeks are already committed.
  *
@@ -435,12 +544,48 @@ export async function runWeeklyUpdateService(
     );
   }
 
+  // Today's dishes come from a second widget — the "DAGENS LUNSJ" board that
+  // hangs by the counter — because the weekly menu is a plan and that board is
+  // the food. A kitchen that rolled its weekly widget over to next week early
+  // leaves the current week holding a draft nobody cooked, and until now the
+  // app served that draft. This is the correction.
+  //
+  // The board carries no date of any kind, so it can only ever be read as
+  // "today", and only on a day there is a lunch to read.
+  const todayIndex = osloWeekdayIndex();
+  const todayKey = todayIndex >= 0 ? DAY_KEYS[todayIndex] : null;
+
+  let dailyData: MenuData | null = null;
+  if (todayKey) {
+    const dailyResults = await scrapeAllDailyMenus(todayKey);
+    for (const r of dailyResults) {
+      if (r.error) {
+        console.warn(`⚠️  ${r.canteen.displayName}: daily board unread — ${r.error}`);
+      }
+    }
+    const built = buildDailyMenuData(dailyResults, todayKey);
+    // A failed daily scrape is not a failed run. The board is an improvement on
+    // the weekly menu, not a replacement for it: with nothing readable, the
+    // week that was already going to be written is still written.
+    if (Object.keys(built.canteens).length > 0) dailyData = built;
+    else console.warn("⚠️  No daily board could be read — keeping the weekly menus as published.");
+  } else {
+    console.log("🛌 Weekend in Oslo — no daily board to read.");
+  }
+
   // Proofread Norwegian dish titles (typos, compound words) before grouping & cache keys.
-  const rawNoDishes = extractNoDishes(menuData);
+  const rawNoDishes = [
+    ...new Set([
+      ...extractNoDishes(menuData),
+      ...(dailyData ? extractNoDishes(dailyData) : []),
+    ]),
+  ];
   try {
     const titleCorrections = await cleanDishTitles(rawNoDishes);
     if (Object.keys(titleCorrections).length > 0) {
-      const updatedCount = applyTitleCorrections(menuData, titleCorrections);
+      const updatedCount =
+        applyTitleCorrections(menuData, titleCorrections) +
+        (dailyData ? applyTitleCorrections(dailyData, titleCorrections) : 0);
       console.log(
         `✏️  Applied ${Object.keys(titleCorrections).length} Norwegian title correction(s) across ${updatedCount} dish item(s):`
       );
@@ -457,6 +602,19 @@ export async function runWeeklyUpdateService(
   const groups = weekIdInput
     ? new Map([[weekIdInput, menuData.canteens || {}]])
     : groupCanteensByPublishedWeek(menuData, fallbackWeekId);
+
+  // If every kitchen has flipped its weekly widget to next week, the loop below
+  // would never visit the week the app is actually showing, and today's board
+  // would have nowhere to land. Add that week with no scraped canteens of its
+  // own: the merge then keeps whatever the row already holds, and the override
+  // supplies today. Skipped for an explicit --week, which is a manual rebuild
+  // of one named week and not a statement about today.
+  if (dailyData && !weekIdInput && !groups.has(displayWeekId)) {
+    console.log(
+      `📌 Every canteen has published ahead — adding ${displayWeekId} so today's board has a row to land in.`
+    );
+    groups.set(displayWeekId, {});
+  }
 
   if (groups.size > 1) {
     console.log(
@@ -492,6 +650,19 @@ export async function runWeeklyUpdateService(
       scrapedCanteens
     );
     const weekMenuData: MenuData = { ...menuData, canteens: mergedCanteens };
+
+    // Only the week the app is showing gets today's board. Today is in exactly
+    // one week, and this runs before extractAllDishes and fingerprintScrape so
+    // the overridden dishes are enriched, fingerprinted and cached like any
+    // other — not bolted on afterwards where nothing would look at them.
+    if (dailyData && todayKey && weekId === displayWeekId) {
+      const overridden = applyDailyOverride(weekMenuData, dailyData, todayKey);
+      if (overridden.length > 0) {
+        console.log(
+          `🍽️  ${weekId} ${todayKey}: today's board overrode ${overridden.join(", ")}.`
+        );
+      }
+    }
 
     const allDishes = extractAllDishes(weekMenuData);
     const fingerprint = fingerprintScrape(weekMenuData);

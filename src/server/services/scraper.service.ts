@@ -11,24 +11,44 @@ export interface CanteenConfig {
   token: string;
   hours: string;
   displayName: string;
+  /**
+   * The canteen's second Inisign widget — the "DAGENS LUNSJ" board that hangs
+   * on the wall by the counter.
+   *
+   * `token` above points at the *weekly* widget, which is a planning document:
+   * the kitchen fills it in ahead of time and rolls it over to the next week
+   * whenever it suits them, sometimes days early. This one is the day-of
+   * screen, so it is what the staff actually cooked. It carries no week and no
+   * weekday marker at all — it only ever means "today" — which is why it can
+   * only ever be used to override today's slot and never to fill a week.
+   *
+   * Verified by fetching all six widgets: the daily boards' dishes match each
+   * canteen's own weekly menu, not each other. Two of the three daily widgets
+   * happen to share a background image asset (`ETS-Bottom.png`), so the
+   * artwork is not a reliable identity check — the dishes are.
+   */
+  dailyToken: string;
 }
 
 export const CANTEENS: CanteenConfig[] = [
   {
     name: "The Hub",
     token: "6e5cc038-e918-4f97-9a59-d2afa0456abf",
+    dailyToken: "bbf807d7-b1ed-4493-8853-e40077f6adde",
     hours: "10:30 - 14:00",
     displayName: "Eat the street",
   },
   {
     name: "Telenor Expo",
     token: "a8923cdb-9d92-46bc-b6a4-d026c2cf9a89",
+    dailyToken: "aa1358ee-d30e-4289-a630-892cd1210857",
     hours: "10:30 - 13:00",
     displayName: "Fresh4you",
   },
   {
     name: "Bygg M",
     token: "756a5aa2-a95f-4d15-ad5a-59829741075b",
+    dailyToken: "4a0457f8-dbfa-4783-8ebe-b5ee0486843f",
     hours: "10:30 - 13:00",
     displayName: "Flow",
   },
@@ -464,4 +484,199 @@ export async function scrapeAllCanteens(): Promise<ScrapeReport> {
     results,
     failed: results.filter((r) => !r.data).map((r) => r.canteen.displayName),
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The daily "DAGENS LUNSJ" widget
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A line that carries allergen numbers for the dish above it rather than a
+ * dish of its own — "Allergener:1", "Allergens: 3,4", or a bare "Allergener:"
+ * when the kitchen left it blank.
+ *
+ * This has to be matched against *every* fragment, not only the ones inside a
+ * `.menu-item-allergens` div, because the markup does not keep the two apart:
+ * Flow publishes a dish's allergens in a bare `<h2>`, and Fresh4you publishes
+ * a whole dish inside a `.menu-item-allergens` div. Classifying by text is the
+ * only thing that survives both.
+ */
+const DAILY_ALLERGEN_LINE = /^allergen(?:er|s)?\s*:?\s*([\d,\s]*)$/i;
+
+/**
+ * Below this, a parse is treated as a failure rather than as a short day.
+ *
+ * A daily board with one item on it is far more likely to be a markup change
+ * we no longer understand than a kitchen serving a single dish, and the cost
+ * of being wrong is asymmetric: a bad override replaces a correct weekly menu,
+ * while a skipped override just leaves that menu in place.
+ */
+const MIN_DAILY_DISHES = 2;
+
+/** One canteen's daily board, in whichever languages it published. */
+export interface DailyMenu {
+  no?: DayMenu;
+  en?: DayMenu;
+}
+
+/**
+ * Reads one language column of the daily board.
+ *
+ * The widget's own nesting is not trustworthy — see `DAILY_ALLERGEN_LINE` — so
+ * this flattens the column into the text fragments a reader would see, in
+ * document order, and then classifies each one. A fragment that reads as
+ * allergens belongs to the dish above it; anything else starts a new dish.
+ * That single rule handles all three kitchens' markup, including Fresh4you's
+ * third dish, which lives in an allergen div with its numbers stranded in the
+ * *following* `.menu-item` block.
+ *
+ * `holder` is scoped to one `.menu-item-holder`, which is what keeps the
+ * 16-row allergen legend — a sibling `.allergen-holder` table — from being
+ * read as fourteen more dishes.
+ */
+function parseDailyHolder(
+  $: cheerio.CheerioAPI,
+  holder: cheerio.Cheerio<any>,
+  canteenDisplayName: string,
+  label: string
+): DayMenu | undefined {
+  const fragments: string[] = [];
+
+  holder.find("h2, .menu-item-allergens").each((_, el) => {
+    // A wrapper whose text is just the concatenation of its children's would
+    // double-count every dish inside it.
+    if ($(el).find("h2, .menu-item-allergens").length > 0) return;
+    const text = $(el).text().replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+    if (text) fragments.push(text);
+  });
+
+  const collected: Array<{ text: string; allergens: Allergen[] }> = [];
+
+  for (const fragment of fragments) {
+    const asAllergens = fragment.match(DAILY_ALLERGEN_LINE);
+
+    if (asAllergens) {
+      const current = collected[collected.length - 1];
+      // Allergens before any dish have nothing to attach to.
+      if (!current) continue;
+      for (const raw of (asAllergens[1] ?? "").split(/[,\s]+/)) {
+        const id = raw.trim();
+        if (!ALLERGEN_MAP[id]) continue;
+        if (!current.allergens.some((a) => a.id === id)) {
+          current.allergens.push({ id, name: ALLERGEN_MAP[id] });
+        }
+      }
+      continue;
+    }
+
+    collected.push({ text: fragment, allergens: [] });
+  }
+
+  if (collected.length < MIN_DAILY_DISHES) return undefined;
+
+  const availabilityNotes: string[] = [];
+  const items: MenuItem[] = [];
+
+  for (const { text, allergens } of collected) {
+    // Unlike the weekly parser, a dietary note does not discard the line it
+    // came from. On the daily board the note is appended to a real dish —
+    // "Tandoori kyllinglår med ris og saus (Halal tilgjengelig)" — so dropping
+    // the line would drop the food with it.
+    const note = extractAvailabilityNote(text);
+    if (note && !availabilityNotes.includes(note)) availabilityNotes.push(note);
+    const withoutNote = note ? text.replace(`(${note})`, " ") : text;
+
+    const item = parseItem(withoutNote);
+    if (!item.dish.trim()) continue;
+
+    for (const a of allergens) {
+      if (!item.allergens.some((x) => x.id === a.id)) item.allergens.push(a);
+    }
+    items.push(item);
+  }
+
+  if (items.length < MIN_DAILY_DISHES) return undefined;
+
+  return {
+    label,
+    // Ranked, not taken in publication order: `isMain` decides both the card
+    // title and — through pickMainDish — which plate image is shown, and those
+    // two must not be able to disagree.
+    items: rankItems(items, canteenDisplayName),
+    ...(availabilityNotes.length ? { availabilityNotes } : {}),
+  };
+}
+
+/**
+ * Turns one daily widget's HTML into today's menu.
+ *
+ * `dayKey` is only used for the language labels — the widget itself says
+ * nothing about which day it is showing, which is the whole reason the caller
+ * has to supply the day and has to be sure it is calling on the right one.
+ */
+export function parseDailyHtml(
+  html: string,
+  canteen: CanteenConfig,
+  dayKey: string
+): DailyMenu {
+  const $ = cheerio.load(html);
+
+  // The first heading DAY_HEADINGS lists for this day in each language — so a
+  // daily override carries the same label the weekly parser would have written
+  // ("FREDAG" / "FRIDAY"), rather than a second vocabulary for the same thing.
+  const found = Object.entries(DAY_HEADINGS).reduce<{ no?: string; en?: string }>(
+    (acc, [heading, meta]) => {
+      if (meta.day === dayKey && !acc[meta.lang]) acc[meta.lang] = heading;
+      return acc;
+    },
+    {}
+  );
+  const labels = {
+    no: found.no ?? dayKey.toUpperCase(),
+    en: found.en ?? dayKey.toUpperCase(),
+  };
+
+  const no = parseDailyHolder($, $(".menu-item-holder.first-holder"), canteen.displayName, labels.no);
+  const en = parseDailyHolder($, $(".menu-item-holder.second-holder"), canteen.displayName, labels.en);
+
+  return { ...(no ? { no } : {}), ...(en ? { en } : {}) };
+}
+
+export interface DailyScrapeResult {
+  canteen: CanteenConfig;
+  daily: DailyMenu | null;
+  error: string | null;
+}
+
+/** Fetches and parses one canteen's daily board. */
+export async function scrapeDailyCanteen(
+  canteen: CanteenConfig,
+  dayKey: string
+): Promise<DailyMenu> {
+  const url = `https://widget.inisign.com/Widget/Customers/Customer.aspx?token=${canteen.dailyToken}&scaleToFit=true`;
+  const html = await fetchWithRetry(url);
+  return parseDailyHtml(html, canteen, dayKey);
+}
+
+/**
+ * Fetches every canteen's daily board, keeping going when one fails.
+ *
+ * A failure here is deliberately not fatal to the run. The daily board is an
+ * improvement on the weekly menu, not a replacement for it: if it cannot be
+ * read, the week that was already going to be written is still written.
+ */
+export async function scrapeAllDailyMenus(dayKey: string): Promise<DailyScrapeResult[]> {
+  return Promise.all(
+    CANTEENS.map(async (canteen): Promise<DailyScrapeResult> => {
+      try {
+        const daily = await scrapeDailyCanteen(canteen, dayKey);
+        if (!daily.no && !daily.en) {
+          return { canteen, daily: null, error: "no dishes on the daily board" };
+        }
+        return { canteen, daily, error: null };
+      } catch (err: any) {
+        return { canteen, daily: null, error: err?.message ?? String(err) };
+      }
+    })
+  );
 }

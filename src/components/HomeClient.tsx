@@ -611,26 +611,22 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     setLightboxIndex(idx >= 0 ? idx : 0);
   }, [openCanteens]);
 
+  // Every viewport opens the action sheet. A previous revision sent desktop
+  // clicks straight to the vote modal instead, which made "Lag hjemme" — and
+  // the dish description, the share button and the recipe — unreachable with a
+  // mouse, and made a click on a non-voteable day (any day that is not today)
+  // do nothing at all. The sheet is the only route to those actions, so it has
+  // to open regardless of width; voting is one of the buttons inside it.
   const handleCardClick = useCallback((canteenName: string) => {
-    const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
-    if (isMobile) {
-      const data = canteenDayData.find(c => c.canteenName === canteenName);
-      setActionSheet({
-        isOpen: true,
-        canteenName,
-        dishName: data?.mainDish?.dish || "",
-        imagePath: data?.imagePath || "",
-        description: data?.description || null,
-      });
-    } else {
-      // Desktop: clicking card directly opens VoteModal if today is voteable (NO bottom sheet on desktop!)
-      const data = canteenDayData.find(c => c.canteenName === canteenName);
-      const isVoteable = mode === "weekday-current" && selectedDay === todayIndex && data && !data.isOutdated && !data.isAhead;
-      if (isVoteable) {
-        setVoteModal({ isOpen: true, canteenName });
-      }
-    }
-  }, [canteenDayData, mode, selectedDay, todayIndex]);
+    const data = canteenDayData.find(c => c.canteenName === canteenName);
+    setActionSheet({
+      isOpen: true,
+      canteenName,
+      dishName: data?.mainDish?.dish || "",
+      imagePath: data?.imagePath || "",
+      description: data?.description || null,
+    });
+  }, [canteenDayData]);
 
   const handleShareSlackWrapped = useCallback(() => {
     voting.handleShareSlack(canteenDayData, lang);
@@ -939,11 +935,19 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
 
-      {/* Action Sheet with 120Hz native GPU compositor transform — MOBILE ONLY */}
+      {/*
+        Action sheet, with the 120Hz native GPU compositor transform.
+
+        Not mobile-only. A width check used to stand here as well as in
+        handleCardClick, so on a desktop the sheet was unreachable twice over
+        and "Lag hjemme", the dish description, the share button and the recipe
+        had no route at all — a click on a card either opened the vote modal or,
+        on any day that was not today, did nothing. Every `.action-sheet` rule
+        is top-level (globals.css:3184+), capped at 440px and anchored to the
+        bottom, so it is already dressed for a wide window.
+      */}
       {(() => {
         if (!actionSheet.isOpen) return null;
-        const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
-        if (!isMobile) return null;
 
         const closeSheet = () => {
           setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });

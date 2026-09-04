@@ -82,6 +82,21 @@ export function isOsloWeekend(): boolean {
   return dayOfWeek === 0 || dayOfWeek === 6;
 }
 
+/**
+ * Today's position in the Mon-Fri strip in Europe/Oslo, or -1 at the weekend.
+ *
+ * Derived from the same Oslo parts as `isOsloWeekend` rather than from the
+ * server's own `getDay()`, for the reason spelled out there: a UTC host is two
+ * hours behind Oslo's midnight and would spend those hours naming the wrong
+ * day. The index is into DAY_ORDER / the day strip, so Monday is 0 and Friday
+ * is 4 — the same numbering `computeDisplayContext` returns as `todayIndex`.
+ */
+export function osloWeekdayIndex(): number {
+  const { year, month, day } = todayOsloParts();
+  const dayOfWeek = new Date(year, month - 1, day, 12, 0, 0).getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6 ? -1 : dayOfWeek - 1;
+}
+
 /** Canonical id for the week `weeks` weeks from today, e.g. 1 for next week. */
 export function getWeekIdOffset(weeks: number): string {
   const { year, month, day } = todayOsloParts();

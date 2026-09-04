@@ -69,10 +69,23 @@ export default function LoadingScreen({ lang = "no" }: { lang?: "no" | "en" }) {
         aria-busy="true"
         aria-label={lang === "no" ? "Laster menyer" : "Loading menus"}
       >
-        <div className="cards-animated-wrapper">
-          {Array.from({ length: CARD_COUNT }, (_, i) => (
-            <SkeletonCard key={i} delay={i * 75} />
-          ))}
+        {/*
+          `.cards-track` is not decoration. Every sizing rule for the wrapper
+          below is scoped as `.cards-track > .cards-animated-wrapper`
+          (globals.css:357 and :2093); rendered outside a track the wrapper
+          falls back to the `gap: inherit` / `flex-direction: inherit` rule,
+          which resolves to no gap on desktop and no height on mobile. The
+          skeleton row then comes out content-height while the loaded row
+          fills the viewport — the exact card jump this component and
+          SkeletonCard both exist to prevent. HomeClient renders the track, so
+          the loading shell has to as well.
+        */}
+        <div className="cards-track">
+          <div className="cards-animated-wrapper">
+            {Array.from({ length: CARD_COUNT }, (_, i) => (
+              <SkeletonCard key={i} delay={i * 75} />
+            ))}
+          </div>
         </div>
       </main>
 
