@@ -1762,6 +1762,23 @@ body {
   100% { text-shadow: 0 0 0 rgba(255, 220, 120, 0); }
 }
 
+/* The static shell in index.html carries a copy of this bar so the page is not
+   missing a chunk of itself before React boots. On mobile that copy is exactly
+   right, because the position below is the real one.
+
+   On desktop it is not: DaySelector centres the bar in the gap between the
+   last card and the bottom of the viewport, which is a measurement of rendered
+   content and not something plain HTML can know. Painting the shell's copy at
+   the fallback below and letting React move it is the bar visibly dropping and
+   snapping back on every reload. So on desktop the shell's copy holds its space
+   and stays invisible — it is position: fixed, so this costs no layout — and
+   the bar appears once, already in the right place. */
+@media (min-width: 769px) {
+  .day-bar-unmeasured {
+    visibility: hidden;
+  }
+}
+
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
 .day-bar {
   position: fixed;
