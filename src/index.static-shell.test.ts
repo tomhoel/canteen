@@ -158,3 +158,30 @@ test("index.html is the shell that ships", () => {
   assert.ok(/^\/?dist\/?$/m.test(gitignore), "dist is no longer gitignored — this test's premise moved");
   assert.ok(!fs.existsSync(path.join(repoRoot.pathname.replace(/^\//, ""), "public", "index.html")));
 });
+
+test("the shell cannot be painted without its stylesheet", () => {
+  // The dev server has no <link rel="stylesheet"> at all — Vite serves CSS
+  // through JS — so the shell would otherwise flash as browser-default markup
+  // on every reload there. index.html hides #root; globals.css reveals it. The
+  // pair makes "visible" and "styled" the same condition.
+  assert.match(
+    indexHtml,
+    /#root\s*\{\s*visibility:\s*hidden/,
+    "index.html no longer hides #root, so the shell can paint unstyled"
+  );
+  assert.match(
+    read("src/styles/globals.css"),
+    /#root\s*\{\s*visibility:\s*visible/,
+    "globals.css no longer reveals #root, so the app would never become visible"
+  );
+});
+
+test("the tab is not renamed a moment after it opens", () => {
+  // __root.tsx replaces the document title on mount. A different string in
+  // index.html means the tab visibly relabels itself once React boots.
+  const staticTitle = indexHtml.match(/<title>([^<]*)<\/title>/)?.[1]?.trim();
+  const routeTitle = read("src/routes/__root.tsx").match(/\{\s*title:\s*"([^"]+)"/)?.[1]?.trim();
+  assert.ok(staticTitle, "index.html has no <title>");
+  assert.ok(routeTitle, "__root.tsx no longer sets a title — drop this test with it");
+  assert.equal(staticTitle, routeTitle);
+});

@@ -146,6 +146,14 @@ body {
 }
 
 /* ─── Decorative Background Elements ─── */
+/* Reveals the static shell in index.html, which is hidden until this file is
+   parsed. Keep the pair together: index.html hides #root, this shows it, and
+   the point is that the markup cannot be seen without the rules that dress it.
+   See index.static-shell.test.ts, which fails if either half goes missing. */
+#root {
+  visibility: visible;
+}
+
 .app-wrapper {
   height: 100vh;
   height: 100dvh;

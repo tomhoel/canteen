@@ -110,7 +110,26 @@ export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> 
   // If cached data is available, return it immediately for a 0ms instant initial paint.
   // Then revalidate in the background without blocking the UI.
   if (cached) {
-    request<WeeklyMenuResponse>(`/api/menu${query}`)
+    // The document head has already fired this exact request by the time we get
+    // here. Issuing a second one meant two identical /api/menu round trips on
+    // the single most common launch path there is — the installed PWA being
+    // reopened with a warm cache — and the head's copy was simply dropped.
+    //
+    // Only when no week is pinned. The head fetch is an unqualified
+    // `/api/menu`, so on a ?week= load it answers for the *current* week, and
+    // reusing it here would write that answer under the pinned week's cache
+    // key and serve the wrong week for the next six hours.
+    const w = typeof window !== "undefined" ? (window as any) : undefined;
+    let revalidation: Promise<WeeklyMenuResponse | null>;
+
+    if (!week && w?.__MENU_FETCH_PROMISE__) {
+      revalidation = w.__MENU_FETCH_PROMISE__;
+      w.__MENU_FETCH_PROMISE__ = undefined;
+    } else {
+      revalidation = request<WeeklyMenuResponse>(`/api/menu${query}`);
+    }
+
+    revalidation
       .then((fresh) => {
         if (fresh?.menuData) {
           setCachedWeeklyMenu(fresh, week);
