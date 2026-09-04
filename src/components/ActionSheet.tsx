@@ -11,7 +11,6 @@ export interface ActionSheetProps {
   dishName: string;
   imagePath: string;
   description: string | null;
-  lang: "no" | "en";
   canVote: boolean;
   hasVoted: boolean;
   isVoting: boolean;
@@ -29,7 +28,6 @@ export default function ActionSheet({
   dishName,
   imagePath,
   description,
-  lang,
   canVote,
   hasVoted,
   isVoting,
@@ -114,7 +112,7 @@ export default function ActionSheet({
               <Check size={28} strokeWidth={3} />
             </div>
             <span className="vote-success-text">
-              {lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}
+              {"Takk for stemmen!"}
             </span>
             <span className="vote-success-sub">{canteenName}</span>
             {shareButton}
@@ -136,25 +134,15 @@ export default function ActionSheet({
                 <div className="action-sheet-btn-text">
                   <span className="action-sheet-btn-label">
                     {isVoting
-                      ? lang === "no"
-                        ? "Stemmer..."
-                        : "Voting..."
+                      ? "Stemmer..."
                       : hasVoted
-                      ? lang === "no"
-                        ? "Allerede stemt"
-                        : "Already voted"
-                      : lang === "no"
-                      ? "Stem på denne"
-                      : "Vote for this"}
+                      ? "Allerede stemt"
+                      : "Stem på denne"}
                   </span>
                   <span className="action-sheet-btn-sub">
                     {hasVoted
-                      ? lang === "no"
-                        ? `Du stemte på ${votedCanteen}`
-                        : `You voted for ${votedCanteen}`
-                      : lang === "no"
-                      ? "Vis at du spiser her i dag"
-                      : "Show you’re eating here today"}
+                      ? `Du stemte på ${votedCanteen}`
+                      : "Vis at du spiser her i dag"}
                   </span>
                 </div>
                 {!hasVoted && !isVoting && (
@@ -176,10 +164,10 @@ export default function ActionSheet({
               </div>
               <div className="action-sheet-btn-text">
                 <span className="action-sheet-btn-label">
-                  {lang === "no" ? "Lag hjemme" : "Make at home"}
+                  {"Lag hjemme"}
                 </span>
                 <span className="action-sheet-btn-sub">
-                  {lang === "no" ? "Få AI-generert oppskrift" : "Get AI-generated recipe"}
+                  {"Få AI-generert oppskrift"}
                 </span>
               </div>
               <ChevronRight size={18} className="action-sheet-btn-arrow" />

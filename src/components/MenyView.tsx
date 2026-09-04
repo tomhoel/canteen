@@ -6,11 +6,10 @@ import "@/styles/meny-view.css";
 
 interface MenyViewProps {
   meny: MenyResponse;
-  lang: "no" | "en";
   onBack: () => void;
 }
 
-function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang: "no" | "en"; index: number }) {
+function ProductCard({ match, index }: { match: MenyIngredientMatch; index: number }) {
   const [showAlts, setShowAlts] = useState(false);
   const hasAlts = (match.alternatives || []).length > 0;
   const recipeDesc = [match.recipeAmount, match.recipeUnit].filter(Boolean).join(" ");
@@ -41,7 +40,7 @@ function ProductCard({ match, lang, index }: { match: MenyIngredientMatch; lang:
                 {match.product!.weight ? ` \u00B7 ${match.product!.weight}` : ""}
               </span>
               {match.outOfStock && (
-                <span className="mv-oos-label">{lang === "no" ? "Ikke tilgjengelig" : "Unavailable"}</span>
+                <span className="mv-oos-label">{"Ikke tilgjengelig"}</span>
               )}
             </div>
             <div className="mv-right">
@@ -110,7 +109,7 @@ function ProductLink({ url, children }: { url: string | null | undefined; childr
   );
 }
 
-export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
+export default function MenyView({ meny, onBack }: MenyViewProps) {
   const { matches, totalCount, storeName } = meny;
   const [maxPrice, setMaxPrice] = useState(250);
 
@@ -130,7 +129,7 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
     <div className="mv">
       <button className="mv-back" onClick={onBack}>
         <span className="mv-back-arrow">{"\u2039"}</span>
-        <span>{lang === "no" ? "Tilbake til oppskrift" : "Back to recipe"}</span>
+        <span>{"Tilbake til oppskrift"}</span>
       </button>
 
       <PriceRanger min={0} max={250} value={maxPrice} onChange={setMaxPrice} />
@@ -140,7 +139,7 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
         <div>
           <span className="mv-store">{storeName}</span>
           <span className="mv-count">
-            {matched.length}/{totalCount} {lang === "no" ? "varer" : "items"}
+            {matched.length}/{totalCount} {"varer"}
           </span>
         </div>
         <div className="mv-totals">
@@ -155,7 +154,7 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
       {toBuy.length > 0 && (
         <div className="mv-list">
           {toBuy.map((match, i) => (
-            <ProductCard key={match.ingredient} match={match} lang={lang} index={i} />
+            <ProductCard key={match.ingredient} match={match} index={i} />
           ))}
         </div>
       )}
@@ -164,11 +163,11 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
       {pantry.length > 0 && (
         <div className="mv-section">
           <span className="mv-section-label">
-            {lang === "no" ? "Har trolig hjemme" : "Likely at home"}
+            {"Har trolig hjemme"}
           </span>
           <div className="mv-list mv-list--pantry">
             {pantry.map((match, i) => (
-              <ProductCard key={match.ingredient} match={match} lang={lang} index={toBuy.length + i} />
+              <ProductCard key={match.ingredient} match={match} index={toBuy.length + i} />
             ))}
           </div>
         </div>
@@ -178,7 +177,7 @@ export default function MenyView({ meny, lang, onBack }: MenyViewProps) {
       {unmatched.length > 0 && (
         <div className="mv-section">
           <span className="mv-section-label">
-            {lang === "no" ? "Ikke funnet" : "Not found"}
+            {"Ikke funnet"}
           </span>
           <div className="mv-chips">
             {unmatched.map((m) => (

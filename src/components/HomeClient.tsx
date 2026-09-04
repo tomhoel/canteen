@@ -6,7 +6,7 @@ import { useSearch, useNavigate } from "@tanstack/react-router";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
 import { Share2 } from "lucide-react";
-import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
+import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import {
@@ -134,12 +134,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   }, [searchParams?.day]);
 
   const [menuData, setMenuData] = useState<MenuData | null>(initialMenu);
-  // Norwegian only, for now. The cascade animation and the switcher that drove
-  // it were removed from the header at some point and the plumbing outlived
-  // them: nothing could call setLang, so `lang` could never change and the
-  // animation class could never be set. Both are in git if the switcher comes
-  // back; leaving them here only made the language look configurable.
-  const [lang] = useState<"no" | "en">("no");
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
@@ -170,9 +164,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // state through `voting.x`; the destructure that used to sit here bound ten
   // names nothing referenced.
   const voting = useVoting();
-  const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe(lang);
-  const { dealsView, handleDealsClick, closeDeals } = useDeals(lang);
-  const { menyView, handleMenyClick, closeMeny } = useMenySearch(lang);
+  const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe();
+  const { dealsView, handleDealsClick, closeDeals } = useDeals();
+  const { menyView, handleMenyClick, closeMeny } = useMenySearch();
 
   const scrollRef = useRef<HTMLElement>(null);
 
@@ -403,16 +397,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     }
   }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, lightboxIndex]);
 
-  const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
+  const fullDayLabels = FULL_DAYS_NO;
 
   const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => voting.votes[name] ?? 0)), [sortedCanteens, voting.votes]);
 
   // Shared with LoadingScreen so the shell shown while the menu loads and the
   // header that replaces it cannot print different dates for the same week.
   const { dateStr, dayLabelsData } = useMemo(() => ({
-    dateStr: formatLongDate(displayMonday, selectedDay, lang),
+    dateStr: formatLongDate(displayMonday, selectedDay, "no"),
     dayLabelsData: weekDayLabels(displayMonday),
-  }), [selectedDay, lang, displayMonday]);
+  }), [selectedDay, displayMonday]);
 
   const allDaysData = useMemo((): CanteenDayItem[][] => {
     return DAY_KEYS.map(dk => {
@@ -420,9 +414,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dk);
         const noItems = dayEntry?.no?.items;
         const enItems = dayEntry?.en?.items;
-        const rawItems = lang === "no"
-          ? (noItems && noItems.length > 0 ? noItems : enItems)
-          : (enItems && enItems.length > 0 ? enItems : noItems);
+        const rawItems = (noItems && noItems.length > 0 ? noItems : enItems);
         const items = getRankedItems(rawItems, canteenName);
         const mainDish = items?.find(i => i.isMain && i.dish.trim());
         // Defense in depth: drop items whose `dish` field is empty (older
@@ -486,12 +478,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const origin = dishOrigins[lookupMainDish?.dish || ""] ?? null;
         const descEntry = dishDescriptions[lookupMainDish?.dish || ""];
         const description = descEntry
-          ? (typeof descEntry === "string" ? descEntry : descEntry[lang] || descEntry["en"] || null)
+          ? (typeof descEntry === "string" ? descEntry : descEntry["no"] || descEntry["en"] || null)
           : null;
         // Pull availability notes from the user's preferred language; fall back
         // to the other language if the canteen only published one side.
-        const langNotes = dayEntry?.[lang]?.availabilityNotes;
-        const otherNotes = dayEntry?.[lang === "no" ? "en" : "no"]?.availabilityNotes;
+        const langNotes = dayEntry?.["no"]?.availabilityNotes;
+        const otherNotes = dayEntry?.["en"]?.availabilityNotes;
         const availabilityNotes = (langNotes?.length ? langNotes : otherNotes) || [];
         return {
           canteenName, canteen, dayEntry, items, mainDish, sideDishes,
@@ -501,7 +493,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         };
       });
     });
-  }, [sortedCanteens, lang, dishOrigins, dishDescriptions, displayWeek, plateImages]);
+  }, [sortedCanteens, dishOrigins, dishDescriptions, displayWeek, plateImages]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
@@ -575,9 +567,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
             showToast(
               "success",
-              lang === "no"
-                ? `🎲 YOLO valgte ${winnerName} for deg i dag!`
-                : `🎲 YOLO chose ${winnerName} for you today!`,
+              `🎲 YOLO valgte ${winnerName} for deg i dag!`,
               { duration: 4000 }
             );
           }
@@ -589,7 +579,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       yoloTimersRef.current.push(t);
       cumulative += interval;
     }
-  }, [yoloSpinning, allDaysData, lang]);
+  }, [yoloSpinning, allDaysData]);
 
   // Clear the winner state when the user navigates to another day.
   useEffect(() => {
@@ -627,8 +617,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   }, [canteenDayData]);
 
   const handleShareSlackWrapped = useCallback(() => {
-    voting.handleShareSlack(canteenDayData, lang);
-  }, [voting, canteenDayData, lang]);
+    voting.handleShareSlack(canteenDayData);
+  }, [voting, canteenDayData]);
 
   // `mounted` used to gate this too, which cost a painted frame of skeleton on
   // every load for no benefit: it is a leftover from when this was a Next.js
@@ -637,7 +627,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // this component exists — so the only thing left to wait for is the effect
   // flush, and waiting for it just showed the placeholder one frame longer.
   if (!menuData) {
-    return <LoadingScreen lang={lang} />;
+    return <LoadingScreen />;
   }
 
   const todayKey = getLocalDateKey();
@@ -648,16 +638,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       className={`share-btn${alreadyShared ? " disabled" : ""}${voting.shareState === "sent" ? " sent" : ""}${className ? ` ${className}` : ""}`}
       disabled={alreadyShared || voting.shareState === "loading"}
       onClick={handleShareSlackWrapped}
-      title={alreadyShared ? (lang === "no" ? "Allerede delt i dag" : "Already shared today") : undefined}
+      title={alreadyShared ? ("Allerede delt i dag") : undefined}
     >
       {voting.shareState === "sent"
-        ? (lang === "no" ? "Sendt! \u2713" : "Sent! \u2713")
+        ? ("Sendt! \u2713")
         : voting.shareState === "loading"
         ? "..."
         : (
           <>
             <Share2 size={14} style={{ marginRight: 6 }} />
-            {lang === "no" ? "Del resultater" : "Share results"}
+            {"Del resultater"}
           </>
         )
       }
@@ -668,7 +658,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     <div className="app-wrapper">
       <AppHeader
         mode={mode}
-        lang={lang}
         displayWeek={displayWeek}
         dayLabel={fullDayLabels[selectedDay]}
         dateStr={dateStr}
@@ -680,7 +669,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
         {closedCanteens.length > 0 && openCanteens.length > 0 && (
-          <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+          <ClosedCanteensPill closedCanteens={closedCanteens} />
         )}
       </AppHeader>
 
@@ -740,12 +729,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 className="cards-animated-wrapper"
               >
                 {openCanteens.length === 0 ? (
-                  <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
+                  <AllClosedCard closedCanteens={closedCanteens} />
                 ) : (
                   <>
                     {closedCanteens.length > 0 && (
                       <div className="closed-pill-mobile">
-                        <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+                        <ClosedCanteensPill closedCanteens={closedCanteens} />
                       </div>
                     )}
                     {canteenDayData.map((data, cardIdx) => (
@@ -754,14 +743,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                           key={data.canteenName}
                           data={data}
                           cardIdx={cardIdx}
-                          lang={lang}
                         />
                       ) : (
                         <FoodCard
                           key={data.canteenName}
                           data={data}
                           cardIdx={cardIdx}
-                          lang={lang}
                           selectedDay={selectedDay}
                           todayIndex={todayIndex}
                           voteCount={voting.votes[data.canteenName] ?? 0}
@@ -788,7 +775,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         dayLabelsData={dayLabelsData}
         selectedDay={selectedDay}
         todayIndex={todayIndex}
-        lang={lang}
         mode={mode}
         onDaySelect={handleDaySelect}
         onDayHover={preloadDay}
@@ -824,63 +810,61 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
             >
               <button className="info-close" onClick={() => setInfoOpen(false)} aria-label="Lukk">&times;</button>
               <div className="info-header">
-                <h2 id="info-title-id" className="info-title">{lang === "no" ? "Dagens" : "Today's"} <span>{lang === "no" ? "Lunsj" : "Lunch"}</span></h2>
-                <p className="info-tagline">{lang === "no" ? "Din daglige lunsjfølgesvenn på Fornebu" : "Your daily lunch companion at Fornebu"}</p>
+                <h2 id="info-title-id" className="info-title">{"Dagens"} <span>{"Lunsj"}</span></h2>
+                <p className="info-tagline">{"Din daglige lunsjfølgesvenn på Fornebu"}</p>
               </div>
               <div className="info-body">
                 <p className="info-intro">
-                  {lang === "no"
-                    ? "En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."
-                    : "An all-in-one lunch app that scrapes fresh menus from the Telenor Fornebu canteens every week. See what's being served, vote on your favorite lunch, and discover new recipes — all in one place."}
+                  {"En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."}
                 </p>
                 <div className="info-features">
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F37D;&#xFE0F;</span>
                     <div>
-                      <strong>{lang === "no" ? "Daglige menyer" : "Daily menus"}</strong>
-                      <span>{lang === "no" ? "Tre kantiner, fem dager, komplett med allergener og bilder generert av AI." : "Three canteens, five days, complete with allergens and AI-generated food imagery."}</span>
+                      <strong>{"Daglige menyer"}</strong>
+                      <span>{"Tre kantiner, fem dager, komplett med allergener og bilder generert av AI."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F5F3;&#xFE0F;</span>
                     <div>
-                      <strong>{lang === "no" ? "Stem i dag" : "Vote today"}</strong>
-                      <span>{lang === "no" ? "Se hvilken kantine kollegene dine velger. Stemmetall oppdateres i sanntid." : "See which canteen your colleagues are choosing. Vote counts update in real-time."}</span>
+                      <strong>{"Stem i dag"}</strong>
+                      <span>{"Se hvilken kantine kollegene dine velger. Stemmetall oppdateres i sanntid."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F468;&#x200D;&#x1F373;</span>
                     <div>
-                      <strong>{lang === "no" ? "AI-oppskrifter" : "AI recipes"}</strong>
-                      <span>{lang === "no" ? "Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI." : "Love a dish? Get a complete recipe with ingredients, steps, and cooking tips, generated by AI."}</span>
+                      <strong>{"AI-oppskrifter"}</strong>
+                      <span>{"Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F6D2;</span>
                     <div>
-                      <strong>{lang === "no" ? "Handle smart" : "Shop smart"}</strong>
-                      <span>{lang === "no" ? "Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY." : "Find the cheapest ingredients across Norwegian grocery stores, or build a shopping list at MENY."}</span>
+                      <strong>{"Handle smart"}</strong>
+                      <span>{"Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F310;</span>
                     <div>
-                      <strong>{lang === "no" ? "Tospråklig" : "Bilingual"}</strong>
-                      <span>{lang === "no" ? "Full norsk og engelsk støtte — bytt med en knapp." : "Full Norwegian and English support — switch with a tap."}</span>
+                      <strong>{"Tospråklig"}</strong>
+                      <span>{"Full norsk og engelsk støtte — bytt med en knapp."}</span>
                     </div>
                   </div>
                 </div>
                 <div className="info-tech">
-                  <p className="info-tech-label">{lang === "no" ? "Bygget med" : "Built with"}</p>
+                  <p className="info-tech-label">{"Bygget med"}</p>
                   <p className="info-tech-stack">Next.js &middot; React 19 &middot; Gemini AI &middot; Upstash Redis &middot; Vercel</p>
                 </div>
               </div>
               <div className="info-footer">
-                <span className="info-made-by">{lang === "no" ? "Laget av" : "Made by"} Tom Hoel</span>
+                <span className="info-made-by">{"Laget av"} Tom Hoel</span>
                 <div className="info-footer-links">
                   <a href="mailto:tom.chamkrai.hoel@telenor.no?subject=Feedback%20on%20Canteen%20App" className="info-footer-link">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                    {lang === "no" ? "Tilbakemelding" : "Feedback"}
+                    {"Tilbakemelding"}
                   </a>
                   <a href="https://www.linkedin.com/in/tom-hoel-47923215b/" target="_blank" rel="noopener noreferrer" className="info-footer-link info-linkedin">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
@@ -898,7 +882,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           <Suspense fallback={null}>
             <LeaderboardModal
               isOpen={leaderboardOpen}
-              lang={lang}
               onClose={() => setLeaderboardOpen(false)}
             />
           </Suspense>
@@ -914,7 +897,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               todayIndex={todayIndex}
               dayLabelsData={dayLabelsData}
               fullDayLabels={fullDayLabels}
-              lang={lang}
               onDaySelect={(i) => { handleDaySelect(i); setWeekOverviewOpen(false); }}
               onClose={() => setWeekOverviewOpen(false)}
             />
@@ -954,7 +936,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
             dishName={actionSheet.dishName}
             imagePath={actionSheet.imagePath}
             description={actionSheet.description}
-            lang={lang}
             canVote={!!canVote}
             hasVoted={voting.hasVoted}
             isVoting={voting.isVoting}
@@ -1020,7 +1001,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 {menyView.isLoading && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji meny-loading-bag">{"\uD83D\uDECD\uFE0F"}</span>
-                    <span className="recipe-loading-text">{lang === "no" ? "S\u00F8ker hos Meny..." : "Searching Meny..."}</span>
+                    <span className="recipe-loading-text">{"S\u00F8ker hos Meny..."}</span>
                   </div>
                 )}
 
@@ -1028,7 +1009,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <div className="recipe-error">
                     <p>{menyView.error}</p>
                     <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleMenyClick(recipeModal.dishName, recipeModal.recipe)}>
-                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                      {"Pr\u00F8v igjen"}
                     </button>
                   </div>
                 )}
@@ -1037,7 +1018,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <Suspense fallback={null}>
                     <MenyView
                       meny={menyView.data}
-                      lang={lang}
                       onBack={closeMeny}
                     />
                   </Suspense>
@@ -1053,7 +1033,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 {dealsView.isLoading && !dealsView.deals && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji deals-loading-cart">{"\uD83D\uDED2"}</span>
-                    <span className="recipe-loading-text">{lang === "no" ? "Sammenligner priser..." : "Comparing prices..."}</span>
+                    <span className="recipe-loading-text">{"Sammenligner priser..."}</span>
                   </div>
                 )}
 
@@ -1061,7 +1041,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <div className="recipe-error">
                     <p>{dealsView.error}</p>
                     <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleDealsClick(recipeModal.dishName, recipeModal.recipe)}>
-                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                      {"Pr\u00F8v igjen"}
                     </button>
                   </div>
                 )}
@@ -1070,7 +1050,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <Suspense fallback={null}>
                     <DealsView
                       deals={dealsView.deals}
-                      lang={lang}
                       isStreaming={dealsView.isStreaming}
                       onBack={closeDeals}
                     />
@@ -1087,7 +1066,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 {recipeModal.isLoading && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji">&#x1F373;</span>
-                    <span className="recipe-loading-text">{lang === "no" ? "Genererer oppskrift..." : "Generating recipe..."}</span>
+                    <span className="recipe-loading-text">{"Genererer oppskrift..."}</span>
                   </div>
                 )}
 
@@ -1095,7 +1074,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <div className="recipe-error">
                     <p>{recipeModal.error}</p>
                     <button className="recipe-retry-btn" onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName)}>
-                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                      {"Pr\u00F8v igjen"}
                     </button>
                   </div>
                 )}
@@ -1116,14 +1095,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                         <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.max(1, s - 1))}>&#x2212;</button>
                         <span className="recipe-servings-value">{recipeServings}</span>
                         <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.min(20, s + 1))}>+</button>
-                        <span className="recipe-servings-label">{lang === "no" ? "pers." : "serv."}</span>
+                        <span className="recipe-servings-label">{"pers."}</span>
                       </span>
-                      <span>{lang === "no" ? "Prep" : "Prep"}: {recipe.prepTime}</span>
-                      <span>{lang === "no" ? "Tilbereding" : "Cook"}: {recipe.cookTime}</span>
+                      <span>{"Prep"}: {recipe.prepTime}</span>
+                      <span>{"Tilbereding"}: {recipe.cookTime}</span>
                     </div>
                     <div className="recipe-content">
                       <div className="recipe-ingredients">
-                        <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
+                        <h3 className="recipe-section-title">{"Ingredienser"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
                         <ul className="recipe-ingredient-list">
                           {recipe.ingredients.map((ing, i) => {
                             const fb = getLetterFallback(ing.item);
@@ -1158,7 +1137,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                         </ul>
                         {/* Shopping divider + options */}
                         <div className="recipe-shop-divider" style={{ animationDelay: `${recipe.ingredients.length * 50 + 30}ms` }}>
-                          <span className="shop-divider-label">{lang === "no" ? "Handle" : "Shop"}</span>
+                          <span className="shop-divider-label">{"Handle"}</span>
                         </div>
                         <div className="recipe-shop-row" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
                           <button className="shop-card shop-card-meny" onClick={() => handleMenyClick(recipeModal.dishName, recipe)}>
@@ -1166,7 +1145,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                               <span className="shop-icon-check" />
                             </span>
                             <span className="shop-card-text">
-                              <span className="shop-card-label">{lang === "no" ? "Handleliste" : "Shopping list"}</span>
+                              <span className="shop-card-label">{"Handleliste"}</span>
                               <span className="shop-card-sub">Meny</span>
                             </span>
                           </button>
@@ -1175,14 +1154,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                               <span className="shop-icon-tag" />
                             </span>
                             <span className="shop-card-text">
-                              <span className="shop-card-label">{lang === "no" ? "Ukens tilbud" : "Weekly deals"}</span>
-                              <span className="shop-card-sub">{lang === "no" ? "Alle butikker" : "All stores"}</span>
+                              <span className="shop-card-label">{"Ukens tilbud"}</span>
+                              <span className="shop-card-sub">{"Alle butikker"}</span>
                             </span>
                           </button>
                         </div>
                       </div>
                       <div className="recipe-steps">
-                        <h3 className="recipe-section-title">{lang === "no" ? "Fremgangsm\u00E5te" : "Instructions"}</h3>
+                        <h3 className="recipe-section-title">{"Fremgangsm\u00E5te"}</h3>
                         <ol className="recipe-step-list">
                           {recipe.steps.map((step, i) => (
                             <li key={i} className="recipe-step-item" style={{ animationDelay: `${(i * 50) + 150}ms` }}>
