@@ -3571,13 +3571,6 @@ body {
   50%      { transform: scale(0.92); }
 }
 
-/* Desktop: NEVER display action sheet bottom popup */
-@media (min-width: 769px) {
-  .action-sheet-overlay,
-  .action-sheet {
-    display: none !important;
-  }
-}
 
 
 @media (prefers-reduced-motion: reduce) {

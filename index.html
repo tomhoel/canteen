@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -121,72 +121,126 @@
          one they get now. Adding it means generating the full device set. -->
   </head>
   <body>
+    <!--
+      The app's own shell, painted before a single byte of JavaScript runs.
+
+      Every class below is one React renders too, and the tree mirrors
+      LoadingScreen node for node — because the whole point is that React's
+      first commit changes nothing on screen. That is a promise this file
+      cannot keep on its own: it is hand-written HTML that has to track a
+      component it cannot import. It has drifted before. The header block used
+      to use `header-top` / `header-title-row` / `header-title` / `date-row` /
+      `date-text`, none of which had survived a redesign to `hero-inline`, so
+      the shell rendered as two lines of unstyled browser-default text — a
+      32px serif "Dagens Lunsj" over a run-together "Fredag Telenor Fornebu" —
+      for the entire window between first paint and mount.
+
+      `index.static-shell.test.ts` is what keeps that from happening again: it
+      fails if any class used here has no rule in the stylesheets.
+
+      No text that depends on the date appears here. The weekday, the week
+      number and the dates in the strip all come from computeDisplayContext,
+      and a second, vanilla copy of that logic living in this file is exactly
+      what that function exists to prevent. The boxes are sized correctly and
+      their text arrives with the first commit.
+    -->
     <div id="root">
+      <div class="animated-gradient-root" aria-hidden="true">
+        <div class="animated-gradient-blob blob-1" style="background: #f0d090"></div>
+        <div class="animated-gradient-blob blob-2" style="background: #d4a090"></div>
+        <div class="animated-gradient-blob blob-3" style="background: #f0bfa0"></div>
+        <div class="animated-gradient-blob blob-4" style="background: #e8d8c4"></div>
+      </div>
       <div class="app-wrapper">
         <header class="app-header">
-          <div class="header-top">
-            <div class="header-title-row">
-              <h1 class="header-title">🍽️ Dagens <span>Lunsj</span></h1>
-            </div>
-            <div class="date-row">
-              <span class="day-label" id="initial-day-label">Dagens lunsj</span>
-              <span class="date-text">Telenor Fornebu</span>
-            </div>
+          <div class="hero-inline">
+            <h1 class="hero-title">Dagens <span>Lunsj</span></h1>
+            <p class="hero-subtitle">&nbsp;</p>
+          </div>
+          <div class="header-actions">
+            <button class="info-btn" disabled title="Om appen" aria-label="Om appen"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>
+            <button class="info-btn" disabled title="Kantineseiere" aria-label="Kantineseiere"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2"/><path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2"/><path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3"/></svg></button>
+            <button class="info-btn" disabled title="Ukeoversikt" aria-label="Ukeoversikt"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg></button>
+            <button class="info-btn" disabled title="Ønsk en rett" aria-label="Ønsk en rett"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M12 8v6"/><path d="M9 11h6"/></svg></button>
           </div>
         </header>
-        <main class="cards-container" role="status" aria-busy="true">
-          <div class="cards-animated-wrapper">
+        <main class="cards-container" role="status" aria-busy="true" aria-label="Laster menyer">
+          <div class="cards-track">
+            <div class="cards-animated-wrapper">
             <div class="food-card-3d-wrapper">
-              <article class="food-card skeleton-card">
+              <article class="food-card skeleton-card" style="animation-delay: 0ms" aria-hidden="true">
                 <div class="card-image-wrapper"><div class="card-image-circle"><div class="image-shimmer"></div></div></div>
                 <div class="card-content">
-                  <div class="card-header"><div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div><h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3></div>
+                  <div class="card-header">
+                    <div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div>
+                    <h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3>
+                  </div>
                   <div class="dish-meta-row"><div class="allergens-row"><span class="skeleton-line skeleton-line-chip"></span><span class="skeleton-line skeleton-line-chip"></span></div></div>
                 </div>
                 <div class="card-bottom">
                   <div class="side-dishes-header"><span class="side-dishes-title"><span class="skeleton-line skeleton-line-label"></span></span></div>
-                  <div class="side-dish-list"><div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div><div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div></div>
+                  <div class="side-dish-list">
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div>
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div>
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div>
+                  </div>
                 </div>
               </article>
             </div>
             <div class="food-card-3d-wrapper">
-              <article class="food-card skeleton-card">
+              <article class="food-card skeleton-card" style="animation-delay: 75ms" aria-hidden="true">
                 <div class="card-image-wrapper"><div class="card-image-circle"><div class="image-shimmer"></div></div></div>
                 <div class="card-content">
-                  <div class="card-header"><div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div><h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3></div>
+                  <div class="card-header">
+                    <div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div>
+                    <h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3>
+                  </div>
                   <div class="dish-meta-row"><div class="allergens-row"><span class="skeleton-line skeleton-line-chip"></span><span class="skeleton-line skeleton-line-chip"></span></div></div>
                 </div>
                 <div class="card-bottom">
                   <div class="side-dishes-header"><span class="side-dishes-title"><span class="skeleton-line skeleton-line-label"></span></span></div>
-                  <div class="side-dish-list"><div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div><div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div></div>
+                  <div class="side-dish-list">
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div>
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div>
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div>
+                  </div>
                 </div>
               </article>
             </div>
             <div class="food-card-3d-wrapper">
-              <article class="food-card skeleton-card">
+              <article class="food-card skeleton-card" style="animation-delay: 150ms" aria-hidden="true">
                 <div class="card-image-wrapper"><div class="card-image-circle"><div class="image-shimmer"></div></div></div>
                 <div class="card-content">
-                  <div class="card-header"><div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div><h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3></div>
+                  <div class="card-header">
+                    <div class="canteen-name"><span class="skeleton-line skeleton-line-canteen"></span></div>
+                    <h3 class="dish-name"><span class="skeleton-line skeleton-line-dish"></span></h3>
+                  </div>
                   <div class="dish-meta-row"><div class="allergens-row"><span class="skeleton-line skeleton-line-chip"></span><span class="skeleton-line skeleton-line-chip"></span></div></div>
                 </div>
                 <div class="card-bottom">
                   <div class="side-dishes-header"><span class="side-dishes-title"><span class="skeleton-line skeleton-line-label"></span></span></div>
-                  <div class="side-dish-list"><div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div><div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div></div>
+                  <div class="side-dish-list">
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div>
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side skeleton-line-side-short"></span></div>
+                    <div class="side-dish-item"><span class="skeleton-line skeleton-line-side"></span></div>
+                  </div>
                 </div>
               </article>
+            </div>
             </div>
           </div>
         </main>
+        <nav class="day-bar day-bar-weekday-current" aria-label="Velg dag">
+          <div class="day-selector" role="tablist">
+            <button role="tab" class="day-btn" aria-selected="false" disabled><span class="day-label-name">Mandag</span><span class="day-label-date">&nbsp;</span></button>
+            <button role="tab" class="day-btn" aria-selected="false" disabled><span class="day-label-name">Tirsdag</span><span class="day-label-date">&nbsp;</span></button>
+            <button role="tab" class="day-btn" aria-selected="false" disabled><span class="day-label-name">Onsdag</span><span class="day-label-date">&nbsp;</span></button>
+            <button role="tab" class="day-btn" aria-selected="false" disabled><span class="day-label-name">Torsdag</span><span class="day-label-date">&nbsp;</span></button>
+            <button role="tab" class="day-btn" aria-selected="false" disabled><span class="day-label-name">Fredag</span><span class="day-label-date">&nbsp;</span></button>
+          </div>
+        </nav>
       </div>
     </div>
-    <script>
-      try {
-        var dayNames = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
-        var d = new Date().getDay();
-        var el = document.getElementById("initial-day-label");
-        if (el) el.textContent = dayNames[d];
-      } catch (e) {}
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
