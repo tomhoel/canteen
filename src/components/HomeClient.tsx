@@ -468,10 +468,17 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => el.removeEventListener("touchmove", onTouchMove);
-    // dragX is a MotionValue and never changes identity; it is listed so the
-    // dependency rule holds, not because the listener needs re-registering —
-    // and it must not, or a re-render mid-gesture would drop the swipe.
-  }, [dragX]);
+    // `menuData` is in here because the element this attaches to does not
+    // exist until it arrives — the component returns <LoadingScreen /> before
+    // that, so `scrollRef.current` is null and the effect bails. With `[dragX]`
+    // alone the effect ran exactly once, on the loading render, and the
+    // listener was never attached at all in production. Development hid it:
+    // StrictMode re-runs effects, so it got a second chance there.
+    //
+    // dragX is a MotionValue and never changes identity. Neither dependency
+    // changes on a day switch, which is what matters — re-registering a
+    // non-passive listener mid-gesture would drop the swipe in progress.
+  }, [dragX, menuData]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (!touchStartRef.current) return;
