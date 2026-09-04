@@ -23,6 +23,7 @@ import { useDeals } from "@/lib/useDeals";
 import { useMenySearch } from "@/lib/useMenySearch";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import LoadingScreen from "@/components/LoadingScreen";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import AppHeader from "@/components/AppHeader";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
@@ -134,6 +135,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   }, [searchParams?.day]);
 
   const [menuData, setMenuData] = useState<MenuData | null>(initialMenu);
+  const isDesktop = useIsDesktop();
+  // How far a day slides in from. The desktop has three cards across a wide
+  // viewport and can afford the full throw; a phone card is nearly the
+  // screen, so the same 80px reads as the whole layout lurching.
+  const travel = isDesktop ? 80 : 44;
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
@@ -684,42 +690,55 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       >
         <ErrorBoundary>
           <div className="cards-track">
-            <AnimatePresence initial={false} custom={direction}>
+            {/*
+              Day switch.
+
+              `popLayout`, not `wait`. With `wait` the outgoing day has to
+              finish leaving before the incoming one may start, so the two
+              never share the screen and the change reads as two separate
+              events — which is what made it feel stiff and rigid. popLayout
+              takes the exiting day out of layout flow so both move at once and
+              the days cross through each other.
+
+              The spring is what gives it weight: a fixed-duration tween
+              arrives at the same instant however hard the strip was flicked,
+              and has no relationship to the gesture that caused it.
+
+              `scale` is desktop-only, and that is the one real concession.
+              Scaling a box full of text forces WebKit to re-rasterise every
+              glyph in it on each frame, which is exactly the cost a phone
+              cannot absorb — it is why the scale was stripped out in the first
+              place. The phone keeps the overlap, the spring and the slide, and
+              travels a little less far because it has less room to travel in.
+            */}
+            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
               <motion.div
                 key={selectedDay}
                 custom={direction}
                 variants={{
-                  // A spring, not a fixed 180ms curve.
-                  //
-                  // A duration-based tween arrives at exactly the same moment
-                  // however hard the day was flicked, which is what makes the
-                  // day change read as stiff: the motion has no relationship
-                  // to the gesture that caused it. A spring settles instead of
-                  // stopping, so the cards arrive with a little weight behind
-                  // them and the strip feels like it is being pushed rather
-                  // than being redrawn.
-                  //
-                  // Exit stays a short tween. The outgoing day is already
-                  // fading and nobody is watching it settle; springing it out
-                  // only keeps a dead element on screen longer.
                   enter: (dir: number) => ({
-                    x: dir > 0 ? 28 : dir < 0 ? -28 : 0,
+                    x: dir > 0 ? travel : dir < 0 ? -travel : 0,
                     opacity: 0,
+                    ...(isDesktop ? { scale: 0.98 } : {}),
                   }),
                   center: {
                     x: 0,
                     opacity: 1,
+                    ...(isDesktop ? { scale: 1 } : {}),
                     transition: {
-                      x: { type: "spring", stiffness: 320, damping: 32, mass: 0.7 },
-                      opacity: { duration: 0.16, ease: "linear" },
+                      x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
+                      opacity: { duration: isDesktop ? 0.28 : 0.2, ease: "linear" },
+                      scale: { duration: 0.28 },
                     },
                   },
                   exit: (dir: number) => ({
-                    x: dir > 0 ? -24 : dir < 0 ? 24 : 0,
+                    x: dir > 0 ? -travel : travel,
                     opacity: 0,
+                    ...(isDesktop ? { scale: 0.98 } : {}),
                     transition: {
-                      x: { duration: 0.16, ease: [0.4, 0, 1, 1] },
-                      opacity: { duration: 0.12, ease: "linear" },
+                      x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
+                      opacity: { duration: isDesktop ? 0.2 : 0.16, ease: "linear" },
+                      scale: { duration: 0.2 },
                     },
                   }),
                 }}
