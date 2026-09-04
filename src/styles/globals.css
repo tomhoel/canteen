@@ -177,53 +177,6 @@ body {
   flex-direction: column;
 }
 
-.decorative-leaf {
-  position: fixed;
-  pointer-events: none;
-  opacity: 0.08;
-  z-index: 0;
-}
-
-.leaf-1 {
-  top: 5%;
-  left: 3%;
-  width: 100px;
-  height: 100px;
-  background: #4caf50;
-  border-radius: 0 80% 0 80%;
-  transform: rotate(-20deg);
-}
-
-.leaf-2 {
-  top: 15%;
-  right: 5%;
-  width: 80px;
-  height: 80px;
-  background: #ff6b4a;
-  border-radius: 80% 0 80% 0;
-  transform: rotate(30deg);
-}
-
-.leaf-3 {
-  bottom: 30%;
-  left: 5%;
-  width: 90px;
-  height: 90px;
-  background: #ffb800;
-  border-radius: 50% 50% 0 50%;
-  transform: rotate(45deg);
-}
-
-.leaf-4 {
-  bottom: 20%;
-  right: 8%;
-  width: 70px;
-  height: 70px;
-  background: #4caf50;
-  border-radius: 50% 0 50% 50%;
-  transform: rotate(-15deg);
-}
-
 /* ─── Header ─── */
 .app-header {
   display: flex;
@@ -239,31 +192,6 @@ body {
 }
 
 /* Language Switcher */
-.lang-switcher {
-  display: flex;
-  background: var(--card-white);
-  border-radius: 50px;
-  padding: 4px;
-  box-shadow: 0 2px 8px var(--shadow-soft);
-  border: 1px solid var(--border-light);
-}
-
-.lang-btn {
-  border: none;
-  outline: none;
-  background: transparent;
-  padding: 8px 20px;
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-radius: 50px;
-  cursor: pointer;
-  transform: scale(1.0);
-  transition: background 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-              color 0.25s ease,
-              transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.25s ease;
-}
 
 .lang-btn.active {
   background: var(--accent-orange);
@@ -875,8 +803,6 @@ body {
 }
 
 /* Legacy stale-notice — kept for backwards compat, hidden */
-.stale-notice { display: none; }
-.stale-notice-icon { display: none; }
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
 
@@ -1196,14 +1122,6 @@ body {
   border-color: rgba(251, 146, 60, 0.3);
 }
 
-.week-label {
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text-muted);
-  font-size: 10px;
-}
-
 .dish-name {
   font-size: clamp(14px, 3.5vw, 16.5px);
   font-weight: 700;
@@ -1237,20 +1155,6 @@ body {
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
-}
-
-.allergen-badge {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  flex-shrink: 0;
 }
 
 /* Full-name allergen chip — used on cards */
@@ -1508,67 +1412,9 @@ body {
 }
 
 /* ─── Allergen Section ─── */
-.allergen-section {
-  position: fixed;
-  bottom: 90px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  width: 90%;
-  max-width: 800px;
-}
-
-.allergen-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: white;
-  padding: 12px 24px;
-  border-radius: 50px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-light);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 0 auto;
-  width: fit-content;
-}
-
-.allergen-toggle:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-}
-
-.allergen-toggle-icon {
-  font-size: 18px;
-}
-
-.allergen-toggle-text {
-  font-size: clamp(11px, 2.5vw, 13px);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.allergen-toggle-arrow {
-  font-size: 12px;
-  color: var(--text-muted);
-  transition: transform 0.3s ease;
-}
 
 .allergen-toggle-arrow.open {
   transform: rotate(180deg);
-}
-
-.allergen-panel {
-  background: rgba(255, 255, 255, 0.96);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border-radius: 20px;
-  padding: 20px;
-  margin-top: 12px;
-  box-shadow: 0 12px 40px rgba(60, 30, 0, 0.14), 0 2px 8px rgba(60, 30, 0, 0.06);
-  border: 1px solid var(--border-light);
-  animation: panelReveal 0.35s var(--spring) both;
 }
 
 @keyframes panelReveal {
@@ -1578,21 +1424,6 @@ body {
 
 .allergen-panel .allergen-item {
   animation: chipPop 0.3s var(--spring) both;
-}
-
-.allergen-panel-title {
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 16px;
-  text-align: center;
-}
-
-.allergen-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
 }
 
 .allergen-item {
@@ -1606,19 +1437,6 @@ body {
   font-weight: 500;
   color: var(--text-secondary);
   border: 1px solid var(--border-light);
-}
-
-.allergen-item-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
-  flex-shrink: 0;
 }
 
 .allergen-item-name {
@@ -2006,25 +1824,9 @@ body {
     height: 220px;
     margin-top: -60px;
   }
-
-  .allergen-section {
-    bottom: 85px;
-  }
 }
 
 /* ─── Main Content Wrapper ─── */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-@media (min-width: 769px) {
-  .main-content {
-    display: contents; /* On desktop, don't create a flex container */
-  }
-}
 
 /* ─── Mobile - iPhone Horizontal Layout ─── */
 @media (max-width: 768px) {
@@ -2066,22 +1868,7 @@ body {
     font-size: 11px;
   }
 
-  .lang-switcher {
-    padding: 2px;
-  }
-
-  .lang-btn {
-    padding: 6px 14px;
-    font-size: clamp(11px, 2.5vw, 13px);
-  }
-
   /* Main content */
-  .main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
 
   /* #3 — Kill animated blobs entirely on mobile: blur(80px) + animation = jank */
   .animated-gradient-root {
@@ -2096,9 +1883,6 @@ body {
   }
 
   /* Allergen section - hidden on mobile */
-  .allergen-section {
-    display: none;
-  }
 
   /* #5 — Mobile card press feedback (translate/opacity only, no scale to avoid Safari rasterization) */
   .food-card:active {
@@ -2333,12 +2117,6 @@ body {
     flex: 1;
   }
 
-  .allergen-badge {
-    width: 18px;
-    height: 18px;
-    font-size: 8px;
-  }
-
   .allergen-chip {
     font-size: 8.5px;
     padding: 2px 6px;
@@ -2435,9 +2213,6 @@ body {
   }
 
   /* Closed canteens mobile text — adjust position above day bar */
-  .closed-canteens-text {
-    font-size: clamp(10px, 1.2dvh, 12px);
-  }
 
   .stale-banner-icon {
     font-size: 14px;
@@ -2586,20 +2361,10 @@ body {
     white-space: normal;
   }
 
-  .decorative-leaf {
-    display: none;
-  }
-
   /* Feedback button - hidden on mobile */
-  .feedback-btn {
-    display: none;
-  }
 }
 
 /* Hide pagination dots completely */
-.pagination-dots {
-  display: none;
-}
 
 /* ─── Cards Animated Wrapper (Powered by Motion) ─── */
 .cards-animated-wrapper {
@@ -3024,35 +2789,10 @@ body {
 }
 
 /* ─── #7 Vote Progress Bar ─── */
-.vote-progress-track {
-  width: 100%;
-  height: 4px;
-  background: var(--bg-cream);
-  border-radius: 2px;
-  overflow: hidden;
-  margin: 4px 0 6px;
-}
-
-.vote-progress-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--accent-coral);
-  opacity: 0.5;
-  transition: width 0.6s var(--smooth);
-  min-width: 0;
-}
 
 .vote-progress-fill.leader {
   background: linear-gradient(90deg, var(--accent-yellow), var(--accent-orange));
   opacity: 0.8;
-}
-
-@media (max-width: 768px) {
-  .vote-progress-track {
-    height: 3px;
-    margin: 2px 0 4px;
-    flex-basis: 100%;
-  }
 }
 
 /* ─── #6 Lightbox Navigation ─── */
@@ -3129,16 +2869,6 @@ body {
 }
 
 /* ─── Action Sheet ─── */
-.action-sheet-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(26, 21, 17, 0.55);
-  z-index: 1100;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0;
-}
 
 .action-sheet {
   width: 100%;
@@ -3158,20 +2888,6 @@ body {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   will-change: transform;
-}
-
-.action-sheet-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.5);
-  margin: 10px auto 0;
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  touch-action: none;
 }
 
 .action-sheet-close {
@@ -4252,19 +3968,6 @@ body {
 .skeleton-line-side-short { width: 62%; }
 
 /* ─── Swipe Gesture Hint ─── */
-.swipe-hint-left,
-.swipe-hint-right {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(200, 116, 26, 0.55);
-  pointer-events: none;
-  z-index: 10;
-  animation: swipeHintPulse 2.5s ease-out forwards;
-}
-
-.swipe-hint-left  { left: 12px; }
-.swipe-hint-right { right: 12px; }
 
 @keyframes swipeHintPulse {
   0%   { opacity: 0; transform: translateY(-50%) scale(0.8); }
@@ -4272,14 +3975,6 @@ body {
   50%  { opacity: 1; transform: translateY(-50%) scale(1.15); }
   70%  { opacity: 1; transform: translateY(-50%) scale(1.0); }
   100% { opacity: 0; transform: translateY(-50%) scale(0.8); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .swipe-hint-left,
-  .swipe-hint-right {
-    animation: none;
-    opacity: 0.55;
-  }
 }
 
 /* ─── Reduced Motion ─── */
@@ -4372,12 +4067,6 @@ body {
 
   .recipe-overlay {
     background: rgba(26, 21, 17, 0.74);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .allergen-panel {
-    background: rgb(255, 255, 255);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
