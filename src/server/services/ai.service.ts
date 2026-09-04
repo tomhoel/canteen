@@ -190,6 +190,7 @@ ${batch.map((d, i) => `${i + 1}. ${d}`).join("\n")}
 
 Guidelines:
 - Make them sound delicious with subtle Scandinavian/workday humor, light sarcasm, or gourmet chef flair.
+- Keep each description very concise: strictly 1-2 short sentences (maximum 2 lines on a menu card, under 110 characters). Never write long paragraphs.
 - Describe the dish named, not a different one.
 - Return ONLY a JSON object mapping each dish name EXACTLY as given above to bilingual descriptions:
 {

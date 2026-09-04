@@ -332,19 +332,37 @@ body {
 .cards-container {
   display: flex;
   justify-content: center;
-  gap: 24px;
   padding: 20px 48px 140px;
   max-width: 1400px;
   margin: 0 auto;
   position: relative;
   z-index: 10;
-  flex-wrap: wrap;
-  align-content: center;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   width: 100%;
-  transition: opacity 0.25s ease;
+}
+
+/* ─── Cards Track (CSS Grid Stack to prevent height jumping during transitions) ─── */
+.cards-track {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: center;
+}
+
+.cards-track > .cards-animated-wrapper {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  will-change: transform, opacity;
 }
 
 /* ─── Food Card ─── */
@@ -1241,7 +1259,7 @@ body {
   font-size: 12px;
   font-weight: 400;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.45;
   text-align: center;
   margin: 2px 0 4px;
   padding: 0 4px;
@@ -1251,6 +1269,12 @@ body {
   margin-left: auto;
   margin-right: auto;
   opacity: 0.75;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Bottom Section */
@@ -2043,7 +2067,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
-    gap: clamp(6px, 1dvh, 14px);
+    gap: 0;
     padding: calc(64px + env(safe-area-inset-top, 0px)) 10px calc(92px + env(safe-area-inset-bottom, 0px));
     flex: 1;
     overflow-y: auto;
@@ -2054,10 +2078,24 @@ body {
     transform: translate3d(0, 0, 0);
   }
 
-  /* Animated wrapper — fills parent, distributes space to cards */
-  .cards-animated-wrapper {
-    min-height: 0;
+  /* Cards track — mobile grid stack ensuring enter and exit share same bounds */
+  .cards-track {
+    display: grid;
+    grid-template-columns: 100%;
+    grid-template-rows: 100%;
+    width: 100%;
+    height: 100%;
     flex: 1;
+    min-height: 0;
+  }
+
+  /* Animated wrapper — fills parent, distributes space to cards */
+  .cards-track > .cards-animated-wrapper {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -3533,26 +3571,14 @@ body {
   50%      { transform: scale(0.92); }
 }
 
-/* Desktop: center the sheet as a floating card */
+/* Desktop: NEVER display action sheet bottom popup */
 @media (min-width: 769px) {
-  .action-sheet-overlay {
-    align-items: center;
-  }
+  .action-sheet-overlay,
   .action-sheet {
-    border-radius: 24px;
-    max-width: 380px;
-    box-shadow:
-      0 8px 30px rgba(60, 30, 0, 0.10),
-      0 30px 80px rgba(60, 30, 0, 0.15);
-  }
-  .action-sheet-handle {
-    display: none;
-  }
-  .action-sheet-hero {
-    height: 180px;
-    border-radius: 24px 24px 0 0;
+    display: none !important;
   }
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .action-sheet { animation: none; }
