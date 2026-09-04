@@ -289,6 +289,11 @@ body {
 /* ─── Food Card ─── */
 .food-card-3d-wrapper {
   width: 380px;
+  /* A flex item's min-width defaults to `auto`, which is its content size — so
+     this refused to shrink and three cards needed ~1000px whatever the window
+     was. Below that the leftmost card was clipped with no way to scroll to it,
+     which is every half-screen window and every zoomed 1280 laptop. */
+  min-width: 0;
 }
 
 /* Disable 3D tilt on touch devices */
@@ -1809,9 +1814,6 @@ body {
     padding: 20px 20px;
   }
 
-  .food-card {
-    width: 320px;
-  }
 
   .card-image-wrapper {
     width: 220px;

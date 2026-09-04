@@ -30,7 +30,12 @@ export default function WeekOverview({
   onClose,
 }: WeekOverviewProps) {
   const [activeCanteenTab, setActiveCanteenTab] = useState(0);
-  const [isNarrow, setIsNarrow] = useState(false);
+  // Read synchronously, not in the effect. Initialising to `false` meant every
+  // phone rendered the wide grid for one frame and then swapped to the tab
+  // layout — a guaranteed flash on every open.
+  const [isNarrow, setIsNarrow] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 520px)").matches
+  );
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 520px)");
