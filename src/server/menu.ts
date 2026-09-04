@@ -17,6 +17,56 @@ export interface WeeklyMenuResponse {
   plateImages: Record<string, string>;
 }
 
+/**
+ * The dish names the cards can actually look up.
+ *
+ * `dishOrigins` and `dishDescriptions` are stored for every dish of every day —
+ * mains and sides, both languages — but exactly one place reads them, and it
+ * reads them by one key per canteen-day: HomeClient.tsx looks up
+ * `lookupMainDish.dish`, which is the Norwegian ranked main when it has a name
+ * and the English one when it does not. Sides are never asked about. On the
+ * live payload that is 14 keys out of 87, and the two maps are ~58% of the
+ * response.
+ *
+ * This deliberately does NOT reuse the key set `resolvePlateImages` builds,
+ * even though it looks like the same thing. That one takes
+ * `no.items?.length ? no.items : en.items` and then skips the day entirely if
+ * the winner has a blank name — where the card falls through to the English
+ * main instead. The sets are a subset relation, not an identity, and trimming
+ * to the smaller one would drop a description the card still wants.
+ *
+ * Both mains are kept rather than only the one the rule selects. The extra
+ * entry per canteen-day is a few hundred bytes and it means a future change to
+ * the client's fallback cannot silently start missing data.
+ */
+function reachableDishNames(menuData: MenuData): Set<string> {
+  const names = new Set<string>();
+
+  for (const [canteenName, canteen] of Object.entries(menuData.canteens || {})) {
+    for (const dayItem of canteen.menu || []) {
+      for (const items of [dayItem.no?.items, dayItem.en?.items]) {
+        const main = pickMainDish(items, canteenName)?.dish?.trim();
+        if (main) names.add(main);
+      }
+    }
+  }
+
+  return names;
+}
+
+/** Keeps only the entries `reachableDishNames` says a card can ask for. */
+function pickReachable<T>(
+  map: Record<string, T> | undefined,
+  names: Set<string>
+): Record<string, T> {
+  if (!map) return {};
+  const out: Record<string, T> = {};
+  for (const name of names) {
+    if (name in map) out[name] = map[name];
+  }
+  return out;
+}
+
 /** Raised when no menu could be served, so the endpoint can answer 503. */
 export class MenuUnavailableError extends Error {}
 
@@ -178,10 +228,12 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     );
   }
 
+  const reachable = reachableDishNames(record.menuData);
+
   const result: WeeklyMenuResponse = {
     menuData: record.menuData,
-    dishOrigins: record.dishOrigins || {},
-    dishDescriptions: record.dishDescriptions || {},
+    dishOrigins: pickReachable(record.dishOrigins, reachable),
+    dishDescriptions: pickReachable(record.dishDescriptions, reachable),
     // Keyed off the week that was actually served, which is not always the one
     // that was asked for: the read falls back to the most recent stored week.
     plateImages: await resolvePlateImages(record.menuData, record.weekId),
