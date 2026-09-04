@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
-import { Share2, ChefHat, Check, ChevronRight, X } from "lucide-react";
-import { FULL_DAYS_NO, FULL_DAYS_EN, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
+import { Share2 } from "lucide-react";
+import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import {
@@ -23,14 +23,16 @@ import { useDeals } from "@/lib/useDeals";
 import { useMenySearch } from "@/lib/useMenySearch";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import LoadingScreen from "@/components/LoadingScreen";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import AppHeader from "@/components/AppHeader";
 import DaySelector from "@/components/DaySelector";
 import FoodCard from "@/components/FoodCard";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import ClosedCard from "@/components/ClosedCard";
+import ActionSheet from "@/components/ActionSheet";
+import { shouldTurnPage } from "@/lib/sheet-drag";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
-import { useAppStore, setFeedbackModalOpen } from "@/store/useAppStore";
 
 // These only render once the user opens a modal or overlay — a recipe's
 // price comparison, the Meny search, the feedback form, the vote/leaderboard/
@@ -42,13 +44,9 @@ import { useAppStore, setFeedbackModalOpen } from "@/store/useAppStore";
 // their JS at all.
 const DealsView = lazy(() => import("@/components/DealsView"));
 const MenyView = lazy(() => import("@/components/MenyView"));
-const VoteModal = lazy(() => import("@/components/VoteModal"));
 const Lightbox = lazy(() => import("@/components/Lightbox"));
 const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
 const WeekOverview = lazy(() => import("@/components/WeekOverview"));
-const CanteenFeedbackForm = lazy(() =>
-  import("@/components/CanteenFeedbackForm").then((m) => ({ default: m.CanteenFeedbackForm }))
-);
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -137,22 +135,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   }, [searchParams?.day]);
 
   const [menuData, setMenuData] = useState<MenuData | null>(initialMenu);
-  // Norwegian only, for now. The cascade animation and the switcher that drove
-  // it were removed from the header at some point and the plumbing outlived
-  // them: nothing could call setLang, so `lang` could never change and the
-  // animation class could never be set. Both are in git if the switcher comes
-  // back; leaving them here only made the language look configurable.
-  const [lang] = useState<"no" | "en">("no");
+  const isDesktop = useIsDesktop();
+  // How far a day slides in from. The desktop has three cards across a wide
+  // viewport and can afford the full throw; a phone card is nearly the
+  // screen, so the same 80px reads as the whole layout lurching.
+  const travel = isDesktop ? 80 : 44;
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
   const [dateTick, setDateTick] = useState(0);
-  const [voteModal, setVoteModal] = useState<{ isOpen: boolean; canteenName: string }>({ isOpen: false, canteenName: "" });
   const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-  // The hero image was the other <img> with no onError, so a dish that has
-  // never had a plate drawn opened the sheet onto a broken-image glyph.
-  const [sheetImageFailed, setSheetImageFailed] = useState(false);
-  const [sheetImageLoaded, setSheetImageLoaded] = useState(false);
   const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
 
@@ -165,7 +157,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const feedbackModalOpen = useAppStore((state) => state.feedbackModalOpen);
 
   // YOLO randomiser: cycles a glow through the open canteens for ~5s then
   // settles on one. yoloHighlight is the currently-lit card during the spin;
@@ -179,9 +170,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // state through `voting.x`; the destructure that used to sit here bound ten
   // names nothing referenced.
   const voting = useVoting();
-  const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe(lang);
-  const { dealsView, handleDealsClick, closeDeals } = useDeals(lang);
-  const { menyView, handleMenyClick, closeMeny } = useMenySearch(lang);
+  const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe();
+  const { dealsView, handleDealsClick, closeDeals } = useDeals();
+  const { menyView, handleMenyClick, closeMeny } = useMenySearch();
 
   const scrollRef = useRef<HTMLElement>(null);
 
@@ -302,8 +293,13 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isInput = tag === "input" || tag === "textarea" || tag === "select";
+
       if (e.key === "Escape") {
-        if (menyView.isOpen) {
+        if (infoOpen) {
+          setInfoOpen(false);
+        } else if (menyView.isOpen) {
           closeMeny();
         } else if (dealsView.isOpen) {
           closeDeals();
@@ -313,20 +309,19 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           setLeaderboardOpen(false);
         } else {
           setLightboxIndex(-1);
-          setVoteModal({ isOpen: false, canteenName: "" });
           setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
           closeRecipe();
         }
-      } else if (e.key === "ArrowLeft") {
-        if (selectedDay > 0 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
+      } else if (e.key === "ArrowLeft" && !isInput) {
+        if (selectedDay > 0 && lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
           handleDaySelect(selectedDay - 1);
         }
-      } else if (e.key === "ArrowRight") {
-        if (selectedDay < 4 && lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen) {
+      } else if (e.key === "ArrowRight" && !isInput) {
+        if (selectedDay < 4 && lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !infoOpen) {
           handleDaySelect(selectedDay + 1);
         }
-      } else if (e.key === " ") {
-        if (lightboxIndex < 0 && !voteModal.isOpen && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen) {
+      } else if (e.key === " " && !isInput) {
+        if (lightboxIndex < 0 && !actionSheet.isOpen && !recipeModal.isOpen && !menyView.isOpen && !dealsView.isOpen && !weekOverviewOpen && !leaderboardOpen && !infoOpen) {
           e.preventDefault();
           handleDaySelect(todayIndex >= 0 ? todayIndex : 0);
         }
@@ -334,7 +329,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, todayIndex, lightboxIndex, voteModal.isOpen, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
+  }, [selectedDay, todayIndex, lightboxIndex, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
 
   // On-demand image preloader for other days — warms a day when hovered or touched
   const preloadDay = useCallback((dayIdx: number) => {
@@ -353,13 +348,84 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     });
   }, [plateImages]);
 
-  // Lightweight native touch swipe detection for day switching without blocking vertical scroll
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  // Trackpad horizontal swipe detection
+  const lastWheelTimeRef = useRef(0);
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (Math.abs(e.deltaX) > 35 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+      const now = performance.now();
+      if (now - lastWheelTimeRef.current < 350) return;
+      lastWheelTimeRef.current = now;
+      if (e.deltaX > 0 && selectedDay < 4) {
+        handleDaySelect(selectedDay + 1);
+      } else if (e.deltaX < 0 && selectedDay > 0) {
+        handleDaySelect(selectedDay - 1);
+      }
+    }
+  }, [selectedDay, handleDaySelect]);
+
+  // High-performance touch swipe detection with velocity thresholding from mutu-web
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  /**
+   * Which way this gesture turned out to be going, decided once and then kept.
+   *
+   * Without it a swipe is only ever measured at its two ends, so for the whole
+   * gesture in between the browser does whatever it likes — and what it likes
+   * is to scroll `.cards-container`, because a sideways flick is never
+   * perfectly level. That vertical drift is what drags the phone browser's
+   * bottom bar back over the day strip mid-swipe.
+   */
+  const swipeAxis = useRef<"undecided" | "x" | "y">("undecided");
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
-      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      swipeAxis.current = "undecided";
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        time: performance.now(),
+      };
     }
+  }, []);
+
+  /**
+   * Attached by hand rather than as onTouchMove, because React registers
+   * touchmove as a passive listener and preventDefault is ignored on those.
+   * Cancelling the horizontal case is the whole point: it stops the day swipe
+   * from scrolling the page, so the browser chrome stays where it is and the
+   * gesture does one thing instead of two.
+   */
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onTouchMove = (e: TouchEvent) => {
+      const start = touchStartRef.current;
+      if (!start || e.touches.length !== 1) return;
+
+      const dx = e.touches[0].clientX - start.x;
+      const dy = e.touches[0].clientY - start.y;
+
+      // Decide early. Chrome commits to a scroll within a few pixels, and once
+      // it has, every following touchmove arrives with cancelable already
+      // false — preventDefault then does nothing at all. Waiting for a
+      // comfortable 10px of travel means losing the race on most swipes.
+      if (swipeAxis.current === "undecided") {
+        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+        swipeAxis.current = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+      }
+
+      // Only the horizontal case is cancelled, and only once the axis is
+      // known. Cancelling every move — which an earlier version did whenever
+      // the container had nothing to scroll — makes iOS block the compositor
+      // on the main thread for each touchmove before it can act on the
+      // gesture, which is a real cost paid on every finger movement including
+      // the vertical ones we have no interest in.
+      if (swipeAxis.current === "x" && e.cancelable) e.preventDefault();
+    };
+
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
   }, []);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
@@ -367,33 +433,42 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     const touch = e.changedTouches[0];
     const deltaX = touch.clientX - touchStartRef.current.x;
     const deltaY = touch.clientY - touchStartRef.current.y;
+    const dt = Math.max(1, performance.now() - touchStartRef.current.time);
+    const vx = deltaX / dt;
+    const width = typeof window !== "undefined" ? window.innerWidth : 360;
     touchStartRef.current = null;
+    const axis = swipeAxis.current;
+    swipeAxis.current = "undecided";
 
     // Do not switch day if an overlay or modal is active
-    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || feedbackModalOpen || lightboxIndex >= 0 || voteModal.isOpen) {
+    if (infoOpen || actionSheet.isOpen || recipeModal.isOpen || weekOverviewOpen || leaderboardOpen || lightboxIndex >= 0) {
       return;
     }
 
-    // Only switch day if swipe is deliberately horizontal (> 50px and horizontally dominant)
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-      if (deltaX < 0 && selectedDay < 4) {
-        handleDaySelect(selectedDay + 1);
-      } else if (deltaX > 0 && selectedDay > 0) {
-        handleDaySelect(selectedDay - 1);
+    // Must be horizontally dominant to avoid triggering on vertical scroll.
+    // The axis lock has usually already decided this; the check stays for the
+    // gesture too short to have tripped it.
+    if (axis !== "y" && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 28) {
+      if (shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.08, velocity: 0.25 })) {
+        if (deltaX < 0 && selectedDay < 4) {
+          handleDaySelect(selectedDay + 1);
+        } else if (deltaX > 0 && selectedDay > 0) {
+          handleDaySelect(selectedDay - 1);
+        }
       }
     }
-  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, feedbackModalOpen, lightboxIndex, voteModal.isOpen]);
+  }, [selectedDay, handleDaySelect, infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, leaderboardOpen, lightboxIndex]);
 
-  const fullDayLabels = lang === "no" ? FULL_DAYS_NO : FULL_DAYS_EN;
+  const fullDayLabels = FULL_DAYS_NO;
 
   const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => voting.votes[name] ?? 0)), [sortedCanteens, voting.votes]);
 
   // Shared with LoadingScreen so the shell shown while the menu loads and the
   // header that replaces it cannot print different dates for the same week.
   const { dateStr, dayLabelsData } = useMemo(() => ({
-    dateStr: formatLongDate(displayMonday, selectedDay, lang),
+    dateStr: formatLongDate(displayMonday, selectedDay, "no"),
     dayLabelsData: weekDayLabels(displayMonday),
-  }), [selectedDay, lang, displayMonday]);
+  }), [selectedDay, displayMonday]);
 
   const allDaysData = useMemo((): CanteenDayItem[][] => {
     return DAY_KEYS.map(dk => {
@@ -401,9 +476,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dk);
         const noItems = dayEntry?.no?.items;
         const enItems = dayEntry?.en?.items;
-        const rawItems = lang === "no"
-          ? (noItems && noItems.length > 0 ? noItems : enItems)
-          : (enItems && enItems.length > 0 ? enItems : noItems);
+        const rawItems = (noItems && noItems.length > 0 ? noItems : enItems);
         const items = getRankedItems(rawItems, canteenName);
         const mainDish = items?.find(i => i.isMain && i.dish.trim());
         // Defense in depth: drop items whose `dish` field is empty (older
@@ -441,10 +514,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           : plateImage
             ? getSupabaseImageUrl("images_nobg", plateImage, { width: 340, format: "webp", quality: 75 })
             : "";
+        // Sized, not untransformed. The bare URL serves the original PNG —
+        // 1.66 MB for a picture no phone screen can show more than a fraction
+        // of, downloaded the moment anyone taps a plate. 1080px WebP is wider
+        // than the largest phone viewport and about 5% of the bytes, and the
+        // transparency the gradient backdrop depends on survives it: WebP has
+        // an alpha channel and `images_nobg` is the cut-out bucket.
         const highResImagePath = isClosed
-          ? getClosedPlateUrl(`${canteenName}-${dk}`)
+          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 1080, format: "webp", quality: 85 })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage)
+            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 1080, format: "webp", quality: 85 })
             : "";
         // CanteenDayItem models "no usable week label" as undefined, not null.
         const canteenWeekNum = parseCanteenWeekNumber(canteen.week) ?? undefined;
@@ -461,12 +540,12 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         const origin = dishOrigins[lookupMainDish?.dish || ""] ?? null;
         const descEntry = dishDescriptions[lookupMainDish?.dish || ""];
         const description = descEntry
-          ? (typeof descEntry === "string" ? descEntry : descEntry[lang] || descEntry["en"] || null)
+          ? (typeof descEntry === "string" ? descEntry : descEntry["no"] || descEntry["en"] || null)
           : null;
         // Pull availability notes from the user's preferred language; fall back
         // to the other language if the canteen only published one side.
-        const langNotes = dayEntry?.[lang]?.availabilityNotes;
-        const otherNotes = dayEntry?.[lang === "no" ? "en" : "no"]?.availabilityNotes;
+        const langNotes = dayEntry?.["no"]?.availabilityNotes;
+        const otherNotes = dayEntry?.["en"]?.availabilityNotes;
         const availabilityNotes = (langNotes?.length ? langNotes : otherNotes) || [];
         return {
           canteenName, canteen, dayEntry, items, mainDish, sideDishes,
@@ -476,7 +555,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         };
       });
     });
-  }, [sortedCanteens, lang, dishOrigins, dishDescriptions, displayWeek, plateImages]);
+  }, [sortedCanteens, dishOrigins, dishDescriptions, displayWeek, plateImages]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
@@ -550,9 +629,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
             showToast(
               "success",
-              lang === "no"
-                ? `🎲 YOLO valgte ${winnerName} for deg i dag!`
-                : `🎲 YOLO chose ${winnerName} for you today!`,
+              `🎲 YOLO valgte ${winnerName} for deg i dag!`,
               { duration: 4000 }
             );
           }
@@ -564,7 +641,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       yoloTimersRef.current.push(t);
       cumulative += interval;
     }
-  }, [yoloSpinning, allDaysData, lang]);
+  }, [yoloSpinning, allDaysData]);
 
   // Clear the winner state when the user navigates to another day.
   useEffect(() => {
@@ -578,41 +655,20 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     yoloTimersRef.current = [];
   }, []);
 
-  // Close any active modal or sheet on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (infoOpen) {
-        setInfoOpen(false);
-      } else if (actionSheet.isOpen) {
-        setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-        voting.setVoteSuccess(false);
-        voting.setShareState("idle");
-      } else if (recipeModal.isOpen) {
-        closeRecipe();
-        closeDeals();
-        closeMeny();
-      } else if (weekOverviewOpen) {
-        setWeekOverviewOpen(false);
-      } else if (lightboxIndex >= 0) {
-        setLightboxIndex(-1);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [infoOpen, actionSheet.isOpen, recipeModal.isOpen, weekOverviewOpen, lightboxIndex, voting, closeRecipe, closeDeals, closeMeny]);
-
   // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
     const idx = openCanteens.findIndex(c => c.canteenName === data.canteenName);
     setLightboxIndex(idx >= 0 ? idx : 0);
   }, [openCanteens]);
 
+  // Every viewport opens the action sheet. A previous revision sent desktop
+  // clicks straight to the vote modal instead, which made "Lag hjemme" — and
+  // the dish description, the share button and the recipe — unreachable with a
+  // mouse, and made a click on a non-voteable day (any day that is not today)
+  // do nothing at all. The sheet is the only route to those actions, so it has
+  // to open regardless of width; voting is one of the buttons inside it.
   const handleCardClick = useCallback((canteenName: string) => {
     const data = canteenDayData.find(c => c.canteenName === canteenName);
-    // A new dish deserves a fresh attempt; without this, one missing plate
-    // would leave every sheet opened afterwards showing the placeholder.
-    setSheetImageLoaded(false);
     setActionSheet({
       isOpen: true,
       canteenName,
@@ -623,8 +679,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   }, [canteenDayData]);
 
   const handleShareSlackWrapped = useCallback(() => {
-    voting.handleShareSlack(canteenDayData, lang);
-  }, [voting, canteenDayData, lang]);
+    voting.handleShareSlack(canteenDayData);
+  }, [voting, canteenDayData]);
 
   // `mounted` used to gate this too, which cost a painted frame of skeleton on
   // every load for no benefit: it is a leftover from when this was a Next.js
@@ -633,7 +689,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   // this component exists — so the only thing left to wait for is the effect
   // flush, and waiting for it just showed the placeholder one frame longer.
   if (!menuData) {
-    return <LoadingScreen lang={lang} />;
+    return <LoadingScreen />;
   }
 
   const todayKey = getLocalDateKey();
@@ -644,16 +700,16 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       className={`share-btn${alreadyShared ? " disabled" : ""}${voting.shareState === "sent" ? " sent" : ""}${className ? ` ${className}` : ""}`}
       disabled={alreadyShared || voting.shareState === "loading"}
       onClick={handleShareSlackWrapped}
-      title={alreadyShared ? (lang === "no" ? "Allerede delt i dag" : "Already shared today") : undefined}
+      title={alreadyShared ? ("Allerede delt i dag") : undefined}
     >
       {voting.shareState === "sent"
-        ? (lang === "no" ? "Sendt! \u2713" : "Sent! \u2713")
+        ? ("Sendt! \u2713")
         : voting.shareState === "loading"
         ? "..."
         : (
           <>
             <Share2 size={14} style={{ marginRight: 6 }} />
-            {lang === "no" ? "Del resultater" : "Share results"}
+            {"Del resultater"}
           </>
         )
       }
@@ -664,7 +720,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
     <div className="app-wrapper">
       <AppHeader
         mode={mode}
-        lang={lang}
         displayWeek={displayWeek}
         dayLabel={fullDayLabels[selectedDay]}
         dateStr={dateStr}
@@ -672,12 +727,11 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           onInfo: () => setInfoOpen(true),
           onLeaderboard: () => setLeaderboardOpen(true),
           onWeekOverview: () => setWeekOverviewOpen(true),
-          onFeedback: () => setFeedbackModalOpen(true),
         }}
       >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
         {closedCanteens.length > 0 && openCanteens.length > 0 && (
-          <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
+          <ClosedCanteensPill closedCanteens={closedCanteens} />
         )}
       </AppHeader>
 
@@ -686,79 +740,106 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         className="cards-container"
         ref={scrollRef}
         onScroll={handleScroll}
+        onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <AnimatePresence mode="wait" custom={direction} initial={false}>
-            <motion.div
-              key={selectedDay}
-              custom={direction}
-              variants={{
-                enter: (dir: number) => ({
-                  x: dir > 0 ? 30 : dir < 0 ? -30 : 0,
-                  opacity: 0,
-                }),
-                center: {
-                  x: 0,
-                  opacity: 1,
-                  transition: {
-                    x: { duration: 0.2, ease: [0.25, 1, 0.5, 1] },
-                    opacity: { duration: 0.15, ease: "linear" },
+          <div className="cards-track">
+            {/*
+              Day switch.
+
+              `popLayout`, not `wait`. With `wait` the outgoing day has to
+              finish leaving before the incoming one may start, so the two
+              never share the screen and the change reads as two separate
+              events — which is what made it feel stiff and rigid. popLayout
+              takes the exiting day out of layout flow so both move at once and
+              the days cross through each other.
+
+              The spring is what gives it weight: a fixed-duration tween
+              arrives at the same instant however hard the strip was flicked,
+              and has no relationship to the gesture that caused it.
+
+              `scale` is desktop-only, and that is the one real concession.
+              Scaling a box full of text forces WebKit to re-rasterise every
+              glyph in it on each frame, which is exactly the cost a phone
+              cannot absorb — it is why the scale was stripped out in the first
+              place. The phone keeps the overlap, the spring and the slide, and
+              travels a little less far because it has less room to travel in.
+            */}
+            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+              <motion.div
+                key={selectedDay}
+                custom={direction}
+                variants={{
+                  enter: (dir: number) => ({
+                    x: dir > 0 ? travel : dir < 0 ? -travel : 0,
+                    opacity: 0,
+                    ...(isDesktop ? { scale: 0.98 } : {}),
+                  }),
+                  center: {
+                    x: 0,
+                    opacity: 1,
+                    ...(isDesktop ? { scale: 1 } : {}),
+                    transition: {
+                      x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
+                      opacity: { duration: isDesktop ? 0.28 : 0.24 },
+                      scale: { duration: 0.28 },
+                    },
                   },
-                },
-                exit: (dir: number) => ({
-                  x: dir < 0 ? 25 : -25,
-                  opacity: 0,
-                  transition: {
-                    x: { duration: 0.08, ease: "easeIn" },
-                    opacity: { duration: 0.08, ease: "linear" },
-                  },
-                }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="cards-animated-wrapper"
-            >
-              {openCanteens.length === 0 ? (
-                <AllClosedCard closedCanteens={closedCanteens} lang={lang} />
-              ) : (
-                <>
-                  {closedCanteens.length > 0 && (
-                    <div className="closed-pill-mobile">
-                      <ClosedCanteensPill closedCanteens={closedCanteens} lang={lang} />
-                    </div>
-                  )}
-                  {canteenDayData.map((data, cardIdx) => (
-                    isCanteenClosed(data) ? (
-                      <ClosedCard
-                        key={data.canteenName}
-                        data={data}
-                        cardIdx={cardIdx}
-                        lang={lang}
-                      />
-                    ) : (
-                      <FoodCard
-                        key={data.canteenName}
-                        data={data}
-                        cardIdx={cardIdx}
-                        lang={lang}
-                        selectedDay={selectedDay}
-                        todayIndex={todayIndex}
-                        voteCount={voting.votes[data.canteenName] ?? 0}
-                        maxVotes={maxVotes}
-                        onImageClick={handleImageClick}
-                        onCardClick={handleCardClick}
-                        yoloHighlighted={yoloHighlight === cardIdx}
-                        yoloWinner={yoloWinner === cardIdx}
-                      />
-                    )
-                  ))}
-                </>
-              )}
-            </motion.div>
-          </AnimatePresence>
+                  exit: (dir: number) => ({
+                    x: dir > 0 ? -travel : travel,
+                    opacity: 0,
+                    ...(isDesktop ? { scale: 0.98 } : {}),
+                    transition: {
+                      x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
+                      opacity: { duration: isDesktop ? 0.2 : 0.18 },
+                      scale: { duration: 0.2 },
+                    },
+                  }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="cards-animated-wrapper"
+              >
+                {openCanteens.length === 0 ? (
+                  <AllClosedCard closedCanteens={closedCanteens} />
+                ) : (
+                  <>
+                    {closedCanteens.length > 0 && (
+                      <div className="closed-pill-mobile">
+                        <ClosedCanteensPill closedCanteens={closedCanteens} />
+                      </div>
+                    )}
+                    {canteenDayData.map((data, cardIdx) => (
+                      isCanteenClosed(data) ? (
+                        <ClosedCard
+                          key={data.canteenName}
+                          data={data}
+                          cardIdx={cardIdx}
+                        />
+                      ) : (
+                        <FoodCard
+                          key={data.canteenName}
+                          data={data}
+                          cardIdx={cardIdx}
+                          selectedDay={selectedDay}
+                          todayIndex={todayIndex}
+                          voteCount={voting.votes[data.canteenName] ?? 0}
+                          maxVotes={maxVotes}
+                          onImageClick={handleImageClick}
+                          onCardClick={handleCardClick}
+                          yoloHighlighted={yoloHighlight === cardIdx}
+                          yoloWinner={yoloWinner === cardIdx}
+                        />
+                      )
+                    ))}
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </ErrorBoundary>
       </main>
 
@@ -769,7 +850,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         dayLabelsData={dayLabelsData}
         selectedDay={selectedDay}
         todayIndex={todayIndex}
-        lang={lang}
         mode={mode}
         onDaySelect={handleDaySelect}
         onDayHover={preloadDay}
@@ -805,63 +885,61 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
             >
               <button className="info-close" onClick={() => setInfoOpen(false)} aria-label="Lukk">&times;</button>
               <div className="info-header">
-                <h2 id="info-title-id" className="info-title">{lang === "no" ? "Dagens" : "Today's"} <span>{lang === "no" ? "Lunsj" : "Lunch"}</span></h2>
-                <p className="info-tagline">{lang === "no" ? "Din daglige lunsjfølgesvenn på Fornebu" : "Your daily lunch companion at Fornebu"}</p>
+                <h2 id="info-title-id" className="info-title">{"Dagens"} <span>{"Lunsj"}</span></h2>
+                <p className="info-tagline">{"Din daglige lunsjfølgesvenn på Fornebu"}</p>
               </div>
               <div className="info-body">
                 <p className="info-intro">
-                  {lang === "no"
-                    ? "En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."
-                    : "An all-in-one lunch app that scrapes fresh menus from the Telenor Fornebu canteens every week. See what's being served, vote on your favorite lunch, and discover new recipes — all in one place."}
+                  {"En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."}
                 </p>
                 <div className="info-features">
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F37D;&#xFE0F;</span>
                     <div>
-                      <strong>{lang === "no" ? "Daglige menyer" : "Daily menus"}</strong>
-                      <span>{lang === "no" ? "Tre kantiner, fem dager, komplett med allergener og bilder generert av AI." : "Three canteens, five days, complete with allergens and AI-generated food imagery."}</span>
+                      <strong>{"Daglige menyer"}</strong>
+                      <span>{"Tre kantiner, fem dager, komplett med allergener og bilder generert av AI."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F5F3;&#xFE0F;</span>
                     <div>
-                      <strong>{lang === "no" ? "Stem i dag" : "Vote today"}</strong>
-                      <span>{lang === "no" ? "Se hvilken kantine kollegene dine velger. Stemmetall oppdateres i sanntid." : "See which canteen your colleagues are choosing. Vote counts update in real-time."}</span>
+                      <strong>{"Stem i dag"}</strong>
+                      <span>{"Se hvilken kantine kollegene dine velger. Stemmetall oppdateres i sanntid."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F468;&#x200D;&#x1F373;</span>
                     <div>
-                      <strong>{lang === "no" ? "AI-oppskrifter" : "AI recipes"}</strong>
-                      <span>{lang === "no" ? "Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI." : "Love a dish? Get a complete recipe with ingredients, steps, and cooking tips, generated by AI."}</span>
+                      <strong>{"AI-oppskrifter"}</strong>
+                      <span>{"Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F6D2;</span>
                     <div>
-                      <strong>{lang === "no" ? "Handle smart" : "Shop smart"}</strong>
-                      <span>{lang === "no" ? "Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY." : "Find the cheapest ingredients across Norwegian grocery stores, or build a shopping list at MENY."}</span>
+                      <strong>{"Handle smart"}</strong>
+                      <span>{"Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY."}</span>
                     </div>
                   </div>
                   <div className="info-feature">
                     <span className="info-feature-icon">&#x1F310;</span>
                     <div>
-                      <strong>{lang === "no" ? "Tospråklig" : "Bilingual"}</strong>
-                      <span>{lang === "no" ? "Full norsk og engelsk støtte — bytt med en knapp." : "Full Norwegian and English support — switch with a tap."}</span>
+                      <strong>{"Tospråklig"}</strong>
+                      <span>{"Full norsk og engelsk støtte — bytt med en knapp."}</span>
                     </div>
                   </div>
                 </div>
                 <div className="info-tech">
-                  <p className="info-tech-label">{lang === "no" ? "Bygget med" : "Built with"}</p>
+                  <p className="info-tech-label">{"Bygget med"}</p>
                   <p className="info-tech-stack">Next.js &middot; React 19 &middot; Gemini AI &middot; Upstash Redis &middot; Vercel</p>
                 </div>
               </div>
               <div className="info-footer">
-                <span className="info-made-by">{lang === "no" ? "Laget av" : "Made by"} Tom Hoel</span>
+                <span className="info-made-by">{"Laget av"} Tom Hoel</span>
                 <div className="info-footer-links">
                   <a href="mailto:tom.chamkrai.hoel@telenor.no?subject=Feedback%20on%20Canteen%20App" className="info-footer-link">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                    {lang === "no" ? "Tilbakemelding" : "Feedback"}
+                    {"Tilbakemelding"}
                   </a>
                   <a href="https://www.linkedin.com/in/tom-hoel-47923215b/" target="_blank" rel="noopener noreferrer" className="info-footer-link info-linkedin">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
@@ -879,7 +957,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
           <Suspense fallback={null}>
             <LeaderboardModal
               isOpen={leaderboardOpen}
-              lang={lang}
               onClose={() => setLeaderboardOpen(false)}
             />
           </Suspense>
@@ -895,7 +972,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               todayIndex={todayIndex}
               dayLabelsData={dayLabelsData}
               fullDayLabels={fullDayLabels}
-              lang={lang}
               onDaySelect={(i) => { handleDaySelect(i); setWeekOverviewOpen(false); }}
               onClose={() => setWeekOverviewOpen(false)}
             />
@@ -903,164 +979,50 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
 
-      {/* Vote Modal */}
-      <AnimatePresence>
-        {voteModal.isOpen && (
-          <Suspense fallback={null}>
-            <VoteModal
-              isOpen={voteModal.isOpen}
-              canteenName={voteModal.canteenName}
-              hasVoted={voting.hasVoted}
-              votedCanteen={voting.votedCanteen}
-              canteenNames={openCanteens.filter(c => !c.isOutdated && !c.isAhead).map(c => c.canteenName)}
-              votes={voting.votes}
-              maxVotes={maxVotes}
-              lang={lang}
-              isVoting={voting.isVoting}
-              onVote={voting.handleVote}
-              onClose={() => setVoteModal({ isOpen: false, canteenName: "" })}
-            />
-          </Suspense>
-        )}
-      </AnimatePresence>
 
-      {/* Action Sheet */}
-      <AnimatePresence>
-        {actionSheet.isOpen && (() => {
-          const closeSheet = () => { setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null }); voting.setVoteSuccess(false); voting.setShareState("idle"); };
-          const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
-          const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
-          return (
-          <motion.div
-            key="action-sheet-overlay"
-            className="action-sheet-overlay"
-            role="presentation"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={closeSheet}
-          >
-            <motion.div
-              key="action-sheet-sheet"
-              className="action-sheet"
-              role="dialog"
-              aria-modal="true"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0.05, bottom: 0.5 }}
-              onDragEnd={(_e, info) => {
-                if (info.offset.y > 80 || info.velocity.y > 400) {
-                  closeSheet();
-                }
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="action-sheet-handle" />
-              <button className="action-sheet-close" onClick={closeSheet} aria-label="Lukk">
-                <X size={16} strokeWidth={2.5} />
-              </button>
 
-              {/* Hero image */}
-              <div className="action-sheet-hero">
-                {sheetImageFailed || !actionSheet.imagePath ? (
-                  <div className="image-placeholder">{actionSheet.canteenName.charAt(0)}</div>
-                ) : (
-                  <img
-                    key={actionSheet.imagePath}
-                    src={actionSheet.imagePath}
-                    alt={actionSheet.dishName}
-                    className={`action-sheet-img${sheetImageLoaded ? " loaded" : ""}`}
-                    decoding="async"
-                    ref={el => { if (el?.complete && el.naturalWidth > 0) setSheetImageLoaded(true); }}
-                    onLoad={() => setSheetImageLoaded(true)}
-                    onError={() => setSheetImageFailed(true)}
-                  />
-                )}
-                <div className="action-sheet-hero-fade" />
-              </div>
 
-              {/* Header */}
-              <div className="action-sheet-header">
-                <span className="action-sheet-canteen">{actionSheet.canteenName}</span>
-                <h3 className="action-sheet-dish">{actionSheet.dishName}</h3>
-                {actionSheet.description && (
-                  <p className="action-sheet-desc">{actionSheet.description}</p>
-                )}
-              </div>
+      {/*
+        Action sheet, with the 120Hz native GPU compositor transform.
 
-              {/* Actions */}
-              {voting.voteSuccess ? (
-                <div className="action-sheet-success">
-                  <div className="vote-celebration">
-                    <span className="celebration-emoji celebration-1">&#x1F389;</span>
-                    <span className="celebration-emoji celebration-2">&#x2B50;</span>
-                    <span className="celebration-emoji celebration-3">&#x1F38A;</span>
-                    <span className="celebration-emoji celebration-4">&#x2728;</span>
-                    <span className="celebration-emoji celebration-5">&#x1F973;</span>
-                  </div>
-                  <div className="vote-success-check">
-                    <Check size={28} strokeWidth={3} />
-                  </div>
-                  <span className="vote-success-text">{lang === "no" ? "Takk for stemmen!" : "Thanks for voting!"}</span>
-                  <span className="vote-success-sub">{actionSheet.canteenName}</span>
-                  <ShareButton />
-                </div>
-              ) : (
-              <div className="action-sheet-actions">
-                {canVote && (
-                <button
-                  className={`action-sheet-btn action-sheet-vote${voting.hasVoted ? " voted" : ""}${voting.isVoting ? " voting" : ""}`}
-                  disabled={voting.hasVoted || voting.isVoting}
-                  onClick={async () => {
-                    await voting.handleVote(actionSheet.canteenName);
-                  }}
-                >
-                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
-                    {voting.isVoting ? "⏳" : voting.hasVoted ? "✔" : "🗳️"}
-                  </div>
-                  <div className="action-sheet-btn-text">
-                    <span className="action-sheet-btn-label">
-                      {voting.isVoting
-                        ? (lang === "no" ? "Stemmer..." : "Voting...")
-                        : voting.hasVoted
-                        ? (lang === "no" ? "Allerede stemt" : "Already voted")
-                        : (lang === "no" ? "Stem på denne" : "Vote for this")}
-                    </span>
-                    <span className="action-sheet-btn-sub">
-                      {voting.hasVoted
-                        ? (lang === "no" ? `Du stemte på ${voting.votedCanteen}` : `You voted for ${voting.votedCanteen}`)
-                        : (lang === "no" ? "Vis at du spiser her i dag" : "Show you’re eating here today")}
-                    </span>
-                  </div>
-                  {!voting.hasVoted && !voting.isVoting && <ChevronRight size={18} className="action-sheet-btn-arrow" />}
-                </button>
-                )}
-                <button
-                  className="action-sheet-btn action-sheet-recipe"
-                  onClick={() => { closeSheet(); handleRecipeClick(actionSheet.dishName, actionSheet.canteenName); }}
-                >
-                  <div className="action-sheet-btn-icon-wrap action-sheet-icon-recipe">
-                    <ChefHat size={18} />
-                  </div>
-                  <div className="action-sheet-btn-text">
-                    <span className="action-sheet-btn-label">{lang === "no" ? "Lag hjemme" : "Make at home"}</span>
-                    <span className="action-sheet-btn-sub">{lang === "no" ? "Få AI-generert oppskrift" : "Get AI-generated recipe"}</span>
-                  </div>
-                  <ChevronRight size={18} className="action-sheet-btn-arrow" />
-                </button>
-                {canVote && <ShareButton />}
-              </div>
-              )}
-            </motion.div>
-          </motion.div>
-          );
-        })()}
-      </AnimatePresence>
+        Not mobile-only. A width check used to stand here as well as in
+        handleCardClick, so on a desktop the sheet was unreachable twice over
+        and "Lag hjemme", the dish description, the share button and the recipe
+        had no route at all — a click on a card either opened the vote modal or,
+        on any day that was not today, did nothing. Every `.action-sheet` rule
+        is top-level (globals.css:3184+), capped at 440px and anchored to the
+        bottom, so it is already dressed for a wide window.
+      */}
+      {(() => {
+        if (!actionSheet.isOpen) return null;
+
+        const closeSheet = () => {
+          setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+          voting.setVoteSuccess(false);
+          voting.setShareState("idle");
+        };
+        const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
+        const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
+
+        return (
+          <ActionSheet
+            isOpen={actionSheet.isOpen}
+            canteenName={actionSheet.canteenName}
+            dishName={actionSheet.dishName}
+            imagePath={actionSheet.imagePath}
+            description={actionSheet.description}
+            canVote={!!canVote}
+            hasVoted={voting.hasVoted}
+            isVoting={voting.isVoting}
+            votedCanteen={voting.votedCanteen}
+            voteSuccess={voting.voteSuccess}
+            onVote={voting.handleVote}
+            onRecipeClick={handleRecipeClick}
+            onClose={closeSheet}
+            shareButton={<ShareButton />}
+          />
+        );
+      })()}
 
       {/* Lightbox with canteen swipe */}
       <AnimatePresence>
@@ -1114,7 +1076,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 {menyView.isLoading && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji meny-loading-bag">{"\uD83D\uDECD\uFE0F"}</span>
-                    <span className="recipe-loading-text">{lang === "no" ? "S\u00F8ker hos Meny..." : "Searching Meny..."}</span>
+                    <span className="recipe-loading-text">{"S\u00F8ker hos Meny..."}</span>
                   </div>
                 )}
 
@@ -1122,7 +1084,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <div className="recipe-error">
                     <p>{menyView.error}</p>
                     <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleMenyClick(recipeModal.dishName, recipeModal.recipe)}>
-                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                      {"Pr\u00F8v igjen"}
                     </button>
                   </div>
                 )}
@@ -1131,7 +1093,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <Suspense fallback={null}>
                     <MenyView
                       meny={menyView.data}
-                      lang={lang}
                       onBack={closeMeny}
                     />
                   </Suspense>
@@ -1147,7 +1108,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 {dealsView.isLoading && !dealsView.deals && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji deals-loading-cart">{"\uD83D\uDED2"}</span>
-                    <span className="recipe-loading-text">{lang === "no" ? "Sammenligner priser..." : "Comparing prices..."}</span>
+                    <span className="recipe-loading-text">{"Sammenligner priser..."}</span>
                   </div>
                 )}
 
@@ -1155,7 +1116,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <div className="recipe-error">
                     <p>{dealsView.error}</p>
                     <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleDealsClick(recipeModal.dishName, recipeModal.recipe)}>
-                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                      {"Pr\u00F8v igjen"}
                     </button>
                   </div>
                 )}
@@ -1164,7 +1125,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <Suspense fallback={null}>
                     <DealsView
                       deals={dealsView.deals}
-                      lang={lang}
                       isStreaming={dealsView.isStreaming}
                       onBack={closeDeals}
                     />
@@ -1181,7 +1141,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                 {recipeModal.isLoading && (
                   <div className="recipe-loading">
                     <span className="recipe-loading-emoji">&#x1F373;</span>
-                    <span className="recipe-loading-text">{lang === "no" ? "Genererer oppskrift..." : "Generating recipe..."}</span>
+                    <span className="recipe-loading-text">{"Genererer oppskrift..."}</span>
                   </div>
                 )}
 
@@ -1189,7 +1149,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                   <div className="recipe-error">
                     <p>{recipeModal.error}</p>
                     <button className="recipe-retry-btn" onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName)}>
-                      {lang === "no" ? "Pr\u00F8v igjen" : "Try again"}
+                      {"Pr\u00F8v igjen"}
                     </button>
                   </div>
                 )}
@@ -1210,14 +1170,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                         <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.max(1, s - 1))}>&#x2212;</button>
                         <span className="recipe-servings-value">{recipeServings}</span>
                         <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.min(20, s + 1))}>+</button>
-                        <span className="recipe-servings-label">{lang === "no" ? "pers." : "serv."}</span>
+                        <span className="recipe-servings-label">{"pers."}</span>
                       </span>
-                      <span>{lang === "no" ? "Prep" : "Prep"}: {recipe.prepTime}</span>
-                      <span>{lang === "no" ? "Tilbereding" : "Cook"}: {recipe.cookTime}</span>
+                      <span>{"Prep"}: {recipe.prepTime}</span>
+                      <span>{"Tilbereding"}: {recipe.cookTime}</span>
                     </div>
                     <div className="recipe-content">
                       <div className="recipe-ingredients">
-                        <h3 className="recipe-section-title">{lang === "no" ? "Ingredienser" : "Ingredients"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
+                        <h3 className="recipe-section-title">{"Ingredienser"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
                         <ul className="recipe-ingredient-list">
                           {recipe.ingredients.map((ing, i) => {
                             const fb = getLetterFallback(ing.item);
@@ -1252,7 +1212,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                         </ul>
                         {/* Shopping divider + options */}
                         <div className="recipe-shop-divider" style={{ animationDelay: `${recipe.ingredients.length * 50 + 30}ms` }}>
-                          <span className="shop-divider-label">{lang === "no" ? "Handle" : "Shop"}</span>
+                          <span className="shop-divider-label">{"Handle"}</span>
                         </div>
                         <div className="recipe-shop-row" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
                           <button className="shop-card shop-card-meny" onClick={() => handleMenyClick(recipeModal.dishName, recipe)}>
@@ -1260,7 +1220,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                               <span className="shop-icon-check" />
                             </span>
                             <span className="shop-card-text">
-                              <span className="shop-card-label">{lang === "no" ? "Handleliste" : "Shopping list"}</span>
+                              <span className="shop-card-label">{"Handleliste"}</span>
                               <span className="shop-card-sub">Meny</span>
                             </span>
                           </button>
@@ -1269,14 +1229,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                               <span className="shop-icon-tag" />
                             </span>
                             <span className="shop-card-text">
-                              <span className="shop-card-label">{lang === "no" ? "Ukens tilbud" : "Weekly deals"}</span>
-                              <span className="shop-card-sub">{lang === "no" ? "Alle butikker" : "All stores"}</span>
+                              <span className="shop-card-label">{"Ukens tilbud"}</span>
+                              <span className="shop-card-sub">{"Alle butikker"}</span>
                             </span>
                           </button>
                         </div>
                       </div>
                       <div className="recipe-steps">
-                        <h3 className="recipe-section-title">{lang === "no" ? "Fremgangsm\u00E5te" : "Instructions"}</h3>
+                        <h3 className="recipe-section-title">{"Fremgangsm\u00E5te"}</h3>
                         <ol className="recipe-step-list">
                           {recipe.steps.map((step, i) => (
                             <li key={i} className="recipe-step-item" style={{ animationDelay: `${(i * 50) + 150}ms` }}>
@@ -1303,11 +1263,6 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {feedbackModalOpen && (
-          <Suspense fallback={null}>
-            <CanteenFeedbackForm onClose={() => setFeedbackModalOpen(false)} />
-          </Suspense>
-        )}
       </AnimatePresence>
     </div>
   );

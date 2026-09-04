@@ -1,12 +1,10 @@
-import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { DealsResponse, ProductOffer } from "@/lib/types";
-import { DealsTable } from "@/components/DealsTable";
 import { PriceRanger } from "@/components/PriceRanger";
 import "@/styles/deals-view.css";
 
 interface DealsViewProps {
   deals: DealsResponse;
-  lang: "no" | "en";
   onBack: () => void;
   isStreaming?: boolean;
 }
@@ -58,17 +56,10 @@ function DealsCarousel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function DealsView({ deals, lang, onBack, isStreaming }: DealsViewProps) {
+export default function DealsView({ deals, onBack, isStreaming }: DealsViewProps) {
   const { recommendation, allStores, searchedIngredients } = deals;
   const [maxPrice, setMaxPrice] = useState(250);
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
-  // Collect all flat offers
-  const flatOffers = useMemo(() => {
-    const list: ProductOffer[] = [];
-    allStores.forEach((s) => list.push(...s.deals));
-    return list.filter((item) => item.price <= maxPrice);
-  }, [allStores, maxPrice]);
 
   const dealsByIngredient = new Map<string, ProductOffer[]>();
   for (const store of allStores) {
@@ -96,47 +87,13 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
         <button className="deals-back" onClick={onBack}>
           <span className="deals-back-arrow">{"\u2039"}</span>
-          <span>{lang === "no" ? "Tilbake til oppskrift" : "Back to recipe"}</span>
+          <span>{"Tilbake til oppskrift"}</span>
         </button>
-        <div style={{ display: "flex", gap: "6px" }}>
-          <button
-            onClick={() => setViewMode("cards")}
-            style={{
-              padding: "4px 10px",
-              borderRadius: "6px",
-              border: "1px solid #ece4d8",
-              background: viewMode === "cards" ? "#c8741a" : "#ffffff",
-              color: viewMode === "cards" ? "#ffffff" : "#6b6158",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
-          >
-            Kort
-          </button>
-          <button
-            onClick={() => setViewMode("table")}
-            style={{
-              padding: "4px 10px",
-              borderRadius: "6px",
-              border: "1px solid #ece4d8",
-              background: viewMode === "table" ? "#c8741a" : "#ffffff",
-              color: viewMode === "table" ? "#ffffff" : "#6b6158",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
-          >
-            Tabell (TanStack Table)
-          </button>
-        </div>
       </div>
 
       <PriceRanger min={0} max={250} value={maxPrice} onChange={setMaxPrice} />
 
-      {viewMode === "table" ? (
-        <DealsTable deals={flatOffers} />
-      ) : hasDeals || isStreaming ? (
+      {hasDeals || isStreaming ? (
         <>
           {showRecommendation && (
             <div className="deals-recommendation" style={{ borderColor: recommendation.storeColor + "30" }}>
@@ -146,7 +103,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
                 )}
                 <div>
                   <span className="deals-rec-badge">
-                    {lang === "no" ? "Anbefalt butikk" : "Recommended Store"}
+                    {"Anbefalt butikk"}
                   </span>
                   <h3 className="deals-rec-store" style={{ color: recommendation.storeColor }}>
                     {recommendation.store}
@@ -157,7 +114,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
                 <div className="deals-rec-stat">
                   <span className="deals-rec-stat-value">{recommendation.totalPrice.toFixed(2)} kr</span>
                   <span className="deals-rec-stat-label">
-                    {lang === "no" ? "Totalpris" : "Total price"}
+                    {"Totalpris"}
                   </span>
                 </div>
                 <div className="deals-rec-stat">
@@ -165,7 +122,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
                     {recommendation.keyIngredientsCovered} / {searchedIngredients.length}
                   </span>
                   <span className="deals-rec-stat-label">
-                    {lang === "no" ? "Dekket" : "Covered"}
+                    {"Dekket"}
                   </span>
                 </div>
               </div>
@@ -218,7 +175,7 @@ export default function DealsView({ deals, lang, onBack, isStreaming }: DealsVie
         </>
       ) : (
         <div className="deals-empty">
-          <p>{lang === "no" ? "Ingen tilbud funnet for disse ingrediensene." : "No deals found."}</p>
+          <p>{"Ingen tilbud funnet for disse ingrediensene."}</p>
         </div>
       )}
     </div>

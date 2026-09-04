@@ -29,7 +29,7 @@ interface UseRecipeReturn {
   closeRecipe: () => void;
 }
 
-export function useRecipe(lang: "no" | "en"): UseRecipeReturn {
+export function useRecipe(): UseRecipeReturn {
   const queryClient = useQueryClient();
   const [recipeModal, setRecipeModal] =
     useState<RecipeModalState>(INITIAL_STATE);
@@ -38,16 +38,14 @@ export function useRecipe(lang: "no" | "en"): UseRecipeReturn {
   const recipeMutation = useMutation({
     mutationFn: async ({
       dishName,
-      lang,
     }: {
       dishName: string;
-      lang: "no" | "en";
     }) => {
-      const cached = queryClient.getQueryData<Recipe>(["recipe", dishName, lang]);
+      const cached = queryClient.getQueryData<Recipe>(["recipe", dishName]);
       if (cached) return cached;
 
-      const recipe = (await generateRecipe({ dishName, lang })) as Recipe;
-      queryClient.setQueryData(["recipe", dishName, lang], recipe);
+      const recipe = (await generateRecipe({ dishName, lang: "no" })) as Recipe;
+      queryClient.setQueryData(["recipe", dishName], recipe);
       return recipe;
     },
   });
@@ -64,7 +62,7 @@ export function useRecipe(lang: "no" | "en"): UseRecipeReturn {
       });
 
       try {
-        const recipe = await recipeMutation.mutateAsync({ dishName, lang });
+        const recipe = await recipeMutation.mutateAsync({ dishName });
         setRecipeServings(recipe.servings);
         setRecipeModal({
           isOpen: true,
@@ -79,13 +77,11 @@ export function useRecipe(lang: "no" | "en"): UseRecipeReturn {
           ...prev,
           isLoading: false,
           error:
-            lang === "no"
-              ? "Kunne ikke generere oppskrift"
-              : "Could not generate recipe",
+            "Kunne ikke generere oppskrift",
         }));
       }
     },
-    [lang, recipeMutation]
+    [recipeMutation]
   );
 
   const closeRecipe = useCallback(() => {

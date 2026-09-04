@@ -4,16 +4,13 @@ import type { CanteenDayItem } from "@/lib/types";
 
 interface ClosedCanteensPillProps {
   closedCanteens: CanteenDayItem[];
-  lang: "no" | "en";
 }
 
-export default function ClosedCanteensPill({ closedCanteens, lang }: ClosedCanteensPillProps) {
+export default function ClosedCanteensPill({ closedCanteens }: ClosedCanteensPillProps) {
   const n = closedCanteens.length;
   if (n === 0) return null;
 
-  const label = lang === "no"
-    ? `${n} kantine${n > 1 ? "r" : ""} stengt`
-    : `${n} canteen${n > 1 ? "s" : ""} closed`;
+  const label = `${n} kantine${n > 1 ? "r" : ""} stengt`;
 
   return (
     <div className="closed-pill-wrapper">

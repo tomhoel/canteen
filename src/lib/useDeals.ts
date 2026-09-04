@@ -25,7 +25,7 @@ interface UseDealsReturn {
   closeDeals: () => void;
 }
 
-export function useDeals(lang: "no" | "en"): UseDealsReturn {
+export function useDeals(): UseDealsReturn {
   const queryClient = useQueryClient();
   const [dealsView, setDealsView] = useState<DealsViewState>(INITIAL_STATE);
 
@@ -33,22 +33,22 @@ export function useDeals(lang: "no" | "en"): UseDealsReturn {
     mutationFn: async ({
       dishName,
       recipe,
-      lang,
     }: {
       dishName: string;
       recipe: Recipe;
-      lang: "no" | "en";
     }) => {
-      const cached = queryClient.getQueryData<DealsResponse>(["deals", dishName, lang]);
+      const cached = queryClient.getQueryData<DealsResponse>(["deals", dishName]);
       if (cached) return cached;
 
       const deals = (await fetchDeals({
         ingredients: recipe.ingredients,
         dishName,
-        lang,
+        // The API still takes a language — it decides what the model writes
+        // back. The UI is Norwegian-only, so it is a constant, not a setting.
+        lang: "no",
       })) as DealsResponse;
 
-      queryClient.setQueryData(["deals", dishName, lang], deals);
+      queryClient.setQueryData(["deals", dishName], deals);
       return deals;
     },
   });
@@ -64,7 +64,7 @@ export function useDeals(lang: "no" | "en"): UseDealsReturn {
       });
 
       try {
-        const deals = await dealsMutation.mutateAsync({ dishName, recipe, lang });
+        const deals = await dealsMutation.mutateAsync({ dishName, recipe });
         setDealsView({
           isOpen: true,
           deals,
@@ -78,11 +78,11 @@ export function useDeals(lang: "no" | "en"): UseDealsReturn {
           isLoading: false,
           isStreaming: false,
           error:
-            lang === "no" ? "Kunne ikke finne priser" : "Could not find prices",
+            "Kunne ikke finne priser",
         }));
       }
     },
-    [lang, dealsMutation]
+    [dealsMutation]
   );
 
   const closeDeals = useCallback(() => {

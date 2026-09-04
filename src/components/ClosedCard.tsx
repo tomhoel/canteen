@@ -4,15 +4,16 @@ import { useState, memo } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
+import { getCanteenMetadata } from "@/lib/constants";
 
 interface ClosedCardProps {
   data: CanteenDayItem;
   cardIdx: number;
-  lang: "no" | "en";
 }
 
-const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardProps) {
+const ClosedCard = memo(function ClosedCard({ data, cardIdx }: ClosedCardProps) {
   const [imgError, setImgError] = useState(false);
+  const meta = getCanteenMetadata(data.canteenName);
 
   return (
     <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
@@ -28,7 +29,7 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardP
               <div className="plate-float-container">
                 <img
                   src={data.imagePath}
-                  alt={lang === "no" ? "Stengt" : "Closed"}
+                  alt={"Stengt"}
                   className="food-image loaded"
                   loading="eager"
                   decoding="async"
@@ -42,20 +43,22 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx, lang }: ClosedCardP
         </div>
 
         <div className="closed-card-body">
-          <span className="closed-card-eyebrow">{data.canteenName}</span>
+          <div className="closed-card-eyebrow">
+            <span>{meta.name}</span>
+          </div>
           <h3 className="closed-card-heading">
-            {lang === "no" ? "Ingen servering" : "Not serving"}
+            {"Ingen servering"}
           </h3>
           <p className="closed-card-sub">
-            {lang === "no" ? "Kantinen holder stengt i dag" : "The canteen is closed today"}
+            {"Kantinen holder stengt i dag"}
           </p>
           <div className="closed-card-hours">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
             </svg>
             <span>
-              {lang === "no" ? "Vanligvis åpen" : "Usually open"}{" "}
-              <strong>{data.canteen.openingHours}</strong>
+              {"Vanligvis åpen"}{" "}
+              <strong>{meta.hours || data.canteen.openingHours}</strong>
             </span>
           </div>
         </div>

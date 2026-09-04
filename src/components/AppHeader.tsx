@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import type { DisplayMode } from "@/lib/dateUtils";
-import { Info, Trophy, CalendarDays, MessageSquarePlus } from "lucide-react";
+import { Info, Trophy, CalendarDays } from "lucide-react";
 
 interface AppHeaderProps {
   mode: DisplayMode;
-  lang: "no" | "en";
   displayWeek: number;
   /** Full name of the selected weekday, e.g. "Mandag". */
   dayLabel: string;
@@ -23,7 +22,6 @@ interface AppHeaderProps {
     onInfo: () => void;
     onLeaderboard: () => void;
     onWeekOverview: () => void;
-    onFeedback: () => void;
   };
   /** The closed-canteens pill, which only exists once the menu is known. */
   children?: ReactNode;
@@ -40,7 +38,6 @@ interface AppHeaderProps {
  */
 export default function AppHeader({
   mode,
-  lang,
   displayWeek,
   dayLabel,
   dateStr,
@@ -54,16 +51,16 @@ export default function AppHeader({
       <div className="hero-inline">
         <h1 className="hero-title">
           {mode === "weekday-current"
-            ? (lang === "no" ? "Dagens" : "Today's")
+            ? ("Dagens")
             : mode === "weekend-preview"
-            ? (lang === "no" ? "Neste ukes" : "Next week's")
+            ? ("Neste ukes")
             : mode === "pinned-week"
-            ? (lang === "no" ? `Uke ${displayWeek}s` : `Week ${displayWeek}'s`)
-            : (lang === "no" ? "Denne ukens" : "This week's")}{" "}
-          <span>{lang === "no" ? "Lunsj" : "Lunch"}</span>
+            ? (`Uke ${displayWeek}s`)
+            : ("Denne ukens")}{" "}
+          <span>{"Lunsj"}</span>
         </h1>
         <p className="hero-subtitle">
-          {lang === "no" ? "Uke" : "Week"} {displayWeek} &bull; {dayLabel} {dateStr}
+          {"Uke"} {displayWeek} &bull; {dayLabel} {dateStr}
         </p>
       </div>
       <div className="header-actions">
@@ -71,8 +68,8 @@ export default function AppHeader({
           className="info-btn"
           onClick={actions?.onInfo}
           disabled={disabled}
-          title={lang === "no" ? "Om appen" : "About"}
-          aria-label={lang === "no" ? "Om appen" : "About"}
+          title={"Om appen"}
+          aria-label={"Om appen"}
         >
           <Info size={16} strokeWidth={2} />
         </button>
@@ -80,8 +77,8 @@ export default function AppHeader({
           className="info-btn"
           onClick={actions?.onLeaderboard}
           disabled={disabled}
-          title={lang === "no" ? "Kantineseiere" : "Canteen wins"}
-          aria-label={lang === "no" ? "Kantineseiere" : "Canteen wins"}
+          title={"Kantineseiere"}
+          aria-label={"Kantineseiere"}
         >
           <Trophy size={16} strokeWidth={2} />
         </button>
@@ -89,19 +86,10 @@ export default function AppHeader({
           className="info-btn"
           onClick={actions?.onWeekOverview}
           disabled={disabled}
-          title={lang === "no" ? "Ukeoversikt" : "Week overview"}
-          aria-label={lang === "no" ? "Ukeoversikt" : "Week overview"}
+          title={"Ukeoversikt"}
+          aria-label={"Ukeoversikt"}
         >
           <CalendarDays size={16} strokeWidth={2} />
-        </button>
-        <button
-          className="info-btn"
-          onClick={actions?.onFeedback}
-          disabled={disabled}
-          title="Ønsk en rett"
-          aria-label="Ønsk en rett"
-        >
-          <MessageSquarePlus size={16} strokeWidth={2} />
         </button>
       </div>
       {children}

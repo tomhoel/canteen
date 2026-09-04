@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getSupabaseImageUrl, getClosedPlateUrl } from "./constants";
+import { getSupabaseImageUrl, getClosedPlateUrl, getCanteenMetadata } from "./constants";
 
 /**
  * These assertions look pedantic and are not. Every one of them corresponds to
@@ -69,4 +69,49 @@ test("getSupabaseImageUrl - a plain slot path is untouched by the encoding", () 
   assert.ok(
     getSupabaseImageUrl("images_nobg", "monday/flow.png").endsWith("/images_nobg/monday/flow.png")
   );
+});
+
+test("getCanteenMetadata - resolves canonical and legacy canteen names", () => {
+  // Flow -> Kantine M
+  const m = getCanteenMetadata("Flow");
+  assert.equal(m.name, "Kantine M");
+  assert.equal(m.building, "Bygg M, 2. etasje");
+  assert.equal(m.buildingCode, "M");
+  assert.equal(m.hours, "10:30 – 13:00");
+  assert.equal(m.subName, "Tidligere Flow");
+
+  // Eat the street -> Eat The Street
+  const street = getCanteenMetadata("Eat the street");
+  assert.equal(street.name, "Eat The Street");
+  assert.equal(street.building, "Bygg J/K");
+  assert.equal(street.buildingCode, "J/K");
+  assert.equal(street.hours, "10:30 – 14:00");
+
+  // Fresh4you -> Fresh 4 You
+  const fresh = getCanteenMetadata("Fresh4you");
+  assert.equal(fresh.name, "Fresh 4 You");
+  assert.equal(fresh.building, "Bygg C/D");
+  assert.equal(fresh.buildingCode, "C/D");
+  assert.equal(fresh.hours, "10:30 – 13:00");
+
+  // Bakern
+  const bakern = getCanteenMetadata("Bakern");
+  assert.equal(bakern.name, "Bakern");
+  assert.equal(bakern.building, "Bygg C");
+  assert.equal(bakern.type, "bakery");
+
+  // Café Expo
+  const expo = getCanteenMetadata("Café Expo");
+  assert.equal(expo.name, "Café Expo");
+  assert.equal(expo.building, "Bygg A / Expo");
+
+  // Hot Spot
+  const hot = getCanteenMetadata("Hot Spot");
+  assert.equal(hot.name, "Hot Spot");
+  assert.equal(hot.building, "Bygg G");
+
+  // Fallback for unknown
+  const unknown = getCanteenMetadata("Random Cafe");
+  assert.equal(unknown.name, "Random Cafe");
+  assert.ok(unknown.building);
 });

@@ -23,7 +23,7 @@ interface UseMenySearchReturn {
   closeMeny: () => void;
 }
 
-export function useMenySearch(lang: "no" | "en"): UseMenySearchReturn {
+export function useMenySearch(): UseMenySearchReturn {
   const queryClient = useQueryClient();
   const [menyView, setMenyView] = useState<MenyViewState>(INITIAL_STATE);
 
@@ -31,22 +31,20 @@ export function useMenySearch(lang: "no" | "en"): UseMenySearchReturn {
     mutationFn: async ({
       dishName,
       recipe,
-      lang,
     }: {
       dishName: string;
       recipe: Recipe;
-      lang: "no" | "en";
     }) => {
-      const cached = queryClient.getQueryData<MenyResponse>(["meny", dishName, lang]);
+      const cached = queryClient.getQueryData<MenyResponse>(["meny", dishName]);
       if (cached) return cached;
 
       const data = (await searchMeny({
         ingredients: recipe.ingredients,
         dishName,
-        lang,
+        lang: "no",
       })) as MenyResponse;
 
-      queryClient.setQueryData(["meny", dishName, lang], data);
+      queryClient.setQueryData(["meny", dishName], data);
       return data;
     },
   });
@@ -56,7 +54,7 @@ export function useMenySearch(lang: "no" | "en"): UseMenySearchReturn {
       setMenyView({ isOpen: true, data: null, isLoading: true, error: null });
 
       try {
-        const data = await menyMutation.mutateAsync({ dishName, recipe, lang });
+        const data = await menyMutation.mutateAsync({ dishName, recipe });
         setMenyView({
           isOpen: true,
           data,
@@ -68,11 +66,11 @@ export function useMenySearch(lang: "no" | "en"): UseMenySearchReturn {
           ...prev,
           isLoading: false,
           error:
-            lang === "no" ? "Kunne ikke søke hos Meny" : "Could not search Meny",
+            "Kunne ikke søke hos Meny",
         }));
       }
     },
-    [lang, menyMutation]
+    [menyMutation]
   );
 
   const closeMeny = useCallback(() => {
