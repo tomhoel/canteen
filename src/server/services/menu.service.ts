@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { getRedis } from "./redis.service.js";
+import { getRedis, menuResponseKey } from "./redis.service.js";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   MenuData,
@@ -532,7 +532,7 @@ export async function invalidateMenuResponseCache(weekIds: string[]): Promise<vo
   const redis = getRedis();
   if (!redis) return;
 
-  const keys = ["response:menu:current", ...weekIds.map((id) => `response:menu:${id}`)];
+  const keys = [menuResponseKey(), ...weekIds.map((id) => menuResponseKey(id))];
   try {
     await redis.del(...keys);
   } catch (err) {
@@ -757,7 +757,7 @@ export async function runWeeklyUpdateService(
     if (redis) {
       try {
         await redis.set(`menu:${weekId}`, record, { ex: MENU_CACHE_TTL_SECONDS });
-        await redis.del(`response:menu:${weekId}`, "response:menu:current");
+        await redis.del(menuResponseKey(weekId), menuResponseKey());
       } catch (err) {
         console.error("Redis menu write error:", err);
         console.warn(
