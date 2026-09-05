@@ -1,5 +1,11 @@
 import type { MenuData, DishOrigin, DishDescription } from "../lib/types.js";
-import { getWeekId, getWeekIdOffset, isOsloWeekend } from "../lib/dateUtils.js";
+import {
+  computeDisplayContext,
+  getWeekId,
+  getWeekIdOffset,
+  isOsloWeekend,
+} from "../lib/dateUtils.js";
+import { DAY_KEYS } from "../lib/constants.js";
 import { pickMainDish } from "../lib/dish-ranking.js";
 import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service.js";
 import { loadDishCache, normalizeDishName } from "./services/dish-cache.service.js";
@@ -25,6 +31,24 @@ export interface WeeklyMenuResponse {
    * the card should render its placeholder.
    */
   plateImages: Record<string, string>;
+  /**
+   * The day the app will open on, e.g. `"monday"`, for a visit with no `?day=`
+   * or `?week=`.
+   *
+   * Exists for the plate preloading in index.html's head script, which has to
+   * name the three above-the-fold pictures before any bundle has run. It used
+   * to work this out itself, and could not: on a weekend the landing day
+   * depends on whether the served week is ahead of the current one, which is
+   * exactly the question that needs `weekId` and the week-comparison rules in
+   * dateUtils. So it warmed *both* Monday and Friday — six pictures, three of
+   * them thrown away, 54 KB measured.
+   *
+   * Sending the answer keeps that decision in `computeDisplayContext` with the
+   * rest of it, instead of a second implementation of Oslo weekday resolution
+   * living in an inline script with no tests. Purely a hint: the head script
+   * falls back to its own guess if this is absent, and nothing else reads it.
+   */
+  landingDay: string;
 }
 
 /**
@@ -248,6 +272,15 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     // Keyed off the week that was actually served, which is not always the one
     // that was asked for: the read falls back to the most recent stored week.
     plateImages: await resolvePlateImages(record.menuData, record.weekId),
+    // No canteen week numbers and no pinned week: with `servedWeekId` given,
+    // computeDisplayContext needs neither, and passing the labels would
+    // reintroduce the disagreement `servedWeekId` was added to settle.
+    // `?? DAY_KEYS[0]` is unreachable — defaultSelectedDay is only ever 0..4,
+    // unlike todayIndex which is -1 at the weekend — but a hint is not worth
+    // an undefined leaking into the preload URLs if that ever changes.
+    landingDay:
+      DAY_KEYS[computeDisplayContext([], undefined, record.weekId).defaultSelectedDay] ??
+      DAY_KEYS[0],
   };
 
   if (isProd) {

@@ -1,11 +1,15 @@
 import { generateAIRecipe } from "./services/ai.service.js";
+import type { Recipe } from "../lib/types.js";
 import { getWeekNumber } from "../lib/dateUtils.js";
-import { getRedis } from "./services/redis.service.js";
+import { getRedis, matchesCachedShape } from "./services/redis.service.js";
 
 export interface RecipeRequest {
   dishName: string;
   lang: "no" | "en";
 }
+
+/** What a cached recipe must still have to be usable — the fields the sheet renders. */
+const RECIPE_CACHE_FIELDS = ["title", "ingredients", "steps"] as const;
 
 export async function generateRecipe(data: RecipeRequest) {
   const { dishName, lang } = data;
@@ -21,7 +25,9 @@ export async function generateRecipe(data: RecipeRequest) {
   if (redis) {
     try {
       const cached = await redis.get(cacheKey);
-      if (cached) return cached;
+      // Shape-checked: a seven-day TTL is a long time to serve a recipe that
+      // is missing whatever the current UI reads off it.
+      if (matchesCachedShape<Recipe>(cached, RECIPE_CACHE_FIELDS)) return cached;
     } catch (err) {
       console.error("Redis read error:", err);
     }

@@ -6,7 +6,7 @@ import type {
   MenyResponse,
 } from "../lib/types.js";
 import { getWeekNumber } from "../lib/dateUtils.js";
-import { getRedis } from "./services/redis.service.js";
+import { getRedis, matchesCachedShape } from "./services/redis.service.js";
 
 const MENY_STORE_ID = process.env.MENY_DEFAULT_STORE_ID || "7080001150488";
 const MENY_STORE_NAME = "MENY Bryn";
@@ -17,6 +17,13 @@ interface GeminiTranslation {
   fallbackTerm: string;
   pantryStaple: boolean;
 }
+
+/**
+ * What a cached Meny result must still have to be usable. Deliberately the
+ * fields the UI reads, not every field on the interface: optional ones are
+ * absent by design and would make every entry a miss.
+ */
+const MENY_CACHE_FIELDS = ["dishName", "matches", "totalPrice", "store"] as const;
 
 async function translateIngredients(
   ingredients: RecipeIngredient[],
@@ -197,7 +204,9 @@ export async function searchMeny(data: MenySearchPayload): Promise<MenyResponse>
   if (redis) {
     try {
       const cached = await redis.get<MenyResponse>(cacheKey);
-      if (cached) return cached;
+      // Shape-checked: an entry from a deploy before a field was added is
+      // otherwise a hit, returned without it, for the full three-day TTL.
+      if (matchesCachedShape<MenyResponse>(cached, MENY_CACHE_FIELDS)) return cached;
     } catch (err) {
       console.error("Redis read error:", err);
     }
