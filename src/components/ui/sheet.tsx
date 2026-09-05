@@ -343,7 +343,16 @@ export function SheetContent({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          touchAction: "pan-y",
+          // `none`, not `pan-y`. Declaring pan-y tells the browser it owns
+          // vertical panning here, so on a real touchscreen it claims the
+          // gesture the moment a drag turns downward and fires pointercancel —
+          // which ends the drag-to-dismiss instantly instead of letting the
+          // sheet follow the finger. Measured: this panel is 344px tall, does
+          // not scroll, and has no scrollable descendant, so there was never
+          // anything for the browser to pan. If a sheet ever does need to
+          // scroll, the scrollable child should declare pan-y for itself —
+          // scrollableIsAtTop above already exists to hand the gesture back.
+          touchAction: "none",
         }}
       >
         {showHandle && !isDesktop && (
