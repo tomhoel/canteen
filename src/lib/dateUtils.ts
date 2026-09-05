@@ -234,6 +234,12 @@ export function weekIdForWeekNumber(weekNumber: number): string {
  * ISO week 1 is the week containing 4 January, so that date's Monday anchors
  * the year and every other week is a multiple of seven days from it.
  */
+/** The ISO week number carried by a `YYYY-Www` id, or NaN if it is not one. */
+function weekNumberOfWeekId(weekId: string): number {
+  const match = /^\d{4}-W(\d{2})$/.exec(weekId);
+  return match ? Number(match[1]) : NaN;
+}
+
 export function mondayOfWeekId(weekId: string | undefined | null): Date | null {
   const match = weekId?.match(/^(\d{4})-W(\d{2})$/);
   if (!match) return null;
@@ -308,6 +314,7 @@ export interface DisplayContext {
 export function computeDisplayContext(
   canteenWeekNumbers: number[],
   pinnedWeekId?: string,
+  servedWeekId?: string,
 ): DisplayContext {
   const { year, month, day } = todayOsloParts();
   // Local-TZ Date that matches Oslo's calendar day. Noon avoids DST edges.
@@ -357,7 +364,25 @@ export function computeDisplayContext(
   // a single early-publishing canteen would hide the rest behind dates
   // that don't apply to them. Year-wrap aware so week 52 → 1 still reads
   // as "ahead".
-  if (allCanteensAhead(canteenWeekNumbers, currentWeek)) {
+  // Is the app showing next week?
+  //
+  // Ask the server, which knows: `servedWeekId` is the row it actually
+  // returned. Deriving it from the canteen labels instead — which is what
+  // `allCanteensAhead` does — asks a different question, and the two give
+  // different answers the moment one kitchen has published ahead and another
+  // has not. The read path serves next week's row when it merely *exists*,
+  // while `allCanteensAhead` demands every canteen agree, so a row containing
+  // two week-37 canteens and one still on week 36 was served as next week's
+  // and labelled as this week's: week 37's food under week 36's dates, which
+  // is the exact failure this function exists to prevent.
+  //
+  // The fallback stays for the callers with no data — LoadingScreen renders
+  // before any response exists.
+  const showingNextWeek = servedWeekId
+    ? compareWeeks(weekNumberOfWeekId(servedWeekId), currentWeek) === 1
+    : allCanteensAhead(canteenWeekNumbers, currentWeek);
+
+  if (showingNextWeek) {
     const nextMonday = new Date(thisMonday);
     nextMonday.setDate(thisMonday.getDate() + 7);
     return {

@@ -95,11 +95,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 function HomeComponent() {
-  const { menuData, dishOrigins, dishDescriptions, plateImages } = Route.useLoaderData();
+  const { weekId, menuData, dishOrigins, dishDescriptions, plateImages } = Route.useLoaderData();
 
   return (
     <HomeClient
       initialMenu={menuData}
+      servedWeekId={weekId}
       initialOrigins={dishOrigins}
       initialDescriptions={dishDescriptions}
       plateImages={plateImages ?? {}}

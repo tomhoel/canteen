@@ -6,6 +6,16 @@ import { loadDishCache, normalizeDishName } from "./services/dish-cache.service.
 import { getRedis } from "./services/redis.service.js";
 
 export interface WeeklyMenuResponse {
+  /**
+   * The week this response is actually for.
+   *
+   * Not always the week that was asked for: on a weekend the read path serves
+   * next week's row, and a request with no week falls back to the most recent
+   * stored one. The client needs to know which, or it has to guess from the
+   * canteen labels inside the row — and those disagree with each other the
+   * moment one kitchen has published ahead and another has not.
+   */
+  weekId: string;
   menuData: MenuData;
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
@@ -231,6 +241,7 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
   const reachable = reachableDishNames(record.menuData);
 
   const result: WeeklyMenuResponse = {
+    weekId: record.weekId,
     menuData: record.menuData,
     dishOrigins: pickReachable(record.dishOrigins, reachable),
     dishDescriptions: pickReachable(record.dishDescriptions, reachable),

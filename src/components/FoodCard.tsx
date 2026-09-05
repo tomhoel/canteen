@@ -190,17 +190,26 @@ const FoodCard = memo(function FoodCard({
         )}
       </div>
       {/*
-        The third rate. Text rises 8px and fades the last of the way in on a
-        stiffer, lighter spring than either the card or the plate, so it
-        settles first. No scale here, deliberately — scaling a box of text is
-        the one thing WebKit has to re-rasterise glyph by glyph, and it is why
-        this motion was removed rather than tuned. y and opacity are both
-        compositor properties and cost the phone nothing.
+        The third rate, on a desktop: text rises 8px and fades the last of the
+        way in on a stiffer, lighter spring than either the card or the plate,
+        so it settles first.
+
+        Off on a phone. y and opacity are compositor properties, so the
+        animation itself is cheap — but `.card-content` has no `will-change`,
+        so WebKit promotes it to its own layer for the duration and drops it
+        again afterwards, and the layer it has to rasterise is ~190x150 CSS px
+        of pure text at 3x. Three cards, three promote-and-discard cycles, on
+        every single day change.
+
+        Nothing is lost visually. The card around it is already rising and
+        fading through `cardRevealFlat`, staggered per card, so the text is in
+        motion either way — this only removed a few pixels of extra travel
+        inside a box that was moving anyway.
       */}
       <motion.div
         key={selectedDay}
-        initial={{ opacity: 0.5, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={isDesktop ? { opacity: 0.5, y: 8 } : false}
+        animate={isDesktop ? { opacity: 1, y: 0 } : undefined}
         transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.6 }}
         className="card-content"
       >
