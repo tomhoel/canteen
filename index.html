@@ -117,6 +117,12 @@
 
           var DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
+          // Must match PLATE_CARD_WIDTH in src/lib/constants.ts and the 769px
+          // breakpoint in useIsDesktop. Preloading a width the card will not
+          // ask for is worse than not preloading at all: the plate is then
+          // downloaded twice, once here and once by the <img>.
+          var PLATE_WIDTH = window.innerWidth >= 769 ? 640 : 340;
+
           // Which day's plates to warm. All three are above the fold on a
           // 390x844 phone, so all three are worth preloading — but only for the
           // day the app will actually open on.
@@ -176,7 +182,7 @@
                     link.href =
                       "https://sloutnqpqfesyoycklgd.supabase.co/storage/v1/render/image/public/images_nobg/" +
                       enc +
-                      "?width=340&format=webp&quality=75&resize=contain";
+                      "?width=" + PLATE_WIDTH + "&format=webp&quality=75&resize=contain";
                     if (first) {
                       link.fetchPriority = "high";
                       first = false;

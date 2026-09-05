@@ -6,7 +6,7 @@ import { useSearch, useNavigate } from "@tanstack/react-router";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
 import { Share2 } from "lucide-react";
-import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl } from "@/lib/constants";
+import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import {
@@ -146,6 +146,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
 
   const [menuData, setMenuData] = useState<MenuData | null>(initialMenu);
   const isDesktop = useIsDesktop();
+  // Desktop renders the plate in a 261px box and phones in a 160px one, so a
+  // single width is wrong for one of them. See PLATE_CARD_WIDTH.
+  const plateWidth = isDesktop ? PLATE_CARD_WIDTH.desktop : PLATE_CARD_WIDTH.mobile;
   // How far a day slides in from. The desktop has three cards across a wide
   // viewport and can afford the full throw; a phone card is nearly the
   // screen, so the same 80px reads as the whole layout lurching.
@@ -395,7 +398,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     CANTEEN_ORDER.forEach(name => {
       const plateImage = plateImages[`${dk}|${name}`];
       if (!plateImage) return;
-      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: 340, format: "webp", quality: 75 });
+      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth, format: "webp", quality: 75 });
 
       if (preloadedRef.current.has(src)) return;
       preloadedRef.current.add(src);
@@ -403,7 +406,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       img.onload = () => markImageCached(src);
       img.src = src;
     });
-  }, [plateImages]);
+  }, [plateImages, plateWidth]);
 
   // Trackpad horizontal swipe detection
   const lastWheelTimeRef = useRef(0);
@@ -643,9 +646,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         // backdrop instead of the studio dark-grey from the bg version.
         const plateImage = plateImages[`${dk}|${canteenName}`];
         const imagePath = isClosed
-          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 340, format: "webp", quality: 75 })
+          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: plateWidth, format: "webp", quality: 75 })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 340, format: "webp", quality: 75 })
+            ? getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth, format: "webp", quality: 75 })
             : "";
         // Sized, not untransformed. The bare URL serves the original PNG —
         // 1.66 MB for a picture no phone screen can show more than a fraction
@@ -688,7 +691,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         };
       });
     });
-  }, [sortedCanteens, dishOrigins, dishDescriptions, displayWeek, plateImages]);
+  }, [sortedCanteens, dishOrigins, dishDescriptions, displayWeek, plateImages, plateWidth]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);

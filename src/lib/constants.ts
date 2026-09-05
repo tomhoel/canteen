@@ -348,6 +348,31 @@ export const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
  * Untransformed requests still go to `/object/public`, which is free and
  * cacheable; only sized requests take the render path.
  */
+/**
+ * Transformed width to request for a card plate, by tier.
+ *
+ * Measured CSS boxes: 160px on a phone, 261px on desktop. A single 340 was
+ * being sent to both, which is two different mistakes at once — a retina
+ * desktop renders a 261px box at DPR 2, wanting 522, and got 0.65× of that
+ * (visibly soft); a phone at DPR 2 wants 320 and was over-served.
+ *
+ * Deliberately NOT a `srcset`. The browser would multiply the phone's 160px by
+ * its DPR and pick 480 on every iPhone — sharper, but ~30 KB more per card on
+ * the one launch path where bytes are the constraint. 340 into a 160px box is
+ * 2.1× on a DPR-3 phone, and the return above 2× on photographic content is
+ * small enough that it is not worth three cards' worth of mobile data.
+ *
+ * Desktop has the room, so it gets the width that is actually correct. This is
+ * the same tiering rule as useIsDesktop: the phone does less work, and the
+ * difference is a decision made once rather than per-component.
+ *
+ * index.html's preload picks the same two values off the same 769px
+ * breakpoint. If these change, change them there too, or a desktop cold load
+ * downloads each plate twice — once at the preloaded width and once at the
+ * width the card actually asks for.
+ */
+export const PLATE_CARD_WIDTH = { mobile: 340, desktop: 640 } as const;
+
 export function getSupabaseImageUrl(bucket: string, path: string, options?: { width?: number; height?: number; format?: string; quality?: number }) {
   // Paths are dish names now, not the tidy `monday/flow.png` slots they used to
   // be — "archive/spanish pork casserole with potatoes.png" is a real object.
