@@ -100,6 +100,9 @@ function cleanupLocalStorage() {
   }
 }
 
+/** What the day transition needs, delivered via AnimatePresence custom. */
+type DayCustom = { dir: number; fromSwipe: boolean };
+
 export default function HomeClient({ initialMenu, initialOrigins, initialDescriptions, plateImages }: HomeClientProps) {
   const navigate = useNavigate({ from: "/" });
   const searchParams = useSearch({ strict: false }) as { day?: string; week?: string };
@@ -233,6 +236,9 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
   }, []);
 
   const handleDaySelect = useCallback((i: number) => {
+    // Cleared for every day change; the swipe path sets it again immediately
+    // after calling this, and the later write wins within the same batch.
+    setFromSwipe(false);
     setSelectedDay(prev => {
       if (i === prev) return prev;
       setDirection(i > prev ? 1 : -1);
@@ -443,6 +449,21 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
    */
   const dayRef = useRef(0);
 
+  /**
+   * Did this day change come from a swipe rather than a tap on the day bar?
+   *
+   * A tap runs one animation: the day's own entrance. A swipe runs two — the
+   * strip springing home from where the finger left it, AND the day's
+   * entrance inside it — two springs on nested elements, the outer one
+   * carrying six cards while popLayout has both days mounted. That is why a
+   * swipe felt worse than tapping a day that plays the identical transition.
+   *
+   * When it was a swipe the day stops sliding and lets the strip carry the
+   * horizontal movement, so there is one spring on one element and the
+   * gesture resolves into the transition instead of racing it.
+   */
+  const [fromSwipe, setFromSwipe] = useState(false);
+
   const settleDrag = useCallback(() => {
     animate(dragX, 0, { type: "spring", stiffness: 380, damping: 40, mass: 0.7 });
   }, [dragX]);
@@ -548,8 +569,10 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
       if (shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.08, velocity: 0.25 })) {
         if (deltaX < 0 && selectedDay < 4) {
           handleDaySelect(selectedDay + 1);
+          setFromSwipe(true);
         } else if (deltaX > 0 && selectedDay > 0) {
           handleDaySelect(selectedDay - 1);
+          setFromSwipe(true);
         }
       }
     }
@@ -867,13 +890,14 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
               place. The phone keeps the overlap, the spring and the slide, and
               travels a little less far because it has less room to travel in.
             */}
-            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+            <AnimatePresence mode="popLayout" initial={false} custom={{ dir: direction, fromSwipe }}>
               <motion.div
                 key={selectedDay}
-                custom={direction}
+                custom={{ dir: direction, fromSwipe }}
                 variants={{
-                  enter: (dir: number) => ({
-                    x: dir > 0 ? travel : dir < 0 ? -travel : 0,
+                  enter: ({ dir, fromSwipe }: DayCustom) => ({
+                    // A swipe leaves the horizontal movement to the strip.
+                    x: fromSwipe ? 0 : dir > 0 ? travel : dir < 0 ? -travel : 0,
                     opacity: 0,
                     ...(isDesktop ? { scale: 0.98 } : {}),
                   }),
@@ -887,8 +911,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
                       scale: { duration: 0.28 },
                     },
                   },
-                  exit: (dir: number) => ({
-                    x: dir > 0 ? -travel : travel,
+                  exit: ({ dir, fromSwipe }: DayCustom) => ({
+                    x: fromSwipe ? 0 : dir > 0 ? -travel : travel,
                     opacity: 0,
                     ...(isDesktop ? { scale: 0.98 } : {}),
                     transition: {
