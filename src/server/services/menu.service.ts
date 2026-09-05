@@ -516,6 +516,31 @@ function isEmptyScrape(menuData: MenuData): boolean {
 }
 
 /**
+ * Drops the cached `/api/menu` responses for these weeks.
+ *
+ * The write loop already does this when it stores a week — but plate images are
+ * drawn *after* the write, by a separate pass in the updater, and a response
+ * cached in between is one with the menu and without the pictures. Left alone
+ * it is served until the TTL expires, which is exactly long enough to make a
+ * freshly-illustrated week look broken to whoever just ran the update.
+ *
+ * Only clears this app's own caches. The CDN in front of them has its own
+ * `s-maxage` and `stale-while-revalidate`, which nothing here can purge; that
+ * layer catches up on its own.
+ */
+export async function invalidateMenuResponseCache(weekIds: string[]): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+
+  const keys = ["response:menu:current", ...weekIds.map((id) => `response:menu:${id}`)];
+  try {
+    await redis.del(...keys);
+  } catch (err) {
+    console.warn(`⚠️  Could not drop cached menu responses: ${(err as Error).message}`);
+  }
+}
+
+/**
  * Scrapes, enriches and persists one week of menus. The only writer.
  *
  * Enrichment is incremental: dish names already in `dish_cache` reuse their
