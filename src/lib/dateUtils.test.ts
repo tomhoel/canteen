@@ -9,6 +9,7 @@ import {
   weekIdForWeekNumber,
   weekDistance,
   getWeekId,
+  getWeekNumber,
   getWeekIdOffset,
   allCanteensAhead,
   mondayOfWeekId,
@@ -227,3 +228,44 @@ test("formatLongDate - formats long date for Norwegian and English", () => {
   assert.match(en, /18\s*August/i);
 });
 
+
+test("the served week decides the label, not the canteens' own labels", () => {
+  // The failure this pins: on a weekend the read path serves next week's row
+  // when it merely exists, while allCanteensAhead demands every canteen agree.
+  // A row holding two week-37 canteens and one still on week 36 was therefore
+  // served as next week's and labelled as this week's — next week's food under
+  // this week's dates.
+  const current = getWeekNumber();
+  const next = current + 1;
+  const mixed = [next, next, current]; // two kitchens ahead, one not
+
+  const fromLabels = computeDisplayContext(mixed);
+  const fromServer = computeDisplayContext(mixed, undefined, getWeekIdOffset(1));
+
+  // Only meaningful at the weekend, which is when the read path looks ahead.
+  if (fromLabels.mode === "weekday-current") {
+    assert.equal(fromServer.mode, "weekday-current", "a weekday is unaffected");
+    return;
+  }
+
+  assert.equal(fromLabels.mode, "weekend-recap", "the old behaviour, for contrast");
+  assert.equal(fromServer.mode, "weekend-preview");
+  assert.equal(fromServer.weekNumber, next, "the header names the week that was served");
+});
+
+test("without a served week the old canteen-label behaviour still applies", () => {
+  // LoadingScreen renders before any response exists and passes no served week.
+  const current = getWeekNumber();
+  const allAhead = [current + 1, current + 1, current + 1];
+
+  const ctx = computeDisplayContext(allAhead);
+  assert.ok(
+    ctx.mode === "weekday-current" || ctx.mode === "weekend-preview",
+    `expected the fallback to still detect an all-ahead week, got ${ctx.mode}`
+  );
+});
+
+test("a served week equal to the current one is not treated as ahead", () => {
+  const ctx = computeDisplayContext([], undefined, getWeekId());
+  assert.notEqual(ctx.mode, "weekend-preview");
+});

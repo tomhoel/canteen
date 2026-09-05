@@ -50,6 +50,8 @@ const WeekOverview = lazy(() => import("@/components/WeekOverview"));
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
+  /** The week the server actually served, so the header cannot label it wrong. */
+  servedWeekId: string;
   initialOrigins: Record<string, DishOrigin>;
   initialDescriptions: Record<string, DishDescription>;
   /**
@@ -103,7 +105,7 @@ function cleanupLocalStorage() {
 /** What the day transition needs, delivered via AnimatePresence custom. */
 type DayCustom = { dir: number; fromSwipe: boolean };
 
-export default function HomeClient({ initialMenu, initialOrigins, initialDescriptions, plateImages }: HomeClientProps) {
+export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, initialDescriptions, plateImages }: HomeClientProps) {
   const navigate = useNavigate({ from: "/" });
   const searchParams = useSearch({ strict: false }) as { day?: string; week?: string };
 
@@ -118,7 +120,8 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
             .map((c) => parseCanteenWeekNumber(c.week))
             .filter((n): n is number => n !== null)
         : [],
-      searchParams?.week
+      searchParams?.week,
+      servedWeekId
     );
     return defaultSelectedDay;
   });
@@ -295,7 +298,7 @@ export default function HomeClient({ initialMenu, initialOrigins, initialDescrip
 
   // dateTick forces a recompute on visibility/interval so Sun→Mon transitions cleanly.
   const displayContext = useMemo(
-    () => computeDisplayContext(canteenWeekNumbers, searchParams.week),
+    () => computeDisplayContext(canteenWeekNumbers, searchParams.week, servedWeekId),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [canteenWeekNumbers, dateTick, searchParams.week],
   );
