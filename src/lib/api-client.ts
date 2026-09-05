@@ -62,13 +62,57 @@ function post<T>(path: string, payload: unknown): Promise<T> {
   return request<T>(path, { method: "POST", body: JSON.stringify(payload) });
 }
 
-const MENU_LOCAL_CACHE_PREFIX = "canteen_menu_cache_v2_";
+/**
+ * Bump the trailing version whenever `WeeklyMenuResponse` gains a field the UI
+ * depends on.
+ *
+ * `getWeeklyMenu` is stale-while-revalidate: it returns the cached payload and
+ * the fresh response only ever reaches `localStorage`, never React. So an entry
+ * written by a previous deploy is what the whole session renders from — for up
+ * to `MENU_CACHE_MAX_AGE_MS` — and on an installed PWA that is nearly every
+ * launch.
+ *
+ * That is not hypothetical. `weekId` was added, deployed, and confirmed live on
+ * the API, and returning users still got the pre-change payload: the weekend
+ * header read "Uke 36 · Fredag 4. september" above week 37's food, which is the
+ * exact contradiction `computeDisplayContext` exists to prevent. Bumping the
+ * prefix retires every old-shape entry at once instead.
+ */
+const MENU_LOCAL_CACHE_PREFIX = "canteen_menu_cache_v3_";
 const MENU_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+/**
+ * Fields a cached payload must carry to be usable.
+ *
+ * Belt and braces with the prefix above: this catches a shape change where the
+ * prefix bump was forgotten, which is the likelier mistake of the two. A miss
+ * costs one fetch; a false hit costs a wrong screen for six hours.
+ */
+const REQUIRED_CACHE_FIELDS = ["menuData", "weekId"] as const;
 
 export interface CachedWeeklyMenu {
   timestamp: number;
   week: string;
   data: WeeklyMenuResponse;
+}
+
+/**
+ * Whether a parsed cache entry may be served. Split out from the localStorage
+ * plumbing so it can be tested without a DOM.
+ */
+export function isUsableCacheEntry(parsed: CachedWeeklyMenu | null, now: number): boolean {
+  if (!parsed?.data) return false;
+
+  // Both ends of the window. A negative age — a device whose clock has been
+  // moved back, or a payload written by a device ahead of this one — is not
+  // "extra fresh"; unbounded, it reads as valid forever.
+  const age = now - parsed.timestamp;
+  if (!(age >= 0 && age < MENU_CACHE_MAX_AGE_MS)) return false;
+
+  // Truthiness, not `!= null`: an empty-string `weekId` reaches
+  // computeDisplayContext as falsy and silently takes the fallback branch,
+  // which is the bug this guard exists to stop, only harder to see.
+  return REQUIRED_CACHE_FIELDS.every((f) => Boolean(parsed.data[f]));
 }
 
 export function getCachedWeeklyMenu(week?: string): WeeklyMenuResponse | null {
@@ -77,18 +121,35 @@ export function getCachedWeeklyMenu(week?: string): WeeklyMenuResponse | null {
     const raw = localStorage.getItem(`${MENU_LOCAL_CACHE_PREFIX}${week || "current"}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedWeeklyMenu;
-    if (
-      parsed &&
-      parsed.data &&
-      parsed.data.menuData &&
-      Date.now() - parsed.timestamp < MENU_CACHE_MAX_AGE_MS
-    ) {
+    if (isUsableCacheEntry(parsed, Date.now())) {
       return parsed.data;
     }
   } catch {
     /* ignore localStorage errors */
   }
   return null;
+}
+
+/**
+ * Drop menu entries left behind by an earlier cache version.
+ *
+ * A prefix bump makes the old entries unreachable, not absent — and a week's
+ * payload is ~23 KB, which is real against a ~5 MB budget shared with the vote
+ * and attendance state. Runs once per session, off the back of a write that has
+ * already succeeded, so it never costs a launch anything.
+ */
+let sweptOldCaches = false;
+function sweepSupersededMenuCaches() {
+  if (sweptOldCaches) return;
+  sweptOldCaches = true;
+  try {
+    const stale = Object.keys(localStorage).filter(
+      (k) => k.startsWith("canteen_menu_cache_") && !k.startsWith(MENU_LOCAL_CACHE_PREFIX)
+    );
+    stale.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* a browser that refuses to enumerate storage is not worth failing over */
+  }
 }
 
 export function setCachedWeeklyMenu(data: WeeklyMenuResponse, week?: string) {
@@ -100,6 +161,7 @@ export function setCachedWeeklyMenu(data: WeeklyMenuResponse, week?: string) {
       data,
     };
     localStorage.setItem(`${MENU_LOCAL_CACHE_PREFIX}${week || "current"}`, JSON.stringify(entry));
+    sweepSupersededMenuCaches();
   } catch {
     /* ignore storage quota errors */
   }

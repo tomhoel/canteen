@@ -296,11 +296,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     [sortedCanteens],
   );
 
-  // dateTick forces a recompute on visibility/interval so Sun→Mon transitions cleanly.
+  // dateTick forces a recompute on visibility/interval so Sun→Mon transitions
+  // cleanly; it is deliberately a dep the callback never reads, which is what
+  // the disable below is for. `servedWeekId` is read and so must be listed —
+  // leaving it out pins the header to whatever week the first payload named.
   const displayContext = useMemo(
     () => computeDisplayContext(canteenWeekNumbers, searchParams.week, servedWeekId),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canteenWeekNumbers, dateTick, searchParams.week],
+    [canteenWeekNumbers, dateTick, searchParams.week, servedWeekId],
   );
 
   const { mode, weekNumber: displayWeek, todayIndex, anchor: displayMonday } = displayContext;
