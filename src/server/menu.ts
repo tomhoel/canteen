@@ -3,7 +3,7 @@ import { getWeekId, getWeekIdOffset, isOsloWeekend } from "../lib/dateUtils.js";
 import { pickMainDish } from "../lib/dish-ranking.js";
 import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service.js";
 import { loadDishCache, normalizeDishName } from "./services/dish-cache.service.js";
-import { getRedis } from "./services/redis.service.js";
+import { getRedis, menuResponseKey } from "./services/redis.service.js";
 
 export interface WeeklyMenuResponse {
   /**
@@ -218,7 +218,7 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
   const redis = isProd ? getRedis() : null;
   if (redis) {
     try {
-      const redisCached = await redis.get<WeeklyMenuResponse>(`response:menu:${cacheKey}`);
+      const redisCached = await redis.get<WeeklyMenuResponse>(menuResponseKey(weekId));
       if (redisCached && redisCached.menuData) {
         memoryCache = { key: cacheKey, data: redisCached, expires: now + 5 * 60 * 1000 };
         return redisCached;
@@ -255,7 +255,7 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     memoryCache = { key: cacheKey, data: result, expires: now + 5 * 60 * 1000 };
     if (redis) {
       try {
-        await redis.set(`response:menu:${cacheKey}`, result, { ex: 10 * 60 });
+        await redis.set(menuResponseKey(weekId), result, { ex: 10 * 60 });
       } catch (err) {
         console.warn("Redis menu response cache write failed:", err);
       }
