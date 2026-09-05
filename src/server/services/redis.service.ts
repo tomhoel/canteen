@@ -45,7 +45,7 @@ export function getRedis(): Redis | null {
  * unreachable at once and age out on their own TTL. Bump this in the same
  * commit that changes `WeeklyMenuResponse`.
  */
-export const MENU_RESPONSE_SHAPE = "v2";
+export const MENU_RESPONSE_SHAPE = "v3";
 
 /**
  * The cache key for one week's `/api/menu` response.
@@ -62,4 +62,27 @@ export const MENU_RESPONSE_SHAPE = "v2";
  */
 export function menuResponseKey(weekId?: string): string {
   return `response:menu:${MENU_RESPONSE_SHAPE}:${weekId || "current"}`;
+}
+
+/**
+ * Whether a cached value still matches the shape its reader expects.
+ *
+ * These caches store whole serialised responses under keys that say nothing
+ * about their shape, and every read site was `if (cached) return cached` — so
+ * an entry written by a previous deploy is a hit, and is handed back missing
+ * whatever was added since. Nothing throws; the caller simply behaves as though
+ * the field had never been added.
+ *
+ * That cost three deploys to chase on the menu path, where the TTL is ten
+ * minutes. `meny` holds for three days and `recipe` for seven.
+ *
+ * A key version would also fix it, which is what `prices:v4:` in deals.ts does,
+ * but it throws away every entry the moment it is bumped — and these two are
+ * paid for in AI generation and upstream API calls. Checking on read costs
+ * nothing while the shape is unchanged, and afterwards regenerates only the
+ * entries someone actually asks for.
+ */
+export function matchesCachedShape<T>(value: unknown, required: readonly (keyof T)[]): value is T {
+  if (!value || typeof value !== "object") return false;
+  return required.every((f) => (value as Record<string, unknown>)[f as string] != null);
 }

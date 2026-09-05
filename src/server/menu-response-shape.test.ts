@@ -25,12 +25,13 @@ const RESPONSE_FIXTURE: WeeklyMenuResponse = {
   dishOrigins: {},
   dishDescriptions: {},
   plateImages: {},
+  landingDay: "monday",
 };
 
 test("a new field on WeeklyMenuResponse must bump MENU_RESPONSE_SHAPE", () => {
   assert.deepEqual(
     Object.keys(RESPONSE_FIXTURE).sort(),
-    ["dishDescriptions", "dishOrigins", "menuData", "plateImages", "weekId"],
+    ["dishDescriptions", "dishOrigins", "landingDay", "menuData", "plateImages", "weekId"],
     "WeeklyMenuResponse changed shape. Entries written by the running deploy " +
       "are still cache hits and will be served without the new field for the " +
       "whole TTL. Bump MENU_RESPONSE_SHAPE in redis.service.ts, then update " +

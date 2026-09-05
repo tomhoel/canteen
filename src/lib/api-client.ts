@@ -78,7 +78,7 @@ function post<T>(path: string, payload: unknown): Promise<T> {
  * exact contradiction `computeDisplayContext` exists to prevent. Bumping the
  * prefix retires every old-shape entry at once instead.
  */
-const MENU_LOCAL_CACHE_PREFIX = "canteen_menu_cache_v3_";
+const MENU_LOCAL_CACHE_PREFIX = "canteen_menu_cache_v4_";
 const MENU_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 /**
