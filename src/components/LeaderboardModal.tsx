@@ -132,7 +132,13 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
                   <div className="leaderboard-dots">
                     {dotData.map(({ date }) => {
                       const d = new Date(date + 'T12:00:00');
-                      const label = `${d.getDate()}.${d.getMonth() + 1}`;
+                      // Day number only. "31.8" is four glyphs — about 16px of
+                      // Outfit — in a 10px box on a 14px pitch, so every date
+                      // overlapped its neighbours and the row rendered as
+                      // "31.827.826.8". The window is a fortnight of weekdays
+                      // in order, so the month adds nothing a reader needs; the
+                      // full ISO date stays on the `title` below.
+                      const label = String(d.getDate());
                       return (
                         <span key={date} className="leaderboard-dot-date" title={date}>
                           {label}
