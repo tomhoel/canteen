@@ -82,12 +82,28 @@
          its data before React has finished booting. api-client picks the result
          up off window.__INITIAL_MENU_DATA__ / __MENU_FETCH_PROMISE__.
 
-         No `crossorigin` on the preload: this is a same-origin URL, and the
-         attribute would put the link in CORS mode with credentials omitted
-         while the `fetch()` below runs in the default same-origin credentials
-         mode. The two would not match, the preload would go unused, and every
-         cold load would pay for the response twice. -->
-    <link rel="preload" href="/api/menu" as="fetch" />
+         There is deliberately no `<link rel="preload" as="fetch">` for this.
+         One was here, and it never worked: a preload is reused only if its
+         credentials mode matches the request that follows, and no combination
+         of `crossorigin` and `fetch(..., {credentials})` got Chrome to accept
+         the pairing. It said so on every load —
+
+           "A preload for '/api/menu' is found, but is not used because the
+            request credentials mode does not match."
+
+         — and the resource timing showed two `/api/menu` entries, one `link`
+         and one `fetch`, so every cold load downloaded the response twice
+         (5.6 KB gzipped each, plus the round trip).
+
+         It bought nothing to begin with. A preload earns its keep when the
+         real request lives in a bundle the parser reaches much later; this
+         one is an inline head script a few lines below, so the two start in
+         the same parse pass. It was also unconditional, while the script
+         deliberately skips a `?week=` load — so a pinned-week visit paid for
+         a copy of the current week that nothing would ever read.
+
+         A matched pair that silently breaks and is worth microseconds when it
+         works is worse than no pair at all. -->
     <script>
       (function () {
         try {
@@ -101,16 +117,28 @@
 
           var DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
-          // Which day's plate is the LCP image.
+          // Which day's plates to warm. All three are above the fold on a
+          // 390x844 phone, so all three are worth preloading — but only for the
+          // day the app will actually open on.
           //
-          // Resolved in Europe/Oslo rather than from the device clock, because
-          // that is where the rest of the app resolves "today" (dateUtils'
-          // todayOsloParts). A phone an hour the other side of midnight would
-          // otherwise warm yesterday's or tomorrow's picture and leave the real
-          // one to load cold.
-          function daysToWarm() {
+          // The response says which (`landingDay`), because working it out here
+          // is not possible: at the weekend it depends on whether the served
+          // week is ahead of the current one, which needs the week-comparison
+          // rules in dateUtils. This script used to guess by warming Monday
+          // *and* Friday, and threw away three pictures — 54 KB measured — on
+          // every weekend cold load.
+          //
+          // The fallback is the old weekday-only guess, for a response served
+          // from a cache written before `landingDay` existed. It resolves the
+          // day in Europe/Oslo rather than from the device clock, matching
+          // dateUtils' todayOsloParts: a phone an hour the other side of
+          // midnight would otherwise warm yesterday's picture and leave the
+          // real one cold.
+          function daysToWarm(data) {
             var pinned = (params.get("day") || "").toLowerCase();
             if (DAY_KEYS.indexOf(pinned) >= 0) return [pinned];
+
+            if (DAY_KEYS.indexOf(data.landingDay) >= 0) return [data.landingDay];
 
             var short = null;
             try {
@@ -122,12 +150,6 @@
 
             var index = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(short);
             if (index >= 0) return [DAY_KEYS[index]];
-
-            // Weekend. The app lands on next week's Monday when the kitchens
-            // have published ahead and on the Friday just gone when they have
-            // not, and which one it is depends on menu data this script has not
-            // received yet. Warm both — one of the two is the LCP image, and the
-            // other is a single cached picture.
             return ["monday", "friday"];
           }
 
@@ -141,7 +163,7 @@
 
               if (data.plateImages) {
                 var canteens = ["Eat the street", "Fresh4you", "Flow"];
-                var days = daysToWarm();
+                var days = daysToWarm(data);
                 var first = true;
                 for (var d = 0; d < days.length; d++) {
                   for (var i = 0; i < canteens.length; i++) {
