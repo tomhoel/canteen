@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { shouldDismiss, shouldEngage } from "@/lib/sheet-drag";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import { useIsDesktop } from "@/lib/useIsDesktop";
+import { useShellInert } from "@/lib/useShellInert";
 
 /**
  * Bottom Sheet — animated with PURE CSS TRANSFORMS (translateY + opacity) so
@@ -69,23 +70,6 @@ export function Sheet({
   return <SheetContext.Provider value={value}>{children}</SheetContext.Provider>;
 }
 
-const SHELL_SELECTOR = ".app-wrapper";
-let inertCount = 0;
-
-function claimShell() {
-  inertCount++;
-  if (inertCount === 1) {
-    document.querySelector(SHELL_SELECTOR)?.setAttribute("inert", "");
-  }
-}
-
-function releaseShell() {
-  inertCount = Math.max(0, inertCount - 1);
-  if (inertCount === 0) {
-    document.querySelector(SHELL_SELECTOR)?.removeAttribute("inert");
-  }
-}
-
 export interface SheetContentProps {
   children: React.ReactNode;
   className?: string;
@@ -141,12 +125,9 @@ export function SheetContent({
     setShown(true);
   }, [open, rendered, panelRef]);
 
-  // Inert background
-  React.useEffect(() => {
-    if (!rendered) return;
-    claimShell();
-    return releaseShell;
-  }, [rendered]);
+  // Inert background — shared with every other overlay, and refcounted so a
+  // recipe modal opening over this sheet does not release it on unmount.
+  useShellInert(rendered);
 
   // Focus management
   React.useEffect(() => {

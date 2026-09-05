@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { CANTEEN_ORDER, getCanteenMetadata } from "@/lib/constants";
 import { getAttendanceHistory } from "@/lib/api-client";
 import "@/styles/leaderboard-modal.css";
+import { useShellInert } from "@/lib/useShellInert";
 
 interface CanteenStats {
   name: string;
@@ -17,6 +18,12 @@ interface LeaderboardModalProps {
 }
 
 export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
+  // Keyed on isOpen rather than placed next to the markup, because this
+  // component returns null early when closed and a hook after that return is a
+  // different hook order per render. Measured before this: 8 focusable
+  // elements stayed reachable behind the overlay.
+  useShellInert(isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {

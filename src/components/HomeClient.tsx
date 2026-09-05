@@ -33,6 +33,7 @@ import ClosedCard from "@/components/ClosedCard";
 import ActionSheet from "@/components/ActionSheet";
 import { shouldTurnPage } from "@/lib/sheet-drag";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
+import { useShellInert } from "@/lib/useShellInert";
 
 // These only render once the user opens a modal or overlay — a recipe's
 // price comparison, the Meny search, the feedback form, the vote/leaderboard/
@@ -215,6 +216,15 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     menyView.isOpen ||
     dealsView.isOpen ||
     lightboxIndex >= 0;
+
+  // The overlays that render inline in this file rather than as components
+  // that claim it themselves. ActionSheet claims via ui/sheet, and the
+  // leaderboard and week overview each claim in their own component — the
+  // refcount makes an overlap harmless, but listing only the inline ones keeps
+  // it obvious which surface owns which claim.
+  useShellInert(
+    infoOpen || recipeModal.isOpen || menyView.isOpen || dealsView.isOpen || lightboxIndex >= 0
+  );
 
   const scrollRef = useRef<HTMLElement>(null);
 
