@@ -5,6 +5,7 @@ import type { CanteenDayItem } from "@/lib/types";
 import { isCanteenClosed } from "@/lib/canteen-utils";
 import { getCanteenMetadata } from "@/lib/constants";
 import "@/styles/week-overview.css";
+import { useShellInert } from "@/lib/useShellInert";
 
 const DAYS_ABBR_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
 
@@ -62,6 +63,10 @@ export default function WeekOverview({
       break;
     }
   }
+
+  // Keeps the page behind this overlay out of the tab order. Measured before
+  // this: 8 focusable elements were still reachable underneath.
+  useShellInert();
 
   return (
     <div className="week-overlay" role="presentation" onClick={onClose}>
