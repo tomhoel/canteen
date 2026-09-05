@@ -83,7 +83,7 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
         transition={{ type: "spring", damping: 28, stiffness: 340 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="info-close" onClick={onClose} aria-label="Close">&times;</button>
+        <button className="info-close" onClick={onClose} aria-label="Lukk">&times;</button>
 
         <h2 id="leaderboard-title-id" className="leaderboard-title">
           {"Kantineseiere — siste 2 uker"}

@@ -40,7 +40,7 @@ function DealsCarousel({ children }: { children: React.ReactNode }) {
   return (
     <div className="deals-carousel">
       {canScrollLeft && (
-        <button className="deals-carousel-arrow deals-carousel-arrow-left" onClick={() => scroll(-1)} aria-label="Previous">
+        <button className="deals-carousel-arrow deals-carousel-arrow-left" onClick={() => scroll(-1)} aria-label="Forrige">
           {"\u2039"}
         </button>
       )}
@@ -48,7 +48,7 @@ function DealsCarousel({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       {canScrollRight && (
-        <button className="deals-carousel-arrow deals-carousel-arrow-right" onClick={() => scroll(1)} aria-label="Next">
+        <button className="deals-carousel-arrow deals-carousel-arrow-right" onClick={() => scroll(1)} aria-label="Neste">
           {"\u203A"}
         </button>
       )}
