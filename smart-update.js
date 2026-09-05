@@ -30,7 +30,10 @@
  */
 
 import { pathToFileURL } from "node:url";
-import { runWeeklyUpdateService } from "./src/server/services/menu.service.js";
+import {
+  runWeeklyUpdateService,
+  invalidateMenuResponseCache,
+} from "./src/server/services/menu.service.js";
 import { processAllCanteenAIImages } from "./src/server/services/image.service.js";
 
 /**
@@ -75,6 +78,38 @@ async function main() {
   console.log(`\n🔍 Ensuring dish images for ${record.weekId}...`);
 
   const images = await processAllCanteenAIImages(record.menuData, { force });
+
+  // Every other week this run wrote gets its plates too, archive-only.
+  //
+  // This loop existed in api/cron/update.ts and not here, and the two updaters
+  // are supposed to do the same job. The consequence was invisible until a
+  // kitchen published ahead: a manual run enriched next week's dishes but never
+  // drew them, and the weekend preview — which is exactly when next week's menu
+  // is on screen — showed cards with no picture.
+  //
+  // `writeSlots: false` is not optional. A slot path is `<day>/<canteen>.png`
+  // and carries no week, so writing next week's plate into one would overwrite
+  // the picture this week is still showing. The archive is dish-addressed,
+  // which is what the read path resolves through for any week that is not the
+  // current one.
+  for (const week of record.weeksWritten) {
+    if (week.weekId === record.weekId) continue;
+    console.log(`
+🔍 Ensuring dish images for ${week.weekId} (archive only)...`);
+    const ahead = await processAllCanteenAIImages(week.menuData, {
+      force,
+      writeSlots: false,
+    });
+    console.log(
+      `   ${week.weekId}: ${ahead.reused} reused, ${ahead.generated} generated, ` +
+        `${ahead.failed} failed`
+    );
+  }
+
+  // The plates were drawn after the menu was written, so the response cached in
+  // between has the food and none of the pictures. Drop it now that both halves
+  // exist, or the week that was just illustrated keeps looking unillustrated.
+  await invalidateMenuResponseCache(record.weeksWritten.map((w) => w.weekId));
 
   console.log("\n🏁 Finished.");
   console.log(

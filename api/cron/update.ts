@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   runWeeklyUpdateService,
+  invalidateMenuResponseCache,
   type WeekWriteResult,
 } from "../../src/server/services/menu.service.js";
 import { processAllCanteenAIImages } from "../../src/server/services/image.service.js";
@@ -167,6 +168,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `${ahead.generated} generated, ${ahead.deferred} deferred.`
       );
     }
+    // Both halves exist now. The response cached between the write and the
+    // drawing has the menu and no pictures; drop it rather than serve it.
+    await invalidateMenuResponseCache(record.weeksWritten.map((w) => w.weekId));
   } catch (err: any) {
     imageError = err.message;
     console.warn("⚠️ [cron] Image processing failed:", err.message);
