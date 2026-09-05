@@ -1,6 +1,6 @@
 import { useState, memo } from "react";
 import { motion } from "motion/react";
-import { Users, Sparkles, Clock } from "lucide-react";
+import { Users, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { Wrapper3D } from "@/components/ui/3d-wrapper";
@@ -211,9 +211,7 @@ const FoodCard = memo(function FoodCard({
               <div className="canteen-name">
                 <span>{meta.name}</span>
                 {isAhead && (
-                  <span className="ahead-tag">
-                    {`Uke ${canteenWeekNum}`} <Sparkles size={10} style={{ marginLeft: 3 }} />
-                  </span>
+                  <span className="ahead-tag">{`Uke ${canteenWeekNum}`}</span>
                 )}
               </div>
             );

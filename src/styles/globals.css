@@ -2104,6 +2104,13 @@ body {
   }
 
   .canteen-name {
+    /* `.card-header { text-align: left }` above cannot do this on its own.
+       The name used to be plain text inside a `.canteen-header-row` flex
+       wrapper, and text-align positioned it; that wrapper was removed and
+       `display: flex; justify-content: center` moved onto .canteen-name
+       itself, so text-align stopped applying to it and the phone quietly went
+       back to centring. Flex items need a flex property. */
+    justify-content: flex-start;
     font-size: clamp(9px, 1.2dvh, 12px);
     margin-bottom: 2px;
     letter-spacing: 1px;
