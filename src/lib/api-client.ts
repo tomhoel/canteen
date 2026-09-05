@@ -20,6 +20,8 @@ import type {
  */
 
 export interface WeeklyMenuResponse {
+  /** The week the server actually served — see the server-side type. */
+  weekId: string;
   menuData: MenuData;
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
