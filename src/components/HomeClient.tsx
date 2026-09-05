@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
-import { motion, AnimatePresence, useMotionValue, animate } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useSearch, useNavigate } from "@tanstack/react-router";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
@@ -31,9 +31,10 @@ import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import ClosedCard from "@/components/ClosedCard";
 import ActionSheet from "@/components/ActionSheet";
-import { shouldTurnPage } from "@/lib/sheet-drag";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useShellInert } from "@/lib/useShellInert";
+import { useDaySwipe } from "@/lib/useDaySwipe";
+import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 
 // These only render once the user opens a modal or overlay — a recipe's
 // price comparison, the Meny search, the feedback form, the vote/leaderboard/
@@ -66,46 +67,6 @@ export interface HomeClientProps {
   plateImages: Record<string, string>;
 }
 
-/**
- * Purge stale localStorage keys.
- *
- * `voted_` and `slack_shared_` are date-keyed and accumulate one entry per day,
- * so they age out after a week.
- *
- * The three prefixes below are different: nothing in the app writes them any
- * more. They are what is left of a client-side cache for recipes, deals and
- * Meny results, and the only writes remaining anywhere are `canteenScrollPos`,
- * the menu cache, `voted_` and `slack_shared_`. So these are pure legacy, and
- * are removed on sight rather than by age — the old age check keyed off a
- * `generatedAt` field inside the payload, which meant any entry written without
- * one could never be collected at all.
- */
-function cleanupLocalStorage() {
-  /** Written by no version of this app that is still shipping. */
-  const LEGACY_PREFIXES = ["recipe_v4_", "deals_v4_", "meny_v4_"];
-  const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-  const now = Date.now();
-
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const key = localStorage.key(i);
-    if (!key) continue;
-
-    // Clean old voted_ and slack_shared_ keys (date-keyed)
-    if (key.startsWith("voted_") || key.startsWith("slack_shared_")) {
-      const dateStr = key.split("_").pop();
-      if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const age = now - new Date(dateStr + "T12:00:00").getTime();
-        if (age > MAX_AGE) localStorage.removeItem(key);
-      }
-      continue;
-    }
-
-    // Retired caches: no reader, no writer, so age is irrelevant.
-    if (LEGACY_PREFIXES.some(p => key.startsWith(p))) {
-      localStorage.removeItem(key);
-    }
-  }
-}
 
 /** What the day transition needs, delivered via AnimatePresence custom. */
 type DayCustom = { dir: number; fromSwipe: boolean };
@@ -254,6 +215,25 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       localStorage.setItem("canteenScrollPos", top.toString());
     }, 200);
   }, []);
+
+  /**
+   * Did this day change come from a swipe rather than a tap on the day bar?
+   *
+   * A tap runs one animation: the day's own entrance. A swipe runs two — the
+   * strip springing home from where the finger left it, AND the day's entrance
+   * inside it — two springs on nested elements, the outer one carrying six
+   * cards while popLayout has both days mounted. That is why a swipe felt worse
+   * than tapping a day that plays the identical transition.
+   *
+   * When it was a swipe the day stops sliding and lets the strip carry the
+   * horizontal movement, so there is one spring on one element and the gesture
+   * resolves into the transition instead of racing it.
+   *
+   * Owned here rather than inside useDaySwipe because clearing it belongs to
+   * every day change, and a day-bar tap never reaches that hook.
+   */
+  const [fromSwipe, setFromSwipe] = useState(false);
+  const markSwipe = useCallback(() => setFromSwipe(true), []);
 
   const handleDaySelect = useCallback((i: number) => {
     // Cleared for every day change; the swipe path sets it again immediately
@@ -418,192 +398,18 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     });
   }, [plateImages, plateWidth]);
 
-  // Trackpad horizontal swipe detection
-  const lastWheelTimeRef = useRef(0);
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (Math.abs(e.deltaX) > 35 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
-      const now = performance.now();
-      if (now - lastWheelTimeRef.current < 350) return;
-      lastWheelTimeRef.current = now;
-      if (e.deltaX > 0 && selectedDay < 4) {
-        handleDaySelect(selectedDay + 1);
-      } else if (e.deltaX < 0 && selectedDay > 0) {
-        handleDaySelect(selectedDay - 1);
-      }
-    }
-  }, [selectedDay, handleDaySelect]);
-
-  // High-performance touch swipe detection with velocity thresholding from mutu-web
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-
-  /**
-   * Which way this gesture turned out to be going, decided once and then kept.
-   *
-   * Without it a swipe is only ever measured at its two ends, so for the whole
-   * gesture in between the browser does whatever it likes — and what it likes
-   * is to scroll `.cards-container`, because a sideways flick is never
-   * perfectly level. That vertical drift is what drags the phone browser's
-   * bottom bar back over the day strip mid-swipe.
-   */
-  const swipeAxis = useRef<"undecided" | "x" | "y">("undecided");
-
-  /**
-   * How far the finger has dragged the day strip, in pixels.
-   *
-   * Until now the gesture produced nothing at all until it ended: you dragged,
-   * the screen sat still, you let go, and only then did a spring play. That
-   * dead interval is most of what "the swipe feels slow" means — it is
-   * latency, not frame rate, and no amount of shaving animation cost touches
-   * it. The strip now moves with the finger.
-   *
-   * It rides on `.cards-track` rather than on the day wrapper because the
-   * wrapper's own `x` belongs to the enter/exit variants. Keeping them on
-   * separate elements means the drag and the day change compose instead of
-   * fighting over one property.
-   */
-  const dragX = useMotionValue(0);
-
-  /**
-   * The selected day, readable from the touchmove listener.
-   *
-   * That listener is attached once with an empty dependency list — it has to
-   * be, because re-registering a non-passive listener on every day change
-   * would drop the gesture in progress — so it cannot close over state.
-   */
-  const dayRef = useRef(0);
-
-  /**
-   * Did this day change come from a swipe rather than a tap on the day bar?
-   *
-   * A tap runs one animation: the day's own entrance. A swipe runs two — the
-   * strip springing home from where the finger left it, AND the day's
-   * entrance inside it — two springs on nested elements, the outer one
-   * carrying six cards while popLayout has both days mounted. That is why a
-   * swipe felt worse than tapping a day that plays the identical transition.
-   *
-   * When it was a swipe the day stops sliding and lets the strip carry the
-   * horizontal movement, so there is one spring on one element and the
-   * gesture resolves into the transition instead of racing it.
-   */
-  const [fromSwipe, setFromSwipe] = useState(false);
-
-  const settleDrag = useCallback(() => {
-    animate(dragX, 0, { type: "spring", stiffness: 380, damping: 40, mass: 0.7 });
-  }, [dragX]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      swipeAxis.current = "undecided";
-      touchStartRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-        time: performance.now(),
-      };
-    }
-  }, []);
-
-  /**
-   * Attached by hand rather than as onTouchMove, because React registers
-   * touchmove as a passive listener and preventDefault is ignored on those.
-   * Cancelling the horizontal case is the whole point: it stops the day swipe
-   * from scrolling the page, so the browser chrome stays where it is and the
-   * gesture does one thing instead of two.
-   */
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const onTouchMove = (e: TouchEvent) => {
-      const start = touchStartRef.current;
-      if (!start || e.touches.length !== 1) return;
-
-      const dx = e.touches[0].clientX - start.x;
-      const dy = e.touches[0].clientY - start.y;
-
-      // Decide early. Chrome commits to a scroll within a few pixels, and once
-      // it has, every following touchmove arrives with cancelable already
-      // false — preventDefault then does nothing at all. Waiting for a
-      // comfortable 10px of travel means losing the race on most swipes.
-      if (swipeAxis.current === "undecided") {
-        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-        swipeAxis.current = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
-      }
-
-      // Only the horizontal case is cancelled, and only once the axis is
-      // known. Cancelling every move — which an earlier version did whenever
-      // the container had nothing to scroll — makes iOS block the compositor
-      // on the main thread for each touchmove before it can act on the
-      // gesture, which is a real cost paid on every finger movement including
-      // the vertical ones we have no interest in.
-      if (swipeAxis.current !== "x") return;
-      if (e.cancelable) e.preventDefault();
-
-      // Resistance at the two ends. Monday dragged rightwards and Friday
-      // dragged leftwards have nowhere to go, so they follow at a quarter
-      // speed — the strip still answers the finger, but it tells you there is
-      // nothing there. Writing straight to a MotionValue keeps this off
-      // React's render path: no state, no reconciliation, one style write per
-      // frame.
-      const atStart = dayRef.current <= 0 && dx > 0;
-      const atEnd = dayRef.current >= 4 && dx < 0;
-      const resisted = atStart || atEnd ? dx * 0.25 : dx;
-      const limit = window.innerWidth * 0.55;
-      dragX.set(Math.max(-limit, Math.min(limit, resisted)));
-    };
-
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", onTouchMove);
-    // `menuData` is in here because the element this attaches to does not
-    // exist until it arrives — the component returns <LoadingScreen /> before
-    // that, so `scrollRef.current` is null and the effect bails. With `[dragX]`
-    // alone the effect ran exactly once, on the loading render, and the
-    // listener was never attached at all in production. Development hid it:
-    // StrictMode re-runs effects, so it got a second chance there.
-    //
-    // dragX is a MotionValue and never changes identity. Neither dependency
-    // changes on a day switch, which is what matters — re-registering a
-    // non-passive listener mid-gesture would drop the swipe in progress.
-  }, [dragX, menuData]);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-    const touch = e.changedTouches[0];
-    const deltaX = touch.clientX - touchStartRef.current.x;
-    const deltaY = touch.clientY - touchStartRef.current.y;
-    const dt = Math.max(1, performance.now() - touchStartRef.current.time);
-    const vx = deltaX / dt;
-    const width = typeof window !== "undefined" ? window.innerWidth : 360;
-    touchStartRef.current = null;
-    const axis = swipeAxis.current;
-    swipeAxis.current = "undecided";
-    // Whether or not this becomes a day change, the strip returns to rest. If
-    // it does, the incoming day's own spring plays on top of this one and the
-    // two read as a single movement; if it does not, this is the snap-back
-    // that tells you the swipe was not enough.
-    if (axis === "x") settleDrag();
-
-    // Do not switch day if an overlay or modal is active
-    if (anyOverlayOpen) return;
-
-    // Must be horizontally dominant to avoid triggering on vertical scroll.
-    // The axis lock has usually already decided this; the check stays for the
-    // gesture too short to have tripped it.
-    if (axis !== "y" && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 28) {
-      if (shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.08, velocity: 0.25 })) {
-        if (deltaX < 0 && selectedDay < 4) {
-          handleDaySelect(selectedDay + 1);
-          setFromSwipe(true);
-        } else if (deltaX > 0 && selectedDay > 0) {
-          handleDaySelect(selectedDay - 1);
-          setFromSwipe(true);
-        }
-      }
-    }
-  }, [selectedDay, handleDaySelect, anyOverlayOpen, settleDrag]);
-
-  useEffect(() => {
-    dayRef.current = selectedDay;
-  }, [selectedDay]);
+  // Finger and trackpad -> day change. Extracted whole: the axis lock, the
+  // MotionValue the strip rides on, the non-passive listener and the release
+  // threshold are one mechanism, and every bug here came from moving one
+  // without the others.
+  const { dragX, handleWheel, handleTouchStart, handleTouchEnd } = useDaySwipe({
+    scrollRef,
+    selectedDay,
+    onSelectDay: handleDaySelect,
+    blocked: anyOverlayOpen,
+    ready: menuData !== null,
+    markSwipe,
+  });
 
   const fullDayLabels = FULL_DAYS_NO;
 
