@@ -75,8 +75,11 @@ Both triaged as legitimate; a warn NOT in this list is new and worth looking at.
 - **`AppHeader` — `Loading` and `Weekday` render identically.** Deliberate.
   `actions` is omitted so the buttons render inert; the header must occupy the
   same box before and after the menu arrives, or every card below it moves.
-- **`ClosedCard` — `Default` and `ThirdInRow` render near-identically.**
-  `cardIdx` only drives the reveal cascade, which a static capture cannot show.
+- ~~`ClosedCard` — `Default` and `ThirdInRow` render near-identically.~~
+  **Resolved 2026-09-06.** The preview no longer varies only `cardIdx` (which
+  drives the reveal cascade a static capture cannot show). It now shows the
+  three closed-plate settings instead, so the three cells differ visibly. If
+  this warn reappears, the preview has been reverted.
 
 `Wrapper3D` deliberately ships **one** story: `maxRotation`, `translateZ` and
 `perspective` only act during pointer movement, so extra configurations rendered
@@ -169,6 +172,22 @@ three identical cards. The props are documented in the contract instead.
   `/design-sync` run", because `_ds_bundle.css` is read-only there. So the
   repo connection covers source and drift tracking; the compiled bundle,
   contracts and preview cards still only move through this sync.
+- **The closed-canteen place settings are a three-variant concept, and the
+  design system now carries all three.** `getClosedPlateUrl()` hashes
+  "<canteen>-<day>" and picks one of
+  `images_nobg/closed-plates/closed-plate-{1,2,3}.png`, so a canteen keeps the
+  same setting all day while a row of closed canteens shows three different
+  ones. They differ in napkin fold, cutlery and herb: parallel fork and knife
+  with rosemary, crossed cutlery with lavender, a draped napkin with spoon and
+  fork and thyme.
+
+  `previews/ClosedCard.tsx` inlines all three at the app's own 340px webp
+  transform, and the concept is written into `cfg.dtsPropsFor.ClosedCard` and
+  `.AllClosedCard` so it reaches the design agent's contract rather than only
+  the picture. Re-fetch them with the render endpoint, not `/object` — the
+  latter ignores transforms:
+  `.../render/image/public/images_nobg/closed-plates/closed-plate-1.png?width=340&format=webp&quality=75&resize=contain`
+
 - **Inlined base64 images go stale.** The plate photographs in
   `previews/FoodCard.tsx`, `ClosedCard.tsx` and `AllClosedCard.tsx` are copies of
   production assets at 340px. If the plates are regenerated they will not update
