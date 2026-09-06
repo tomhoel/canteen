@@ -2128,6 +2128,15 @@ body {
        clipped by the viewport rather than by the card. .vote-pip positions
        against the plate and reads the same token. */
     --plate-pull-x: -24px;
+    /* How far the ANDRE RETTER block is pulled up under the plate. This is a
+       margin on the plate, so it moves that block and never the plate itself.
+       It used to be -2dvh, which left the last side dish 4.8px from the card's
+       bottom border against the 10px above the canteen name — the block was
+       overflowing the content box into the padding. Pulling harder lets the
+       block finish on the content edge, so the space below it matches the
+       space above the canteen name. The block passing behind the plate's lower
+       curve is intended. */
+    --plate-pull-b: clamp(-26px, -2.6dvh, -10px);
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -2214,7 +2223,7 @@ body {
     align-self: flex-start;
     width: var(--plate-size);
     height: var(--plate-size);
-    margin: var(--plate-pull-y) 0 clamp(-16px, -2dvh, -8px) var(--plate-pull-x);
+    margin: var(--plate-pull-y) 0 var(--plate-pull-b) var(--plate-pull-x);
     flex-shrink: 0;
     z-index: 10;
   }
@@ -2292,7 +2301,7 @@ body {
        overflow: visible, so it did not clip, it slid under the next card.
        The clamps below keep the text inside this box on their own; this is
        the guarantee that holds when a font or a locale makes them wrong. */
-    max-height: calc(var(--plate-size) + var(--plate-pull-y) + clamp(-16px, -2dvh, -8px));
+    max-height: calc(var(--plate-size) + var(--plate-pull-y) + var(--plate-pull-b));
     overflow: hidden;
   }
 
