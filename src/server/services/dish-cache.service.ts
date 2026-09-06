@@ -12,7 +12,7 @@ import type { DishOrigin, DishDescription } from "../../lib/types.js";
  * expensive and why descriptions changed wording between runs.
  *
  * Table shape:
- *   cache_key TEXT PRIMARY KEY, original_name, clean_name,
+ *   cache_key TEXT PRIMARY KEY, original_name, clean_name, short_name,
  *   origin JSONB, description JSONB, image_path, image_nobg_path, first_seen,
  *   enrich_attempts INTEGER, last_enrich_attempt TIMESTAMPTZ
  */
@@ -23,6 +23,16 @@ export interface DishCacheRow {
   originalName: string;
   origin: DishOrigin | null;
   description: DishDescription | null;
+  /**
+   * A shortened form of the dish name, for the card's headline only.
+   *
+   * Null for a dish whose name already fits, which is most of them — the
+   * updater only asks about titles past SHORT_TITLE_TARGET_CHARS. Deliberately
+   * not the same thing as `originalName`: that is the cache key, the name a
+   * plate is archived under and what the recipe generator is asked about, and
+   * it must not move.
+   */
+  shortName: string | null;
   imagePath: string | null;
   imageNoBgPath: string | null;
   /** How many consecutive runs have asked the model about this dish and got nothing. */
@@ -39,6 +49,7 @@ export interface DishCacheEntry {
   originalName: string;
   origin?: DishOrigin | null;
   description?: DishDescription | null;
+  shortName?: string | null;
   imagePath?: string | null;
   imageNoBgPath?: string | null;
   enrichAttempts?: number | null;
@@ -179,7 +190,7 @@ export async function loadDishCache(dishNames: string[]): Promise<DishCacheLoad>
       // type from the select at the type level, and `string` degrades it to an
       // error union that nothing type-checks against.
       // prettier-ignore
-      .select("cache_key, original_name, origin, description, image_path, image_nobg_path, enrich_attempts, last_enrich_attempt")
+      .select("cache_key, original_name, origin, description, short_name, image_path, image_nobg_path, enrich_attempts, last_enrich_attempt")
       .in("cache_key", slice);
 
     if (error) {
@@ -196,6 +207,7 @@ export async function loadDishCache(dishNames: string[]): Promise<DishCacheLoad>
         originalName: row.original_name,
         origin: row.origin ?? null,
         description: row.description ?? null,
+        shortName: row.short_name ?? null,
         imagePath: row.image_path ?? null,
         imageNoBgPath: row.image_nobg_path ?? null,
         enrichAttempts: row.enrich_attempts ?? 0,
@@ -236,6 +248,7 @@ export async function saveDishCacheEntries(entries: DishCacheEntry[]): Promise<n
       };
       if (e.origin) row.origin = e.origin;
       if (e.description) row.description = e.description;
+      if (e.shortName) row.short_name = e.shortName;
       if (e.imagePath) row.image_path = e.imagePath;
       if (e.imageNoBgPath) row.image_nobg_path = e.imageNoBgPath;
       // 0 is a meaningful value here (a dish that just succeeded), so test for

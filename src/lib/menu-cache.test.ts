@@ -23,6 +23,7 @@ const response = (over: Partial<WeeklyMenuResponse> = {}): WeeklyMenuResponse =>
   menuData: { scrapedAt: "", canteens: {} },
   dishOrigins: {},
   dishDescriptions: {},
+  dishShortNames: {},
   plateImages: {},
   landingDay: "monday",
   ...over,

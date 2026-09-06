@@ -95,7 +95,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 function HomeComponent() {
-  const { weekId, menuData, dishOrigins, dishDescriptions, plateImages } = Route.useLoaderData();
+  const { weekId, menuData, dishOrigins, dishDescriptions, dishShortNames, plateImages } =
+    Route.useLoaderData();
 
   return (
     <HomeClient
@@ -103,6 +104,7 @@ function HomeComponent() {
       servedWeekId={weekId}
       initialOrigins={dishOrigins}
       initialDescriptions={dishDescriptions}
+      initialShortNames={dishShortNames ?? {}}
       plateImages={plateImages ?? {}}
     />
   );
