@@ -2545,9 +2545,11 @@ body {
      dishes, which are the actual information, all stay on screen. Nothing here
      applies at 844px, so the layout on a normal phone is untouched. */
   @media (max-height: 740px) {
-    .food-card {
-      --plate-size: clamp(88px, 15dvh, 125px);
-    }
+    /* The plate is NOT shrunk here. It was, briefly, to 15dvh — and that is a
+       change to the one element the whole card is built around, on any screen
+       under 740px including a desktop browser window that happens to be short.
+       It stays at 19dvh everywhere. Room on a short screen comes out of the
+       text instead. */
 
     .dish-description {
       display: none;
