@@ -58,8 +58,8 @@
   --font-heading: "Outfit", sans-serif;
   --font-body: "Outfit", sans-serif;
   --font-serif: "Outfit", sans-serif;
-  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
-  --smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1); /* @kind other */
+  --smooth: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
 
   /* ─── Type scale ───────────────────────────────────────────────────────────
      Five roles, three breakpoint columns. Named by ROLE, not by size rank,
@@ -78,24 +78,38 @@
      mechanism that fits three cards in an 844px viewport with no scroll; a
      flat-pixel mobile scale breaks the layout on the phones the app is used on.
      A blanket 11px floor was proposed twice by the audit and rejected twice. */
-  --fs-label: 10.5px;   /* @kind font — eyebrows, section labels, allergen codes, badges */
-  --fs-meta: 12.5px;    /* @kind font — side-dish rows, day-label dates */
-  --fs-body: 13px;      /* @kind font — dish description, day names, sheet body */
-  --fs-title: 16.5px;   /* @kind font — dish name, and the action sheet's, so they cannot drift */
-  --fs-hero: 26px;      /* @kind font — page title */
+  --fs-label: 10.5px;   /* @kind font */ /* eyebrows, section labels, allergen codes, badges */
+  --fs-meta: 12.5px;    /* @kind font */ /* side-dish rows, day-label dates */
+  --fs-body: 13px;      /* @kind font */ /* dish description, day names, sheet body */
+  --fs-title: 16.5px;   /* @kind font */ /* dish name, and the action sheet's, so they cannot drift */
+  --fs-hero: 26px;      /* @kind font */ /* page title */
 
   --lh-tight: 1.25;  /* @kind font */
   --lh-snug: 1.35;   /* @kind font */
   --lh-body: 1.45;   /* @kind font */
 
-  /* The `@kind` markers above and below are read by claude.ai/design when it
-     builds its token panel. It otherwise infers a token's family from its
-     VALUE, which mis-files anything whose value does not look like its
-     purpose: every --fs-* landed under spacing because a px length looks like
-     spacing, --lh-* landed under other because they are unitless, and --r-lg
-     landed under spacing while --r-round landed under radius purely because
-     one is 24px and the other 50%. The marker states the family outright.
-     Harmless to CSS; delete only if the panel stops reading them. */
+  /* The `@kind` markers throughout this file are read by claude.ai/design when
+     it builds its token panel. Without one it infers the family from the
+     token's VALUE, which mis-files anything whose value does not look like its
+     purpose: --lh-* land under "other" because they are unitless, and --r-lg
+     lands under spacing while --r-round lands under radius purely because one
+     is 24px and the other 50%.
+
+     Two rules, both learned the hard way:
+
+     1. THE MARKER MUST STAND ALONE. A comment whose entire body is
+        "@kind font" is read; one that continues into prose after the family
+        name is not. Any explanation goes in a second, separate comment.
+        (Written out rather than shown: a CSS comment cannot contain the
+        characters that close one, and an earlier version of this note that
+        tried to quote the syntax literally failed the build.)
+     2. ANNOTATE EVERY DECLARATION, not just the one in the base :root. The
+        classifier reads the LAST declaration it sees, so --fs-*, which is
+        redeclared in both the <=768px and >=1101px blocks, ignored a marker
+        placed only on the base — the panel's values (11px/14px/19px/30px) are
+        the 1101px column, which is how this was diagnosed.
+
+     Harmless to CSS. Delete only if the panel stops reading them. */
 
   /* ─── Spacing ──────────────────────────────────────────────────────────────
      8-based with two half-steps, replacing 23 distinct single-value paddings
@@ -110,10 +124,10 @@
   /* ─── Radius ───────────────────────────────────────────────────────────────
      Eighteen values collapse to six. --r-lg is the identity radius: it is what
      makes a canteen card look like a canteen card. */
-  --r-xs: 6px;      /* @kind radius — chips, tags, micro pills */
-  --r-sm: 12px;     /* @kind radius — inner surfaces: buttons, list rows, image tiles */
-  --r-md: 16px;     /* @kind radius — secondary panels */
-  --r-lg: 24px;     /* @kind radius — cards, modals, sheets */
+  --r-xs: 6px;      /* @kind radius */ /* chips, tags, micro pills */
+  --r-sm: 12px;     /* @kind radius */ /* inner surfaces: buttons, list rows, image tiles */
+  --r-md: 16px;     /* @kind radius */ /* secondary panels */
+  --r-lg: 24px;     /* @kind radius */ /* cards, modals, sheets */
   --r-pill: 999px;  /* @kind radius */
   --r-round: 50%;
 
@@ -129,9 +143,9 @@
   /* ─── Motion ───────────────────────────────────────────────────────────────
      --dur-slow matches DUR_MS in ui/sheet.tsx; changing one without the other
      desynchronises the sheet's CSS from its JS unmount timer. */
-  --dur-fast: 150ms;   /* colour, background, hover, press */
-  --dur-base: 250ms;   /* entrances, reveals, list items */
-  --dur-slow: 400ms;   /* sheet and modal transitions */
+  --dur-fast: 150ms;   /* @kind other */ /* colour, background, hover, press */
+  --dur-base: 250ms;   /* @kind other */ /* entrances, reveals, list items */
+  --dur-slow: 400ms;   /* @kind other */ /* sheet and modal transitions */
 
   /* ─── Stacking order ───────────────────────────────────────────────────────
      Four layers, named, so nothing has to be inferred from a bare number.
@@ -146,9 +160,9 @@
      Card-level z-indexes are left alone: `.cards-container` is positioned with
      its own z-index, so everything inside it is scoped to that stacking
      context and never competes with these.                                  */
-  --z-chrome: 1000;
-  --z-overlay: 1500;
-  --z-sheet: 2100;
+  --z-chrome: 1000;  /* @kind other */
+  --z-overlay: 1500; /* @kind other */
+  --z-sheet: 2100;   /* @kind other */
 
 }
 
@@ -163,11 +177,11 @@
    ceilings: the ceiling is what a roomy phone gets and it is already modest. */
 @media (max-width: 768px) {
   :root {
-    --fs-label: clamp(9.5px, 1.15dvh, 10.5px);
-    --fs-meta:  clamp(9.5px, 1.2dvh, 12px);
-    --fs-body:  clamp(10.5px, 1.5dvh, 13.5px);
-    --fs-title: clamp(13px, 2dvh, 18px);
-    --fs-hero:  20px;
+    --fs-label: clamp(9.5px, 1.15dvh, 10.5px); /* @kind font */
+    --fs-meta:  clamp(9.5px, 1.2dvh, 12px);    /* @kind font */
+    --fs-body:  clamp(10.5px, 1.5dvh, 13.5px); /* @kind font */
+    --fs-title: clamp(13px, 2dvh, 18px);       /* @kind font */
+    --fs-hero:  20px;                          /* @kind font */
   }
 }
 
@@ -184,11 +198,11 @@
    and carried a dish name 1.3px larger. */
 @media (min-width: 1101px) {
   :root {
-    --fs-label: 11px;
-    --fs-meta:  14px;
-    --fs-body:  14.5px;
-    --fs-title: 19px;
-    --fs-hero:  30px;
+    --fs-label: 11px;   /* @kind font */
+    --fs-meta:  14px;   /* @kind font */
+    --fs-body:  14.5px; /* @kind font */
+    --fs-title: 19px;   /* @kind font */
+    --fs-hero:  30px;   /* @kind font */
   }
 }
 
@@ -2183,7 +2197,7 @@ body {
        this clamp, so changing one silently mispositioned the other. */
     --plate-size: clamp(125px, 19dvh, 210px);
     --card-pad-y: clamp(8px, 1.2dvh, 14px);
-    --plate-pull-y: clamp(-24px, -3dvh, -14px);
+    --plate-pull-y: clamp(-24px, -3dvh, -14px); /* @kind other */
     /* How far the plate hangs off the card's left edge. This is as far as it
        can go: the card sits 8px from the screen, its own padding is 16px, so
        -24px puts the plate's left edge at x=0. Anything more and the plate is
