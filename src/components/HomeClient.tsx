@@ -305,19 +305,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
 
   const { mode, weekNumber: displayWeek, todayIndex, anchor: displayMonday } = displayContext;
 
-  // Canteens with nothing in the previewed week. They are absent from the row
-  // rather than empty in it — the updater files each canteen under the week it
-  // actually published — so without naming them, a kitchen that has not posted
-  // next week's menu yet simply loses its card with no explanation. Only
-  // meaningful in preview: on any other mode an absent canteen is a real fault.
-  const pendingCanteens = useMemo(
-    () =>
-      mode === "weekend-preview" && menuData
-        ? CANTEEN_ORDER.filter(name => !menuData.canteens[name])
-        : [],
-    [mode, menuData],
-  );
-
   // Seed selectedDay once menu data is ready, so the user lands on the
   // mode-appropriate day (today / Monday-preview / Friday-recap).
   //
@@ -808,7 +795,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         onDayHover={preloadDay}
         onTodayPress={mode === "weekday-current" ? () => runYolo(todayIndex) : undefined}
         cardsRef={scrollRef}
-        pendingCanteens={pendingCanteens}
       />
 
       {/* Info Modal */}

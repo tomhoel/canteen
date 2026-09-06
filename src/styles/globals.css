@@ -1397,6 +1397,7 @@ body {
   display: flex;
   align-items: baseline;
   gap: 0;
+  min-width: 0;
   font-size: 12.5px;
   color: var(--text-secondary);
   padding: 6px 2px;
@@ -1415,6 +1416,13 @@ body {
 .side-dish-text {
   flex: 1;
   line-height: 1.35;
+  /* One line, ellipsised. Wrapping made a long side dish look like two
+     entries in a list whose whole job is to be countable, and each wrap added
+     a row's height to a card that has a fixed one. */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .side-allergens {
@@ -1855,27 +1863,6 @@ body {
   .day-btn { transition: none; }
 }
 
-/* ─── Day-bar banner (weekend modes) — desktop ─── */
-.day-bar-banner {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--accent-orange);
-  text-align: center;
-  padding: 6px 14px 9px;
-  margin: 0 4px 8px;
-  border-bottom: 1px dashed rgba(200, 116, 26, 0.22);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.day-bar-weekend-recap .day-bar-banner {
-  color: var(--text-secondary);
-  border-bottom-color: rgba(0, 0, 0, 0.08);
-}
-
 /* Mute the day buttons when no day is "today" — preview/recap context. */
 .day-bar-weekend-preview .day-pill,
 .day-bar-weekend-recap .day-pill {
@@ -2063,6 +2050,7 @@ body {
     max-width: none;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -2134,13 +2122,13 @@ body {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    /* `stretch`, not `space-between`. With the cards now a fixed equal height,
-       a canteen with fewer side dishes has leftover vertical space, and
-       space-between parked all of it in a hole between the plate row and the
-       ANDRE RETTER block — measured at 25px on Wednesday's middle card.
-       Stretching hands that space to the lines themselves, where the plate
-       below grows into it. */
-    align-content: stretch;
+    /* Leftover vertical space collects at the BOTTOM of the card.
+       `space-between` pooled it in a hole between the plate row and the ANDRE
+       RETTER block — 41px on a one-side-dish card. `stretch` was tried too,
+       and let the plate absorb it; see .card-image-wrapper for why that is
+       gone. Slack at the bottom edge is the only place it does not read as a
+       missing element. */
+    align-content: flex-start;
     padding: var(--card-pad-y) 16px;
     border-radius: 18px;
     position: relative;
@@ -2193,25 +2181,27 @@ body {
     /* --plate-size is the resting size and the ONE place it is written.
        .vote-pip positions itself against the plate edge and used to carry its
        own literal copy of this clamp, so the two could drift silently. */
-    /* Grows into a line that stretched, staying square.
+    /* A fixed square. It deliberately does NOT grow into leftover space.
 
-       `height: auto` is what makes align-self: stretch able to act at all — an
-       explicit height cannot be stretched. --plate-size becomes the FLOOR, so
-       a card with a full three side dishes still renders exactly the size it
-       always did.
+       It was briefly allowed to, stretching up to --plate-size + 28px. That
+       had two faults. It fired unconditionally, so the plate sat at its 188px
+       ceiling even on a card carrying three side dishes and no slack at all,
+       and the text column beside it lost that width for nothing. And the
+       taller plate pushed the ANDRE RETTER rows past the bottom of a card
+       whose height is now fixed by `flex: 1 1 0` — .food-card is
+       overflow: visible and the next card paints over them, so on 11 of the
+       week's 15 cards the last side dish was simply not on screen.
 
-       The growth is capped at +28px rather than left to run to the old 210px
-       ceiling, because plate width and text width are coupled in this
-       side-by-side layout: a plate that grows tall also grows wide, squeezing
-       the dish name into more lines, which adds height, which grows the plate
-       again. 28px is enough to close the measured 25px hole and small enough
-       that the text column cannot collapse. */
-    align-self: stretch;
-    width: auto;
-    height: auto;
-    min-height: var(--plate-size);
-    max-height: calc(var(--plate-size) + 28px);
-    aspect-ratio: 1;
+       Leftover space belongs to align-content above, not to the plate. */
+    /* flex-start, not the card's `align-items: center`. Centred, the plate
+       floated down whenever the text column beside it was taller than the
+       plate row, so the top overhang varied per card and vanished entirely on
+       Friday's middle card (measured 4px BELOW the card edge instead of 13px
+       above). The negative margins are what produce the overhang; they only
+       read consistently from a fixed top edge. */
+    align-self: flex-start;
+    width: var(--plate-size);
+    height: var(--plate-size);
     margin: var(--plate-pull-y) 0 clamp(-16px, -2dvh, -8px) -22px;
     flex-shrink: 0;
     z-index: 10;
@@ -2277,7 +2267,21 @@ body {
     text-align: left;
     padding: 0 2px 0 12px;
     min-width: 0;
-    align-self: center;
+    /* Top, not centre. Centred, the text block floated to the middle of the
+       plate row, so the canteen name started at a different height on every
+       card — Eat the street's sat below Fresh4you's purely because it had a
+       shorter dish name. The three names now line up across the stack. */
+    align-self: flex-start;
+    /* Exactly the plate's margin-box height, so the first flex line is ALWAYS
+       the plate's height and the card's total is always plate + side dishes.
+       Without this the card height is set by whichever is taller, and a
+       three-line dish name pushed the last ANDRE RETTER row out of a card
+       that `flex: 1 1 0` had already fixed the height of — .food-card is
+       overflow: visible, so it did not clip, it slid under the next card.
+       The clamps below keep the text inside this box on their own; this is
+       the guarantee that holds when a font or a locale makes them wrong. */
+    max-height: calc(var(--plate-size) + var(--plate-pull-y) + clamp(-16px, -2dvh, -8px));
+    overflow: hidden;
   }
 
   .card-header {
@@ -2306,6 +2310,17 @@ body {
     text-align: left;
     justify-content: flex-start;
     align-items: flex-start;
+    /* Two lines. There was no clamp at all, and "Ovnsbakt torskefilet med
+       rattatouille og saltbakte poteter" ran to four, which set a card height
+       none of the others could match. Two is the number the plate and the
+       card's whole vertical budget are sized around — see .card-content's
+       max-height. Names that need more are shortened upstream by the enricher
+       rather than ellipsised here; the clamp is the backstop. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .dish-meta-row {
@@ -2488,6 +2503,34 @@ body {
     padding-bottom: 0;
   }
 
+  /* ─── Short phones (iPhone SE class, <=740px tall) ───────────────────────
+     Everything above is sized for a 844px screen, where a card gets 224px and
+     the numbers work out with a pixel to spare. At 667px a card gets 166px:
+     take off the padding and the ANDRE RETTER block and only 68px is left for
+     the plate row, against a plate whose margin box alone is 93px. Three side
+     dishes, a plate at 19dvh and a description do not fit, and no amount of
+     tuning makes them.
+
+     So on a short screen the two cheapest things give way — the plate drops to
+     15dvh and the AI-written description is dropped entirely — and the side
+     dishes, which are the actual information, all stay on screen. Nothing here
+     applies at 844px, so the layout on a normal phone is untouched. */
+  @media (max-height: 740px) {
+    .food-card {
+      --plate-size: clamp(88px, 15dvh, 125px);
+    }
+
+    .dish-description {
+      display: none;
+    }
+
+    /* 22px of fixed overhead for a row of allergen chips that are 14px tall. */
+    .dish-meta-row {
+      min-height: 0;
+      margin-top: 2px;
+    }
+  }
+
   /* Day bar — liquid glass floating pill for mobile */
   .day-bar {
     position: fixed;
@@ -2560,15 +2603,6 @@ body {
 
   .day-label-date {
     font-size: clamp(9px, 1.1dvh, 11px);
-  }
-
-  /* Banner — compact on mobile, no nowrap so it can wrap if i18n grows it */
-  .day-bar-banner {
-    font-size: 9.5px;
-    padding: 4px 8px 6px;
-    margin: 0 2px 5px;
-    letter-spacing: 0.05em;
-    white-space: normal;
   }
 
   /* Feedback button - hidden on mobile */
