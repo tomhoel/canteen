@@ -225,6 +225,32 @@ Guidelines:
 }
 
 /**
+ * Levenshtein distance, with an early bail-out.
+ *
+ * Both title validators below need it, and the `> 6` shortcut is load-bearing
+ * for the proofreader: it only ever accepts distances up to 3, so any pair
+ * whose lengths differ by more than 6 is already a reject and there is no point
+ * filling the table.
+ */
+function editDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length;
+  const n = b.length;
+  if (Math.abs(m - n) > 6) return 7;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+/**
  * Validates a proposed AI title correction against safety heuristics.
  * Rejects translations and wholesale rewrites, accepting only compound fixes,
  * small typo corrections, and high-overlap edits.
@@ -238,24 +264,6 @@ export function validateTitleCorrection(original: string, corrected: string): bo
   const cleanCorr = corrected.trim();
 
   const stripNonLetters = (s: string) => s.toLowerCase().replace(/[^a-zæøåäöü0-9]/gi, "");
-
-  const editDistance = (a: string, b: string): number => {
-    if (a === b) return 0;
-    const m = a.length;
-    const n = b.length;
-    if (Math.abs(m - n) > 6) return 7;
-    const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        dp[i][j] =
-          a[i - 1] === b[j - 1]
-            ? dp[i - 1][j - 1]
-            : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-      }
-    }
-    return dp[m][n];
-  };
 
   const strippedOrig = stripNonLetters(cleanOrig);
   const strippedCorr = stripNonLetters(cleanCorr);
@@ -350,6 +358,179 @@ If nothing needs fixing, respond with {}`;
   }
 
   return result;
+}
+
+/**
+ * How long a dish title may be before the card has to wrap it onto a third
+ * line, and the hard ceiling past which it is cut off entirely.
+ *
+ * Measured, not guessed. On a 390x844 phone the headline column is 197.6px of
+ * usable width at a 15.2px bold face, which is a little over 25 characters a
+ * line. Two lines is what the card is budgeted for: the plate is 160px tall
+ * and the ANDRE RETTER block below it takes the rest, so a title that runs to
+ * three lines eats the description's only line.
+ *
+ * TARGET is what the model is asked to hit. MAX is what the validator will
+ * still accept — a title between the two costs a third line but is not
+ * truncated, which is better than rejecting a good shortening for two
+ * characters. Anything longer is refused and the original is kept, because a
+ * title the card cuts off is no worse than one the model mangled.
+ */
+export const SHORT_TITLE_TARGET_CHARS = 48;
+export const SHORT_TITLE_MAX_CHARS = 62;
+
+/**
+ * A shortening pass, plus the dishes the model actually gave an answer about.
+ *
+ * `fromModel` alone cannot distinguish "the model looked at this title and had
+ * nothing shorter" from "the call never landed". The caller needs to, because
+ * the first is worth recording permanently so the dish is never re-sent, and
+ * the second must stay retryable — one rate-limited afternoon would otherwise
+ * mark a whole week's titles unshortenable forever.
+ */
+export interface ShortTitlePass extends EnrichmentPass<string> {
+  answered: Set<string>;
+}
+
+/** Whether a dish name is long enough to be worth a model call. */
+export function needsShortening(dish: string): boolean {
+  return dish.trim().length > SHORT_TITLE_TARGET_CHARS;
+}
+
+/**
+ * Accepts a shortened title only if it is a TRIM of the original, never a
+ * rewrite.
+ *
+ * This is the safety property that matters. The short title is what the card
+ * shows, so a model that invents "Kylling med ris" for a fish dish puts a wrong
+ * dish in front of someone deciding where to eat. Requiring every word of the
+ * short title to appear in the original makes that impossible: the model may
+ * only drop words, not supply them.
+ *
+ * The word match is deliberately loose about form — Norwegian compounds get
+ * split and joined freely ("sitronpotet" / "sitron potet"), and inflections
+ * differ by a letter or two ("poteter" / "potet") — so a word counts as present
+ * if it contains, is contained by, or is within two edits of some word of the
+ * original.
+ */
+export function validateShortTitle(original: string, short: string): boolean {
+  if (typeof short !== "string") return false;
+
+  const cleanOrig = original.trim();
+  const cleanShort = short.trim();
+
+  if (!cleanShort) return false;
+  // No gain, or worse: not worth a cache row.
+  if (cleanShort.length >= cleanOrig.length) return false;
+  if (cleanShort.length > SHORT_TITLE_MAX_CHARS) return false;
+
+  const words = (v: string) =>
+    v
+      .toLowerCase()
+      .replace(/[^a-zæøåäöü0-9\s-]/gi, " ")
+      .split(/[\s-]+/)
+      .filter(Boolean);
+
+  const origWords = words(cleanOrig);
+  const shortWords = words(cleanShort);
+  if (shortWords.length === 0) return false;
+
+  const known = (w: string) =>
+    origWords.some(
+      (ow) => ow === w || ow.includes(w) || w.includes(ow) || editDistance(ow, w) <= 2
+    );
+
+  // Every word must come from the original. One invented word is a reject.
+  if (!shortWords.every(known)) return false;
+
+  // And enough of the original must survive that it still names the dish.
+  // "Laks" alone is technically a trim of "Bakt laks med sitronpotet" and is
+  // not a title.
+  const contentWords = shortWords.filter((w) => w.length > 2);
+  return contentWords.length >= 2;
+}
+
+/**
+ * Shortens dish titles that are too long for the card's headline.
+ *
+ * Kept separate from cleanDishTitles, and from the dish name itself, on
+ * purpose. The scraped name is the primary key of dish_cache, the name a plate
+ * image is archived under, and what the recipe generator is asked about;
+ * rewriting it in place would change those keys and orphan every plate already
+ * drawn for that dish. So this is a display-only field, and the full name is
+ * still what the lightbox and the recipe show.
+ *
+ * Like the other passes it reports `fromModel`, so a rate-limited run writes
+ * nothing to the cache rather than persisting a title it did not get.
+ */
+export async function shortenDishTitles(
+  dishes: string[]
+): Promise<ShortTitlePass> {
+  if (dishes.length === 0) {
+    return { values: {}, fromModel: new Set(), answered: new Set() };
+  }
+
+  const result: Record<string, string> = {};
+  const fromModel = new Set<string>();
+  const answered = new Set<string>();
+
+  for (const batch of chunk(dishes, BATCH_SIZE)) {
+    const prompt = `You are editing headlines for a Norwegian workplace canteen app.
+
+Each title below is printed on a phone card in a column about 25 characters
+wide. Two lines is the space available — roughly ${SHORT_TITLE_TARGET_CHARS}
+characters. These titles are longer than that and need to be shortened.
+
+Shorten each one to at most ${SHORT_TITLE_TARGET_CHARS} characters by REMOVING
+words. Keep the dish recognisable at a glance.
+
+RULES:
+- Only DELETE words. Never add a word that is not already in the title, never
+  substitute a synonym, never translate, never re-order.
+- Keep the main component: the protein or the dish itself, and the one side
+  that identifies it. Drop trailing garnishes, dressings, preparation adverbs
+  and "serveres med ..." clauses first.
+- Keep the original spelling and casing of every word you keep, including
+  Norwegian characters (æ ø å).
+- Do not add a trailing ellipsis, period, or any punctuation of your own.
+- If a title cannot be shortened without losing what the dish is, omit it from
+  the output entirely.
+
+Examples:
+"Bakt laks med stekt sitronpotet, rucola og ajvardressing" -> "Bakt laks med sitronpotet og rucola"
+"Tortilla med skavet kyllinglårfilet, serveres med hvitløksdressing eller salsa" -> "Tortilla med skavet kyllinglårfilet"
+"Ovnsbakt torskefilet med rattatouille og saltbakte poteter" -> "Ovnsbakt torskefilet med poteter"
+
+Titles to shorten:
+${batch.map((d, i) => `${i + 1}. "${d}"`).join("\n")}
+
+Respond with ONLY a JSON object mapping each ORIGINAL title exactly as given
+above to its shortened form. Omit any title you could not shorten safely.
+Format: {"original title": "shortened title"}`;
+
+    const parsed = await generateJson<Record<string, string>>(prompt, "dish title shortening");
+
+    if (parsed && typeof parsed === "object") {
+      // The call landed and returned something parseable, so every title in
+      // this batch has now had its answer — including the ones the model chose
+      // to omit. That is what lets the caller store a "nothing shorter exists"
+      // marker for them without also marking dishes whose call never arrived.
+      for (const dish of batch) answered.add(dish);
+
+      const batchSet = new Set(batch);
+      for (const [original, short] of Object.entries(parsed)) {
+        if (batchSet.has(original) && validateShortTitle(original, short)) {
+          result[original] = short.trim();
+          fromModel.add(original);
+        }
+      }
+    }
+  }
+
+  // No fallback here, unlike origins and descriptions. A dish with no short
+  // title renders its full name, which is correct — there is nothing canned to
+  // put in its place.
+  return { values: result, fromModel, answered };
 }
 
 /**

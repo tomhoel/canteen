@@ -27,6 +27,8 @@ import {
   detectDishOrigins,
   generateDishDescriptions,
   cleanDishTitles,
+  shortenDishTitles,
+  needsShortening,
   fallbackOrigin,
   fallbackDescription,
 } from "./ai.service.js";
@@ -139,6 +141,7 @@ export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuR
     menuData: row.menu_data,
     dishOrigins: row.dish_origins || {},
     dishDescriptions: row.dish_descriptions || {},
+    dishShortNames: row.dish_short_names || {},
     scrapedAt: row.scraped_at,
   };
 
@@ -710,11 +713,13 @@ export async function runWeeklyUpdateService(
       {
         origins: existing?.dishOrigins ?? {},
         descriptions: existing?.dishDescriptions ?? {},
+        shortNames: existing?.dishShortNames ?? {},
       },
       enrichmentRun
     );
     const dishOrigins = enriched.origins;
     const dishDescriptions = enriched.descriptions;
+    const dishShortNames = enriched.shortNames;
 
     if (unchanged) {
       console.log(`✅ ${weekId} identical to the stored week — no new food to file.`);
@@ -725,6 +730,7 @@ export async function runWeeklyUpdateService(
       menuData: weekMenuData,
       dishOrigins,
       dishDescriptions,
+      dishShortNames,
       scrapedAt,
     };
 
@@ -737,6 +743,7 @@ export async function runWeeklyUpdateService(
         menu_data: { ...weekMenuData, fingerprint },
         dish_origins: dishOrigins,
         dish_descriptions: dishDescriptions,
+        dish_short_names: dishShortNames,
         scraped_at: scrapedAt,
       },
       { onConflict: "week_id" }
@@ -869,7 +876,7 @@ async function readStoredRecord(weekId: string): Promise<WeeklyMenuRecord | null
 
   const { data, error } = await supabase
     .from("weekly_menus")
-    .select("week_id, menu_data, dish_origins, dish_descriptions, scraped_at")
+    .select("week_id, menu_data, dish_origins, dish_descriptions, dish_short_names, scraped_at")
     .eq("week_id", weekId)
     .maybeSingle();
 
@@ -884,6 +891,7 @@ async function readStoredRecord(weekId: string): Promise<WeeklyMenuRecord | null
     menuData: data.menu_data,
     dishOrigins: data.dish_origins ?? {},
     dishDescriptions: data.dish_descriptions ?? {},
+    dishShortNames: data.dish_short_names ?? {},
     scrapedAt: data.scraped_at,
   };
 }
@@ -892,6 +900,7 @@ interface StoredRow {
   fingerprint?: string;
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
+  dishShortNames: Record<string, string>;
   /** The stored week, so a partial scrape can be merged into it. */
   menuData: MenuData | null;
 }
@@ -915,7 +924,7 @@ async function getStoredRow(
 
   const { data, error } = await supabase
     .from("weekly_menus")
-    .select("menu_data, dish_origins, dish_descriptions")
+    .select("menu_data, dish_origins, dish_descriptions, dish_short_names")
     .eq("week_id", weekId)
     .maybeSingle();
 
@@ -930,6 +939,7 @@ async function getStoredRow(
       fingerprint: data.menu_data?.fingerprint,
       dishOrigins: data.dish_origins ?? {},
       dishDescriptions: data.dish_descriptions ?? {},
+      dishShortNames: data.dish_short_names ?? {},
       menuData: (data.menu_data as MenuData) ?? null,
     },
   };
@@ -939,6 +949,7 @@ async function getStoredRow(
 interface StoredEnrichment {
   origins: Record<string, DishOrigin>;
   descriptions: Record<string, DishDescription>;
+  shortNames: Record<string, string>;
 }
 
 /**
@@ -981,7 +992,11 @@ async function enrichDishes(
   dishes: string[],
   stored: StoredEnrichment,
   run: EnrichmentRun
-): Promise<{ origins: Record<string, DishOrigin>; descriptions: Record<string, DishDescription> } & EnrichmentCounts> {
+): Promise<{
+  origins: Record<string, DishOrigin>;
+  descriptions: Record<string, DishDescription>;
+  shortNames: Record<string, string>;
+} & EnrichmentCounts> {
   const { rows: cache, failed: cacheUnreadable } = await loadDishCache(dishes);
   const now = Date.now();
 
@@ -1007,6 +1022,9 @@ async function enrichDishes(
     return {
       origins,
       descriptions,
+      // Whatever the row already holds. There is no fallback for a short title
+      // — a dish without one renders its full name, which is correct.
+      shortNames: { ...stored.shortNames },
       fromCache: 0,
       sentToModel: 0,
       durablyCached: 0,
@@ -1018,8 +1036,10 @@ async function enrichDishes(
 
   const origins: Record<string, DishOrigin> = {};
   const descriptions: Record<string, DishDescription> = {};
+  const shortNames: Record<string, string> = {};
   const needOrigin: string[] = [];
   const needDescription: string[] = [];
+  const needShortName: string[] = [];
   const givenUp: string[] = [];
   let fromCache = 0;
 
@@ -1027,7 +1047,14 @@ async function enrichDishes(
     const hit = cache.get(normalizeDishName(dish));
     if (hit?.origin) origins[dish] = hit.origin;
     if (hit?.description) descriptions[dish] = hit.description;
-    if (hit?.origin && hit?.description) {
+    if (hit?.shortName) shortNames[dish] = hit.shortName;
+
+    // A short title is only wanted for a name too long for the card, and is
+    // only ever asked for once: any stored value settles it, including the
+    // "could not be shortened" marker written further down.
+    const wantsShortName = needsShortening(dish) && !hit?.shortName;
+
+    if (hit?.origin && hit?.description && !wantsShortName) {
       fromCache++;
       continue;
     }
@@ -1043,22 +1070,25 @@ async function enrichDishes(
 
     if (!hit?.origin) needOrigin.push(dish);
     if (!hit?.description) needDescription.push(dish);
+    if (wantsShortName) needShortName.push(dish);
   }
 
-  const asked = new Set([...needOrigin, ...needDescription]);
+  const asked = new Set([...needOrigin, ...needDescription, ...needShortName]);
   for (const dish of asked) run.attempted.add(dish);
   console.log(
     `🗃️  ${fromCache} dishes fully cached, ${asked.size} to ask about ` +
-      `(${needOrigin.length} origins, ${needDescription.length} descriptions)` +
+      `(${needOrigin.length} origins, ${needDescription.length} descriptions, ` +
+      `${needShortName.length} long titles)` +
       (givenUp.length ? `, ${givenUp.length} given up on` : "") +
       "."
   );
 
   // detectDishOrigins/generateDishDescriptions short-circuit on an empty list,
   // so a fully-cached week costs no model call at all.
-  const [newOrigins, newDescriptions] = await Promise.all([
+  const [newOrigins, newDescriptions, newShortNames] = await Promise.all([
     detectDishOrigins(needOrigin),
     generateDishDescriptions(needDescription),
+    shortenDishTitles(needShortName),
   ]);
 
   for (const dish of needOrigin) {
@@ -1066,6 +1096,9 @@ async function enrichDishes(
   }
   for (const dish of needDescription) {
     if (newDescriptions.fromModel.has(dish)) descriptions[dish] = newDescriptions.values[dish];
+  }
+  for (const dish of needShortName) {
+    if (newShortNames.fromModel.has(dish)) shortNames[dish] = newShortNames.values[dish];
   }
 
   // `origins[dish]`/`descriptions[dish]` now hold only durable values — a cache
@@ -1080,11 +1113,17 @@ async function enrichDishes(
     if (!durableDescriptions.has(dish)) {
       descriptions[dish] = stored.descriptions[dish] ?? fallbackDescription(dish);
     }
+    // No fallback: a dish with no short title renders its full name. Only the
+    // stored row can supply one this run did not get.
+    if (!shortNames[dish] && stored.shortNames[dish]) {
+      shortNames[dish] = stored.shortNames[dish];
+    }
     if (!durableOrigins.has(dish) || !durableDescriptions.has(dish)) unresolved.push(dish);
   }
 
   const askedOrigin = new Set(needOrigin);
   const askedDescription = new Set(needDescription);
+  const askedShortName = new Set(needShortName);
   const entries: DishCacheEntry[] = [];
   const newlyExhausted: string[] = [];
   let durablyCached = 0;
@@ -1097,11 +1136,26 @@ async function enrichDishes(
       (askedOrigin.has(dish) && !gainedOrigin) ||
       (askedDescription.has(dish) && !gainedDescription);
 
-    if (gainedOrigin || gainedDescription) durablyCached++;
+    if (gainedOrigin || gainedDescription || newShortNames.fromModel.has(dish)) {
+      durablyCached++;
+    }
 
     const entry: DishCacheEntry = { cacheKey: key, originalName: dish };
     if (gainedOrigin) entry.origin = newOrigins.values[dish];
     if (gainedDescription) entry.description = newDescriptions.values[dish];
+
+    // A title the model looked at and declined to shorten is stored as itself.
+    // That is the "asked, and nothing better exists" marker: it renders as the
+    // full name, which is what would have happened anyway, and it stops the
+    // dish being re-sent on every run forever. Written only when the model
+    // actually answered for that batch — a rate-limited call has to stay
+    // retryable, and `answered` is what tells a decline apart from a call that
+    // never landed.
+    if (newShortNames.fromModel.has(dish)) {
+      entry.shortName = newShortNames.values[dish];
+    } else if (askedShortName.has(dish) && newShortNames.answered.has(dish)) {
+      entry.shortName = dish;
+    }
 
     if (failed) {
       const hit = cache.get(key);
@@ -1134,6 +1188,7 @@ async function enrichDishes(
   return {
     origins,
     descriptions,
+    shortNames,
     fromCache,
     sentToModel: asked.size,
     durablyCached,

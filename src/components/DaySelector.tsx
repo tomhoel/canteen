@@ -15,9 +15,6 @@ interface DaySelectorProps {
       Used to trigger the YOLO randomiser from the day bar itself. */
   onTodayPress?: () => void;
   cardsRef?: React.RefObject<HTMLElement | null>;
-  /** Canteens with no menu in the previewed week. Named in the banner so an
-      absent card reads as "not published yet" rather than as a missing card. */
-  pendingCanteens?: string[];
   /** Set while the menu is loading. The bar still renders — it holds the same
       space and shows the same dates either way — but there is no day to change
       to yet, and the selection would be thrown away when the data arrives. */
@@ -34,7 +31,6 @@ export default function DaySelector({
   onDayHover,
   onTodayPress,
   cardsRef,
-  pendingCanteens = [],
   disabled = false,
 }: DaySelectorProps) {
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -121,21 +117,6 @@ export default function DaySelector({
       aria-label={"Velg dag"}
       style={dynamicBottom != null ? { bottom: dynamicBottom } : undefined}
     >
-      {mode !== "weekday-current" && (
-        <div className="day-bar-banner" role="status">
-          {mode === "weekend-preview"
-            ? (`Forhåndsvisning av neste uke${
-                    pendingCanteens.length
-                      ? ` — ${pendingCanteens.join(", ")} har ikke publisert ennå`
-                      : ""
-                  }`)
-            : mode === "pinned-week"
-            // A week reached by ?week=. Say so, or the dates in the strip look
-            // like a bug rather than an answer to what was asked for.
-            ? ("Du ser på en annen uke")
-            : ("Helg — kantinene er stengt")}
-        </div>
-      )}
       <div className="day-selector" role="tablist" ref={selectorRef}>
         {pill && (
           <motion.div

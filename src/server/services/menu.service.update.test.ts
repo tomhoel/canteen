@@ -38,6 +38,7 @@ interface StoredRowShape {
   menu_data: Record<string, unknown> | null;
   dish_origins: Record<string, unknown>;
   dish_descriptions: Record<string, unknown>;
+  dish_short_names?: Record<string, unknown>;
 }
 
 interface Upsert {
@@ -55,6 +56,12 @@ interface World {
   /** Dish names the model refuses to answer for, per pass. */
   silentOrigins: Set<string>;
   silentDescriptions: Set<string>;
+  /** Dish names long enough that the updater should ask for a short title. */
+  longTitles: Set<string>;
+  /** Long titles the model looks at and declines to shorten. */
+  declinedShortTitles: Set<string>;
+  /** When true the shortening call fails outright: nothing is answered. */
+  shortTitleCallFails: boolean;
   cacheRows: Map<string, Record<string, any>>;
   redisAvailable: boolean;
   redisWritesFail: boolean;
@@ -65,6 +72,7 @@ interface World {
   cacheWrites: Array<Record<string, unknown>[]>;
   originsAsked: string[][];
   descriptionsAsked: string[][];
+  shortTitlesAsked: string[][];
   redisSets: string[];
   redisGets: string[];
   redisConstructed: number;
@@ -111,6 +119,9 @@ function reset(overrides: Partial<World> = {}) {
     rejectUpsert: new Set(),
     silentOrigins: new Set(),
     silentDescriptions: new Set(),
+    longTitles: new Set(),
+    declinedShortTitles: new Set(),
+    shortTitleCallFails: false,
     cacheRows: new Map(),
     redisAvailable: false,
     redisWritesFail: false,
@@ -119,6 +130,7 @@ function reset(overrides: Partial<World> = {}) {
     cacheWrites: [],
     originsAsked: [],
     descriptionsAsked: [],
+    shortTitlesAsked: [],
     redisSets: [],
     redisGets: [],
     redisConstructed: 0,
@@ -185,6 +197,24 @@ mock.module("./ai.service.js", {
       return { values, fromModel };
     },
     cleanDishTitles: async (_dishes: string[]) => ({}),
+    needsShortening: (dish: string) => world.longTitles.has(dish),
+    shortenDishTitles: async (dishes: string[]) => {
+      world.shortTitlesAsked.push([...dishes]);
+      const values: Record<string, string> = {};
+      const fromModel = new Set<string>();
+      const answered = new Set<string>();
+      if (world.shortTitleCallFails) return { values, fromModel, answered };
+      for (const d of dishes) {
+        // The call landed, so every dish in it has had its answer — even the
+        // ones the model chose not to shorten.
+        answered.add(d);
+        if (!world.declinedShortTitles.has(d)) {
+          values[d] = `kort:${d}`;
+          fromModel.add(d);
+        }
+      }
+      return { values, fromModel, answered };
+    },
     fallbackOrigin: (dish: string) => ({ code: "fb", country: `fallback:${dish}` }),
     fallbackDescription: (dish: string) => ({ no: `fallback:${dish}`, en: `fallback:${dish}` }),
   },
@@ -308,6 +338,7 @@ function weeklyMenusBuilder() {
         menu_data: payload.menu_data,
         dish_origins: payload.dish_origins,
         dish_descriptions: payload.dish_descriptions,
+        dish_short_names: payload.dish_short_names,
       });
       return Promise.resolve({ error: null });
     },
@@ -700,6 +731,109 @@ test("a half-answered dish keeps the half that worked", async () => {
   assert.deepEqual(world.descriptionsAsked, [["Fiskesuppe"]]);
   assert.deepEqual(second.stats.unresolved, []);
   assert.equal(world.cacheRows.get("fiskesuppe")!.enrich_attempts, 0, "recovery clears the counter");
+});
+
+test("only titles too long for the card are sent to be shortened", async () => {
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Kort rett", "En veldig lang rett"]) }),
+    longTitles: new Set(["En veldig lang rett"]),
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.deepEqual(
+    world.shortTitlesAsked,
+    [["En veldig lang rett"]],
+    "a name that already fits is never worth a model call"
+  );
+  assert.equal(world.cacheRows.get("en veldig lang rett")!.short_name, "kort:En veldig lang rett");
+  assert.equal(world.cacheRows.get("kort rett")!.short_name, undefined);
+});
+
+test("a shortened title reaches the week row without touching the dish name", async () => {
+  // The whole reason this is a side map: the dish name is the dish_cache key and
+  // the name a plate is archived under. Shortening must not move it.
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["En veldig lang rett"]) }),
+    longTitles: new Set(["En veldig lang rett"]),
+  });
+
+  await runWeeklyUpdateService();
+
+  const upsert = world.upserts.at(-1)!;
+  assert.deepEqual(upsert.payload.dish_short_names, {
+    "En veldig lang rett": "kort:En veldig lang rett",
+  });
+  assert.ok(
+    JSON.stringify(upsert.payload.menu_data).includes("En veldig lang rett"),
+    "the full name is still what the menu carries"
+  );
+  assert.ok(world.cacheRows.has("en veldig lang rett"), "and the cache key is unchanged");
+});
+
+test("a title the model declines is marked, and never asked about again", async () => {
+  // Without the marker, a dish that genuinely cannot be shortened is re-sent on
+  // every run for as long as the kitchens keep serving it.
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Uforkortbar rett"]) }),
+    longTitles: new Set(["Uforkortbar rett"]),
+    declinedShortTitles: new Set(["Uforkortbar rett"]),
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.equal(
+    world.cacheRows.get("uforkortbar rett")!.short_name,
+    "Uforkortbar rett",
+    "stored as itself: renders as the full name, and settles the question"
+  );
+
+  world.shortTitlesAsked = [];
+  await runWeeklyUpdateService();
+  assert.deepEqual(world.shortTitlesAsked, [[]], "and it is never sent again");
+});
+
+test("a shortening call that never lands stays retryable", async () => {
+  // The failure that must not be permanent. One rate-limited afternoon would
+  // otherwise mark a whole week of titles unshortenable forever.
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["En veldig lang rett"]) }),
+    longTitles: new Set(["En veldig lang rett"]),
+    shortTitleCallFails: true,
+  });
+
+  await runWeeklyUpdateService();
+
+  assert.equal(
+    world.cacheRows.get("en veldig lang rett")!.short_name,
+    undefined,
+    "nothing is written when the model did not answer"
+  );
+
+  world.shortTitleCallFails = false;
+  world.shortTitlesAsked = [];
+  await runWeeklyUpdateService();
+
+  assert.deepEqual(world.shortTitlesAsked, [["En veldig lang rett"]], "the next run asks again");
+  assert.equal(world.cacheRows.get("en veldig lang rett")!.short_name, "kort:En veldig lang rett");
+});
+
+test("a missing short title does not burn the dish's enrichment attempts", async () => {
+  // enrich_attempts is what eventually stops asking about origins and
+  // descriptions. A display-only field with no fallback must not consume it, or
+  // one unshortenable title would give up on a dish that renders perfectly.
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Uforkortbar rett"]) }),
+    longTitles: new Set(["Uforkortbar rett"]),
+    declinedShortTitles: new Set(["Uforkortbar rett"]),
+  });
+
+  await runWeeklyUpdateService();
+
+  const row = world.cacheRows.get("uforkortbar rett")!;
+  assert.ok(row.origin, "the origin still landed");
+  assert.ok(row.description, "so did the description");
+  assert.equal(row.enrich_attempts, 0, "and nothing was counted against the dish");
 });
 
 test("a partial write does not blank the field another run filled in", async () => {

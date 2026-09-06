@@ -26,6 +26,17 @@ export interface WeeklyMenuResponse {
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
   /**
+   * Dish name -> a shortened form of it, for the card's headline only.
+   *
+   * Present only for names too long to fit two lines; everything else renders
+   * as scraped. A value equal to its key means the model was asked and had
+   * nothing shorter, which renders identically.
+   *
+   * The full name stays in `menuData` and is what the lightbox and the recipe
+   * use — this never replaces it.
+   */
+  dishShortNames: Record<string, string>;
+  /**
    * Storage path of the plate image for each canteen-day, keyed
    * `"<day>|<canteen name>"`. Absent means there is no picture for that day and
    * the card should render its placeholder.
@@ -269,6 +280,7 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     menuData: record.menuData,
     dishOrigins: pickReachable(record.dishOrigins, reachable),
     dishDescriptions: pickReachable(record.dishDescriptions, reachable),
+    dishShortNames: pickReachable(record.dishShortNames ?? {}, reachable),
     // Keyed off the week that was actually served, which is not always the one
     // that was asked for: the read falls back to the most recent stored week.
     plateImages: await resolvePlateImages(record.menuData, record.weekId),
