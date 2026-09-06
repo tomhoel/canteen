@@ -2071,16 +2071,23 @@ body {
     grid-row: 3;
     align-self: start;
     min-height: 0;
-    /* Whole lines only. The leftover is a continuous number of pixels and
-       almost never a multiple of the line height, so clipping to it left a
-       3-15px slice of the next line's letter-tops showing on every card —
-       measured on all fifteen. Rounding the box down to a whole number of
-       lines cuts between them instead.
+    /* Whole lines, and never more than two.
+
+       Whole, because the leftover is a continuous number of pixels and almost
+       never a multiple of the line height: clipping straight to it left a
+       3-15px slice of the next line's letter-tops showing on every card,
+       measured on all fifteen. Rounding the box down cuts between lines.
+
+       Two, because this is the secondary text on the card and a third or
+       fourth line of it starts to compete with the dish it is describing. The
+       description is written to that budget upstream — see
+       DESCRIPTION_MAX_CHARS, which is the 68 characters two lines actually
+       hold — so this ceiling should almost never be the thing that bites.
 
        The plain 100% below is the fallback: if round() is ever unavailable the
        declaration is dropped and the box is merely un-rounded, not unbounded. */
     max-height: 100%;
-    max-height: round(down, 100%, 1lh);
+    max-height: min(2lh, round(down, 100%, 1lh));
     overflow: hidden;
   }
 

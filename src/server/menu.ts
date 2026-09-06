@@ -6,6 +6,7 @@ import {
   isOsloWeekend,
 } from "../lib/dateUtils.js";
 import { DAY_KEYS } from "../lib/constants.js";
+import { fitDescription } from "./services/ai.service.js";
 import { pickMainDish } from "../lib/dish-ranking.js";
 import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service.js";
 import { loadDishCache, normalizeDishName } from "./services/dish-cache.service.js";
@@ -97,6 +98,26 @@ function reachableDishNames(menuData: MenuData): Set<string> {
   }
 
   return names;
+}
+
+/**
+ * Trims every description to the two lines a phone card can show.
+ *
+ * Done here, on the way out, rather than where descriptions are generated. The
+ * dish_cache holds hundreds written when the prompt asked for "under 110
+ * characters" — three and a half lines — and those are the ones being cut off
+ * mid-sentence on the card today. Fitting at read time reaches all of them at
+ * once, with no regeneration and no model calls, and leaves the full text in
+ * the cache in case a future layout has room for it.
+ *
+ * Idempotent: anything already inside the budget is returned untouched.
+ */
+function fitDescriptions(
+  d: Record<string, DishDescription>
+): Record<string, DishDescription> {
+  const out: Record<string, DishDescription> = {};
+  for (const [dish, entry] of Object.entries(d)) out[dish] = fitDescription(entry);
+  return out;
 }
 
 /** Keeps only the entries `reachableDishNames` says a card can ask for. */
@@ -279,7 +300,7 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     weekId: record.weekId,
     menuData: record.menuData,
     dishOrigins: pickReachable(record.dishOrigins, reachable),
-    dishDescriptions: pickReachable(record.dishDescriptions, reachable),
+    dishDescriptions: fitDescriptions(pickReachable(record.dishDescriptions, reachable)),
     dishShortNames: pickReachable(record.dishShortNames ?? {}, reachable),
     // Keyed off the week that was actually served, which is not always the one
     // that was asked for: the read falls back to the most recent stored week.

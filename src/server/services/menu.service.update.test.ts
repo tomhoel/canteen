@@ -215,6 +215,10 @@ mock.module("./ai.service.js", {
       }
       return { values, fromModel, answered };
     },
+    // Identity here on purpose: the trimming rules have their own tests in
+    // fit-description.test.ts, and these assertions are about which dishes get
+    // asked about and what reaches the cache, not about text length.
+    fitDescription: (d: unknown) => d,
     fallbackOrigin: (dish: string) => ({ code: "fb", country: `fallback:${dish}` }),
     fallbackDescription: (dish: string) => ({ no: `fallback:${dish}`, en: `fallback:${dish}` }),
   },
