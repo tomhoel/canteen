@@ -12,6 +12,75 @@ import { pathToFileURL } from "node:url";
 import type { ServerResponse } from "node:http";
 
 /**
+ * Shortens the production critical path, all inside index.html.
+ *
+ * Three separate problems, measured on a cold load of the deployed app:
+ *
+ * 1. The render-blocking stylesheet was the LAST thing in <head>, at byte
+ *    ~23,400 of a comment-heavy document. Nothing can paint before it lands —
+ *    `#root { visibility: hidden }` in the inline <style> is released by a rule
+ *    inside that file — so its discovery time is first paint's floor.
+ *
+ * 2. `routes-*.js` holds HomeClient and FoodCard and is reached by a dynamic
+ *    import the preload scanner cannot see. It began downloading only after
+ *    ~456 KB of raw JS had been parsed and executed: a second, serialized
+ *    network wave for the chunk that actually draws the cards.
+ *
+ * 3. ~17 KB of explanatory comments sat in front of all of it. They are worth
+ *    keeping in source and worth nothing to a browser.
+ *
+ * Build only — the dev server has no <link> to move (Vite serves CSS through
+ * JS there) and the comments help while editing.
+ */
+function shortenCriticalPath(): Plugin {
+  return {
+    name: "canteen-shorten-critical-path",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html, ctx) {
+        // Strip HTML comments. Safe here because no <script> or <style> in this
+        // document contains the literal `<!--`; the inline scripts use `//` and
+        // the inline styles use `/* */`.
+        let out = html.replace(/<!--[\s\S]*?-->\s*/g, "");
+
+        // Hoist the stylesheet so the preload scanner finds it near the top.
+        //
+        // CRITICALLY: after the inline <style>, never before it. The inline
+        // block sets `#root { visibility: hidden }` and globals.css releases it
+        // with `#root { visibility: visible }` — equal specificity, so the
+        // later rule wins. Moving the stylesheet above the inline style would
+        // invert that and leave the app permanently blank.
+        const linkRe = /\s*<link[^>]+rel="stylesheet"[^>]*>/;
+        const link = out.match(linkRe);
+        const styleEnd = out.indexOf("</style>");
+        if (link && styleEnd !== -1) {
+          out = out.replace(linkRe, "");
+          const at = out.indexOf("</style>") + "</style>".length;
+          out = out.slice(0, at) + "\n    " + link[0].trim() + out.slice(at);
+        }
+
+        // Make the route chunk discoverable. Both `routes-*` chunks are
+        // preloaded rather than just the big one: there are only two, the
+        // second is ~500 bytes gzipped, and picking by name is more robust
+        // than guessing which facade id the router's code-splitter produced.
+        const routeChunks = Object.keys(ctx.bundle ?? {}).filter((f) =>
+          /^assets\/routes-[^/]+\.js$/.test(f)
+        );
+        if (routeChunks.length) {
+          const tags = routeChunks
+            .map((f) => `    <link rel="modulepreload" crossorigin href="/${f}">`)
+            .join("\n");
+          out = out.replace("</head>", `${tags}\n  </head>`);
+        }
+
+        return out;
+      },
+    },
+  };
+}
+
+/**
  * Serves the api/ functions during `npm run dev`.
  *
  * In production Vercel turns every file under api/ into a serverless function.
@@ -122,6 +191,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      shortenCriticalPath(),
       devApiPlugin(),
       TanStackRouterVite({
         target: "react",
