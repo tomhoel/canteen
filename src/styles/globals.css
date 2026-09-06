@@ -2435,12 +2435,21 @@ body {
 
   /* Stale banner — absolutely positioned overlay at card bottom, no height impact */
   .stale-banner {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    flex-basis: auto;
-    margin: 0;
+    /* A real row of the card, not an overlay.
+       It used to be absolutely positioned across the bottom, which meant the
+       card had to keep the side-dish block underneath it at opacity 0 to
+       reserve the space — 82.7px of a 203px card, of which the 48px banner
+       covered 38. The remaining 45px was simply blank, and the description
+       above it was squeezed by room that showed nothing.
+       As row 2 it takes exactly the height it needs, and the hidden block can
+       be removed outright. */
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    /* Bleeds back out through the card's asymmetric padding so it still sits
+       flush on the bottom edge, corner to corner, as it did when it was
+       absolute. */
+    margin: 0 -12px calc(-1 * var(--card-pad-y)) -16px;
     padding: 10px 14px;
     gap: 8px;
     border-radius: 0 0 18px 18px;
@@ -2451,10 +2460,31 @@ body {
     box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.08);
   }
 
-  /* Side dishes fade out on outdated cards — stale banner overlays that zone */
+  /* An outdated card has no side dishes to show, so it does not keep their
+     space. `opacity: 0` left them invisible but still laid out, which is what
+     put 45px of nothing in the middle of the card and took those lines off the
+     description. The banner above occupies row 2 instead. */
   .food-card.outdated .card-bottom {
-    opacity: 0;
-    pointer-events: none;
+    display: none;
+  }
+
+  /* The rows swap over on a stale card: the plate and text take the height
+     they need, and the banner takes the rest.
+
+     A card with no side dishes has less to say than its neighbours, and the
+     leftover has to land somewhere. Under the normal `1fr auto` it pooled
+     between the description and the banner — 94px of nothing on a 224px card.
+     Giving the banner the flexible row hands 27px of that to the one element
+     that can use it, and it stays flush on the bottom edge where its rounded
+     corners belong. The canteen name still starts at 11.1px, level with the
+     other two cards. */
+  .food-card.outdated {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .food-card.outdated .stale-banner {
+    align-self: stretch;
+    align-items: center;
   }
 
   /* Per-canteen closed card — row layout (image left, text right) matching
