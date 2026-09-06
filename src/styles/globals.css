@@ -2117,7 +2117,12 @@ body {
   /* Card layout - horizontal, grows to fill viewport */
   .food-card {
     width: 100%;
-    flex: 1 1 auto;
+    /* `1 1 0`, not `1 1 auto`. With basis `auto` the basis is the card's own
+       CONTENT height, so flex-grow distributes free space on top of differences
+       it has already baked in — which is why a canteen with three side dishes
+       ended up a whole row taller than one with one. Basis 0 makes all three
+       cards start from nothing and take an identical share. */
+    flex: 1 1 0;
     min-height: 0 !important;
     display: flex;
     flex-direction: row;
@@ -2136,7 +2141,10 @@ body {
 
   .food-card-3d-wrapper {
     width: 100%;
-    flex: 1 1 auto;
+    /* Must match .food-card above — this wrapper is the actual flex item of
+       .cards-animated-wrapper, so a basis of `auto` here would reintroduce the
+       content-height difference one level up. */
+    flex: 1 1 0;
     display: flex;
     min-height: 0;
   }
