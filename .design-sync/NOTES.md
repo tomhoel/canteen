@@ -134,6 +134,29 @@ three identical cards. The props are documented in the contract instead.
   radius, and `--plate-pull-x` as other. Do not delete them as noise — there is
   a note in globals.css saying so.
 
+  Two rules for the marker, both learned by getting them wrong:
+
+  1. **It must stand alone.** A comment whose entire body is the family name is
+     read; one that continues into prose is not. Prose goes in a second comment.
+  2. **Annotate every declaration, not just the base `:root`.** The classifier
+     reads the LAST declaration. `--fs-*` is redeclared in the <=768px and
+     >=1101px blocks, so a marker on the base alone never applied. The panel
+     values (11px, 14px, 19px, 30px) are the 1101px column, which is how this
+     was diagnosed. All three sites carry markers now; 33 declarations total.
+
+  **Never write the comment-closing characters inside a CSS comment.** A note
+  here that quoted the marker syntax literally terminated its own comment and
+  failed the build with `[lightningcss minify] Unexpected token Semicolon`.
+  `npm test` does NOT catch it — tokens.test.ts reads the file as text.
+  `npm run build` does, so always build after editing this file.
+
+  **Check the sentinel before trusting `_ds_manifest.json`.** The self-check
+  regenerates it on project open and clears `_ds_needs_recompile`. If that file
+  still appears in `list_files`, the manifest predates your upload and says
+  nothing about whether the markers took. On 2026-09-06 a report claimed the
+  `--lh-*` markers had "taken" while the manifest still read `other` for them
+  and was byte-identical to its pre-upload state, sentinel still present.
+
   Beware a report that says tokens are "unclassified": none are. Check
   `_ds_manifest.json` in the project before acting on such a claim — eight of
   the twelve named in one already carried exactly the kind being asked for, so
