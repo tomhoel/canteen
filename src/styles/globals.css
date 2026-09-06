@@ -1,16 +1,55 @@
 /* ─── Nordic Warmth — Canteen Design System ─── */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN SYSTEM
+
+   Every value below is verified by `node scripts/verify-tokens.mjs`, which
+   computes WCAG 2.1 contrast from first principles for each ink against each
+   of the four grounds it actually lands on. That script is the gate: it runs
+   in CI, and an adopted value that does not clear its threshold fails the
+   build. It also records what the app shipped before, so the case for each
+   change stays visible rather than becoming folklore.
+
+   Two rules the tokens cannot enforce on their own:
+
+   1. `opacity` may never be the thing that makes text quiet. Colour carries
+      de-emphasis. An opacity multiplier is invisible to a computed-style
+      audit — it reads the token and sees a pass — while the eye receives the
+      composite. Four shipped AA failures were hiding exactly there, the worst
+      at 1.59:1.
+
+   2. Orange has three roles and they are not interchangeable:
+        --accent-orange       decorative only  (fills, borders, dots, tints)
+        --accent-orange-ink   text on a light ground, AND any surface that
+                              carries white text
+      Using the decorative value for either text case is the single most
+      common failure in this codebase.
+   ═══════════════════════════════════════════════════════════════════════════ */
 :root {
   --bg-cream: #f5f0e8;
   --bg-warm: #ede7db;
   --card-white: #ffffff;
   --text-primary: #1a1511;
   --text-secondary: #6b6158;
-  --text-muted: #a09890;
+  /* Was #a09890 — 2.84:1 on white, and it carried real text in 41 rules across
+     five stylesheets. It could never legally do that.
+
+     NOTE: muted is no longer a distinct visual weight. Anything clearing 4.5:1
+     on cream must land at L* <= 46, which is within ~4 L* of --text-secondary;
+     this palette supports two text inks, not three. The muted-vs-secondary
+     distinction now comes from size, weight and case — which every call site
+     already does. Do not "restore the hierarchy" by lightening this back. */
+  --text-muted: #6f665c;
+  /* Decorative only. 3.52:1 clears the 3:1 bar for a fill, border or dot, and
+     fails 4.5:1 for anything with text in it. */
   --accent-orange: #c8741a;
+  /* Text on a light ground, and any orange surface carrying white text.
+     5.64:1 on white, 4.98 on cream, 4.58 on warm; white on it is 5.64. */
+  --accent-orange-ink: #9c5510;
   --accent-yellow: #e8a020;
   --accent-coral: #d9604a;
-  --accent-green: #4a9e55;
+  /* Was #4a9e55 — 3.33:1. Also retires four raw #34c759 literals at 2.22:1. */
+  --accent-green: #357a3e;
   --accent-rose: #d4a090;
   --border-light: #ece4d8;
   --shadow-soft: rgba(60, 30, 0, 0.05);
@@ -21,6 +60,69 @@
   --font-serif: "Outfit", sans-serif;
   --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ─── Type scale ───────────────────────────────────────────────────────────
+     Five roles, three breakpoint columns. Named by ROLE, not by size rank,
+     because mobile and desktop legitimately want different absolute values for
+     the same job. Each column is monotonic.
+
+     This column is the tablet band (769–1100px). Mobile overrides below at
+     max-width 768, desktop at min-width 1101.
+
+     The app shipped THIRTEEN sizes on one phone screen — 8, 8.44, 8.5, 9.28,
+     9.5, 10, 10.13, 10.97, 11, 12.66, 14, 15.19, 22 — from seven different dvh
+     coefficients with seven different floors. Five of them spanned 1.7px and
+     rendered as two.
+
+     Mobile values MUST stay dvh clamps. The 30 dvh clamps in this file are the
+     mechanism that fits three cards in an 844px viewport with no scroll; a
+     flat-pixel mobile scale breaks the layout on the phones the app is used on.
+     A blanket 11px floor was proposed twice by the audit and rejected twice. */
+  --fs-label: 10.5px;   /* eyebrows, section labels, allergen codes, badges */
+  --fs-meta: 12.5px;    /* side-dish rows, day-label dates */
+  --fs-body: 13px;      /* dish description, day names, sheet body */
+  --fs-title: 16.5px;   /* dish name — and the action sheet's, so they cannot drift */
+  --fs-hero: 26px;      /* page title */
+
+  --lh-tight: 1.25;
+  --lh-snug: 1.35;
+  --lh-body: 1.45;
+
+  /* ─── Spacing ──────────────────────────────────────────────────────────────
+     8-based with two half-steps, replacing 23 distinct single-value paddings
+     and 12 distinct gaps.
+
+     ADOPTION IS OPPORTUNISTIC. New and touched rules use these; there is no
+     bulk-migration commit, because that is a large diff with no user-visible
+     benefit on an app people use every day. */
+  --sp-0: 2px;   --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;
+  --sp-4: 16px;  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;  --sp-12: 48px;
+
+  /* ─── Radius ───────────────────────────────────────────────────────────────
+     Eighteen values collapse to six. --r-lg is the identity radius: it is what
+     makes a canteen card look like a canteen card. */
+  --r-xs: 6px;      /* chips, tags, micro pills */
+  --r-sm: 12px;     /* inner surfaces: buttons, list rows, image tiles */
+  --r-md: 16px;     /* secondary panels */
+  --r-lg: 24px;     /* cards, modals, sheets */
+  --r-pill: 999px;
+  --r-round: 50%;
+
+  /* ─── Elevation ────────────────────────────────────────────────────────────
+     Every shadow is warm — rgb(60,30,0) — never neutral black. The app had
+     three shadow tokens used four times, against ~20 hand-written shadows,
+     half of them black on a palette whose shadow family is brown. */
+  --e-1: 0 1px 3px rgba(60, 30, 0, 0.08);
+  --e-2: 0 2px 8px rgba(60, 30, 0, 0.10);
+  --e-3: 0 6px 20px rgba(60, 30, 0, 0.12);
+  --e-4: 0 16px 48px rgba(60, 30, 0, 0.16), 0 2px 8px rgba(60, 30, 0, 0.08);
+
+  /* ─── Motion ───────────────────────────────────────────────────────────────
+     --dur-slow matches DUR_MS in ui/sheet.tsx; changing one without the other
+     desynchronises the sheet's CSS from its JS unmount timer. */
+  --dur-fast: 150ms;   /* colour, background, hover, press */
+  --dur-base: 250ms;   /* entrances, reveals, list items */
+  --dur-slow: 400ms;   /* sheet and modal transitions */
 
   /* ─── Stacking order ───────────────────────────────────────────────────────
      Four layers, named, so nothing has to be inferred from a bare number.
@@ -39,6 +141,46 @@
   --z-overlay: 1500;
   --z-sheet: 2100;
 
+}
+
+/* Type scale, mobile column (<=768px).
+
+   Every value is a dvh clamp, deliberately. The floor is what renders on a
+   phone shorter than 844px — an iPhone SE at 667px sits on it — so the floor,
+   not the ceiling, is the number that matters. It moves from an authored 7.5px
+   to 9.5px.
+
+   If a card ever overflows after adopting these, lower the FLOORS, never the
+   ceilings: the ceiling is what a roomy phone gets and it is already modest. */
+@media (max-width: 768px) {
+  :root {
+    --fs-label: clamp(9.5px, 1.15dvh, 10.5px);
+    --fs-meta:  clamp(9.5px, 1.2dvh, 12px);
+    --fs-body:  clamp(10.5px, 1.5dvh, 13.5px);
+    --fs-title: clamp(13px, 2dvh, 18px);
+    --fs-hero:  20px;
+  }
+}
+
+/* Type scale, desktop column (>=1101px).
+
+   1101, not 769. Between 769 and 1100 three 380px cards flex down to ~251px
+   and the dish name already runs to three lines; stepping type up there makes
+   it worse. This stylesheet already draws its own roomy/cramped line at
+   1100px, and the step belongs on the far side of it.
+
+   Desktop shipped identical type to tablet because every vw clamp in the file
+   saturates below a 700px viewport: .dish-name pinned at max from 471px up,
+   .hero-title from 520px. A 1440px card has 73% more area than the phone card
+   and carried a dish name 1.3px larger. */
+@media (min-width: 1101px) {
+  :root {
+    --fs-label: 11px;
+    --fs-meta:  14px;
+    --fs-body:  14.5px;
+    --fs-title: 19px;
+    --fs-hero:  30px;
+  }
 }
 
 /* ─── Reset ─── */

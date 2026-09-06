@@ -285,9 +285,13 @@
   color: var(--text-primary);
 }
 
+/* White on #c8741a is 3.52:1. The decorative orange may not carry white text —
+   an orange surface with text on it takes the ink value, where white reads at
+   5.64:1. The border keeps the decorative value: it is a boundary, not text,
+   and 3.52:1 clears the 3:1 bar for that. */
 .week-tab.active {
-  background: #c8741a;
-  border-color: #c8741a;
+  background: var(--accent-orange-ink);
+  border-color: var(--accent-orange-ink);
   color: #fff;
   font-weight: 600;
   box-shadow: 0 2px 10px rgba(200, 116, 26, 0.35);
