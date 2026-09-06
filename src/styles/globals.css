@@ -2122,13 +2122,13 @@ body {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    /* Leftover vertical space collects at the BOTTOM of the card.
-       `space-between` pooled it in a hole between the plate row and the ANDRE
-       RETTER block — 41px on a one-side-dish card. `stretch` was tried too,
-       and let the plate absorb it; see .card-image-wrapper for why that is
-       gone. Slack at the bottom edge is the only place it does not read as a
-       missing element. */
-    align-content: flex-start;
+    /* Two flex lines: the plate row, then ANDRE RETTER. space-between pins
+       the first to the top and the second to the card's bottom edge, so the
+       side-dish block starts at the same height on all three cards and any
+       leftover space sits between them. `stretch` was tried here so the
+       plate could absorb that space instead; see .card-image-wrapper for why
+       that is gone. */
+    align-content: space-between;
     padding: var(--card-pad-y) 16px;
     border-radius: 18px;
     position: relative;
@@ -2466,6 +2466,16 @@ body {
   /* Side dishes - full width horizontal row */
   .card-bottom {
     flex-basis: 100%;
+    /* Without this the row is wider than the card. .side-dish-text is
+       white-space: nowrap, which makes a long side dish's min-content width
+       the width of the whole string; .card-bottom is a flex item, its
+       automatic minimum size is that min-content width, and it wins over
+       flex-basis: 100%. Tuesday's "Buljong og krydder trukne wienerpølser,
+       med potetmos, lomper og tilbehør" pushed the row 16px past the card's
+       padding and parked its allergen label on the border. The inner
+       elements already carry min-width: 0; the chain has to reach the item
+       the card itself lays out. */
+    min-width: 0;
     margin: clamp(2px, 0.5dvh, 6px) 0 0;
     padding: clamp(2px, 0.5dvh, 6px) 0 0;
   }
@@ -2488,6 +2498,7 @@ body {
   .side-dish-list {
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
 
   .side-dish-item {
