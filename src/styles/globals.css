@@ -2117,14 +2117,31 @@ body {
   /* Card layout - horizontal, grows to fill viewport */
   .food-card {
     width: 100%;
-    flex: 1 1 auto;
+    /* `1 1 0`, not `1 1 auto`. With basis `auto` the basis is the card's own
+       CONTENT height, so flex-grow distributes free space on top of differences
+       it has already baked in — which is why a canteen with three side dishes
+       ended up a whole row taller than one with one. Basis 0 makes all three
+       cards start from nothing and take an identical share. */
+    flex: 1 1 0;
     min-height: 0 !important;
+    /* The plate's resting size, declared once. .card-image-wrapper renders it
+       and .vote-pip positions against it; both used to carry their own copy of
+       this clamp, so changing one silently mispositioned the other. */
+    --plate-size: clamp(125px, 19dvh, 210px);
+    --card-pad-y: clamp(8px, 1.2dvh, 14px);
+    --plate-pull-y: clamp(-24px, -3dvh, -14px);
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    align-content: space-between;
-    padding: clamp(8px, 1.2dvh, 14px) 16px;
+    /* `stretch`, not `space-between`. With the cards now a fixed equal height,
+       a canteen with fewer side dishes has leftover vertical space, and
+       space-between parked all of it in a hole between the plate row and the
+       ANDRE RETTER block — measured at 25px on Wednesday's middle card.
+       Stretching hands that space to the lines themselves, where the plate
+       below grows into it. */
+    align-content: stretch;
+    padding: var(--card-pad-y) 16px;
     border-radius: 18px;
     position: relative;
     overflow: visible;
@@ -2136,7 +2153,10 @@ body {
 
   .food-card-3d-wrapper {
     width: 100%;
-    flex: 1 1 auto;
+    /* Must match .food-card above — this wrapper is the actual flex item of
+       .cards-animated-wrapper, so a basis of `auto` here would reintroduce the
+       content-height difference one level up. */
+    flex: 1 1 0;
     display: flex;
     min-height: 0;
   }
@@ -2170,9 +2190,29 @@ body {
     left: auto;
     top: auto;
     transform: none !important;
-    width: clamp(125px, 19dvh, 210px);
-    height: clamp(125px, 19dvh, 210px);
-    margin: clamp(-24px, -3dvh, -14px) 0 clamp(-16px, -2dvh, -8px) -22px;
+    /* --plate-size is the resting size and the ONE place it is written.
+       .vote-pip positions itself against the plate edge and used to carry its
+       own literal copy of this clamp, so the two could drift silently. */
+    /* Grows into a line that stretched, staying square.
+
+       `height: auto` is what makes align-self: stretch able to act at all — an
+       explicit height cannot be stretched. --plate-size becomes the FLOOR, so
+       a card with a full three side dishes still renders exactly the size it
+       always did.
+
+       The growth is capped at +28px rather than left to run to the old 210px
+       ceiling, because plate width and text width are coupled in this
+       side-by-side layout: a plate that grows tall also grows wide, squeezing
+       the dish name into more lines, which adds height, which grows the plate
+       again. 28px is enough to close the measured 25px hole and small enough
+       that the text column cannot collapse. */
+    align-self: stretch;
+    width: auto;
+    height: auto;
+    min-height: var(--plate-size);
+    max-height: calc(var(--plate-size) + 28px);
+    aspect-ratio: 1;
+    margin: var(--plate-pull-y) 0 clamp(-16px, -2dvh, -8px) -22px;
     flex-shrink: 0;
     z-index: 10;
   }
@@ -2865,9 +2905,9 @@ body {
 @media (max-width: 768px) {
   .vote-pip {
     /* bottom-right of image, matching origin-pip position (swapped) */
-    top: calc(clamp(8px, 1.2dvh, 14px) + clamp(-24px, -3dvh, -14px) + clamp(125px, 19dvh, 210px) - 21px);
+    top: calc(var(--card-pad-y) + var(--plate-pull-y) + var(--plate-size) - 21px);
     right: auto;
-    left: calc(16px - 22px + clamp(125px, 19dvh, 210px) - 4px);
+    left: calc(16px - 22px + var(--plate-size) - 4px);
     transform: translateX(-100%);
     z-index: 11;
     font-size: 10px;
