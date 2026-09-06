@@ -89,14 +89,25 @@ test("the description takes whole lines, and as many as fit", () => {
 
   assert.match(
     desc,
-    /max-height:\s*round\(down,\s*100%,\s*1lh\)/,
+    /round\(down,\s*100%,\s*1lh\)/,
     "the leftover is not a whole number of lines; without rounding, every card " +
       "shows a slice of the next line's letter-tops"
+  );
+  assert.match(
+    desc,
+    /max-height:\s*min\(\s*2lh\s*,\s*round\(down,\s*100%,\s*1lh\)\s*\)/,
+    "two lines is the ceiling: this is secondary text, and a third or fourth " +
+      "line of it competes with the dish it describes. DESCRIPTION_MAX_CHARS " +
+      "is written to the same budget, so this should rarely be what bites."
   );
   // The plain 100% must stay directly above it as the fallback: if round() is
   // ever unavailable the declaration is dropped, and the box must still be
   // bounded by its row rather than unbounded.
-  assert.match(desc, /max-height:\s*100%;[\s\S]*max-height:\s*round\(/, "keep the un-rounded fallback");
+  assert.match(
+    desc,
+    /max-height:\s*100%;[\s\S]*max-height:\s*min\(/,
+    "keep the un-rounded fallback"
+  );
 
   assert.match(
     desc,
