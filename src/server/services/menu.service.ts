@@ -146,11 +146,14 @@ export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuR
   // would keep serving the older menu for the whole TTL even after the cron
   // fills in the real one.
   if (redis && record.weekId === targetWeekId) {
-    try {
-      await redis.set(`menu:${targetWeekId}`, record, { ex: MENU_CACHE_TTL_SECONDS });
-    } catch (err) {
-      console.error("Redis menu write error:", err);
-    }
+    // Not awaited. This is a cache write for the NEXT request; the caller
+    // already has the record in hand, so awaiting it only adds a round trip to
+    // this request's own critical path — and this path is the cold miss, which
+    // is exactly the request that can least afford one. A failure is logged and
+    // costs nothing but a repeated miss.
+    void redis
+      .set(`menu:${targetWeekId}`, record, { ex: MENU_CACHE_TTL_SECONDS })
+      .catch((err) => console.error("Redis menu write error:", err));
   }
 
   return record;
