@@ -287,11 +287,11 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     // Keep in serverless instance memory for 5 minutes
     memoryCache = { key: cacheKey, data: result, expires: now + 5 * 60 * 1000 };
     if (redis) {
-      try {
-        await redis.set(menuResponseKey(weekId), result, { ex: 10 * 60 });
-      } catch (err) {
-        console.warn("Redis menu response cache write failed:", err);
-      }
+      // Not awaited — same reason as the record write in menu.service.ts: the
+      // response is already assembled, so this only serves the next request.
+      void redis
+        .set(menuResponseKey(weekId), result, { ex: 10 * 60 })
+        .catch((err) => console.warn("Redis menu response cache write failed:", err));
     }
   }
 
