@@ -2048,14 +2048,39 @@ body {
     padding: 0;
     text-align: left;
     max-width: none;
-    display: -webkit-box;
-    /* One line on a phone. A three-line dish name, a two-line description and
-       three ANDRE RETTER rows do not fit a card sized to a fifth of an 844px
-       screen. The title wins; this is AI-written flavour text that was already
-       being ellipsised at two lines. */
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-    -webkit-box-orient: vertical;
+    /* No line clamp. A clamp is a fixed number, and the number of lines that
+       fit is not fixed: it is whatever the row has left after the canteen
+       name, the dish name and the allergen row, which depends on how long the
+       title is and on how many side dishes the kitchen published that day.
+       Measured across one week, a single clamp wasted between one and six
+       lines on fourteen of fifteen cards.
+
+       The grid row above hands over exactly that leftover, so a card with one
+       side dish and a short title shows its whole description and a card with
+       three side dishes and a three-line title shows none — no gap, no
+       overflow, and nothing to keep in sync by hand.
+
+       display: block is not redundant. The desktop rule sets
+       `display: -webkit-box` with `-webkit-line-clamp: 2`, and that clamp is
+       inherited here: as a grid item the box blockifies to flow-root, the
+       clamp half-applies, and the result was two lines on one card and four on
+       the next. Both are reset explicitly. */
+    display: block;
+    -webkit-line-clamp: none;
+    line-clamp: none;
+    grid-row: 3;
+    align-self: start;
+    min-height: 0;
+    /* Whole lines only. The leftover is a continuous number of pixels and
+       almost never a multiple of the line height, so clipping to it left a
+       3-15px slice of the next line's letter-tops showing on every card —
+       measured on all fifteen. Rounding the box down to a whole number of
+       lines cuts between them instead.
+
+       The plain 100% below is the fallback: if round() is ever unavailable the
+       declaration is dropped and the box is merely un-rounded, not unbounded. */
+    max-height: 100%;
+    max-height: round(down, 100%, 1lh);
     overflow: hidden;
   }
 
@@ -2128,26 +2153,30 @@ body {
        clipped by the viewport rather than by the card. .vote-pip positions
        against the plate and reads the same token. */
     --plate-pull-x: -24px;
-    /* How far the ANDRE RETTER block is pulled up under the plate. This is a
-       margin on the plate, so it moves that block and never the plate itself.
-       It used to be -2dvh, which left the last side dish 4.8px from the card's
-       bottom border against the 10px above the canteen name — the block was
-       overflowing the content box into the padding. Pulling harder lets the
-       block finish on the content edge, so the space below it matches the
-       space above the canteen name. The block passing behind the plate's lower
-       curve is intended. */
-    --plate-pull-b: clamp(-26px, -2.6dvh, -10px);
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    /* Two flex lines: the plate row, then ANDRE RETTER. space-between pins
-       the first to the top and the second to the card's bottom edge, so the
-       side-dish block starts at the same height on all three cards and any
-       leftover space sits between them. `stretch` was tried here so the
-       plate could absorb that space instead; see .card-image-wrapper for why
-       that is gone. */
-    align-content: space-between;
+    /* Grid, not wrapped flex.
+
+       The card has exactly three things in flow — the plate, the text column
+       and the ANDRE RETTER block — and one hard rule: ANDRE RETTER takes the
+       height it needs and the text column gets everything else. That is two
+       grid rows, `1fr auto`, and it is the whole trick.
+
+       Wrapped flex could not say it. Its two lines were each sized by their
+       own content, so the leftover became a gap between them — 25px on a
+       two-side-dish card, 44px on a one-side-dish card — and the text column
+       had to be capped by hand to stop a long dish name pushing the side
+       dishes out of the card. That cap was --plate-size plus the pulls: 114px,
+       a number describing the PLATE, used as the budget for the TEXT. The
+       actual budget is 116px, 140px or 159px depending on how many side dishes
+       the kitchen published, and nothing static can track it.
+
+       With `minmax(0, 1fr)` on the first row the text column is handed exactly
+       what is left over, on every card, for free — and it cannot overflow,
+       because a row that has no more to give simply clips. The gap is gone
+       because there is no gap: the description grows into it. */
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: start;
     /* Asymmetric: the left padding is what the plate hangs off, the right is
        pure gutter and gives its width to the text. */
     padding: var(--card-pad-y) 12px var(--card-pad-y) 16px;
@@ -2220,10 +2249,19 @@ body {
        Friday's middle card (measured 4px BELOW the card edge instead of 13px
        above). The negative margins are what produce the overhang; they only
        read consistently from a fixed top edge. */
-    align-self: flex-start;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
     width: var(--plate-size);
     height: var(--plate-size);
-    margin: var(--plate-pull-y) 0 var(--plate-pull-b) var(--plate-pull-x);
+    /* No bottom pull any more. It existed to drag the ANDRE RETTER block up
+       out of the card's padding when the two flex lines together came to more
+       than the card; the grid row above places that block exactly, so there is
+       nothing left to correct. The plate still hangs past the bottom of its
+       row on a three-side-dish card and the side dishes still pass behind its
+       lower curve — that is the row being shorter than the plate, which is
+       intended and is where the description's room comes from. */
+    margin: var(--plate-pull-y) 0 0 var(--plate-pull-x);
     flex-shrink: 0;
     z-index: 10;
   }
@@ -2284,25 +2322,40 @@ body {
 
   /* Content - right of image */
   .card-content {
-    flex: 1;
+    grid-column: 2;
+    grid-row: 1;
+    /* Stretch, so the column is the height of its row rather than of its own
+       text. That is what gives .dish-description something to grow into. The
+       canteen name still starts at the top because of the column direction
+       below, not because the box is shrink-wrapped to it. */
+    align-self: stretch;
     text-align: left;
     padding: 0 2px 0 8px;
     min-width: 0;
-    /* Top, not centre. Centred, the text block floated to the middle of the
-       plate row, so the canteen name started at a different height on every
-       card — Eat the street's sat below Fresh4you's purely because it had a
-       shorter dish name. The three names now line up across the stack. */
-    align-self: flex-start;
-    /* Exactly the plate's margin-box height, so the first flex line is ALWAYS
-       the plate's height and the card's total is always plate + side dishes.
-       Without this the card height is set by whichever is taller, and a
-       three-line dish name pushed the last ANDRE RETTER row out of a card
-       that `flex: 1 1 0` had already fixed the height of — .food-card is
-       overflow: visible, so it did not clip, it slid under the next card.
-       The clamps below keep the text inside this box on their own; this is
-       the guarantee that holds when a font or a locale makes them wrong. */
-    max-height: calc(var(--plate-size) + var(--plate-pull-y) + var(--plate-pull-b));
+    /* Grid rather than a flex column, for one reason: the description needs a
+       containing block whose height is the leftover, so it can round that
+       height down to whole lines (see .dish-description). A flex item's
+       percentage heights resolve against the whole column, not against the
+       space it was actually given, and there is no way to ask for the latter.
+       A grid area is definite, so `100%` there means exactly "what is left".
+
+       The rows are explicit because .dish-meta-row and .dish-description are
+       both conditional — a card with no allergens must not promote the
+       description into the auto row. */
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    /* The pair that makes the row a real ceiling: without min-height: 0 a grid
+       item refuses to shrink below its content, and the clip never happens. */
+    min-height: 0;
     overflow: hidden;
+  }
+
+  .card-header {
+    grid-row: 1;
+  }
+
+  .dish-meta-row {
+    grid-row: 2;
   }
 
   .card-header {
@@ -2483,7 +2536,8 @@ body {
 
   /* Side dishes - full width horizontal row */
   .card-bottom {
-    flex-basis: 100%;
+    grid-column: 1 / -1;
+    grid-row: 2;
     /* Without this the row is wider than the card. .side-dish-text is
        white-space: nowrap, which makes a long side dish's min-content width
        the width of the whole string; .card-bottom is a flex item, its
@@ -2549,11 +2603,13 @@ body {
        change to the one element the whole card is built around, on any screen
        under 740px including a desktop browser window that happens to be short.
        It stays at 19dvh everywhere. Room on a short screen comes out of the
-       text instead. */
+       text instead.
 
-    .dish-description {
-      display: none;
-    }
+       The description is not hidden here either. It was, when the text column
+       was capped by hand and a short screen genuinely had no room for it. The
+       grid works that out per card now: on a 667px screen the description
+       simply gets fewer whole lines, or none, on exactly the cards that cannot
+       spare them — rather than every card losing it because one might. */
 
     /* 22px of fixed overhead for a row of allergen chips that are 14px tall. */
     .dish-meta-row {
