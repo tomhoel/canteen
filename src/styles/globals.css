@@ -78,15 +78,24 @@
      mechanism that fits three cards in an 844px viewport with no scroll; a
      flat-pixel mobile scale breaks the layout on the phones the app is used on.
      A blanket 11px floor was proposed twice by the audit and rejected twice. */
-  --fs-label: 10.5px;   /* eyebrows, section labels, allergen codes, badges */
-  --fs-meta: 12.5px;    /* side-dish rows, day-label dates */
-  --fs-body: 13px;      /* dish description, day names, sheet body */
-  --fs-title: 16.5px;   /* dish name — and the action sheet's, so they cannot drift */
-  --fs-hero: 26px;      /* page title */
+  --fs-label: 10.5px;   /* @kind font — eyebrows, section labels, allergen codes, badges */
+  --fs-meta: 12.5px;    /* @kind font — side-dish rows, day-label dates */
+  --fs-body: 13px;      /* @kind font — dish description, day names, sheet body */
+  --fs-title: 16.5px;   /* @kind font — dish name, and the action sheet's, so they cannot drift */
+  --fs-hero: 26px;      /* @kind font — page title */
 
-  --lh-tight: 1.25;
-  --lh-snug: 1.35;
-  --lh-body: 1.45;
+  --lh-tight: 1.25;  /* @kind font */
+  --lh-snug: 1.35;   /* @kind font */
+  --lh-body: 1.45;   /* @kind font */
+
+  /* The `@kind` markers above and below are read by claude.ai/design when it
+     builds its token panel. It otherwise infers a token's family from its
+     VALUE, which mis-files anything whose value does not look like its
+     purpose: every --fs-* landed under spacing because a px length looks like
+     spacing, --lh-* landed under other because they are unitless, and --r-lg
+     landed under spacing while --r-round landed under radius purely because
+     one is 24px and the other 50%. The marker states the family outright.
+     Harmless to CSS; delete only if the panel stops reading them. */
 
   /* ─── Spacing ──────────────────────────────────────────────────────────────
      8-based with two half-steps, replacing 23 distinct single-value paddings
@@ -101,11 +110,11 @@
   /* ─── Radius ───────────────────────────────────────────────────────────────
      Eighteen values collapse to six. --r-lg is the identity radius: it is what
      makes a canteen card look like a canteen card. */
-  --r-xs: 6px;      /* chips, tags, micro pills */
-  --r-sm: 12px;     /* inner surfaces: buttons, list rows, image tiles */
-  --r-md: 16px;     /* secondary panels */
-  --r-lg: 24px;     /* cards, modals, sheets */
-  --r-pill: 999px;
+  --r-xs: 6px;      /* @kind radius — chips, tags, micro pills */
+  --r-sm: 12px;     /* @kind radius — inner surfaces: buttons, list rows, image tiles */
+  --r-md: 16px;     /* @kind radius — secondary panels */
+  --r-lg: 24px;     /* @kind radius — cards, modals, sheets */
+  --r-pill: 999px;  /* @kind radius */
   --r-round: 50%;
 
   /* ─── Elevation ────────────────────────────────────────────────────────────
@@ -2180,7 +2189,7 @@ body {
        -24px puts the plate's left edge at x=0. Anything more and the plate is
        clipped by the viewport rather than by the card. .vote-pip positions
        against the plate and reads the same token. */
-    --plate-pull-x: -24px;
+    --plate-pull-x: -24px; /* @kind other */
     /* Grid, not wrapped flex.
 
        The card has exactly three things in flow — the plate, the text column

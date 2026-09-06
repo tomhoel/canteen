@@ -120,6 +120,26 @@ three identical cards. The props are documented in the contract instead.
   `deletePaths`. The danger is the no-anchor branch, which asks you to review
   `list_files` and hand-pick deletes: do not sweep those paths.
 
+- **Token kinds come from the VALUE, not the name — `@kind` markers override
+  it.** claude.ai/design classifies every custom property for its token panel
+  and it reads the value, which mis-files anything whose value does not look
+  like its purpose. Two proofs from the 2026-09-06 manifest: `--r-lg: 24px`
+  landed under spacing while `--r-round: 50%` landed under radius, and
+  `--plate-pull-x: -24px` landed under spacing while its sibling
+  `--plate-pull-y: clamp(...)` landed under other. Same families, split purely
+  by value shape.
+
+  `/* @kind <family> */` after a declaration states it outright. Fourteen are
+  annotated: the five `--fs-*` and three `--lh-*` as font, five `--r-*` as
+  radius, and `--plate-pull-x` as other. Do not delete them as noise — there is
+  a note in globals.css saying so.
+
+  Beware a report that says tokens are "unclassified": none are. Check
+  `_ds_manifest.json` in the project before acting on such a claim — eight of
+  the twelve named in one already carried exactly the kind being asked for, so
+  annotating them changed nothing, while ten genuinely wrong ones went
+  unmentioned.
+
 - **Claude Design can read the repo itself.** `github.md` in the project is
   written by that side and tracks upstream drift per file. It reached the same
   conclusion this skill does — a `globals.css` change "can only land via a
