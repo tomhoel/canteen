@@ -2097,7 +2097,27 @@ body {
     justify-content: center;
     align-items: stretch;
     gap: 0;
-    padding: calc(64px + env(safe-area-inset-top, 0px)) 8px calc(92px + env(safe-area-inset-bottom, 0px));
+    /* One rhythm for the whole stack: the space above the first card, between
+       the cards, and below the last one is the same number.
+
+       It was three different numbers. The 64px and 92px were guesses that
+       cleared the fixed header and the floating day bar with room to spare —
+       measured at 390x844, that left 12.4px above the first card and 18px
+       below the last against 8.4px between them, so the column read as
+       drifting rather than as a stack.
+
+       Both chrome heights are derivable rather than guessed. The header is
+       52px: min-height 40px plus its own 6px/6px padding. The day bar is 58px
+       tall and floats 16px off the bottom, so it occupies 74px. The safe-area
+       insets stay separate because both elements already carry their own — the
+       header's padding-top has inset-top in it, so the gap here is
+       inset-independent, which is why this must not be folded into the
+       constants. */
+    --stack-gap: clamp(6px, 1dvh, 14px);
+    padding:
+      calc(52px + var(--stack-gap) + env(safe-area-inset-top, 0px))
+      8px
+      calc(74px + var(--stack-gap) + env(safe-area-inset-bottom, 0px));
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
@@ -2132,7 +2152,8 @@ body {
     flex-direction: column;
     align-items: stretch;
     justify-content: space-between;
-    gap: clamp(6px, 1dvh, 14px);
+    /* The same value the container pads with, so the three gaps cannot drift. */
+    gap: var(--stack-gap);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     will-change: transform, opacity;
