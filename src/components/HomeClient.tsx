@@ -56,6 +56,8 @@ export interface HomeClientProps {
   servedWeekId: string;
   initialOrigins: Record<string, DishOrigin>;
   initialDescriptions: Record<string, DishDescription>;
+  /** Dish name -> shortened headline. Empty for a week nothing was shortened in. */
+  initialShortNames: Record<string, string>;
   /**
    * Storage path per card, keyed `"<day>|<canteen name>"`, resolved server-side.
    *
@@ -71,7 +73,7 @@ export interface HomeClientProps {
 /** What the day transition needs, delivered via AnimatePresence custom. */
 type DayCustom = { dir: number; fromSwipe: boolean };
 
-export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, initialDescriptions, plateImages }: HomeClientProps) {
+export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, initialDescriptions, initialShortNames, plateImages }: HomeClientProps) {
   const navigate = useNavigate({ from: "/" });
   const searchParams = useSearch({ strict: false }) as { day?: string; week?: string };
 
@@ -122,12 +124,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
   const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
+  const [dishShortNames, setDishShortNames] = useState<Record<string, string>>(initialShortNames);
 
   useEffect(() => {
     setMenuData(initialMenu);
     setDishOrigins(initialOrigins);
     setDishDescriptions(initialDescriptions);
-  }, [initialMenu, initialOrigins, initialDescriptions]);
+    setDishShortNames(initialShortNames);
+  }, [initialMenu, initialOrigins, initialDescriptions, initialShortNames]);
   const [direction, setDirection] = useState(0);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
@@ -304,19 +308,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   );
 
   const { mode, weekNumber: displayWeek, todayIndex, anchor: displayMonday } = displayContext;
-
-  // Canteens with nothing in the previewed week. They are absent from the row
-  // rather than empty in it — the updater files each canteen under the week it
-  // actually published — so without naming them, a kitchen that has not posted
-  // next week's menu yet simply loses its card with no explanation. Only
-  // meaningful in preview: on any other mode an absent canteen is a real fault.
-  const pendingCanteens = useMemo(
-    () =>
-      mode === "weekend-preview" && menuData
-        ? CANTEEN_ORDER.filter(name => !menuData.canteens[name])
-        : [],
-    [mode, menuData],
-  );
 
   // Seed selectedDay once menu data is ready, so the user lands on the
   // mode-appropriate day (today / Monday-preview / Friday-recap).
@@ -499,15 +490,20 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const langNotes = dayEntry?.["no"]?.availabilityNotes;
         const otherNotes = dayEntry?.["en"]?.availabilityNotes;
         const availabilityNotes = (langNotes?.length ? langNotes : otherNotes) || [];
+        // The headline the card prints. Keyed on the same NO lookup dish as the
+        // origin and description above, for the same reason: the EN title the
+        // canteen publishes sometimes names a different dish entirely.
+        const displayDishName =
+          dishShortNames[lookupMainDish?.dish || ""] || mainDish?.dish || null;
         return {
           canteenName, canteen, dayEntry, items, mainDish, sideDishes,
           mainAllergens, imageSlug, imagePath, highResImagePath,
           isOutdated, isAhead, canteenWeekNum, origin, description,
-          availabilityNotes,
+          displayDishName, availabilityNotes,
         };
       });
     });
-  }, [sortedCanteens, dishOrigins, dishDescriptions, displayWeek, plateImages, plateWidth]);
+  }, [sortedCanteens, dishOrigins, dishDescriptions, dishShortNames, displayWeek, plateImages, plateWidth]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
@@ -808,7 +804,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         onDayHover={preloadDay}
         onTodayPress={mode === "weekday-current" ? () => runYolo(todayIndex) : undefined}
         cardsRef={scrollRef}
-        pendingCanteens={pendingCanteens}
       />
 
       {/* Info Modal */}

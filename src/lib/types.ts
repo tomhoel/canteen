@@ -17,6 +17,19 @@ export interface WeeklyMenuRecord {
   menuData: MenuData;
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
+  /**
+   * Dish name -> a shortened form of it, for the card's headline only.
+   *
+   * Only present for names too long to fit the headline in two lines; the rest
+   * render as they are. A value equal to its key means the model was asked and
+   * had nothing shorter to offer, which renders identically and stops the dish
+   * being re-asked every run.
+   *
+   * Deliberately a side map rather than a rewrite of the dish name: that name
+   * is the dish_cache key, what a plate image is archived under, and what the
+   * recipe generator is asked about, so it must not move.
+   */
+  dishShortNames: Record<string, string>;
   scrapedAt: string;
 }
 
@@ -36,6 +49,13 @@ export interface CanteenDayItem {
   canteenWeekNum?: number;
   origin?: DishOrigin | null;
   description?: string | null;
+  /**
+   * What the card's headline should say. Equals `mainDish.dish` unless the
+   * enricher produced something shorter for a name too long to fit. The full
+   * name stays on `mainDish` and is what the lightbox, the action sheet and
+   * the recipe use.
+   */
+  displayDishName?: string | null;
   availabilityNotes?: string[];
 }
 

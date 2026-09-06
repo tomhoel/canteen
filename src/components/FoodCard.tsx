@@ -90,6 +90,7 @@ const FoodCard = memo(function FoodCard({
     canteenWeekNum,
     origin,
     description,
+    displayDishName,
     availabilityNotes,
   } = data;
 
@@ -225,7 +226,10 @@ const FoodCard = memo(function FoodCard({
               </div>
             );
           })()}
-          <h3 className="dish-name">{mainDish?.dish || ("Ingen meny")}</h3>
+          {/* The shortened headline where there is one, the scraped name where
+            there is not. Everything else on this card — the lightbox, the
+            action sheet, the recipe — still uses mainDish.dish. */}
+        <h3 className="dish-name">{displayDishName || mainDish?.dish || ("Ingen meny")}</h3>
         </div>
 
         {mainAllergens && mainAllergens.length > 0 && (

@@ -77,6 +77,7 @@ function record(weekId: string, canteens: Record<string, CanteenData>): WeeklyMe
     menuData: { scrapedAt: "2026-08-14T00:00:00.000Z", canteens } as any,
     dishOrigins: {},
     dishDescriptions: {},
+    dishShortNames: {},
     scrapedAt: "2026-08-14T00:00:00.000Z",
   };
 }

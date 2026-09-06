@@ -26,6 +26,11 @@ export interface WeeklyMenuResponse {
   dishOrigins: Record<string, DishOrigin>;
   dishDescriptions: Record<string, DishDescription>;
   /**
+   * Dish name -> a shortened headline for it. See the server-side type; the
+   * full name is still what `menuData` carries and what the lightbox shows.
+   */
+  dishShortNames: Record<string, string>;
+  /**
    * Storage path of each card's plate image, keyed `"<day>|<canteen name>"`.
    * The server resolves this because it knows which dish a stored plate depicts;
    * the browser cannot. A missing key means no picture exists for that day.
@@ -78,7 +83,7 @@ function post<T>(path: string, payload: unknown): Promise<T> {
  * exact contradiction `computeDisplayContext` exists to prevent. Bumping the
  * prefix retires every old-shape entry at once instead.
  */
-const MENU_LOCAL_CACHE_PREFIX = "canteen_menu_cache_v4_";
+const MENU_LOCAL_CACHE_PREFIX = "canteen_menu_cache_v5_";
 const MENU_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 /**
