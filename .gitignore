@@ -77,3 +77,8 @@ clear-cache.js
 .gemini/
 skills/
 skills-lock.json
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
