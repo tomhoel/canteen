@@ -87,6 +87,45 @@ three identical cards. The props are documented in the contract instead.
 - **`dtsPropsFor` is a hand-maintained copy of the props.** It cannot detect
   drift. Any prop added, removed or retyped in `src/components/` silently leaves
   the uploaded contract stale. Check it whenever a component's signature moves.
+
+  **`CanteenDayItem` is inlined in FOUR entries** — `FoodCard.data`,
+  `ClosedCard.data`, `AllClosedCard.closedCanteens`, and
+  `ClosedCanteensPill.closedCanteens`. A field added to that type in
+  `src/lib/types.ts` has to be added to all four. The 2026-09-06 re-sync found
+  three of them stale after `displayDishName` was added and only `FoodCard`
+  updated. `ActionSheet` looks like a fifth but is not: it has its own
+  `canteenName`/`dishName` scalars, not the item.
+
+  A quick audit that catches this:
+  `node -e "const c=require('./.design-sync/config.json');for(const[k,v]of
+  Object.entries(c.dtsPropsFor))if(v.includes('mainDish?'))console.log(k,
+  v.includes('<newField>'))"`
+
+- **Mobile-only CSS does not move `renderHashes`.** Previews capture at
+  900×700, so a change confined to `@media (max-width: 768px)` leaves every
+  desktop render byte-identical. On 2026-09-06 a near-total rewrite of the
+  phone card layout re-graded only 4 of 12 components — correct, not a missed
+  diff. The change still ships: it rides in `_ds_bundle.css` under `styling`,
+  which is a separate partition from verification. Verify it landed by
+  grepping the built `_ds_bundle.css` for a rule you changed — and grep the
+  UNMINIFIED form, because this bundle appends the raw `globals.css`, not
+  Vite's minified output.
+
+- **The project holds files this sync does not produce, and must not delete
+  them.** As of 2026-09-06: `templates/home-screen/*` (a home-screen template
+  and a 390×844 phone preview) and `github.md`, all authored on the Claude
+  Design side, plus the app's own `_ds_manifest.json` and
+  `_adherence.oxlintrc.json`. The atomic path is safe by construction — the
+  writes globs never name `templates/`, and an anchored diff puts nothing in
+  `deletePaths`. The danger is the no-anchor branch, which asks you to review
+  `list_files` and hand-pick deletes: do not sweep those paths.
+
+- **Claude Design can read the repo itself.** `github.md` in the project is
+  written by that side and tracks upstream drift per file. It reached the same
+  conclusion this skill does — a `globals.css` change "can only land via a
+  `/design-sync` run", because `_ds_bundle.css` is read-only there. So the
+  repo connection covers source and drift tracking; the compiled bundle,
+  contracts and preview cards still only move through this sync.
 - **Inlined base64 images go stale.** The plate photographs in
   `previews/FoodCard.tsx`, `ClosedCard.tsx` and `AllClosedCard.tsx` are copies of
   production assets at 340px. If the plates are regenerated they will not update
