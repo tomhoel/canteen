@@ -192,12 +192,22 @@ test("the shell cannot be painted without its stylesheet", () => {
   );
 });
 
-test("the tab is not renamed a moment after it opens", () => {
-  // __root.tsx replaces the document title on mount. A different string in
-  // index.html means the tab visibly relabels itself once React boots.
+test("the tab is never renamed after it opens", () => {
+  // The router's __root.tsx used to re-set the document title on mount, so this
+  // asserted the two strings matched. There is no router now and nothing sets
+  // <title> at runtime, so the stronger claim holds: index.html is the only
+  // place a title is declared, and no component may start setting one again.
   const staticTitle = indexHtml.match(/<title>([^<]*)<\/title>/)?.[1]?.trim();
-  const routeTitle = read("src/routes/__root.tsx").match(/\{\s*title:\s*"([^"]+)"/)?.[1]?.trim();
   assert.ok(staticTitle, "index.html has no <title>");
-  assert.ok(routeTitle, "__root.tsx no longer sets a title — drop this test with it");
-  assert.equal(staticTitle, routeTitle);
+
+  const setsTitleAtRuntime = [
+    "src/App.tsx",
+    "src/main.tsx",
+    "src/components/HomeClient.tsx",
+  ].filter((f) => /document\.title\s*=|<title>/.test(read(f)));
+  assert.deepEqual(
+    setsTitleAtRuntime,
+    [],
+    "something sets the title at runtime again — the tab will relabel itself on boot"
+  );
 });

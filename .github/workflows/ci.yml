@@ -63,9 +63,3 @@ jobs:
       - name: Build
         run: npm run build
 
-      # `npm run build` starts with `tsr generate`, which rewrites
-      # src/routeTree.gen.ts — a file that is also committed. If the two ever
-      # disagree the checked-in tree is stale, and the next person to run a
-      # build gets an unexplained diff in their working copy.
-      - name: Generated route tree is up to date
-        run: git diff --exit-code -- src/routeTree.gen.ts
