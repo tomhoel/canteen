@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 import { CANTEEN_ORDER, getCanteenMetadata } from "@/lib/constants";
 import { getAttendanceHistory } from "@/lib/api-client";
 import "@/styles/leaderboard-modal.css";
@@ -63,7 +63,7 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
   });
 
   return (
-    <motion.div
+    <m.div
       className="leaderboard-overlay"
       role="presentation"
       initial={{ opacity: 0 }}
@@ -72,7 +72,7 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
       transition={{ duration: 0.2 }}
       onClick={onClose}
     >
-      <motion.div
+      <m.div
         className="leaderboard-modal"
         role="dialog"
         aria-modal="true"
@@ -172,7 +172,7 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
             </p>
           </>
         )}
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }

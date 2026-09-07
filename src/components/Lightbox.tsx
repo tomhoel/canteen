@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CanteenDayItem } from "@/lib/types";
 
@@ -58,7 +59,7 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
   return (
     <AnimatePresence>
       {isOpen && current && (
-        <motion.div
+        <m.div
           key="lightbox-overlay"
           className="lightbox-overlay"
           initial={{ opacity: 0 }}
@@ -67,7 +68,7 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
           transition={{ duration: 0.2 }}
           onClick={onClose}
         >
-          <motion.div
+          <m.div
             key="lightbox-content"
             className="lightbox-content"
             initial={{ opacity: 0, y: 20 }}
@@ -131,8 +132,8 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
                 ))}
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

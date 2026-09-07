@@ -219,9 +219,12 @@ export default defineConfig(({ mode }) => {
               if (/[\\/]node_modules[\\/]@tanstack[\\/]react-query[\\/]/.test(id)) {
                 return "vendor-tanstack";
               }
-              if (/[\\/]node_modules[\\/]motion[\\/]/.test(id)) {
-                return "vendor-motion";
-              }
+              // No `vendor-motion` rule any more, deliberately. Naming a
+              // manual chunk forces every motion module into one chunk that
+              // the entry imports statically — which is exactly what
+              // `<LazyMotion>` exists to avoid. Left to itself the bundler
+              // splits on the `import()` in App.tsx and the animation runtime
+              // lands in its own async chunk, off the critical path.
               if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) {
                 return "vendor-ui";
               }
