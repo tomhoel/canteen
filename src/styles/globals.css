@@ -469,6 +469,59 @@ body {
   will-change: transform, opacity;
 }
 
+/* ─── The day change ───
+   Was `<AnimatePresence mode="popLayout">` with motion variants. The spring was
+   300/30/0.8 — damping ratio 0.97, so it never overshot, and this curve was
+   fitted numerically against its step response: within 0.53px of the 44px
+   mobile throw and 0.96px of the 80px desktop one over the whole travel.
+
+   Both panels are `.cards-animated-wrapper`, so they are already pinned to
+   `grid-column: 1; grid-row: 1` above and stack in the one cell. Nothing here
+   positions anything absolutely, which is what keeps the leaving day exactly
+   where it was standing.
+
+   Direction arrives as a unitless `--day-dir` written inline by DayPanel: 1 for
+   a later day, -1 for an earlier one, and 0 when the change came from a swipe —
+   `calc(0 * 44px)` is `0px`, so the panel does not translate and the strip's own
+   movement carries it, which is what `fromSwipe` meant to the old variants. */
+.day-panel {
+  --day-travel: 44px;
+  --day-scale: 1;
+  transition:
+    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
+    opacity 0.24s linear;
+}
+
+.day-panel-enter {
+  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel)), 0, 0)
+    scale(var(--day-scale));
+  opacity: 0;
+}
+
+.day-panel-exit {
+  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel) * -1), 0, 0)
+    scale(var(--day-scale));
+  opacity: 0;
+  /* Leaves faster than it arrives, as the old exit variant did (0.2/0.18
+     against 0.28/0.24). */
+  transition:
+    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
+    opacity 0.18s linear;
+}
+
+@media (min-width: 769px) {
+  .day-panel {
+    /* The desktop has three cards across a wide viewport and can afford the
+       full throw; a phone card is nearly the screen, so 80px there reads as
+       the whole layout lurching. */
+    --day-travel: 80px;
+    /* Desktop only, and deliberately: scaling a box full of text makes WebKit
+       re-rasterise every glyph in it on each frame, which is the cost a phone
+       cannot absorb. */
+    --day-scale: 0.98;
+  }
+}
+
 /* ─── Food Card ─── */
 .food-card-3d-wrapper {
   width: 380px;
@@ -1912,6 +1965,17 @@ body {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   will-change: transform, width;
+  /* Was a motion spring, 380/34/0.65 — damping ratio 1.08, so over-damped and
+     reproducible by a curve. `x` and `width` shared one spring and now share
+     one duration and easing, which is the same thing.
+
+     No entrance to suppress: DaySelector inserts the pill with its transform
+     already set, inside the same useLayoutEffect that measures it, and a
+     transition cannot run on an element's first style. That is what
+     `initial={false}` bought. */
+  transition:
+    transform 0.34s cubic-bezier(0.23, 0.25, 0.1, 1),
+    width 0.34s cubic-bezier(0.23, 0.25, 0.1, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2856,6 +2920,45 @@ body {
 }
 
 /* ─── Info Modal ─── */
+/* ─── Modal entrances ───
+   The info and recipe overlays were motion components: the scrim tweened
+   opacity over 0.2s (motion's `easeOut`, which is exactly
+   cubic-bezier(0, 0, 0.58, 1)) and the panel rose 20px on a 340/28 spring.
+   That spring's damping ratio is 0.76, so it overshoots by about half a pixel
+   at 262ms and rests at 275ms — a curve reproduces it to well inside a pixel.
+
+   Keyframes rather than transitions, because these elements mount when the
+   modal opens: an animation runs on a newly inserted element, where a
+   transition would need a second commit to have something to transition from.
+   Both close instantly, as the lightbox and week overview already did.
+
+   The `prefers-reduced-motion` blanket further down turns both off. */
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.info-overlay,
+.recipe-overlay {
+  animation: overlayFadeIn 0.2s cubic-bezier(0, 0, 0.58, 1) both;
+}
+
+.info-modal,
+.recipe-modal {
+  animation: modalPanelIn 0.26s cubic-bezier(0.2, 0, 0.35, 1.15) both;
+}
+
 .info-overlay {
   position: fixed;
   inset: 0;

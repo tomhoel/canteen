@@ -1,5 +1,5 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
-import * as m from "motion/react-m";
+
 import type { DisplayMode } from "@/lib/dateUtils";
 
 interface DaySelectorProps {
@@ -119,18 +119,25 @@ export default function DaySelector({
     >
       <div className="day-selector" role="tablist" ref={selectorRef}>
         {pill && (
-          <m.div
+          /*
+            The pill was a motion spring (380/34/0.65). Its damping ratio is
+            1.08 — over-damped, so it never overshot and a cubic-bezier is the
+            same movement; the curve lives on `.day-pill` in the stylesheet.
+
+            `initial={false}` came for free and did not need reproducing. The
+            element is inserted with its inline transform already set, in the
+            same commit `updatePill` measures it (a useLayoutEffect, so before
+            paint), and a CSS transition cannot run on an element's very first
+            style. So there is no slide-in from the left edge here or on
+            LoadingScreen, which mounts this same component. The one way to
+            break that is to render the pill unconditionally with a
+            `{ left: 0, width: 0 }` default — hence `pill &&`.
+          */
+          <div
             className="day-pill"
-            initial={false}
-            animate={{
-              x: pill.left,
+            style={{
+              transform: `translateX(${pill.left}px)`,
               width: pill.width,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 380,
-              damping: 34,
-              mass: 0.65,
             }}
             aria-hidden="true"
           />
