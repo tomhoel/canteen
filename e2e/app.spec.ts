@@ -250,3 +250,47 @@ test("the critical path stays within budget", async () => {
   expect(js, `eager JS is ${js} bytes gzipped`).toBeLessThan(100_000);
   expect(css, `eager CSS is ${css} bytes gzipped`).toBeLessThan(16_000);
 });
+
+/**
+ * Guards the sheet's close animation.
+ *
+ * `ui/sheet.tsx` has always had a two-phase close — drop `shown`, let the 400ms
+ * transition run, then unmount — but HomeClient returned null the moment
+ * `isOpen` went false, destroying the component on the same tick. The sheet
+ * vanished instead of sliding down, which is what it was reported as.
+ *
+ * Asserted as "still mounted while it animates" rather than on translateY,
+ * because the two breakpoints animate differently: a phone slides the panel up
+ * from the bottom edge, a desktop scales a centred card that never translates.
+ * Surviving its own close is the property both share, and the one that broke.
+ *
+ * Measured on a phone before the fix: 0 -> GONE in a single frame.
+ * After: 0 -> 44 -> 233 -> 371 -> 434 -> 443 -> GONE.
+ */
+test("the sheet animates out when dismissed instead of vanishing", async ({ page }) => {
+  await page.goto("/");
+  await loaded(page);
+
+  await page.locator(".food-card").first().click();
+  await page.waitForSelector(".action-sheet");
+  await page.waitForTimeout(600); // let it finish opening
+
+  const frames = await page.evaluate(async () => {
+    const wait = (ms: number) => new Promise((k) => setTimeout(k, ms));
+    const panel = document.querySelector(".action-sheet") as HTMLElement;
+    (panel.previousElementSibling as HTMLElement)?.click(); // the scrim
+    const present: boolean[] = [];
+    for (let i = 0; i < 16; i++) {
+      present.push(!!document.querySelector(".action-sheet"));
+      await wait(40);
+    }
+    return present;
+  });
+
+  // An instant unmount gives [true, false, false, ...]. A 400ms exit keeps it
+  // alive for roughly ten 40ms samples.
+  const alive = frames.filter(Boolean).length;
+  expect(alive, `panel survived only ${alive} frames — it is being unmounted, not animated`).toBeGreaterThan(4);
+  // ...and it does eventually leave.
+  expect(frames[frames.length - 1]).toBe(false);
+});
