@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
 import { Share2 } from "lucide-react";
@@ -74,8 +74,7 @@ export interface HomeClientProps {
 type DayCustom = { dir: number; fromSwipe: boolean };
 
 export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, initialDescriptions, initialShortNames, plateImages }: HomeClientProps) {
-  const navigate = useNavigate({ from: "/" });
-  const searchParams = useSearch({ strict: false }) as { day?: string; week?: string };
+  const searchParams = useSearch();
 
   const [selectedDay, setSelectedDay] = useState(() => {
     if (searchParams?.day) {
@@ -248,14 +247,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       setDirection(i > prev ? 1 : -1);
       return i;
     });
-    navigate({
-      search: (prev: Record<string, unknown>) => ({
-        ...prev,
-        day: DAY_KEYS[i],
-      }),
-      replace: true,
-    });
-  }, [navigate]);
+    // replaceState, as before: tapping through the weekdays must not stack
+    // history entries, or Back walks Friday -> Thursday instead of leaving the
+    // app. setSearchParam rewrites this one key and leaves the rest of the
+    // query string alone, which is what the old spread of `prev` did.
+    setSearchParam("day", DAY_KEYS[i]);
+  }, []);
 
   // Initial data loading + localStorage cleanup
   useEffect(() => {

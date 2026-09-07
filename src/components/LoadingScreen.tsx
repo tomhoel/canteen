@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useSearch } from "@tanstack/react-router";
+import { useSearch } from "@/lib/useSearch";
 import { DAY_KEYS, FULL_DAYS_NO } from "@/lib/constants";
 import {
   computeDisplayContext,
@@ -36,7 +36,7 @@ const CARD_COUNT = 3;
  * text inside boxes that keep their size.
  */
 export default function LoadingScreen() {
-  const search = useSearch({ strict: false }) as { day?: string; week?: string };
+  const search = useSearch();
   const cardsRef = useRef<HTMLElement>(null);
 
   const { mode, weekNumber, todayIndex, defaultSelectedDay, anchor } =

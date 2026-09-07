@@ -5,7 +5,6 @@ if (!globalThis.WebSocket) {
 
 import { defineConfig, loadEnv, type Connect, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -60,7 +59,8 @@ function shortenCriticalPath(): Plugin {
           out = out.slice(0, at) + "\n    " + link[0].trim() + out.slice(at);
         }
 
-        // Make the route chunk discoverable. Both `routes-*` chunks are
+        // Make the lazily-imported first-paint chunk discoverable. Both
+        // `routes-*` chunks are
         // preloaded rather than just the big one: there are only two, the
         // second is ~500 bytes gzipped, and picking by name is more robust
         // than guessing which facade id the router's code-splitter produced.
@@ -193,12 +193,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       shortenCriticalPath(),
       devApiPlugin(),
-      TanStackRouterVite({
-        target: "react",
-        autoCodeSplitting: true,
-        routesDirectory: "src/routes",
-        generatedRouteTree: "src/routeTree.gen.ts",
-      }),
       react(),
     ],
     resolve: {
@@ -220,7 +214,9 @@ export default defineConfig(({ mode }) => {
               if (/[\\/]node_modules[\\/](react|react-dom)[\\/]/.test(id)) {
                 return "vendor-react";
               }
-              if (/[\\/]node_modules[\\/]@tanstack[\\/](react-router|react-query|react-store)[\\/]/.test(id)) {
+              // react-query only. The router is gone (src/lib/useSearch.ts
+              // replaced it) and react-store was never imported at all.
+              if (/[\\/]node_modules[\\/]@tanstack[\\/]react-query[\\/]/.test(id)) {
                 return "vendor-tanstack";
               }
               if (/[\\/]node_modules[\\/]motion[\\/]/.test(id)) {
