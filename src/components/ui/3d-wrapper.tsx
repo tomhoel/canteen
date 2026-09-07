@@ -1,7 +1,6 @@
 "use client"
 
 import { useRef, useCallback, useState, useEffect } from "react"
-import { motion, useMotionValue, useSpring, useTransform } from "motion/react"
 
 interface Wrapper3DProps {
   children: React.ReactNode
@@ -11,6 +10,19 @@ interface Wrapper3DProps {
   className?: string
 }
 
+/**
+ * Follow-the-pointer tilt, written straight to the element.
+ *
+ * This used to run two motion springs (stiffness 260, damping 24, mass 0.6)
+ * through useTransform into a motion.div's rotateX/rotateY. Their damping ratio
+ * is 0.96 — over-damped, so the spring never overshot and a CSS ease produces
+ * the same curve. The springs were also writing a second copy of data the
+ * component already sets: onMove has always written --card-mx/--card-my to the
+ * element, which is what the stylesheet reads.
+ *
+ * Desktop hover only. The matchMedia gate below means a phone never mounts
+ * this, which is why the tilt cost nothing to move off the motion runtime.
+ */
 function DesktopTiltWrapper({
   children,
   maxRotation = 8,
@@ -20,54 +32,51 @@ function DesktopTiltWrapper({
 }: Wrapper3DProps) {
   const ref = useRef<HTMLDivElement>(null)
 
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-
-  // Fluid, organic spring physics for interactive 3D tilt
-  const mouseX = useSpring(x, { stiffness: 260, damping: 24, mass: 0.6 })
-  const mouseY = useSpring(y, { stiffness: 260, damping: 24, mass: 0.6 })
-
-  const rotateX = useTransform(mouseY, [-0.5, 0.5], [`${maxRotation}deg`, `-${maxRotation}deg`])
-  const rotateY = useTransform(mouseX, [-0.5, 0.5], [`-${maxRotation}deg`, `${maxRotation}deg`])
-
-  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = ref.current
-    if (!el) return
-    const { left, top, width, height } = el.getBoundingClientRect()
-    const normX = (e.clientX - left) / width - 0.5
-    const normY = (e.clientY - top) / height - 0.5
-    x.set(normX)
-    y.set(normY)
-    el.style.setProperty("--card-mx", normX.toFixed(3))
-    el.style.setProperty("--card-my", normY.toFixed(3))
-  }, [x, y])
+  const onMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const el = ref.current
+      if (!el) return
+      const { left, top, width, height } = el.getBoundingClientRect()
+      const normX = (e.clientX - left) / width - 0.5
+      const normY = (e.clientY - top) / height - 0.5
+      el.style.setProperty("--card-mx", normX.toFixed(3))
+      el.style.setProperty("--card-my", normY.toFixed(3))
+      // Same mapping the useTransforms had: [-0.5, 0.5] -> [max, -max] for
+      // rotateX off the vertical axis, and [-0.5, 0.5] -> [-max, max] for
+      // rotateY off the horizontal one.
+      const rx = (-normY * 2 * maxRotation).toFixed(2)
+      const ry = (normX * 2 * maxRotation).toFixed(2)
+      el.style.transform = `translateZ(${translateZ}px) rotateX(${rx}deg) rotateY(${ry}deg)`
+    },
+    [maxRotation, translateZ]
+  )
 
   const onLeave = useCallback(() => {
-    x.set(0)
-    y.set(0)
     const el = ref.current
-    if (el) {
-      el.style.setProperty("--card-mx", "0")
-      el.style.setProperty("--card-my", "0")
-    }
-  }, [x, y])
+    if (!el) return
+    el.style.setProperty("--card-mx", "0")
+    el.style.setProperty("--card-my", "0")
+    el.style.transform = `translateZ(${translateZ}px) rotateX(0deg) rotateY(0deg)`
+  }, [translateZ])
 
   return (
-    <motion.div
+    <div
       ref={ref}
       className={className}
       style={{
         transformStyle: "preserve-3d",
         perspective: perspective ? 800 : undefined,
-        rotateX,
-        rotateY,
-        z: translateZ,
+        transform: `translateZ(${translateZ}px)`,
+        // The spring's job: smooth the pointer's jitter on the way in and ease
+        // back to flat on the way out. 160ms matches the settle time of the
+        // 260/24/0.6 spring it replaces.
+        transition: "transform 160ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }
 

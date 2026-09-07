@@ -1,5 +1,4 @@
-import { useState, memo } from "react";
-import { motion } from "motion/react";
+import { useState, useEffect, memo } from "react";
 import { Users, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
@@ -49,6 +48,86 @@ const COUNTRY_ADJECTIVES: Record<string, { no: string; en: string }> = {
 function getCountryAdjective(country: string): string {
   const key = country.toLowerCase().trim();
   return COUNTRY_ADJECTIVES[key]?.["no"] || country;
+}
+
+/**
+ * The plate, and its entrance.
+ *
+ * This was a `motion.img` running a 240/24/0.7 spring on x and scale plus a
+ * 280ms opacity tween. That spring's damping ratio is 0.93 — over-damped, so
+ * it never overshot, and a cubic-bezier reproduces the curve exactly. What the
+ * spring actually bought was the shape of the curve, not the physics.
+ *
+ * Two details this has to keep, both easy to lose:
+ *
+ * 1. It is a separate component so that `key={imagePath}` remounts *it*. The
+ *    state below then starts at false again, which is what re-fires the
+ *    entrance on a day change. FoodCard itself does not remount, so holding
+ *    this state up there would fade the plate in once, on the first day
+ *    viewed, and never again.
+ *
+ * 2. A `transition`, not an `animation`. The mobile block sets
+ *    `animation: none !important` on `.food-image` (it is aimed at the
+ *    infinite `gentleFloat`, but it is a blanket), so a keyframe entrance here
+ *    would be silently discarded on exactly the devices that matter most. A
+ *    transition is untouched by that rule, and an inline style outranks it.
+ *
+ * The phone gets the fade only, and always did: the mobile stylesheet used to
+ * discard the plate's transform with an `!important`, so the parallax has
+ * never once rendered on a phone. Three plates x two animated values is six
+ * spring integrators writing to element.style every frame of every swipe, for
+ * a movement that was thrown away.
+ */
+function PlateImage({
+  src,
+  alt,
+  isDesktop,
+  priority,
+  onLoad,
+  onError,
+}: {
+  src: string;
+  alt: string;
+  isDesktop: boolean;
+  priority: boolean;
+  onLoad: () => void;
+  onError: () => void;
+}) {
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    // A frame late on purpose. Flipping this in the same commit as the mount
+    // would give the browser one style resolution holding both the start and
+    // the end value, and no transition at all.
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="food-image loaded"
+      style={{
+        opacity: shown ? 1 : 0,
+        // Desktop only, matching what actually rendered before: the plate
+        // slides 28px in from the right and settles out of a 1.1 scale.
+        transform: isDesktop
+          ? shown
+            ? "translateX(0) scale(1)"
+            : "translateX(28px) scale(1.1)"
+          : undefined,
+        transition: isDesktop
+          ? "opacity 280ms linear, transform 460ms cubic-bezier(0.22, 1, 0.36, 1)"
+          : "opacity 280ms linear",
+      }}
+      loading="eager"
+      decoding="async"
+      fetchPriority={priority ? "high" : undefined}
+      onLoad={onLoad}
+      onError={onError}
+    />
+  );
 }
 
 interface FoodCardProps {
@@ -130,38 +209,12 @@ const FoodCard = memo(function FoodCard({
             </div>
           ) : (
             <div className="plate-float-container">
-              {/*
-                On a desktop the plate carries its own spring, softer and
-                slower than the one moving the day around it (240/24 against
-                300/30), so the picture lags fractionally behind the card it
-                sits in and the two read as separate depths.
-
-                On a phone it only fades. Not a new concession — the mobile
-                stylesheet has been discarding this transform all along with an
-                `!important`, so the parallax has never once rendered on a
-                phone. What is new is that we stop paying for it: three plates
-                x two animated values is six spring integrators writing to
-                element.style every frame of every swipe, for a movement that
-                was thrown away. Asking for nothing looks identical and costs
-                nothing.
-              */}
-              <motion.img
+              <PlateImage
                 key={imagePath}
                 src={imagePath}
                 alt={mainDish?.dish || "Matrett"}
-                className="food-image loaded"
-                initial={isDesktop ? { opacity: 0, scale: 1.1, x: 28 } : { opacity: 0 }}
-                animate={isDesktop ? { opacity: 1, scale: 1, x: 0 } : { opacity: 1 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 240,
-                  damping: 24,
-                  mass: 0.7,
-                  opacity: { duration: 0.28 },
-                }}
-                loading="eager"
-                decoding="async"
-                fetchPriority={cardIdx === 0 ? "high" : undefined}
+                isDesktop={isDesktop}
+                priority={cardIdx === 0}
                 onLoad={() => markImageCached(imagePath)}
                 onError={() => setImgError(true)}
               />
@@ -192,28 +245,20 @@ const FoodCard = memo(function FoodCard({
       </div>
       {/*
         The third rate, on a desktop: text rises 8px and fades the last of the
-        way in on a stiffer, lighter spring than either the card or the plate,
-        so it settles first.
+        way in, faster than either the card or the plate, so it settles first.
+        It is `cardContentEnter` in the stylesheet now rather than a spring
+        here, but `key` stays exactly where it was — remounting on the day
+        change is what re-fires the animation, the same event that used to
+        replay motion's `initial`.
 
-        Off on a phone. y and opacity are compositor properties, so the
-        animation itself is cheap — but `.card-content` has no `will-change`,
-        so WebKit promotes it to its own layer for the duration and drops it
-        again afterwards, and the layer it has to rasterise is ~190x150 CSS px
-        of pure text at 3x. Three cards, three promote-and-discard cycles, on
-        every single day change.
-
-        Nothing is lost visually. The card around it is already rising and
-        fading through `cardRevealFlat`, staggered per card, so the text is in
-        motion either way — this only removed a few pixels of extra travel
-        inside a box that was moving anyway.
+        Off on a phone, which is why the rule sits behind `min-width: 769px`.
+        y and opacity are compositor properties, so the animation itself is
+        cheap — but `.card-content` has no `will-change`, so WebKit promotes it
+        to its own layer for the duration and drops it again afterwards, and
+        the layer it has to rasterise is ~190x150 CSS px of pure text at 3x.
+        Three cards, three promote-and-discard cycles, on every day change.
       */}
-      <motion.div
-        key={selectedDay}
-        initial={isDesktop ? { opacity: 0.5, y: 8 } : false}
-        animate={isDesktop ? { opacity: 1, y: 0 } : undefined}
-        transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.6 }}
-        className="card-content"
-      >
+      <div key={selectedDay} className="card-content">
         <div className="card-header">
           {(() => {
             const meta = getCanteenMetadata(canteenName);
@@ -259,7 +304,7 @@ const FoodCard = memo(function FoodCard({
         {description && (
           <p className="dish-description">{description}</p>
         )}
-      </motion.div>
+      </div>
 
       {isOutdated && (
         <div className="stale-banner">
