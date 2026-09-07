@@ -199,6 +199,56 @@ export function parseItem(text: string): MenuItem {
   return { dish: dish.replace(/\s+/g, " ").trim(), isMain: false, allergens };
 }
 
+/**
+ * What is left of an allergen line once `parseItem` has taken the numbers out.
+ *
+ * `DAILY_ALLERGEN_LINE` below catches these earlier, but only when the raw
+ * fragment is the label followed by nothing but digits, commas and spaces. It
+ * shipped a wrong menu the first time the kitchen typed something else:
+ * Fresh4you's Monday board reached production as
+ *
+ *   { dish: "Ovnsbakt torsk med ratatouille…", isMain: true,  allergens: [] }
+ *   { dish: "Allergener:",                     isMain: false, allergens: [Gluten, Fish] }
+ *
+ * — a phantom side dish under "Andre retter", and a main course showing NO
+ * allergens because the two that belong to it were sitting on the phantom.
+ * That is worse than cosmetic: this app tells people what is in their food.
+ *
+ * Matching here instead of on the raw fragment is what makes it robust. The
+ * numbers have already been extracted by then — however they were written,
+ * parenthesised, jammed against a word, or trailing — so whatever spelling the
+ * kitchen invents next, what remains is the bare label.
+ */
+const ALLERGEN_LABEL = /^allergen(?:er|s)?\s*:?\s*$/i;
+
+/**
+ * Folds allergen-label lines into the dish above them.
+ *
+ * The label is never a dish. Its allergens belong to the item it follows —
+ * that is the whole reason the kitchen typed it — so they are merged upward
+ * and the line is dropped. A label with nothing above it (a board that opens
+ * with one) has nothing to attach to and is simply discarded.
+ */
+export function foldAllergenLabels(items: MenuItem[]): MenuItem[] {
+  const out: MenuItem[] = [];
+
+  for (const item of items) {
+    if (!ALLERGEN_LABEL.test(item.dish)) {
+      out.push(item);
+      continue;
+    }
+
+    const previous = out[out.length - 1];
+    if (!previous) continue;
+
+    for (const a of item.allergens) {
+      if (!previous.allergens.some((x) => x.id === a.id)) previous.allergens.push(a);
+    }
+  }
+
+  return out;
+}
+
 function shouldMerge(line1: string, line2: string): boolean {
   const PREPOSITIONS = [
     "med", "og", "with", "and", "in", "på", "i", "over", "under",
@@ -358,9 +408,12 @@ function parseSection(lines: string[], canteenDisplayName: string): ParsedSectio
     dishLines.push(line);
   }
 
-  const parsed = dishLines
-    .map((line) => parseItem(line))
-    .filter((item) => item.dish.trim().length > 0);
+  // The weekly board had no allergen-line handling of any kind — only the
+  // daily one did — so a label here became a dish with the previous dish's
+  // allergens on it.
+  const parsed = foldAllergenLabels(
+    dishLines.map((line) => parseItem(line)).filter((item) => item.dish.trim().length > 0)
+  );
 
   return { items: rankItems(parsed, canteenDisplayName), availabilityNotes };
 }
@@ -594,6 +647,14 @@ function parseDailyHolder(
     }
     items.push(item);
   }
+
+  // Backstop for the fragments DAILY_ALLERGEN_LINE above did not recognise.
+  // That regex only matches the label followed by digits, commas and spaces;
+  // anything else falls through to here as a dish called "Allergener:" holding
+  // the allergens of the dish before it.
+  const folded = foldAllergenLabels(items);
+  items.length = 0;
+  items.push(...folded);
 
   if (items.length < MIN_DAILY_DISHES) return undefined;
 

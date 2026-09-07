@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseItem,
+  foldAllergenLabels,
   mergeItems,
   extractAvailabilityNote,
   parseCanteenHtml,
@@ -180,4 +181,66 @@ test("mergeItems - trims and drops blank lines", () => {
 
 test("mergeItems - preserves Norwegian characters across a join", () => {
   assert.deepEqual(mergeItems(["Laks på", "eng av grønnsaker"]), ["Laks på eng av grønnsaker"]);
+});
+
+// ─── Allergen labels are not dishes ───
+// Fresh4you's Monday board shipped to production as a main course with NO
+// allergens plus a side dish literally called "Allergener:" carrying the two
+// that belonged to the main. The app tells people what is in their food, so
+// this is a correctness bug, not a cosmetic one.
+
+test("foldAllergenLabels - merges a label into the dish above it", () => {
+  const folded = foldAllergenLabels([
+    parseItem("Ovnsbakt torsk med ratatouille og saltbakte poteter"),
+    { dish: "Allergener:", isMain: false, allergens: [
+      { id: "3", name: "Gluten" },
+      { id: "2", name: "Fish" },
+    ] },
+    parseItem("Stekt ris med egg, karri og grønnsaker 1"),
+  ]);
+
+  assert.equal(folded.length, 2, "the label must not survive as a dish");
+  assert.equal(folded[0].dish, "Ovnsbakt torsk med ratatouille og saltbakte poteter");
+  assert.deepEqual(folded[0].allergens.map((a) => a.name).sort(), ["Fish", "Gluten"]);
+  assert.equal(folded[1].dish, "Stekt ris med egg, karri og grønnsaker");
+});
+
+test("foldAllergenLabels - accepts every spelling the label appears in", () => {
+  for (const label of ["Allergener:", "Allergener", "Allergens:", "Allergens", "allergener :", "ALLERGENER:"]) {
+    const folded = foldAllergenLabels([
+      parseItem("Torsk"),
+      { dish: label, isMain: false, allergens: [{ id: "2", name: "Fish" }] },
+    ]);
+    assert.equal(folded.length, 1, `"${label}" was left standing as a dish`);
+    assert.deepEqual(folded[0].allergens.map((a) => a.name), ["Fish"]);
+  }
+});
+
+test("foldAllergenLabels - a label with no dish above it is dropped, not crashed on", () => {
+  const folded = foldAllergenLabels([
+    { dish: "Allergener:", isMain: false, allergens: [{ id: "2", name: "Fish" }] },
+    parseItem("Torsk"),
+  ]);
+  assert.deepEqual(folded.map((i) => i.dish), ["Torsk"]);
+});
+
+test("foldAllergenLabels - never merges a real dish that merely mentions allergens", () => {
+  const folded = foldAllergenLabels([
+    parseItem("Torsk"),
+    parseItem("Allergenfri sjokoladekake"),
+    // The widget's 14-row legend, once parseItem has taken its numbers out.
+    { dish: "Allergener: egg, fisk, gluten, melk", isMain: false, allergens: [] },
+  ]);
+  assert.equal(folded.length, 3, "only the bare label is a label");
+});
+
+test("foldAllergenLabels - does not duplicate an allergen the dish already has", () => {
+  const folded = foldAllergenLabels([
+    parseItem("Torsk 2"),
+    { dish: "Allergener:", isMain: false, allergens: [
+      { id: "2", name: "Fish" },
+      { id: "3", name: "Gluten" },
+    ] },
+  ]);
+  assert.deepEqual(folded[0].allergens.map((a) => a.name).sort(), ["Fish", "Gluten"]);
 });
