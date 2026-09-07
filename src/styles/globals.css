@@ -3450,6 +3450,21 @@ body {
   will-change: transform;
 }
 
+/* The bottom sheet's open/close transition.
+   This MUST be a stylesheet rule and not an inline style. `endDrag` in
+   sheet.tsx clears the inline transition (`style.transition = ""`) when a
+   gesture ends, and React never writes it back — it only emits an inline style
+   when the value it holds changed, and that value is a module constant. With
+   nothing underneath, the panel lost its transition from the first drag onward:
+   measured in a browser as `computed: "all / 0s"`, a release that teleported
+   back instead of settling, and a close that jumped 443px in one frame.
+   During a drag sheet.tsx sets `transition: none` inline, which still wins. */
+.native-sheet-panel {
+  transition:
+    transform 400ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 400ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 .action-sheet-close {
   position: absolute;
   top: 10px;

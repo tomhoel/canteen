@@ -26,28 +26,51 @@ test("shouldEngage — once engaged it stays engaged even as finger moves back u
 });
 
 test("shouldDismiss — closes past a quarter of the panel height", () => {
-  const opts = { height: 400, fraction: 0.25, velocity: 0.5 };
+  const opts = { height: 400, fraction: 0.25, velocity: 0.5, dy: 1 };
   assert.equal(shouldDismiss({ my: 101, vy: 0, ...opts }), true);
   assert.equal(shouldDismiss({ my: 99, vy: 0, ...opts }), false);
 });
 
 test("shouldDismiss — closes on a fast flick that barely moved", () => {
-  const opts = { height: 400, fraction: 0.25, velocity: 0.5 };
+  const opts = { height: 400, fraction: 0.25, velocity: 0.5, dy: 1 };
   assert.equal(shouldDismiss({ my: 20, vy: 0.9, ...opts }), true);
 });
 
 test("shouldDismiss — springs back on a slow short pull", () => {
-  const opts = { height: 400, fraction: 0.25, velocity: 0.5 };
+  const opts = { height: 400, fraction: 0.25, velocity: 0.5, dy: 1 };
   assert.equal(shouldDismiss({ my: 20, vy: 0.1, ...opts }), false);
 });
 
 test("shouldDismiss — never dismisses on an unmeasured panel", () => {
-  assert.equal(shouldDismiss({ my: 300, vy: 2, height: 0, fraction: 0.25, velocity: 0.5 }), false);
+  assert.equal(
+    shouldDismiss({ my: 300, vy: 2, dy: 1, height: 0, fraction: 0.25, velocity: 0.5 }),
+    false
+  );
 });
 
 test("shouldDismiss — never dismisses on an upward release", () => {
-  const opts = { height: 400, fraction: 0.25, velocity: 0.5 };
+  const opts = { height: 400, fraction: 0.25, velocity: 0.5, dy: -1 };
   assert.equal(shouldDismiss({ my: -300, vy: 0, ...opts }), false);
+});
+
+// `vy` is a magnitude, not a signed velocity — @use-gesture derives it from
+// `_delta.map(Math.abs)`. Every test above passed `vy: 0` on the upward cases,
+// so none of them could see that a hard flick UP cleared the velocity threshold
+// and closed the sheet. Reproduced in a real browser before these were written.
+test("shouldDismiss — a hard flick UP cancels, it does not dismiss", () => {
+  const opts = { height: 400, fraction: 0.25, velocity: 0.5 };
+  assert.equal(shouldDismiss({ my: -40, vy: 2.0, dy: -1, ...opts }), false);
+});
+
+test("shouldDismiss — a hard flick UP cancels even from past the distance threshold", () => {
+  const opts = { height: 400, fraction: 0.25, velocity: 0.5 };
+  assert.equal(shouldDismiss({ my: 150, vy: 2.0, dy: -1, ...opts }), false);
+});
+
+test("shouldDismiss — a slow upward drift past the threshold still dismisses", () => {
+  // Drifting up gently is not a cancel; the panel is simply already far enough down.
+  const opts = { height: 400, fraction: 0.25, velocity: 0.5 };
+  assert.equal(shouldDismiss({ my: 150, vy: 0.05, dy: -1, ...opts }), true);
 });
 
 test("shouldTurnPage — commits past a quarter of width in either direction", () => {
