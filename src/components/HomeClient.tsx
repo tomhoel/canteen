@@ -1,5 +1,4 @@
 "use client";
-import { createPortal } from "react-dom";
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
@@ -8,7 +7,6 @@ import { markImageCached } from "@/lib/imageCache";
 import { Share2 } from "lucide-react";
 import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
-import { getMealDbUrl, getSpoonUrl, getLetterFallback } from "@/lib/ingredientImg";
 import {
   getLocalDateKey,
   computeDisplayContext,
@@ -41,8 +39,6 @@ import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 // only mounting each one once its own "open" condition is true (see the call
 // sites below), means a visitor who never opens any of these never pays for
 // their JS at all.
-const DealsView = lazy(() => import("@/components/DealsView"));
-const MenyView = lazy(() => import("@/components/MenyView"));
 const Lightbox = lazy(() => import("@/components/Lightbox"));
 const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
 const WeekOverview = lazy(() => import("@/components/WeekOverview"));
@@ -52,6 +48,8 @@ const WeekOverview = lazy(() => import("@/components/WeekOverview"));
 // drag-to-dismiss gesture, needed by nothing else in the app — into the chunk
 // the first paint waits on.
 const ActionSheet = lazy(() => import("@/components/ActionSheet"));
+const InfoModal = lazy(() => import("@/components/InfoModal"));
+const RecipeModal = lazy(() => import("@/components/RecipeModal"));
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -793,99 +791,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         cardsRef={scrollRef}
       />
 
-      {/* Info Modal */}
-      {/* Portalled to document.body. `useShellInert` at the top of this
-          component marks `.app-wrapper` inert while this overlay is open, and
-          this overlay renders inside `.app-wrapper` — so the attribute meant to
-          take the page behind it out of the tab order was taking the overlay
-          with it. Measured on production: zero of the panel's focusable
-          elements could be focused and a hit test at its centre never landed
-          inside it. ui/sheet.tsx portals for exactly this reason, which is why
-          the action sheet was the only overlay in the app that still worked. */}
-      {createPortal(
-        <>
-        {infoOpen && (
-          <div
-            className="info-overlay"
-            role="presentation"
-            onClick={() => setInfoOpen(false)}
-          >
-            <div
-              className="info-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="info-title-id"
-              onClick={e => e.stopPropagation()}
-            >
-              <button className="info-close" onClick={() => setInfoOpen(false)} aria-label="Lukk">&times;</button>
-              <div className="info-header">
-                <h2 id="info-title-id" className="info-title">{"Dagens"} <span>{"Lunsj"}</span></h2>
-                <p className="info-tagline">{"Din daglige lunsjfølgesvenn på Fornebu"}</p>
-              </div>
-              <div className="info-body">
-                <p className="info-intro">
-                  {"En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."}
-                </p>
-                <div className="info-features">
-                  <div className="info-feature">
-                    <span className="info-feature-icon">&#x1F37D;&#xFE0F;</span>
-                    <div>
-                      <strong>{"Daglige menyer"}</strong>
-                      <span>{"Tre kantiner, fem dager, komplett med allergener og bilder generert av AI."}</span>
-                    </div>
-                  </div>
-                  <div className="info-feature">
-                    <span className="info-feature-icon">&#x1F5F3;&#xFE0F;</span>
-                    <div>
-                      <strong>{"Stem i dag"}</strong>
-                      <span>{"Se hvilken kantine kollegene dine velger. Stemmetall oppdateres i sanntid."}</span>
-                    </div>
-                  </div>
-                  <div className="info-feature">
-                    <span className="info-feature-icon">&#x1F468;&#x200D;&#x1F373;</span>
-                    <div>
-                      <strong>{"AI-oppskrifter"}</strong>
-                      <span>{"Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI."}</span>
-                    </div>
-                  </div>
-                  <div className="info-feature">
-                    <span className="info-feature-icon">&#x1F6D2;</span>
-                    <div>
-                      <strong>{"Handle smart"}</strong>
-                      <span>{"Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY."}</span>
-                    </div>
-                  </div>
-                  <div className="info-feature">
-                    <span className="info-feature-icon">&#x1F310;</span>
-                    <div>
-                      <strong>{"Tospråklig"}</strong>
-                      <span>{"Full norsk og engelsk støtte — bytt med en knapp."}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="info-tech">
-                  <p className="info-tech-label">{"Bygget med"}</p>
-                  <p className="info-tech-stack">Next.js &middot; React 19 &middot; Gemini AI &middot; Upstash Redis &middot; Vercel</p>
-                </div>
-              </div>
-              <div className="info-footer">
-                <span className="info-made-by">{"Laget av"} Tom Hoel</span>
-                <div className="info-footer-links">
-                  <a href="mailto:tom.chamkrai.hoel@telenor.no?subject=Feedback%20on%20Canteen%20App" className="info-footer-link">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                    {"Tilbakemelding"}
-                  </a>
-                  <a href="https://www.linkedin.com/in/tom-hoel-47923215b/" target="_blank" rel="noopener noreferrer" className="info-footer-link info-linkedin">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                    LinkedIn
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        </>,
-        document.body
+      {/* Lazy: ~80 lines of static JSX and two inline SVGs for a panel almost
+          nobody opens, plus its stylesheet. */}
+      {infoOpen && (
+        <Suspense fallback={null}>
+          <InfoModal onClose={() => setInfoOpen(false)} />
+        </Suspense>
       )}
 
         {leaderboardOpen && (
@@ -971,229 +882,26 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           </Suspense>
         )}
 
-      {/* Recipe Modal */}
-      {/* Portalled to document.body. `useShellInert` at the top of this
-          component marks `.app-wrapper` inert while this overlay is open, and
-          this overlay renders inside `.app-wrapper` — so the attribute meant to
-          take the page behind it out of the tab order was taking the overlay
-          with it. Measured on production: zero of the panel's focusable
-          elements could be focused and a hit test at its centre never landed
-          inside it. ui/sheet.tsx portals for exactly this reason, which is why
-          the action sheet was the only overlay in the app that still worked. */}
-      {createPortal(
-        <>
-        {recipeModal.isOpen && (
-          <div
-            className="recipe-overlay"
-            role="presentation"
-            onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }}
-          >
-            <div
-              className="recipe-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="recipe-dish-title"
-              onClick={e => e.stopPropagation()}
-            >
-              <button className="recipe-close" onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }} aria-label="Lukk">&#xD7;</button>
-
-{menyView.isOpen ? (
-              <>
-                <div className="recipe-header">
-                  <span className="recipe-canteen">{recipeModal.canteenName}</span>
-                  <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
-                </div>
-
-                {menyView.isLoading && (
-                  <div className="recipe-loading">
-                    <span className="recipe-loading-emoji meny-loading-bag">{"\uD83D\uDECD\uFE0F"}</span>
-                    <span className="recipe-loading-text">{"S\u00F8ker hos Meny..."}</span>
-                  </div>
-                )}
-
-                {menyView.error && (
-                  <div className="recipe-error">
-                    <p>{menyView.error}</p>
-                    <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleMenyClick(recipeModal.dishName, recipeModal.recipe)}>
-                      {"Pr\u00F8v igjen"}
-                    </button>
-                  </div>
-                )}
-
-                {menyView.data && (
-                  <Suspense fallback={null}>
-                    <MenyView
-                      meny={menyView.data}
-                      onBack={closeMeny}
-                    />
-                  </Suspense>
-                )}
-              </>
-            ) : dealsView.isOpen ? (
-              <>
-                <div className="recipe-header">
-                  <span className="recipe-canteen">{recipeModal.canteenName}</span>
-                  <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
-                </div>
-
-                {dealsView.isLoading && !dealsView.deals && (
-                  <div className="recipe-loading">
-                    <span className="recipe-loading-emoji deals-loading-cart">{"\uD83D\uDED2"}</span>
-                    <span className="recipe-loading-text">{"Sammenligner priser..."}</span>
-                  </div>
-                )}
-
-                {dealsView.error && (
-                  <div className="recipe-error">
-                    <p>{dealsView.error}</p>
-                    <button className="recipe-retry-btn" onClick={() => recipeModal.recipe && handleDealsClick(recipeModal.dishName, recipeModal.recipe)}>
-                      {"Pr\u00F8v igjen"}
-                    </button>
-                  </div>
-                )}
-
-                {dealsView.deals && (
-                  <Suspense fallback={null}>
-                    <DealsView
-                      deals={dealsView.deals}
-                      isStreaming={dealsView.isStreaming}
-                      onBack={closeDeals}
-                    />
-                  </Suspense>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="recipe-header">
-                  <span className="recipe-canteen">{recipeModal.canteenName}</span>
-                  <h2 className="recipe-dish-name">{recipeModal.dishName}</h2>
-                </div>
-
-                {recipeModal.isLoading && (
-                  <div className="recipe-loading">
-                    <span className="recipe-loading-emoji">&#x1F373;</span>
-                    <span className="recipe-loading-text">{"Genererer oppskrift..."}</span>
-                  </div>
-                )}
-
-                {recipeModal.error && (
-                  <div className="recipe-error">
-                    <p>{recipeModal.error}</p>
-                    <button className="recipe-retry-btn" onClick={() => handleRecipeClick(recipeModal.dishName, recipeModal.canteenName)}>
-                      {"Pr\u00F8v igjen"}
-                    </button>
-                  </div>
-                )}
-
-                {recipeModal.recipe && (() => {
-                  const scale = recipeServings / recipeModal.recipe.servings;
-                  const scaleAmount = (amount: string) => {
-                    const num = parseFloat(amount);
-                    if (isNaN(num)) return amount;
-                    const scaled = num * scale;
-                    return scaled % 1 === 0 ? scaled.toString() : scaled.toFixed(1).replace(/\.0$/, "");
-                  };
-                  const recipe = recipeModal.recipe;
-                  return (
-                  <>
-                    <div className="recipe-meta">
-                      <span className="recipe-meta-servings">
-                        <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.max(1, s - 1))}>&#x2212;</button>
-                        <span className="recipe-servings-value">{recipeServings}</span>
-                        <button className="recipe-servings-btn" onClick={() => setRecipeServings(s => Math.min(20, s + 1))}>+</button>
-                        <span className="recipe-servings-label">{"pers."}</span>
-                      </span>
-                      <span>{"Prep"}: {recipe.prepTime}</span>
-                      <span>{"Tilbereding"}: {recipe.cookTime}</span>
-                    </div>
-                    <div className="recipe-content">
-                      <div className="recipe-ingredients">
-                        <h3 className="recipe-section-title">{"Ingredienser"}{scale !== 1 ? ` (${"\u00D7"}${scale % 1 === 0 ? scale : scale.toFixed(1)})` : ""}</h3>
-                        <ul className="recipe-ingredient-list">
-                          {recipe.ingredients.map((ing, i) => {
-                            const fb = getLetterFallback(ing.item);
-                            return (
-                            <li key={i} className="recipe-ingredient-item" style={{ animationDelay: `${i * 50}ms` }}>
-                              <div className="recipe-ingredient-img-wrap">
-                                <img
-                                  src={getMealDbUrl(ing.item)}
-                                  alt=""
-                                  className="recipe-ingredient-img"
-                                  loading="lazy"
-                                  onLoad={e => { (e.target as HTMLImageElement).parentElement!.classList.add("has-img"); }}
-                                  onError={e => {
-                                    const img = e.target as HTMLImageElement;
-                                    if (!img.dataset.fallback) {
-                                      img.dataset.fallback = "1";
-                                      img.src = getSpoonUrl(ing.item);
-                                    } else {
-                                      img.style.display = "none";
-                                    }
-                                  }}
-                                />
-                                <span className="recipe-ingredient-letter" style={{ background: fb.color }}>{fb.letter}</span>
-                              </div>
-                              <div className="recipe-ingredient-details">
-                                <span className="recipe-ingredient-name">{ing.itemLocal || ing.item}</span>
-                                <span className="recipe-ingredient-amount">{scaleAmount(ing.amount)} {ing.unit}</span>
-                              </div>
-                            </li>
-                            );
-                          })}
-                        </ul>
-                        {/* Shopping divider + options */}
-                        <div className="recipe-shop-divider" style={{ animationDelay: `${recipe.ingredients.length * 50 + 30}ms` }}>
-                          <span className="shop-divider-label">{"Handle"}</span>
-                        </div>
-                        <div className="recipe-shop-row" style={{ animationDelay: `${recipe.ingredients.length * 50 + 50}ms` }}>
-                          <button className="shop-card shop-card-meny" onClick={() => handleMenyClick(recipeModal.dishName, recipe)}>
-                            <span className="shop-card-icon shop-icon-meny">
-                              <span className="shop-icon-check" />
-                            </span>
-                            <span className="shop-card-text">
-                              <span className="shop-card-label">{"Handleliste"}</span>
-                              <span className="shop-card-sub">Meny</span>
-                            </span>
-                          </button>
-                          <button className="shop-card shop-card-deals" onClick={() => handleDealsClick(recipeModal.dishName, recipe)}>
-                            <span className="shop-card-icon shop-icon-deals">
-                              <span className="shop-icon-tag" />
-                            </span>
-                            <span className="shop-card-text">
-                              <span className="shop-card-label">{"Ukens tilbud"}</span>
-                              <span className="shop-card-sub">{"Alle butikker"}</span>
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-                      <div className="recipe-steps">
-                        <h3 className="recipe-section-title">{"Fremgangsm\u00E5te"}</h3>
-                        <ol className="recipe-step-list">
-                          {recipe.steps.map((step, i) => (
-                            <li key={i} className="recipe-step-item" style={{ animationDelay: `${(i * 50) + 150}ms` }}>
-                              <span className="recipe-step-number">{i + 1}</span>
-                              <span className="recipe-step-text">{step}</span>
-                            </li>
-                          ))}
-                        </ol>
-                        {recipe.tip && (
-                          <div className="recipe-tip">
-                            <span className="recipe-tip-icon">&#x1F4A1;</span>
-                            <span className="recipe-tip-text">{recipe.tip}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                  );
-                })()}
-              </>
-            )}
-            </div>
-          </div>
-        )}
-        </>,
-        document.body
+      {/* The recipe panel and the Meny/Deals views over it, in their own chunk.
+          It is reached by two taps and brings `@/lib/ingredientImg` with it —
+          6.6 KB imported nowhere else — so none of it belongs in the chunk the
+          first paint waits on. */}
+      {recipeModal.isOpen && (
+        <Suspense fallback={null}>
+          <RecipeModal
+            recipeModal={recipeModal}
+            recipeServings={recipeServings}
+            setRecipeServings={setRecipeServings}
+            menyView={menyView}
+            dealsView={dealsView}
+            handleRecipeClick={handleRecipeClick}
+            handleMenyClick={handleMenyClick}
+            handleDealsClick={handleDealsClick}
+            closeRecipe={closeRecipe}
+            closeMeny={closeMeny}
+            closeDeals={closeDeals}
+          />
+        </Suspense>
       )}
     </div>
   );

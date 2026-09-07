@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Recipe, MenyResponse } from "@/lib/types";
 import { searchMeny } from "@/lib/api-client";
 
-interface MenyViewState {
+export interface MenyViewState {
   isOpen: boolean;
   data: MenyResponse | null;
   isLoading: boolean;

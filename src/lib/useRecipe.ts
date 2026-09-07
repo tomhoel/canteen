@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Recipe } from "@/lib/types";
 import { generateRecipe } from "@/lib/api-client";
 
-interface RecipeModalState {
+export interface RecipeModalState {
   isOpen: boolean;
   dishName: string;
   canteenName: string;

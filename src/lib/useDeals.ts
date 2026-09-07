@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Recipe, DealsResponse } from "@/lib/types";
 import { fetchDeals } from "@/lib/api-client";
 
-interface DealsViewState {
+export interface DealsViewState {
   isOpen: boolean;
   deals: DealsResponse | null;
   isLoading: boolean;
