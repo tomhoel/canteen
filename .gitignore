@@ -24,10 +24,12 @@
 # screenshots & debug images
 *.png
 !public/**/*.png
+# Source-only artwork lives in assets/source-images/ so Vite never copies it
+# into dist/. It was under public/, which shipped 1.7 MB of master-plate-ref.png
+# and closed-plate copies on every deploy that no client ever requests: the app
+# reads the closed plates from Supabase, and image.service.ts fetches the master
+# reference from Supabase too. Only scripts/upload-*.cjs read these files.
 public/images/*
-!public/images/master-plate-ref.png
-!public/images/closed-plates/
-!public/images/fornebu-campus.webp
 public/images_nobg/*
 public/history/*
 
