@@ -1887,32 +1887,22 @@ body {
     visibility: hidden;
   }
 
-  /* Having hidden the shell's copy, React's bar would otherwise simply appear.
-     It rises into place instead — which is what the bar did before, except
-     that then it was rising from the wrong position to the right one rather
-     than being an entrance. Same feel, no jump. Mobile is left alone: there
-     the shell's copy is already correct and visible, so animating React's
-     would be a second entrance for a bar that never left. */
-  .day-bar:not(.day-bar-unmeasured) {
-    animation: dayBarRise 0.42s var(--smooth) both;
-  }
-}
+  /* There used to be a `dayBarRise` entrance here, on
+     `.day-bar:not(.day-bar-unmeasured)`. It is gone, by its own argument.
 
-@keyframes dayBarRise {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
+     The rule's comment already stated the principle — animating a bar whose
+     content never changed "would be a second entrance for a bar that never
+     left" — and gave mobile the exemption. Desktop needed it too: only
+     index.html emits `day-bar-unmeasured`, never DaySelector, so BOTH React
+     bars matched. LoadingScreen mounts one and HomeClient mounts another, and
+     the second rise is a bar that is already on screen, in its final position.
 
-@media (prefers-reduced-motion: reduce) {
-  .day-bar:not(.day-bar-unmeasured) {
-    animation: none;
-  }
+     Measured on a production build at 1440x900, sampling the bar every frame:
+     it climbs from rectTop 775 to 762 between 69ms and 323ms, then SNAPS BACK
+     to 775 at 382ms and climbs again — a visible drop and re-rise on every
+     load. Deleting it is safe because the two mounts resolve to the same
+     place: `bottom` was 73.3047px in all 184 samples, so with no animation the
+     bar simply appears where it belongs and never moves. */
 }
 
 /* ─── Day Selector Bar — Liquid Glass (desktop) ─── */
@@ -4480,9 +4470,53 @@ body {
    on a phone the placeholder stood 504px tall where the card replacing it was
    233px — and every card visibly jumped as it loaded. The real card now supplies
    the box at every breakpoint and only the stand-ins for text live here. */
-.skeleton-card {
+/* ─── The placeholders do not animate. Only content that genuinely arrives does. ───
+
+   A cold load renders this card THREE times: index.html's static shell, then
+   LoadingScreen's SkeletonCard when React wipes #root, then the real FoodCard.
+   Each is a fresh element, so each restarted every entrance animation on it.
+   Recorded from a production build with an animationstart listener injected
+   ahead of everything else: cardReveal fired 7 times, cardContentEnter 9 times,
+   on a single page load — and the waves overlapped rather than handing off,
+   because the skeletons run 0.5s while the real cards start 150ms before they
+   finish.
+
+   The entrance belongs on the real cards and nowhere else, for a reason that is
+   about timing rather than taste. `getWeeklyMenu` returns a localStorage hit
+   immediately and revalidates in the background — the installed PWA reopened
+   with a warm cache, which is the most common launch there is. On that path the
+   menu settles a frame or two after LoadingScreen commits, so an entrance
+   attached to the placeholder would be destroyed at ~5% progress and replaced by
+   a fully opaque card: a hard pop, on the most common launch. An entrance on the
+   real cards behaves identically whether the data takes 16ms or 4s.
+
+   Removing this is also a straight win for the shell's actual job. With
+   `both` fill and the 75ms/150ms delays the shell hands cards 2 and 3, the 0%
+   keyframe (opacity: 0) held two of the three cards invisible — so the markup
+   that exists to paint an app-shaped page before any JavaScript runs was
+   painting ONE card. Now it paints all three.
+
+   `.food-card.skeleton-card`, not bare `.skeleton-card`: the phone block near
+   the end of this file sets `.food-card { animation-name: cardRevealFlat }` at
+   equal specificity and later in source order, so a single-class selector would
+   lose the name back to it. */
+.food-card.skeleton-card {
   cursor: default;
-  animation: cardReveal 0.5s var(--smooth) both;
+  animation: none;
+}
+
+/* Desktop only — cardContentEnter lives behind `min-width: 769px`. */
+.skeleton-card .card-content {
+  animation: none;
+}
+
+/* `display`, not `animation: none`. The halo is the one thing here that
+   animates `filter: blur()`, which is not compositor-only, and `will-change`
+   on it promotes a layer whether or not anything is running — six of them,
+   during the exact window the main thread is parsing the bundle. A placeholder
+   has no plate to glow behind. The phone block already does this. */
+.skeleton-card .card-image-circle::after {
+  display: none;
 }
 
 @keyframes skeletonShimmer {
