@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useMotionValue, animate, type MotionValue } from "motion/react";
 import { shouldTurnPage } from "@/lib/sheet-drag";
+import { sampleSpring } from "@/lib/spring-easing";
 
 /**
  * Everything that turns a finger or a trackpad into a day change.
@@ -54,8 +54,16 @@ export interface UseDaySwipeOptions {
 }
 
 export interface DaySwipe {
-  /** Drives `.cards-track`; read by the component as a style value. */
-  dragX: MotionValue<number>;
+  /**
+   * Attach to `.cards-track`. The hook writes `transform` straight onto it.
+   *
+   * This used to be a MotionValue the component handed to `style={{ x }}`.
+   * Writing the element directly costs nothing in fidelity — the value was
+   * never read by anything else (grep: `dragX` appeared only here and at the
+   * one `.cards-track` call site) — and it takes motion's animation runtime
+   * off the critical path, which was the point.
+   */
+  trackRef: React.RefObject<HTMLDivElement | null>;
   handleWheel: (e: React.WheelEvent) => void;
   handleTouchStart: (e: React.TouchEvent) => void;
   handleTouchEnd: (e: React.TouchEvent) => void;
@@ -121,7 +129,81 @@ export function useDaySwipe({
    * separate elements means the drag and the day change compose instead of
    * fighting over one property.
    */
-  const dragX = useMotionValue(0);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  /** Where the strip currently sits, in px. The old MotionValue's `.get()`. */
+  const offsetRef = useRef(0);
+
+  /**
+   * The last two touchmoves, for the release velocity.
+   *
+   * `handleTouchEnd` already computes a `vx`, but that is the average over the
+   * whole gesture and it is used for the page-turn threshold, where average is
+   * what you want. The settle needs the *instantaneous* velocity at the lift —
+   * what `MotionValue.getVelocity()` returned — because that is what carries
+   * the strip a little further out before it turns back on a hard flick.
+   */
+  const recentRef = useRef<{ x: number; t: number }[]>([]);
+
+  /** `window.innerWidth * 0.55`, sampled once per gesture at the axis lock. */
+  const limitRef = useRef(0);
+
+  /** Set while a settle transition is in flight, so a new grab can cancel it. */
+  const settlingRef = useRef(false);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  /**
+   * Hand the element back: no transition, and no transform at all.
+   *
+   * Cleared to `""` rather than parked on `translateX(0px)` deliberately. It is
+   * what motion did — `buildTransform` collapses an all-default transform to
+   * the string `none` — and a transform makes the element a containing block
+   * for any absolutely positioned descendant. Nothing inside `.cards-track` is
+   * absolutely positioned today (the day transition stacks the two days in the
+   * track's grid cell instead), so this currently costs nothing either way;
+   * it stays because the day that changes, this is a silent bug.
+   */
+  const releaseTrack = useCallback(() => {
+    const el = trackRef.current;
+    settlingRef.current = false;
+    if (settleTimer.current) {
+      clearTimeout(settleTimer.current);
+      settleTimer.current = undefined;
+    }
+    if (!el) return;
+    el.style.transition = "";
+    el.style.transform = "";
+  }, []);
+
+  /**
+   * Take the element for a drag: freeze wherever the settle had painted it.
+   *
+   * `MotionValue.set()` did NOT stop a running animation — only `jump()` and
+   * `start()` call `stop()` — so grabbing the strip mid-settle used to leave
+   * the spring writing every frame while the finger wrote the absolute offset,
+   * and the two fought for the rest of the settle. This freezes first.
+   */
+  const grabTrack = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    if (settlingRef.current) {
+      // Read where the transition has actually painted it, then pin that.
+      const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+      offsetRef.current = m.m41;
+      settlingRef.current = false;
+      if (settleTimer.current) {
+        clearTimeout(settleTimer.current);
+        settleTimer.current = undefined;
+      }
+    }
+    el.style.transition = "none";
+  }, []);
+
+  const writeOffset = useCallback((px: number) => {
+    offsetRef.current = px;
+    const el = trackRef.current;
+    if (el) el.style.transform = `translateX(${px}px)`;
+  }, []);
 
   /**
    * The selected day, readable from the touchmove listener.
@@ -135,9 +217,72 @@ export function useDaySwipe({
     dayRef.current = selectedDay;
   }, [selectedDay]);
 
+  /**
+   * Send the strip home on the spring it always used: 380/40/0.7.
+   *
+   * That spring is over-damped (damping ratio 1.226), so it has a closed form,
+   * and `spring-easing.ts` solves it for this gesture's release velocity and
+   * hands the result to CSS as a sampled `linear()` easing. A `cubic-bezier`
+   * would have been simpler and would have thrown the velocity away — and with
+   * it the thing a hard flick actually does, which is carry the strip about
+   * 10px further out before turning back. That carry is most of what the
+   * gesture feels like, so it is worth the thirty lines.
+   *
+   * The transition also runs on the compositor, which the rAF-driven spring
+   * never did.
+   */
   const settleDrag = useCallback(() => {
-    animate(dragX, 0, { type: "spring", stiffness: 380, damping: 40, mass: 0.7 });
-  }, [dragX]);
+    const el = trackRef.current;
+    if (!el) return;
+    if (offsetRef.current === 0) {
+      releaseTrack();
+      return;
+    }
+
+    // Under reduced motion the stylesheet's `* { transition: none !important }`
+    // beats the inline transition, so nothing animates and no transitionend
+    // ever fires. Release now rather than hold the element for half a second
+    // per swipe waiting for an event that cannot arrive.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      releaseTrack();
+      return;
+    }
+
+    // Instantaneous velocity at the lift, in px/s, from the last two moves.
+    const pts = recentRef.current;
+    let velocity = 0;
+    if (pts.length >= 2) {
+      const a = pts[pts.length - 2];
+      const b = pts[pts.length - 1];
+      const dt = b.t - a.t;
+      if (dt > 0) velocity = ((b.x - a.x) / dt) * 1000;
+    }
+
+    const { durationMs, easing } = sampleSpring(
+      { stiffness: 380, damping: 40, mass: 0.7 },
+      offsetRef.current,
+      velocity
+    );
+    if (!durationMs) {
+      releaseTrack();
+      return;
+    }
+
+    settlingRef.current = true;
+    el.style.transition = `transform ${durationMs}ms ${easing}`;
+    el.style.transform = "translateX(0px)";
+    offsetRef.current = 0;
+
+    // The timer is the authority, not transitionend. transitionend bubbles, and
+    // the two day panels inside this element transition `transform` and
+    // `opacity` on every day change — a swipe fires both by construction — so a
+    // listener here would be ended by a panel's event mid-settle. A guarded
+    // listener would work; a timer needs no guard and cannot be fooled.
+    settleTimer.current = setTimeout(releaseTrack, durationMs + 60);
+  }, [releaseTrack]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
@@ -175,6 +320,15 @@ export function useDaySwipe({
       if (swipeAxis.current === "undecided") {
         if (Math.abs(dx) < AXIS_LOCK_PX && Math.abs(dy) < AXIS_LOCK_PX) return;
         swipeAxis.current = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+        if (swipeAxis.current === "x") {
+          // Once per gesture, not once per move. Reading innerWidth flushes
+          // style, and now that we also WRITE style on every move that would
+          // be a thrash the old code avoided only because motion deferred its
+          // write to the next frame.
+          limitRef.current = window.innerWidth * 0.55;
+          recentRef.current = [];
+          grabTrack();
+        }
       }
 
       // Only the horizontal case is cancelled, and only once the axis is
@@ -195,17 +349,45 @@ export function useDaySwipe({
       const atStart = dayRef.current <= 0 && dx > 0;
       const atEnd = dayRef.current >= 4 && dx < 0;
       const resisted = atStart || atEnd ? dx * 0.25 : dx;
-      const limit = window.innerWidth * 0.55;
-      dragX.set(Math.max(-limit, Math.min(limit, resisted)));
+      const limit = limitRef.current;
+      const next = Math.max(-limit, Math.min(limit, resisted));
+
+      // Kept for the release velocity; two points is all the settle needs.
+      const now = performance.now();
+      const pts = recentRef.current;
+      pts.push({ x: next, t: now });
+      if (pts.length > 2) pts.shift();
+
+      writeOffset(next);
+    };
+
+    // A system gesture — the app switcher, a notification shade, an incoming
+    // call — takes the touch away without ever firing touchend. There was no
+    // handler for that, so the strip simply stayed where the finger left it
+    // until the next gesture. Now it would also strand `transition: none` on
+    // the element, so this is required rather than a nicety.
+    const onTouchCancel = () => {
+      touchStartRef.current = null;
+      const axis = swipeAxis.current;
+      swipeAxis.current = "undecided";
+      if (axis === "x") settleDrag();
     };
 
     el.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", onTouchMove);
+    el.addEventListener("touchcancel", onTouchCancel);
+    return () => {
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchcancel", onTouchCancel);
+    };
     // `ready` is here because the element this attaches to does not exist until
-    // the menu arrives — see the field's own comment. `dragX` is a MotionValue
-    // and never changes identity. Neither dependency changes on a day switch,
-    // which is what matters.
-  }, [dragX, ready, scrollRef]);
+    // the menu arrives — see the field's own comment. Neither dependency
+    // changes on a day switch, which is what matters.
+    // `grabTrack` and `writeOffset` both have empty dependency arrays, so they
+    // are referentially stable and this still attaches exactly once. That
+    // property is load-bearing — re-registering a non-passive listener drops
+    // the gesture in progress — so if either ever grows a dependency, this
+    // effect has to stop depending on it.
+  }, [grabTrack, ready, scrollRef, settleDrag, writeOffset]);
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
@@ -247,7 +429,7 @@ export function useDaySwipe({
   );
 
   return {
-    dragX,
+    trackRef,
     handleWheel,
     handleTouchStart,
     handleTouchEnd,

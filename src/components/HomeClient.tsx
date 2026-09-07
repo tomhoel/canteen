@@ -2,8 +2,6 @@
 import { createPortal } from "react-dom";
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
-import { AnimatePresence } from "motion/react";
-import * as m from "motion/react-m";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
@@ -28,10 +26,8 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import AppHeader from "@/components/AppHeader";
 import DaySelector from "@/components/DaySelector";
-import FoodCard from "@/components/FoodCard";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
-import AllClosedCard from "@/components/AllClosedCard";
-import ClosedCard from "@/components/ClosedCard";
+import DayPanel from "@/components/DayPanel";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useShellInert } from "@/lib/useShellInert";
 import { useDaySwipe } from "@/lib/useDaySwipe";
@@ -77,9 +73,6 @@ export interface HomeClientProps {
 }
 
 
-/** What the day transition needs, delivered via AnimatePresence custom. */
-type DayCustom = { dir: number; fromSwipe: boolean };
-
 export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, initialDescriptions, initialShortNames, plateImages }: HomeClientProps) {
   const searchParams = useSearch();
 
@@ -119,10 +112,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // Desktop renders the plate in a 261px box and phones in a 160px one, so a
   // single width is wrong for one of them. See PLATE_CARD_WIDTH.
   const plateWidth = isDesktop ? PLATE_CARD_WIDTH.desktop : PLATE_CARD_WIDTH.mobile;
-  // How far a day slides in from. The desktop has three cards across a wide
-  // viewport and can afford the full throw; a phone card is nearly the
-  // screen, so the same 80px reads as the whole layout lurching.
-  const travel = isDesktop ? 80 : 44;
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
@@ -138,7 +127,17 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setDishDescriptions(initialDescriptions);
     setDishShortNames(initialShortNames);
   }, [initialMenu, initialOrigins, initialDescriptions, initialShortNames]);
-  const [direction, setDirection] = useState(0);
+  /**
+   * The day change, as two panels instead of an AnimatePresence.
+   *
+   * `current` is the day on screen and `leaving` is the one still sliding out;
+   * `seq` is what keys them, so returning to a day that is still leaving gets a
+   * brand-new panel rather than reversing the old one. Both live in the track's
+   * single grid cell — see DayPanel for why that is enough.
+   */
+  const [current, setCurrent] = useState({ seq: 0, day: selectedDay });
+  const [leaving, setLeaving] = useState<{ seq: number; day: number; dir: number } | null>(null);
+  const [dayDir, setDayDir] = useState(0);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -246,14 +245,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const markSwipe = useCallback(() => setFromSwipe(true), []);
 
   const handleDaySelect = useCallback((i: number) => {
-    // Cleared for every day change; the swipe path sets it again immediately
-    // after calling this, and the later write wins within the same batch.
-    setFromSwipe(false);
-    setSelectedDay(prev => {
-      if (i === prev) return prev;
-      setDirection(i > prev ? 1 : -1);
-      return i;
-    });
+    setSelectedDay(prev => (i === prev ? prev : i));
     // replaceState, as before: tapping through the weekdays must not stack
     // history entries, or Back walks Friday -> Thursday instead of leaving the
     // app. setSearchParam rewrites this one key and leaves the rest of the
@@ -397,7 +389,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // MotionValue the strip rides on, the non-passive listener and the release
   // threshold are one mechanism, and every bug here came from moving one
   // without the others.
-  const { dragX, handleWheel, handleTouchStart, handleTouchEnd } = useDaySwipe({
+  const { trackRef, handleWheel, handleTouchStart, handleTouchEnd } = useDaySwipe({
     scrollRef,
     selectedDay,
     onSelectDay: handleDaySelect,
@@ -640,6 +632,39 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // There is no SSR any more — `menuData` arrives from the route loader before
   // this component exists — so the only thing left to wait for is the effect
   // flush, and waiting for it just showed the placeholder one frame longer.
+  /*
+    Derive the transition during render, not in an effect — an effect would
+    start it one painted frame late, so the new day would be visible at rest
+    before it slid. This is React's sanctioned derived-state escape hatch: the
+    guard makes the re-render terminate, and every setter targets this
+    component's own state.
+
+    Gated on `menuData` because two effects move `selectedDay` while the menu
+    is still loading (the `?day=` reader and the seed that picks the default
+    day). `<AnimatePresence>` was not mounted during that phase, so those moves
+    produced no transition; without the gate they would mount a whole second
+    DayPanel — three FoodCards and their plates — for a day that has never been
+    on screen, and the first frame the user sees would be it sliding away.
+
+    `fromSwipe` is consumed here rather than in `handleDaySelect` because that
+    is the only place it is read. It used to be cleared only on the tap path,
+    so after any swipe it stayed true and the next day change arriving from the
+    URL — a shared link, browser Back — was told it came from a finger and
+    cross-faded in place with no slide and no strip movement to stand in.
+  */
+  if (current.day !== selectedDay) {
+    if (!menuData) {
+      // Keep the panels in step with the day, without producing a transition.
+      setCurrent({ seq: 0, day: selectedDay });
+    } else {
+      const d = fromSwipe ? 0 : selectedDay > current.day ? 1 : -1;
+      setDayDir(d);
+      if (fromSwipe) setFromSwipe(false);
+      setLeaving({ seq: current.seq, day: current.day, dir: d });
+      setCurrent({ seq: current.seq + 1, day: selectedDay });
+    }
+  }
+
   if (!menuData) {
     return <LoadingScreen />;
   }
@@ -697,102 +722,60 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <m.div className="cards-track" style={{ x: dragX }}>
+          <div className="cards-track" ref={trackRef}>
             {/*
-              Day switch.
+              The day change: at most two panels, stacked in this element's
+              single grid cell. `<AnimatePresence mode="popLayout">` used to do
+              this by pinning the outgoing day with `position: absolute` and a
+              measured top/left; the grid stack the stylesheet already declares
+              does it with no positioning at all, which is both simpler and
+              free of popLayout's desktop failure mode (the pinned offsets
+              resolve against the stretched grid AREA, not the box the panel
+              was standing in).
 
-              `popLayout`, not `wait`. With `wait` the outgoing day has to
-              finish leaving before the incoming one may start, so the two
-              never share the screen and the change reads as two separate
-              events — which is what made it feel stiff and rigid. popLayout
-              takes the exiting day out of layout flow so both move at once and
-              the days cross through each other.
-
-              The spring is what gives it weight: a fixed-duration tween
-              arrives at the same instant however hard the strip was flicked,
-              and has no relationship to the gesture that caused it.
-
-              `scale` is desktop-only, and that is the one real concession.
-              Scaling a box full of text forces WebKit to re-rasterise every
-              glyph in it on each frame, which is exactly the cost a phone
-              cannot absorb — it is why the scale was stripped out in the first
-              place. The phone keeps the overlap, the spring and the slide, and
-              travels a little less far because it has less room to travel in.
+              The leaving panel is rendered FIRST, and that ordering is
+              load-bearing: it means React appends the arriving panel rather
+              than inserting before it, and `insertBefore` would take the
+              leaving node out of the tree and cancel its running transition.
             */}
-            <AnimatePresence mode="popLayout" initial={false} custom={{ dir: direction, fromSwipe }}>
-              <m.div
-                key={selectedDay}
-                custom={{ dir: direction, fromSwipe }}
-                variants={{
-                  enter: ({ dir, fromSwipe }: DayCustom) => ({
-                    // A swipe leaves the horizontal movement to the strip.
-                    x: fromSwipe ? 0 : dir > 0 ? travel : dir < 0 ? -travel : 0,
-                    opacity: 0,
-                    ...(isDesktop ? { scale: 0.98 } : {}),
-                  }),
-                  center: {
-                    x: 0,
-                    opacity: 1,
-                    ...(isDesktop ? { scale: 1 } : {}),
-                    transition: {
-                      x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
-                      opacity: { duration: isDesktop ? 0.28 : 0.24 },
-                      scale: { duration: 0.28 },
-                    },
-                  },
-                  exit: ({ dir, fromSwipe }: DayCustom) => ({
-                    x: fromSwipe ? 0 : dir > 0 ? -travel : travel,
-                    opacity: 0,
-                    ...(isDesktop ? { scale: 0.98 } : {}),
-                    transition: {
-                      x: { type: "spring", stiffness: 300, damping: 30, mass: 0.8 },
-                      opacity: { duration: isDesktop ? 0.2 : 0.18 },
-                      scale: { duration: 0.2 },
-                    },
-                  }),
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="cards-animated-wrapper"
-              >
-                {openCanteens.length === 0 ? (
-                  <AllClosedCard closedCanteens={closedCanteens} />
-                ) : (
-                  <>
-                    {closedCanteens.length > 0 && (
-                      <div className="closed-pill-mobile">
-                        <ClosedCanteensPill closedCanteens={closedCanteens} />
-                      </div>
-                    )}
-                    {canteenDayData.map((data, cardIdx) => (
-                      isCanteenClosed(data) ? (
-                        <ClosedCard
-                          key={data.canteenName}
-                          data={data}
-                          cardIdx={cardIdx}
-                        />
-                      ) : (
-                        <FoodCard
-                          key={data.canteenName}
-                          data={data}
-                          cardIdx={cardIdx}
-                          selectedDay={selectedDay}
-                          todayIndex={todayIndex}
-                          voteCount={voting.votes[data.canteenName] ?? 0}
-                          maxVotes={maxVotes}
-                          onImageClick={handleImageClick}
-                          onCardClick={handleCardClick}
-                          yoloHighlighted={yoloHighlight === cardIdx}
-                          yoloWinner={yoloWinner === cardIdx}
-                        />
-                      )
-                    ))}
-                  </>
-                )}
-              </m.div>
-            </AnimatePresence>
-          </m.div>
+            {leaving && (
+              <DayPanel
+                key={leaving.seq}
+                day={leaving.day}
+                data={allDaysData[leaving.day] ?? []}
+                phase="exit"
+                dir={leaving.dir}
+                todayIndex={todayIndex}
+                votes={voting.votes}
+                maxVotes={maxVotes}
+                onImageClick={handleImageClick}
+                onCardClick={handleCardClick}
+                /* Forced off: tapping Today both starts the YOLO spin and
+                   changes the day, and the glow belongs to the day arriving,
+                   not the one leaving. AnimatePresence hid this by freezing the
+                   exiting child's props; this panel renders live. */
+                yoloHighlight={-1}
+                yoloWinner={-1}
+                onExited={() =>
+                  setLeaving(l => (l && l.seq === leaving.seq ? null : l))
+                }
+              />
+            )}
+            <DayPanel
+              key={current.seq}
+              day={current.day}
+              data={canteenDayData}
+              phase={current.seq === 0 ? "static" : "enter"}
+              dir={dayDir}
+              todayIndex={todayIndex}
+              votes={voting.votes}
+              maxVotes={maxVotes}
+              onImageClick={handleImageClick}
+              onCardClick={handleCardClick}
+              yoloHighlight={yoloHighlight}
+              yoloWinner={yoloWinner}
+            />
+          </div>
         </ErrorBoundary>
       </main>
 
@@ -820,28 +803,18 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           inside it. ui/sheet.tsx portals for exactly this reason, which is why
           the action sheet was the only overlay in the app that still worked. */}
       {createPortal(
-        <AnimatePresence>
+        <>
         {infoOpen && (
-          <m.div
-            key="info-overlay"
+          <div
             className="info-overlay"
             role="presentation"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
             onClick={() => setInfoOpen(false)}
           >
-            <m.div
-              key="info-modal"
+            <div
               className="info-modal"
               role="dialog"
               aria-modal="true"
               aria-labelledby="info-title-id"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 28, stiffness: 340 }}
               onClick={e => e.stopPropagation()}
             >
               <button className="info-close" onClick={() => setInfoOpen(false)} aria-label="Lukk">&times;</button>
@@ -908,14 +881,13 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                   </a>
                 </div>
               </div>
-            </m.div>
-          </m.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>,
+        </>,
         document.body
       )}
 
-      <AnimatePresence>
         {leaderboardOpen && (
           <Suspense fallback={null}>
             <LeaderboardModal
@@ -924,9 +896,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             />
           </Suspense>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
         {weekOverviewOpen && (
           <Suspense fallback={null}>
             <WeekOverview
@@ -940,7 +910,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             />
           </Suspense>
         )}
-      </AnimatePresence>
 
 
 
@@ -990,7 +959,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       })()}
 
       {/* Lightbox with canteen swipe */}
-      <AnimatePresence>
         {lightboxIndex >= 0 && (
           <Suspense fallback={null}>
             <Lightbox
@@ -1002,7 +970,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             />
           </Suspense>
         )}
-      </AnimatePresence>
 
       {/* Recipe Modal */}
       {/* Portalled to document.body. `useShellInert` at the top of this
@@ -1014,28 +981,18 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           inside it. ui/sheet.tsx portals for exactly this reason, which is why
           the action sheet was the only overlay in the app that still worked. */}
       {createPortal(
-        <AnimatePresence>
+        <>
         {recipeModal.isOpen && (
-          <m.div
-            key="recipe-overlay"
+          <div
             className="recipe-overlay"
             role="presentation"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
             onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }}
           >
-            <m.div
-              key="recipe-modal"
+            <div
               className="recipe-modal"
               role="dialog"
               aria-modal="true"
               aria-labelledby="recipe-dish-title"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 28, stiffness: 340 }}
               onClick={e => e.stopPropagation()}
             >
               <button className="recipe-close" onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }} aria-label="Lukk">&#xD7;</button>
@@ -1232,14 +1189,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                 })()}
               </>
             )}
-            </m.div>
-          </m.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>,
+        </>,
         document.body
       )}
-      <AnimatePresence>
-      </AnimatePresence>
     </div>
   );
 }
