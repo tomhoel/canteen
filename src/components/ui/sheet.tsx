@@ -28,6 +28,11 @@ const DUR_MS = 400;
 const DISMISS_FRACTION = 0.25;
 const DISMISS_VELOCITY = 0.5;
 
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 type SheetContextValue = {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -111,6 +116,29 @@ export function SheetContent({
       return;
     }
     setShown(false);
+    // Under `prefers-reduced-motion` globals.css applies `* { transition: none
+    // !important }`, which beats even an inline style. No transition means no
+    // `transitionend`, so the timer below was the ONLY unmount path for those
+    // users — leaving a full-screen fixed layer over the app for 460ms after
+    // every single close. Nothing is animating; unmount now.
+    if (prefersReducedMotion()) {
+      setRendered(false);
+      return;
+    }
+    // The timer is the ONLY unmount path, deliberately.
+    //
+    // There used to be an `onTransitionEnd` on the panel that unmounted as soon
+    // as a `transform` transition finished, with the timer as a backstop. It was
+    // a race. A `transitionend` is delivered on the event loop, and under load
+    // that delivery lags the transition itself — measured here at up to 180ms.
+    // Close the sheet inside that window (tap a card, then tap outside while it
+    // is still sliding up) and the ENTRANCE's queued `transitionend` arrives
+    // when `open` is already false, satisfies the guard, and unmounts the panel
+    // instantly. Nothing in the event distinguishes it from the exit's own.
+    // Measured: this made the desktop close vanish instantly 4 times in 6.
+    //
+    // A fixed timer cannot be confused by a stale event. It costs 60ms of an
+    // already-invisible layer, and that layer is now `pointer-events: none`.
     closeTimer.current = setTimeout(() => setRendered(false), DUR_MS + 60);
     return () => {
       if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -198,7 +226,7 @@ export function SheetContent({
   };
 
   useDrag(
-    ({ first, last, movement: [, my], velocity: [, vy], event }) => {
+    ({ first, last, movement: [, my], velocity: [, vy], direction: [, dy], event }) => {
       const panel = panelRef.current;
       if (!panel) return;
 
@@ -221,6 +249,7 @@ export function SheetContent({
           shouldDismiss({
             my,
             vy,
+            dy,
             height: dragRef.current.height,
             fraction: DISMISS_FRACTION,
             velocity: DISMISS_VELOCITY,
@@ -265,7 +294,12 @@ export function SheetContent({
         // positioning inline.
         justifyContent: isDesktop ? "center" : "flex-end",
         alignItems: "center",
-        pointerEvents: "auto",
+        // The layer stays mounted for the whole close animation. Left at
+        // "auto" it went on covering the screen at zIndex 2100 while invisible,
+        // so a tap in that window hit a dead backdrop — and ActionSheet closes
+        // itself and THEN opens the recipe modal, which lands at zIndex 1500,
+        // underneath it.
+        pointerEvents: shown ? "auto" : "none",
       }}
     >
       {/* Backdrop — GPU opacity compositor */}
@@ -290,11 +324,6 @@ export function SheetContent({
         aria-modal="true"
         aria-label={ariaLabel}
         tabIndex={-1}
-        onTransitionEnd={(e) => {
-          if (!open && e.target === panelRef.current && e.propertyName === "transform") {
-            setRendered(false);
-          }
-        }}
         className={`native-sheet-panel ${className}`}
         style={{
           position: "relative",
@@ -325,7 +354,17 @@ export function SheetContent({
               ? `translateY(calc(${keyboardInset ? `-${keyboardInset}px` : "0px"} + var(--sheet-drag, 0px)))`
               : "translateY(100%)",
           opacity: isDesktop ? (shown ? 1 : 0) : 1,
-          transition,
+          // NO `transition` here — it lives in the `.native-sheet-panel` rule in
+          // globals.css, and it has to.
+          //
+          // `endDrag` clears the inline transition with `style.transition = ""`
+          // when a gesture ends. React will not put it back: it only writes an
+          // inline style when the value it holds CHANGED, and this string is a
+          // module constant, so from React's point of view nothing happened. With
+          // no stylesheet rule underneath, the panel was left with no transition
+          // at all from the first drag onward — measured in a browser as
+          // `computed: "all / 0s"`, and a close that teleported to 443px in a
+          // single frame instead of sliding. A class rule survives the clear.
           willChange: "transform, opacity",
           outline: "none",
           display: "flex",
