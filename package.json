@@ -10,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/run-tests.js",
+    "test:e2e": "playwright test",
     "update": "node --env-file-if-exists=.env --import tsx smart-update.js",
     "update:force": "node --env-file-if-exists=.env --import tsx smart-update.js --force",
     "postinstall": "node scripts/cleanup-phantom-types.js"
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.63.0",
     "@tanstack/react-query-devtools": "^5.101.4",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
