@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -249,6 +249,72 @@ test("the critical path stays within budget", async () => {
   // on the critical path does.
   expect(js, `eager JS is ${js} bytes gzipped`).toBeLessThan(100_000);
   expect(css, `eager CSS is ${css} bytes gzipped`).toBeLessThan(16_000);
+});
+
+/**
+ * The budget above is blind to lazy chunks, and one of them is not really lazy
+ * in the way that matters: the sheet chunk downloads and parses at the exact
+ * moment the user taps a card and is waiting for something to happen. It is the
+ * one piece of deferred work that happens under the user's eye.
+ *
+ * It was 9,974 bytes gzipped, of which `@use-gesture/react` was 6,489 — 65% of
+ * it, for a drag-to-dismiss that nothing else in the app used. Replacing it with
+ * raw touch listeners took it to 3,676. Without an assertion here, that saving
+ * is invisible to CI and the next dependency lands in it unnoticed.
+ */
+test("the sheet chunk stays small, because it loads while the user waits", () => {
+  const dir = join(DIST, "assets");
+  const chunk = readdirSync(dir).find((f) => /^ActionSheet-.*\.js$/.test(f));
+  expect(chunk, "no ActionSheet chunk in dist — did the lazy boundary move?").toBeTruthy();
+
+  const gz = gzipSync(readFileSync(join(dir, chunk!))).length;
+  // Headroom over the 3,676 bytes it is today, well under the 9,974 it was.
+  expect(gz, `the sheet chunk is ${gz} bytes gzipped`).toBeLessThan(5_000);
+});
+
+/**
+ * The Android back gesture must close an open overlay, not leave the app.
+ *
+ * `manifest.json` declares `display: "standalone"`, so on an installed phone
+ * there is no browser chrome and the system back gesture is the only back
+ * affordance there is. Nothing in `src/` touched history or close requests, so
+ * back exited the whole app from inside an open overlay.
+ *
+ * A real back gesture cannot be synthesised, but a close request can: Escape IS
+ * a close request, and where `CloseWatcher` exists the platform delivers both
+ * through the same channel. So Escape here exercises the exact path back takes.
+ *
+ * The overlay under test is deliberately the INFO MODAL and not the sheet. The
+ * sheet, the lightbox and the leaderboard each carry their own keydown listener,
+ * so they close on Escape whether or not a watcher exists — a test against one
+ * of those passes with the wiring torn out, which is exactly what the first
+ * draft of this test did. The info modal is closed only by HomeClient's chain,
+ * and since Escape is now handed to the watcher wherever one exists, removing
+ * the watcher leaves nothing at all to close it. Mutation-checked both ways.
+ */
+test("a platform close request closes the overlay instead of the app", async ({ page }) => {
+  await page.goto("/");
+  await loaded(page);
+
+  const supported = await page.evaluate(
+    () => typeof (window as unknown as { CloseWatcher?: unknown }).CloseWatcher === "function"
+  );
+  test.skip(!supported, "no CloseWatcher here — iOS keeps the plain Escape path");
+
+  await page.click('button[aria-label="Om appen"]');
+  await page.waitForSelector(".info-modal");
+
+  await page.keyboard.press("Escape"); // the same close request the back gesture raises
+  await page.waitForTimeout(600);
+
+  await expect(
+    page.locator(".info-modal"),
+    "the close request never reached the app — on a phone, back would have exited it"
+  ).toHaveCount(0);
+
+  // ...and the app behind it is alive, i.e. the request closed a layer rather
+  // than tearing anything else down.
+  await expect(page.locator(".food-card").first()).toBeVisible();
 });
 
 /**

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { useDrag } from "@use-gesture/react";
 import { X } from "lucide-react";
 import { shouldDismiss, shouldEngage } from "@/lib/sheet-drag";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
@@ -17,8 +16,8 @@ import { useShellInert } from "@/lib/useShellInert";
  * Ported from sister app `mutu-web`:
  * - Vaul/iOS spring curve: cubic-bezier(0.32, 0.72, 0, 1), 400ms.
  * - Portalled to document.body so it escapes any parent transforms/stacking contexts.
- * - Drag-to-dismiss via `@use-gesture/react` writes to `--sheet-drag` CSS custom property
- *   without per-frame React state re-renders.
+ * - Drag-to-dismiss writes to the `--sheet-drag` custom property from raw touch
+ *   listeners, with no per-frame React state re-render and no gesture library.
  * - Inert shell while open so touches & focus behind the sheet cannot leak.
  * - Keyboard-aware lift via `useKeyboardInset`.
  */
@@ -181,14 +180,30 @@ export function SheetContent({
     return () => document.removeEventListener("keydown", onKey);
   }, [rendered, handleClose]);
 
-  // Drag to dismiss
+  // Drag to dismiss.
   //
-  // `height` is measured once, when the gesture starts. It used to be read
-  // inside setDrag — a `getBoundingClientRect()` on every pointermove, between
-  // two style writes, which forces the browser to flush layout mid-gesture on
-  // the frame it can least afford to. The panel cannot change height while a
-  // finger is dragging it, so once is enough.
-  const dragRef = React.useRef({ atTop: false, engaged: false, height: 0 });
+  // Hand-rolled on raw touch events, deliberately. `@use-gesture/react` did this
+  // and cost 6,489 bytes gzipped — 65% of the chunk that downloads and parses at
+  // the exact moment the user taps a card and is waiting for something to
+  // happen. It had exactly one consumer in the repo: these forty lines. It also
+  // bound its listeners through `useEffect` with no dependency array, so every
+  // render of this component tore down and re-registered them, and it derived
+  // release velocity from a sample up to 32ms stale.
+  //
+  // `height` is measured once, when the gesture starts. It used to be read on
+  // every move — a `getBoundingClientRect()` between two style writes, forcing a
+  // layout flush on the frame that can least afford one. The panel cannot change
+  // height while a finger is dragging it.
+  const dragRef = React.useRef({
+    atTop: false,
+    engaged: false,
+    height: 0,
+    startY: 0,
+    lastY: 0,
+    lastT: 0,
+    vy: 0,
+    dy: 0,
+  });
 
   const scrollableIsAtTop = (from: EventTarget | null): boolean => {
     let el = from as HTMLElement | null;
@@ -225,54 +240,111 @@ export function SheetContent({
     }
   };
 
-  useDrag(
-    ({ first, last, movement: [, my], velocity: [, vy], direction: [, dy], event }) => {
-      const panel = panelRef.current;
-      if (!panel) return;
+  // Everything the listeners need lives in `dragRef` and in refs above, so this
+  // effect depends only on whether there is a panel to attach to and whether
+  // drag applies at all. That is the point: re-registering a non-passive
+  // listener mid-gesture drops the gesture, which is what the old binding did on
+  // every render.
+  const dragHandlers = React.useRef<{ dismiss: (d: boolean) => void; drag: (px: number) => void; atTop: (t: EventTarget | null) => boolean }>({
+    dismiss: endDrag,
+    drag: setDrag,
+    atTop: scrollableIsAtTop,
+  });
+  dragHandlers.current = { dismiss: endDrag, drag: setDrag, atTop: scrollableIsAtTop };
 
-      if (first) {
-        dragRef.current.atTop = scrollableIsAtTop(event.target);
-        dragRef.current.engaged = false;
-        dragRef.current.height = panel.getBoundingClientRect().height;
-        return;
-      }
+  React.useEffect(() => {
+    // Drag-to-dismiss is a touch affordance. On a desktop the panel is a centred
+    // card with nowhere to be flung, and a click-drag would smear it off the
+    // bottom of the screen.
+    if (!rendered || isDesktop) return;
+    const panel = panelRef.current;
+    if (!panel) return;
 
-      if (!dragRef.current.engaged) {
-        if (last) return;
-        if (!shouldEngage({ ...dragRef.current, my })) return;
-        dragRef.current.engaged = true;
+    const d = dragRef.current;
+
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      d.atTop = dragHandlers.current.atTop(e.target);
+      d.engaged = false;
+      d.height = panel.getBoundingClientRect().height;
+      d.startY = t.clientY;
+      d.lastY = t.clientY;
+      d.lastT = e.timeStamp;
+      d.vy = 0;
+      d.dy = 0;
+    };
+
+    const onMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      const my = t.clientY - d.startY;
+
+      if (!d.engaged) {
+        if (!shouldEngage({ atTop: d.atTop, engaged: false, my })) {
+          // Not ours yet. Keep the sampler warm so the first engaged frame has a
+          // real baseline instead of the touchstart position.
+          d.lastY = t.clientY;
+          d.lastT = e.timeStamp;
+          return;
+        }
+        d.engaged = true;
         panel.style.transition = "none";
       }
 
-      if (last) {
-        endDrag(
-          shouldDismiss({
-            my,
-            vy,
-            dy,
-            height: dragRef.current.height,
-            fraction: DISMISS_FRACTION,
-            velocity: DISMISS_VELOCITY,
-          })
-        );
-        dragRef.current.engaged = false;
-        return;
+      // px/ms, the same unit @use-gesture reported, so DISMISS_VELOCITY keeps
+      // the value it was tuned to. Taken from the most recent pair of moves —
+      // a flick is decided by how the gesture ENDS, not by its average.
+      const dt = e.timeStamp - d.lastT;
+      if (dt > 0) {
+        const step = t.clientY - d.lastY;
+        d.vy = Math.abs(step) / dt;
+        d.dy = Math.sign(step);
+        d.lastY = t.clientY;
+        d.lastT = e.timeStamp;
       }
 
-      if (event.cancelable) event.preventDefault();
-      setDrag(Math.max(0, my));
-    },
-    {
-      target: panelRef,
-      axis: "y",
-      filterTaps: true,
-      eventOptions: { passive: false },
-      // Drag-to-dismiss is a touch affordance. On a desktop the panel is a
-      // centred card with nowhere to be flung, and a click-drag on it would
-      // just smear it off the bottom of the screen.
-      enabled: !isDesktop,
-    }
-  );
+      if (e.cancelable) e.preventDefault();
+      dragHandlers.current.drag(Math.max(0, my));
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      if (!d.engaged) return;
+      d.engaged = false;
+      const t = e.changedTouches[0];
+      const my = t ? t.clientY - d.startY : 0;
+      // A finger that came to rest before lifting is not a flick, however fast
+      // it was travelling earlier.
+      const stale = e.timeStamp - d.lastT > 100;
+      dragHandlers.current.dismiss(
+        shouldDismiss({
+          my,
+          vy: stale ? 0 : d.vy,
+          dy: stale ? 0 : d.dy,
+          height: d.height,
+          fraction: DISMISS_FRACTION,
+          velocity: DISMISS_VELOCITY,
+        })
+      );
+    };
+
+    const onCancel = () => {
+      if (!d.engaged) return;
+      d.engaged = false;
+      dragHandlers.current.dismiss(false);
+    };
+
+    panel.addEventListener("touchstart", onStart, { passive: true });
+    panel.addEventListener("touchmove", onMove, { passive: false });
+    panel.addEventListener("touchend", onEnd, { passive: true });
+    panel.addEventListener("touchcancel", onCancel, { passive: true });
+    return () => {
+      panel.removeEventListener("touchstart", onStart);
+      panel.removeEventListener("touchmove", onMove);
+      panel.removeEventListener("touchend", onEnd);
+      panel.removeEventListener("touchcancel", onCancel);
+    };
+  }, [rendered, isDesktop, panelRef]);
 
   if (typeof document === "undefined" || !rendered) return null;
 

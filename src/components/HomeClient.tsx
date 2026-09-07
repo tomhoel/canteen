@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
+import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCloseRequest";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
 import { Share2 } from "lucide-react";
@@ -328,6 +329,64 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setSelectedDay(displayContext.defaultSelectedDay);
   }, [menuData, displayContext.defaultSelectedDay, searchParams?.day]);
 
+  /**
+   * Close the innermost open overlay.
+   *
+   * The order here is a real decision, not an accident of listing: Escape inside
+   * the Meny sub-view returns to the recipe rather than closing everything. That
+   * is why this walks a chain instead of using the derived `anyOverlayOpen`
+   * above.
+   *
+   * Both the Escape key and the platform close request (the Android back
+   * gesture) run it, so the two cannot drift apart.
+   */
+  const closeTopmostOverlay = useCallback(() => {
+    if (infoOpen) {
+      setInfoOpen(false);
+    } else if (menyView.isOpen) {
+      closeMeny();
+    } else if (dealsView.isOpen) {
+      closeDeals();
+    } else if (weekOverviewOpen) {
+      setWeekOverviewOpen(false);
+    } else if (leaderboardOpen) {
+      setLeaderboardOpen(false);
+    } else {
+      setLightboxIndex(-1);
+      setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+      closeRecipe();
+    }
+  }, [
+    infoOpen,
+    menyView.isOpen,
+    closeMeny,
+    dealsView.isOpen,
+    closeDeals,
+    weekOverviewOpen,
+    leaderboardOpen,
+    closeRecipe,
+  ]);
+
+  /**
+   * The Android back gesture closes the topmost overlay instead of the app.
+   *
+   * The depth counts the layers that are actually open, so the watcher re-arms
+   * as each one closes and back walks the stack a press at a time. At zero, no
+   * watcher exists and back leaves the app, which is what it should do from the
+   * menu itself. See `useCloseRequest` for why this is not `history.pushState`.
+   */
+  useCloseRequest(
+    (infoOpen ? 1 : 0) +
+      (menyView.isOpen ? 1 : 0) +
+      (dealsView.isOpen ? 1 : 0) +
+      (weekOverviewOpen ? 1 : 0) +
+      (leaderboardOpen ? 1 : 0) +
+      (lightboxIndex >= 0 ? 1 : 0) +
+      (actionSheet.isOpen ? 1 : 0) +
+      (recipeModal.isOpen ? 1 : 0),
+    closeTopmostOverlay
+  );
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -335,21 +394,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       const isInput = tag === "input" || tag === "textarea" || tag === "select";
 
       if (e.key === "Escape") {
-        if (infoOpen) {
-          setInfoOpen(false);
-        } else if (menyView.isOpen) {
-          closeMeny();
-        } else if (dealsView.isOpen) {
-          closeDeals();
-        } else if (weekOverviewOpen) {
-          setWeekOverviewOpen(false);
-        } else if (leaderboardOpen) {
-          setLeaderboardOpen(false);
-        } else {
-          setLightboxIndex(-1);
-          setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-          closeRecipe();
-        }
+        // Where CloseWatcher exists it already delivers Escape, and running the
+        // chain here as well would walk it twice. Let the watcher own it.
+        if (!CLOSE_REQUESTS_HANDLED_BY_PLATFORM) closeTopmostOverlay();
       } else if (e.key === "ArrowLeft" && !isInput) {
         if (selectedDay > 0 && !anyOverlayOpen) {
           handleDaySelect(selectedDay - 1);
@@ -367,7 +414,10 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDay, todayIndex, anyOverlayOpen, lightboxIndex, actionSheet.isOpen, recipeModal.isOpen, dealsView.isOpen, menyView.isOpen, weekOverviewOpen, leaderboardOpen, infoOpen, handleDaySelect, closeDeals, closeMeny, closeRecipe]);
+    // `closeTopmostOverlay` now carries every overlay state this effect used to
+    // list for Escape's sake, and it is memoised on exactly those, so the ones
+    // left here are the ones the arrow and space branches actually read.
+  }, [selectedDay, todayIndex, anyOverlayOpen, handleDaySelect, closeTopmostOverlay]);
 
   // On-demand image preloader for other days — warms a day when hovered or touched
   const preloadDay = useCallback((dayIdx: number) => {
