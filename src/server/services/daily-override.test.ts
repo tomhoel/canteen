@@ -46,9 +46,9 @@ const dayOf = (data: MenuData, canteen: string, day: string) =>
 
 test("applyDailyOverride - replaces today's dishes with the board's", () => {
   const data = week();
-  const changed = applyDailyOverride(data, board([item("Faktisk servert", true)]), "friday");
+  const { overridden } = applyDailyOverride(data, board([item("Faktisk servert", true)]), "friday");
 
-  assert.deepEqual(changed, ["Flow"]);
+  assert.deepEqual(overridden, ["Flow"]);
   assert.deepEqual(
     dayOf(data, "Flow", "friday")?.no?.items.map((i) => i.dish),
     ["Faktisk servert"]
@@ -84,7 +84,7 @@ test("applyDailyOverride - never introduces a canteen the week does not have", (
   stray.canteens["Ghost Kitchen"] = stray.canteens.Flow;
   delete (stray.canteens as Record<string, unknown>).Flow;
 
-  assert.deepEqual(applyDailyOverride(data, stray, "friday"), []);
+  assert.deepEqual(applyDailyOverride(data, stray, "friday").overridden, []);
   assert.deepEqual(Object.keys(data.canteens), ["Flow"]);
 });
 
@@ -122,7 +122,7 @@ test("applyDailyOverride - does not mutate the object it read from", () => {
 test("applyDailyOverride - an empty board changes nothing", () => {
   const data = week();
   const before = JSON.stringify(data);
-  assert.deepEqual(applyDailyOverride(data, board(undefined, undefined), "friday"), []);
+  assert.deepEqual(applyDailyOverride(data, board(undefined, undefined), "friday").overridden, []);
   assert.equal(JSON.stringify(data), before);
 });
 
@@ -160,4 +160,159 @@ test("buildDailyMenuData - shapes the boards as a one-day MenuData", () => {
   // No week label: inventing one would feed groupCanteensByPublishedWeek a
   // number the kitchen never published.
   assert.equal(built.canteens.Flow.week, "");
+});
+
+// ─── The rollover guard ───
+//
+// The daily board carries no date — it is "DAGENS LUNSJ" and three dishes — so
+// a scrape that runs after the kitchen has rolled it forward writes tomorrow's
+// food into today's slot. Both boards below are what Fresh4you actually
+// published on 2026-09-07, eight hours apart, against that week's real weekly
+// menu.
+
+const WEEKLY_MON = [
+  item("Stekt ris med egg og grønnsaker"),
+  item("Norsk bondesuppe med urøkt pølse"),
+  item("Ovnsbakt torskefilet med rattatouille og saltbakte poteter", true),
+];
+const WEEKLY_TUE = [
+  item("Vegetar bratwurst med potetmos", true),
+  // The kitchen typed English into the Norwegian column. Real noise, kept.
+  item("Creamy cauliflower soup"),
+  item("Buljong og krydder trukne wienerpølser, med potetmos, lomper og tilbehør"),
+];
+
+/** A Mon/Tue week for one canteen, so the guard has a tomorrow to compare to. */
+const monTueWeek = (): MenuData => ({
+  scrapedAt: "2026-09-07T06:00:00.000Z",
+  canteens: {
+    Fresh4you: {
+      week: "Uke 37",
+      openingHours: "10:30 - 13:00",
+      menu: [
+        { day: "Monday", no: { label: "MANDAG", items: WEEKLY_MON } },
+        { day: "Tuesday", no: { label: "TIRSDAG", items: WEEKLY_TUE } },
+      ],
+    },
+  },
+});
+
+const f4yBoard = (items: MenuItem[]): MenuData => ({
+  scrapedAt: "2026-09-07T06:00:00.000Z",
+  canteens: {
+    Fresh4you: {
+      week: "",
+      openingHours: "",
+      menu: [{ day: "Monday", no: { label: "DAGENS LUNSJ", items } }],
+    },
+  },
+});
+
+test("applyDailyOverride - applies a board that is showing today's food", () => {
+  // Fresh4you's real board on Monday morning: the same dishes as the weekly
+  // Monday, worded differently, which is exactly what the override is for.
+  const data = monTueWeek();
+  const morning = f4yBoard([
+    item("Ovnsbakt torsk med ratatouille og saltbakte poteter", true),
+    item("Stekt ris med egg, karri og grønnsaker"),
+    item("Norsk bondesuppe med rotgrønnsaker og urøkt pølse"),
+  ]);
+
+  const { overridden, rolledOver } = applyDailyOverride(data, morning, "monday");
+
+  assert.deepEqual(overridden, ["Fresh4you"]);
+  assert.deepEqual(rolledOver, []);
+  assert.equal(
+    data.canteens.Fresh4you.menu[0].no?.items[0].dish,
+    "Ovnsbakt torsk med ratatouille og saltbakte poteter"
+  );
+});
+
+test("applyDailyOverride - refuses a board that has rolled over to tomorrow", () => {
+  // The same board eight hours later, now showing Tuesday's food. Writing it
+  // to Monday is worse than the stale weekly menu it would replace.
+  const data = monTueWeek();
+  const evening = f4yBoard([
+    item("Vegetar bratwurst med potetmos", true),
+    item("Kremet blomkålsuppe"),
+    item("Buljong og krydder trukne wienerpølser med potetmos, potetlompe og tilbehør"),
+  ]);
+
+  const { overridden, rolledOver } = applyDailyOverride(data, evening, "monday");
+
+  assert.deepEqual(overridden, []);
+  assert.deepEqual(rolledOver, ["Fresh4you"]);
+  assert.equal(
+    data.canteens.Fresh4you.menu[0].no?.items[0].dish,
+    "Stekt ris med egg og grønnsaker",
+    "Monday must still hold Monday's weekly menu"
+  );
+});
+
+test("applyDailyOverride - still applies a board that matches neither day", () => {
+  // The case the override exists for: the weekly menu is a draft nobody cooked,
+  // so the board matches nothing in it. The guard must not fire on a low score
+  // alone — only on tomorrow scoring clearly HIGHER than today.
+  const data = monTueWeek();
+  const unrelated = f4yBoard([
+    item("Lasagne med salat", true),
+    item("Tomatsuppe"),
+    item("Fiskegrateng med ertestuing"),
+  ]);
+
+  const { overridden, rolledOver } = applyDailyOverride(data, unrelated, "monday");
+
+  assert.deepEqual(overridden, ["Fresh4you"]);
+  assert.deepEqual(rolledOver, []);
+});
+
+test("applyDailyOverride - the guard cannot fire on Friday, and says so by behaviour", () => {
+  // There is no next day inside the week, so a Friday board is always applied.
+  // Documented in the code; asserted here so the limitation is visible rather
+  // than discovered.
+  const data = monTueWeek();
+  data.canteens.Fresh4you.menu = [
+    { day: "Friday", no: { label: "FREDAG", items: WEEKLY_MON } },
+  ];
+  const board = f4yBoard([item("Noe helt annet", true)]);
+
+  const { overridden, rolledOver } = applyDailyOverride(data, board, "friday");
+
+  assert.deepEqual(overridden, ["Fresh4you"]);
+  assert.deepEqual(rolledOver, []);
+});
+
+test("applyDailyOverride - one canteen rolling over does not block the others", () => {
+  const data = monTueWeek();
+  data.canteens.Flow = {
+    week: "Uke 37",
+    openingHours: "10:30 - 13:00",
+    menu: [
+      { day: "Monday", no: { label: "MANDAG", items: [item("Flow mandag", true)] } },
+      { day: "Tuesday", no: { label: "TIRSDAG", items: [item("Flow tirsdag", true)] } },
+    ],
+  };
+
+  const boards: MenuData = {
+    scrapedAt: "2026-09-07T16:00:00.000Z",
+    canteens: {
+      // rolled
+      Fresh4you: f4yBoard([
+        item("Vegetar bratwurst med potetmos", true),
+        item("Kremet blomkålsuppe"),
+        item("Buljong og krydder trukne wienerpølser med potetmos, potetlompe og tilbehør"),
+      ]).canteens.Fresh4you,
+      // not rolled
+      Flow: {
+        week: "",
+        openingHours: "",
+        menu: [{ day: "Monday", no: { label: "DAGENS LUNSJ", items: [item("Flow faktisk servert", true)] } }],
+      },
+    },
+  };
+
+  const { overridden, rolledOver } = applyDailyOverride(data, boards, "monday");
+
+  assert.deepEqual(overridden, ["Flow"]);
+  assert.deepEqual(rolledOver, ["Fresh4you"]);
 });

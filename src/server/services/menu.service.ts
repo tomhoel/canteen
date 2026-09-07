@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   MenuData,
   DayEntry,
+  MenuItem,
   WeeklyMenuRecord,
   DishOrigin,
   DishDescription,
@@ -440,9 +441,88 @@ export function buildDailyMenuData(
 }
 
 /**
+ * Words worth comparing. Short ones ("med", "og", "i") match everything.
+ */
+function significantWords(dish: string): Set<string> {
+  return new Set(
+    dish
+      .toLowerCase()
+      .replace(/[0-9]/g, " ")
+      .replace(/[^a-zæøåäöü ]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 3)
+  );
+}
+
+/** How much of the shorter dish name the two have in common, 0..1. */
+function dishSimilarity(a: string, b: string): number {
+  const A = significantWords(a);
+  const B = significantWords(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let shared = 0;
+  for (const w of A) if (B.has(w)) shared++;
+  return shared / Math.min(A.size, B.size);
+}
+
+/** Average over the board's dishes of the best match in a day's menu. */
+function dayMatch(board: MenuItem[], day: MenuItem[]): number {
+  if (board.length === 0 || day.length === 0) return 0;
+  const best = board.map((b) => Math.max(0, ...day.map((d) => dishSimilarity(b.dish, d.dish))));
+  return best.reduce((a, b) => a + b, 0) / best.length;
+}
+
+/**
+ * How well the board must match tomorrow before we believe it has rolled over,
+ * and by how much it must beat today.
+ *
+ * Measured against the two real boards Fresh4you published on 2026-09-07 — the
+ * same board, the same day, eight hours apart:
+ *
+ *   showing today's food     today 0.87   tomorrow 0.00
+ *   rolled to tomorrow's     today 0.00   tomorrow 0.62
+ *
+ * The gap is wide enough that these thresholds are not a fine-tuning exercise;
+ * they sit in the middle of an empty range. Both conditions have to hold, so a
+ * week whose weekly menu is simply wrong — which is the case the override
+ * exists for — scores low against BOTH days and is left alone.
+ */
+const ROLLOVER_MIN_MATCH = 0.4;
+const ROLLOVER_MIN_MARGIN = 0.3;
+
+/**
+ * Whether a daily board is showing the NEXT day's food.
+ *
+ * The board carries no date of any kind — it is just "DAGENS LUNSJ" and three
+ * dishes — so the only way to date it is to ask which weekday's menu it looks
+ * like. Kitchens roll it forward during the afternoon, and a scrape that
+ * happens after they do writes tomorrow's food into today's slot.
+ *
+ * Deliberately asymmetric: this does NOT require the board to match today. The
+ * whole reason `applyDailyOverride` exists is that the weekly menu can be a
+ * draft nobody cooked, so demanding a match with today would defeat it. It only
+ * fires when the board matches TOMORROW clearly better.
+ */
+export function boardLooksLikeNextDay(
+  board: MenuItem[],
+  today: MenuItem[],
+  tomorrow: MenuItem[]
+): boolean {
+  if (board.length === 0 || tomorrow.length === 0) return false;
+  const matchTomorrow = dayMatch(board, tomorrow);
+  if (matchTomorrow < ROLLOVER_MIN_MATCH) return false;
+  return matchTomorrow - dayMatch(board, today) >= ROLLOVER_MIN_MARGIN;
+}
+
+/** The items a day entry published, in whichever language it filled in. */
+function itemsOf(entry: DayEntry | undefined): MenuItem[] {
+  return entry?.no?.items ?? entry?.en?.items ?? [];
+}
+
+/**
  * Replaces today's slot with what the kitchen actually served.
  *
- * Returns the canteens it changed, for the log.
+ * Returns the canteens it changed and the ones it refused to change because
+ * their board had already rolled over to tomorrow, both for the log.
  *
  * Three things it deliberately does not do:
  *
@@ -460,8 +540,16 @@ export function applyDailyOverride(
   weekMenuData: MenuData,
   daily: MenuData,
   todayKey: string
-): string[] {
+): { overridden: string[]; rolledOver: string[] } {
   const overridden: string[] = [];
+  const rolledOver: string[] = [];
+
+  // Tomorrow within the same week. Friday has none, so the guard below cannot
+  // fire then — a Friday-evening board showing Monday's food would still get
+  // through. Left as is: the scheduled runs are at 06:00 and 09:00, and
+  // inventing a cross-week comparison to cover a case only a manual run can
+  // reach would be more machinery than the risk deserves.
+  const tomorrowKey = DAY_KEYS[DAY_KEYS.indexOf(todayKey) + 1];
 
   for (const [name, dailyCanteen] of Object.entries(daily.canteens || {})) {
     const target = weekMenuData.canteens?.[name];
@@ -473,6 +561,16 @@ export function applyDailyOverride(
     const menu = [...(target.menu ?? [])];
     const index = menu.findIndex((d) => d.day?.toLowerCase() === todayKey);
     const existing = index >= 0 ? menu[index] : undefined;
+
+    // Per canteen, not per run: kitchens roll their boards over at different
+    // times, and one that has is no reason to distrust the other two.
+    if (tomorrowKey) {
+      const tomorrow = menu.find((d) => d.day?.toLowerCase() === tomorrowKey);
+      if (boardLooksLikeNextDay(itemsOf(source), itemsOf(existing), itemsOf(tomorrow))) {
+        rolledOver.push(name);
+        continue;
+      }
+    }
 
     const replacement: DayEntry = {
       day: existing?.day ?? dayEntryName(todayKey),
@@ -496,7 +594,7 @@ export function applyDailyOverride(
     overridden.push(name);
   }
 
-  return overridden;
+  return { overridden, rolledOver };
 }
 
 /**
@@ -687,10 +785,16 @@ export async function runWeeklyUpdateService(
     // the overridden dishes are enriched, fingerprinted and cached like any
     // other — not bolted on afterwards where nothing would look at them.
     if (dailyData && todayKey && weekId === displayWeekId) {
-      const overridden = applyDailyOverride(weekMenuData, dailyData, todayKey);
+      const { overridden, rolledOver } = applyDailyOverride(weekMenuData, dailyData, todayKey);
       if (overridden.length > 0) {
         console.log(
           `🍽️  ${weekId} ${todayKey}: today's board overrode ${overridden.join(", ")}.`
+        );
+      }
+      if (rolledOver.length > 0) {
+        console.warn(
+          `⏭️  ${weekId} ${todayKey}: ${rolledOver.join(", ")} already rolled the board ` +
+            `to tomorrow — kept the weekly menu rather than writing the wrong day's food.`
         );
       }
     }
