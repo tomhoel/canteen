@@ -2,7 +2,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import * as m from "motion/react-m";
 import { CANTEEN_ORDER, getCanteenMetadata } from "@/lib/constants";
 import { getAttendanceHistory } from "@/lib/api-client";
 import "@/styles/leaderboard-modal.css";
@@ -71,25 +70,20 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
   // a hit test at its centre never landed inside it. ui/sheet.tsx portals for
   // exactly this reason, which is why the action sheet was the only overlay in
   // the app that still worked.
+  // The `exit` props these two carried were dead: the parent AnimatePresence
+  // that would have run them was removed once it was shown to be a no-op, and
+  // `{leaderboardOpen && ...}` unmounts this outright. Entrance is CSS now.
   return createPortal(
-    <m.div
+    <div
       className="leaderboard-overlay"
       role="presentation"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
       onClick={onClose}
     >
-      <m.div
+      <div
         className="leaderboard-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="leaderboard-title-id"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        transition={{ type: "spring", damping: 28, stiffness: 340 }}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="info-close" onClick={onClose} aria-label="Lukk">&times;</button>
@@ -181,8 +175,8 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
             </p>
           </>
         )}
-      </m.div>
-    </m.div>,
+      </div>
+    </div>,
     document.body
   );
 }
