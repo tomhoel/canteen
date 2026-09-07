@@ -1,4 +1,5 @@
 "use client";
+import { createPortal } from "react-dom";
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { AnimatePresence } from "motion/react";
@@ -810,7 +811,16 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       />
 
       {/* Info Modal */}
-      <AnimatePresence>
+      {/* Portalled to document.body. `useShellInert` at the top of this
+          component marks `.app-wrapper` inert while this overlay is open, and
+          this overlay renders inside `.app-wrapper` — so the attribute meant to
+          take the page behind it out of the tab order was taking the overlay
+          with it. Measured on production: zero of the panel's focusable
+          elements could be focused and a hit test at its centre never landed
+          inside it. ui/sheet.tsx portals for exactly this reason, which is why
+          the action sheet was the only overlay in the app that still worked. */}
+      {createPortal(
+        <AnimatePresence>
         {infoOpen && (
           <m.div
             key="info-overlay"
@@ -901,7 +911,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             </m.div>
           </m.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+        document.body
+      )}
 
       <AnimatePresence>
         {leaderboardOpen && (
@@ -993,7 +1005,16 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       </AnimatePresence>
 
       {/* Recipe Modal */}
-      <AnimatePresence>
+      {/* Portalled to document.body. `useShellInert` at the top of this
+          component marks `.app-wrapper` inert while this overlay is open, and
+          this overlay renders inside `.app-wrapper` — so the attribute meant to
+          take the page behind it out of the tab order was taking the overlay
+          with it. Measured on production: zero of the panel's focusable
+          elements could be focused and a hit test at its centre never landed
+          inside it. ui/sheet.tsx portals for exactly this reason, which is why
+          the action sheet was the only overlay in the app that still worked. */}
+      {createPortal(
+        <AnimatePresence>
         {recipeModal.isOpen && (
           <m.div
             key="recipe-overlay"
@@ -1214,7 +1235,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             </m.div>
           </m.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+        document.body
+      )}
       <AnimatePresence>
       </AnimatePresence>
     </div>

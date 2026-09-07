@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { CanteenDayItem } from "@/lib/types";
 import { isCanteenClosed } from "@/lib/canteen-utils";
 import { getCanteenMetadata } from "@/lib/constants";
@@ -68,7 +69,10 @@ export default function WeekOverview({
   // this: 8 focusable elements were still reachable underneath.
   useShellInert();
 
-  return (
+  // Portalled: `useShellInert()` above marks `.app-wrapper` inert for as long
+  // as this is mounted, and this renders inside `.app-wrapper`, so without the
+  // portal the overlay made itself unreachable along with the page behind it.
+  return createPortal(
     <div className="week-overlay" role="presentation" onClick={onClose}>
       <div
         className="week-modal"
@@ -207,6 +211,7 @@ export default function WeekOverview({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -56,7 +57,12 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
     else if (distance < -minSwipe && hasPrev) onNavigate(currentIndex - 1);
   };
 
-  return (
+  // Portalled, for the same reason ui/sheet.tsx is: HomeClient marks
+  // `.app-wrapper` inert while the lightbox is open (HomeClient.tsx:195
+  // includes `lightboxIndex >= 0`) and the lightbox renders inside it, so the
+  // attribute meant to take the page behind it out of the tab order was taking
+  // the lightbox out too.
+  return createPortal(
     <AnimatePresence>
       {isOpen && current && (
         <m.div
@@ -135,6 +141,7 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
           </m.div>
         </m.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
