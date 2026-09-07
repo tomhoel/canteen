@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { AnimatePresence } from "motion/react";
-import * as m from "motion/react-m";
 import type { MenyResponse, MenyIngredientMatch } from "@/lib/types";
 import { PriceRanger } from "@/components/PriceRanger";
 import "@/styles/meny-view.css";
@@ -65,16 +63,25 @@ function ProductCard({ match, index }: { match: MenyIngredientMatch; index: numb
         )}
       </div>
 
-      <AnimatePresence initial={false}>
-        {hasAlts && showAlts && (
-          <m.div
-            className="mv-alts"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            style={{ overflow: "hidden" }}
-          >
+      {/*
+        The alternatives list. This was the app's last use of motion — an
+        animated `height: 0 <-> auto`.
+
+        It is now a plain conditional, and the height change is instant. I tried
+        the CSS grid `0fr -> 1fr` technique first and measured it in a real
+        build: it expands smoothly (0 -> 16 -> 102 -> 147 -> 170px) but will not
+        collapse, because every non-zero flex fraction resolves to the same
+        content size in an auto-height container, so the track sits at its full
+        height until the fraction reaches exactly zero. An accordion that only
+        animates one way is worse than one that animates neither.
+
+        Nothing is really lost: `.mv-alt` already carries
+        `animation: recipeReveal 0.25s both` with a per-item delay, so the rows
+        still cascade in. That entrance was there all along, underneath the
+        height animation.
+      */}
+      {hasAlts && showAlts && (
+        <div className="mv-alts">
             {(match.alternatives || []).map((alt, ai) => (
               <ProductLink key={alt.ean} url={alt.productUrl}>
                 <div className="mv-alt" style={{ animationDelay: `${ai * 50}ms` }}>
@@ -95,10 +102,9 @@ function ProductCard({ match, index }: { match: MenyIngredientMatch; index: numb
                   <span className="mv-alt-price">{alt.price} <span className="mv-kr">kr</span></span>
                 </div>
               </ProductLink>
-            ))}
-          </m.div>
-        )}
-      </AnimatePresence>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

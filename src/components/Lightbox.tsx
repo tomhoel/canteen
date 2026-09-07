@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence } from "motion/react";
-import * as m from "motion/react-m";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CanteenDayItem } from "@/lib/types";
 
@@ -62,25 +60,24 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
   // includes `lightboxIndex >= 0`) and the lightbox renders inside it, so the
   // attribute meant to take the page behind it out of the tab order was taking
   // the lightbox out too.
+  /*
+    No <AnimatePresence>, and no exit animation, because there never was one in
+    practice: HomeClient renders this as `{lightboxIndex >= 0 && <Lightbox/>}`,
+    so closing unmounts the whole component and takes the AnimatePresence with
+    it before any exit could run. The `exit` props here were dead code.
+
+    The entrance is the shared `overlayFadeIn` / `modalPanelIn` pair in
+    globals.css — the same curves, measured off the springs they replace.
+  */
   return createPortal(
-    <AnimatePresence>
+    <>
       {isOpen && current && (
-        <m.div
-          key="lightbox-overlay"
+        <div
           className="lightbox-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
           onClick={onClose}
         >
-          <m.div
-            key="lightbox-content"
+          <div
             className="lightbox-content"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ type: "spring", stiffness: 340, damping: 28 }}
             onClick={e => e.stopPropagation()}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
@@ -138,10 +135,10 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
                 ))}
               </div>
             </div>
-          </m.div>
-        </m.div>
+          </div>
+        </div>
       )}
-    </AnimatePresence>,
+    </>,
     document.body
   );
 }
