@@ -2,7 +2,7 @@
 /**
  * One-time uploader for the master plate reference.
  *
- * Puts public/images/master-plate-ref.png into Supabase at
+ * Puts assets/source-images/master-plate-ref.png into Supabase at
  * images/reference/master-plate-ref.png, where image.service.ts fetches it
  * before every generation run.
  *
@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     process.exit(1);
 }
 
-const SRC = path.join(__dirname, '..', 'public', 'images', 'master-plate-ref.png');
+const SRC = path.join(__dirname, '..', 'assets', 'source-images', 'master-plate-ref.png');
 const BUCKET = 'images';
 const DEST = 'reference/master-plate-ref.png';
 

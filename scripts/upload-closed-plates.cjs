@@ -2,7 +2,7 @@
 /**
  * One-time uploader for the closed-canteen plate designs.
  *
- * Puts public/images/closed-plates/closed-plate-{1,2,3}.png into Supabase
+ * Puts assets/source-images/closed-plates/closed-plate-{1,2,3}.png into Supabase
  * at images_nobg/closed-plates/closed-plate-{1,2,3}.png so the Vercel
  * frontend can reference them directly via getClosedPlateUrl().
  *
@@ -31,7 +31,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 async function uploadOne(variant) {
     const filename = `closed-plate-${variant}.png`;
-    const src = path.join(__dirname, '..', 'public', 'images', 'closed-plates', filename);
+    const src = path.join(__dirname, '..', 'assets', 'source-images', 'closed-plates', filename);
     if (!fs.existsSync(src)) {
         console.log(`  ⚠️  ${filename} not in repo, skipping`);
         return;
