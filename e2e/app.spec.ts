@@ -294,3 +294,112 @@ test("the sheet animates out when dismissed instead of vanishing", async ({ page
   // ...and it does eventually leave.
   expect(frames[frames.length - 1]).toBe(false);
 });
+
+/**
+ * The close animation has to survive a DRAG, not just a tap.
+ *
+ * The test above taps the scrim on a sheet nobody touched, and that path was
+ * fixed first. But `endDrag` clears the inline transition when any gesture
+ * ends, and React does not write it back — it only emits an inline style whose
+ * value changed, and that string is a module constant. With no stylesheet rule
+ * underneath, one drag left the panel with `computed: "all / 0s"` forever
+ * after: releasing without dismissing teleported it back, and the next close
+ * jumped 443px in a single frame. That is most of what "it does not move
+ * smoothly" meant, and the tap-only test could never see it.
+ *
+ * Measured on a phone before the fix: 0 -> 443 -> 443 -> ... -> GONE.
+ * After: 4 -> 98 -> 303 -> 389 -> 427 -> 443 -> GONE.
+ */
+test("the sheet still animates its close AFTER it has been dragged", async ({ page }) => {
+  test.skip(test.info().project.name === "desktop", "drag-to-dismiss is touch-only");
+  await page.goto("/");
+  await loaded(page);
+
+  await page.locator(".food-card").first().click();
+  await page.waitForSelector(".action-sheet");
+  await page.waitForTimeout(600);
+
+  const cdp = await page.context().newCDPSession(page);
+  const box = (await page.locator(".native-sheet-panel").boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y0 = box.y + 24;
+
+  // A short pull down — well under the 25% dismiss threshold — then release.
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: y0 }] });
+  for (let d = 8; d <= 40; d += 8) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y0 + d }] });
+    await page.waitForTimeout(20);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(150);
+
+  // The panel must still HAVE a transition. This is the direct assertion.
+  const duration = await page.evaluate(
+    () => getComputedStyle(document.querySelector(".native-sheet-panel")!).transitionDuration
+  );
+  expect(duration, "the drag cleared the panel transition and nothing restored it").not.toMatch(
+    /^0s/
+  );
+
+  // ...and the close it feeds must still be gradual.
+  const offsets = await page.evaluate(async () => {
+    const wait = (ms: number) => new Promise((k) => setTimeout(k, ms));
+    const panel = document.querySelector(".action-sheet") as HTMLElement;
+    (panel.previousElementSibling as HTMLElement)?.click();
+    const seen: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      const el = document.querySelector(".native-sheet-panel") as HTMLElement | null;
+      if (el) seen.push(Math.round(new DOMMatrixReadOnly(getComputedStyle(el).transform).m42));
+      await wait(40);
+    }
+    return seen;
+  });
+
+  const distinct = new Set(offsets).size;
+  expect(
+    distinct,
+    `panel snapped through only ${distinct} positions (${offsets.join(", ")}) — it teleported`
+  ).toBeGreaterThan(3);
+});
+
+/**
+ * A hard flick UPWARD must cancel the drag, not dismiss the sheet.
+ *
+ * `@use-gesture` derives velocity from `_delta.map(Math.abs)`, so `vy` is a
+ * magnitude with no sign; the sign lives in `direction`, which the sheet never
+ * read. The threshold `vy > 0.5` therefore fired identically in both
+ * directions, and the universal "no, put it back" gesture closed the sheet.
+ * Reproduced in a browser before the fix.
+ */
+test("flicking the sheet upward cancels the drag instead of dismissing it", async ({ page }) => {
+  test.skip(test.info().project.name === "desktop", "drag-to-dismiss is touch-only");
+  await page.goto("/");
+  await loaded(page);
+
+  await page.locator(".food-card").first().click();
+  await page.waitForSelector(".action-sheet");
+  await page.waitForTimeout(600);
+
+  const cdp = await page.context().newCDPSession(page);
+  const box = (await page.locator(".native-sheet-panel").boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + 40;
+
+  // Engage downward (engagement latches), then flick sharply back up and lift.
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  for (const d of [10, 20, 25]) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y + d }] });
+    await page.waitForTimeout(24);
+  }
+  for (const d of [0, -25, -50]) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y + d }] });
+    await page.waitForTimeout(8);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(700);
+
+  await expect(
+    page.locator(".action-sheet"),
+    "an upward flick dismissed the sheet — vy is unsigned, so the direction guard is missing"
+  ).toHaveCount(1);
+});
