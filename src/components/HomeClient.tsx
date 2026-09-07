@@ -31,7 +31,6 @@ import FoodCard from "@/components/FoodCard";
 import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import AllClosedCard from "@/components/AllClosedCard";
 import ClosedCard from "@/components/ClosedCard";
-import ActionSheet from "@/components/ActionSheet";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useShellInert } from "@/lib/useShellInert";
 import { useDaySwipe } from "@/lib/useDaySwipe";
@@ -50,6 +49,12 @@ const MenyView = lazy(() => import("@/components/MenyView"));
 const Lightbox = lazy(() => import("@/components/Lightbox"));
 const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
 const WeekOverview = lazy(() => import("@/components/WeekOverview"));
+// The action sheet belongs in that list too, and was the one overlay left out
+// of it. It is only reachable by tapping a card, but importing it eagerly put
+// `ui/sheet.tsx` and with it the whole of `@use-gesture/react` — the
+// drag-to-dismiss gesture, needed by nothing else in the app — into the chunk
+// the first paint waits on.
+const ActionSheet = lazy(() => import("@/components/ActionSheet"));
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -951,6 +956,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
 
         return (
+          <Suspense fallback={null}>
           <ActionSheet
             isOpen={actionSheet.isOpen}
             canteenName={actionSheet.canteenName}
@@ -967,6 +973,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             onClose={closeSheet}
             shareButton={<ShareButton />}
           />
+          </Suspense>
         );
       })()}
 
