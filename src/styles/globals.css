@@ -1742,6 +1742,24 @@ body {
   inherits: false;
 }
 
+/* How far the finger has pulled the sheet down. ui/sheet.tsx writes it on every
+   pointermove of a drag-to-dismiss.
+
+   Registered for `inherits: false`, which is the whole reason this block
+   exists. An unregistered custom property inherits, so setting it on the panel
+   invalidated the computed style of everything inside the panel — the plate
+   image, the vote button, the share row, every line of text — once per frame,
+   on the main thread, during the one gesture that has to stay at 120Hz.
+   Declaring it non-inheriting scopes the invalidation to the panel itself.
+
+   The panel is also the only element that reads it, so nothing below needs to
+   inherit it. */
+@property --sheet-drag {
+  syntax: "<length>";
+  initial-value: 0px;
+  inherits: false;
+}
+
 /* Cycling state: a single solid 3px warm ring at the card edge.
    No glow, no scale, no plate change. Discrete jump from card to card
    IS the motion of the spin. */

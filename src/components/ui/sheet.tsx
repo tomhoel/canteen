@@ -154,7 +154,13 @@ export function SheetContent({
   }, [rendered, handleClose]);
 
   // Drag to dismiss
-  const dragRef = React.useRef({ atTop: false, engaged: false });
+  //
+  // `height` is measured once, when the gesture starts. It used to be read
+  // inside setDrag — a `getBoundingClientRect()` on every pointermove, between
+  // two style writes, which forces the browser to flush layout mid-gesture on
+  // the frame it can least afford to. The panel cannot change height while a
+  // finger is dragging it, so once is enough.
+  const dragRef = React.useRef({ atTop: false, engaged: false, height: 0 });
 
   const scrollableIsAtTop = (from: EventTarget | null): boolean => {
     let el = from as HTMLElement | null;
@@ -174,7 +180,7 @@ export function SheetContent({
     panel.style.setProperty("--sheet-drag", `${px}px`);
     const backdrop = panel.previousElementSibling as HTMLElement | null;
     if (backdrop) {
-      const h = panel.getBoundingClientRect().height || 1;
+      const h = dragRef.current.height || 1;
       backdrop.style.opacity = String(Math.max(0, 1 - px / h));
     }
   };
@@ -199,6 +205,7 @@ export function SheetContent({
       if (first) {
         dragRef.current.atTop = scrollableIsAtTop(event.target);
         dragRef.current.engaged = false;
+        dragRef.current.height = panel.getBoundingClientRect().height;
         return;
       }
 
@@ -214,7 +221,7 @@ export function SheetContent({
           shouldDismiss({
             my,
             vy,
-            height: panel.getBoundingClientRect().height,
+            height: dragRef.current.height,
             fraction: DISMISS_FRACTION,
             velocity: DISMISS_VELOCITY,
           })

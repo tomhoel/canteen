@@ -194,6 +194,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     infoOpen || recipeModal.isOpen || menyView.isOpen || dealsView.isOpen || lightboxIndex >= 0
   );
 
+  /** Has the action sheet ever been opened? See its render block for why. */
+  const sheetEverOpened = useRef(false);
+
   const scrollRef = useRef<HTMLElement>(null);
 
   // Debounced scroll position save
@@ -837,10 +840,27 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         bottom, so it is already dressed for a wide window.
       */}
       {(() => {
-        if (!actionSheet.isOpen) return null;
+        // Stays mounted once it has been opened, rather than unmounting the
+        // moment `isOpen` goes false.
+        //
+        // ui/sheet.tsx has a proper two-phase close — it drops `shown`, lets the
+        // 400ms translateY run, and only then unmounts — but it never got to
+        // use it: returning null here destroyed the whole component on the same
+        // tick, so the sheet vanished instead of sliding down. Keeping it
+        // mounted hands the close animation back to the thing that owns it.
+        //
+        // The latch is what keeps it lazy. The chunk is still not fetched until
+        // the first tap; afterwards the component stays mounted and renders
+        // nothing while closed, which costs one null render.
+        if (actionSheet.isOpen) sheetEverOpened.current = true;
+        if (!sheetEverOpened.current) return null;
 
         const closeSheet = () => {
-          setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+          // Only the flag. Wiping the canteen and dish here used to be
+          // invisible because the component was destroyed in the same tick —
+          // now that it survives to animate out, clearing them would empty the
+          // sheet's content mid-slide. The next open overwrites them anyway.
+          setActionSheet((s) => ({ ...s, isOpen: false }));
           voting.setVoteSuccess(false);
           voting.setShareState("idle");
         };
