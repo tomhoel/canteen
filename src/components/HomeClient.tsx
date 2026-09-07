@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
@@ -690,7 +691,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <motion.div className="cards-track" style={{ x: dragX }}>
+          <m.div className="cards-track" style={{ x: dragX }}>
             {/*
               Day switch.
 
@@ -713,7 +714,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
               travels a little less far because it has less room to travel in.
             */}
             <AnimatePresence mode="popLayout" initial={false} custom={{ dir: direction, fromSwipe }}>
-              <motion.div
+              <m.div
                 key={selectedDay}
                 custom={{ dir: direction, fromSwipe }}
                 variants={{
@@ -783,9 +784,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                     ))}
                   </>
                 )}
-              </motion.div>
+              </m.div>
             </AnimatePresence>
-          </motion.div>
+          </m.div>
         </ErrorBoundary>
       </main>
 
@@ -806,7 +807,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       {/* Info Modal */}
       <AnimatePresence>
         {infoOpen && (
-          <motion.div
+          <m.div
             key="info-overlay"
             className="info-overlay"
             role="presentation"
@@ -816,7 +817,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             transition={{ duration: 0.2 }}
             onClick={() => setInfoOpen(false)}
           >
-            <motion.div
+            <m.div
               key="info-modal"
               className="info-modal"
               role="dialog"
@@ -892,8 +893,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                   </a>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -987,7 +988,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       {/* Recipe Modal */}
       <AnimatePresence>
         {recipeModal.isOpen && (
-          <motion.div
+          <m.div
             key="recipe-overlay"
             className="recipe-overlay"
             role="presentation"
@@ -997,7 +998,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             transition={{ duration: 0.2 }}
             onClick={() => { closeRecipe(); closeDeals(); closeMeny(); }}
           >
-            <motion.div
+            <m.div
               key="recipe-modal"
               className="recipe-modal"
               role="dialog"
@@ -1203,8 +1204,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                 })()}
               </>
             )}
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
       <AnimatePresence>

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import type { MenyResponse, MenyIngredientMatch } from "@/lib/types";
 import { PriceRanger } from "@/components/PriceRanger";
 import "@/styles/meny-view.css";
@@ -66,7 +67,7 @@ function ProductCard({ match, index }: { match: MenyIngredientMatch; index: numb
 
       <AnimatePresence initial={false}>
         {hasAlts && showAlts && (
-          <motion.div
+          <m.div
             className="mv-alts"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -95,7 +96,7 @@ function ProductCard({ match, index }: { match: MenyIngredientMatch; index: numb
                 </div>
               </ProductLink>
             ))}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

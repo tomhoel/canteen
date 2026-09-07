@@ -1,5 +1,5 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 import type { DisplayMode } from "@/lib/dateUtils";
 
 interface DaySelectorProps {
@@ -119,7 +119,7 @@ export default function DaySelector({
     >
       <div className="day-selector" role="tablist" ref={selectorRef}>
         {pill && (
-          <motion.div
+          <m.div
             className="day-pill"
             initial={false}
             animate={{

@@ -1250,6 +1250,39 @@ body {
   padding-top: 8px;
 }
 
+/* The card text's entrance on a day change. It was a motion spring in
+   FoodCard (320/30/0.6); its damping ratio is 0.76, so it never overshot and
+   this curve is the same movement. FoodCard keys the element by the selected
+   day, so the day change remounts it and the animation re-fires — the same
+   trigger that used to replay motion's `initial`.
+
+   Behind min-width rather than the pointer, because the reason it is off on a
+   phone is cost, not input: `.card-content` has no `will-change`, so WebKit
+   promotes it to a layer for the duration and drops it again, rasterising
+   ~190x150 CSS px of text at 3x, three times per swipe. */
+@media (min-width: 769px) {
+  .card-content {
+    animation: cardContentEnter 0.26s var(--smooth) both;
+  }
+}
+
+@keyframes cardContentEnter {
+  from {
+    opacity: 0.5;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-content {
+    animation: none;
+  }
+}
+
 .card-header {
   text-align: center;
   margin-bottom: 4px;

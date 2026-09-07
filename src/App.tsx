@@ -1,4 +1,5 @@
 import React, { Suspense, use, useCallback, useState } from "react";
+import { LazyMotion } from "motion/react";
 import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import HomeClient from "@/components/HomeClient";
@@ -25,6 +26,16 @@ import { menuResource } from "@/lib/menu-resource";
 const Toaster = React.lazy(() =>
   import("sonner").then((m) => ({ default: m.Toaster }))
 );
+
+/**
+ * Fetched, not bundled — see `src/lib/motion-features.ts` for why.
+ *
+ * Declared at module scope rather than inline in the JSX: LazyMotion compares
+ * this by identity, and a new arrow function every render would make it
+ * reload the features on each one.
+ */
+const loadMotionFeatures = () =>
+  import("@/lib/motion-features").then((mod) => mod.default);
 
 function Menu({ epoch }: { epoch: number }) {
   // Read the week here rather than in App, so a ?day= change re-renders only
@@ -70,14 +81,22 @@ export default function App() {
           boundary so it drops the error it caught, and the new epoch makes
           menuResource mint a fresh promise rather than replaying the failed
           one. Either alone would leave the retry button inert. */}
-      <ErrorBoundary
-        key={epoch}
-        fallback={(error: Error) => <MenuError error={error} onRetry={retry} />}
-      >
-        <Suspense fallback={<LoadingScreen />}>
-          <Menu epoch={epoch} />
-        </Suspense>
-      </ErrorBoundary>
+      {/* `strict` is the regression guard: it makes a plain `motion.div`
+          throw, so the next one added anywhere under here fails loudly in
+          development instead of silently pulling the whole 42 KB animation
+          runtime back onto the critical path. */}
+      <LazyMotion features={loadMotionFeatures} strict>
+        <ErrorBoundary
+          key={epoch}
+          fallback={(error: Error) => (
+            <MenuError error={error} onRetry={retry} />
+          )}
+        >
+          <Suspense fallback={<LoadingScreen />}>
+            <Menu epoch={epoch} />
+          </Suspense>
+        </ErrorBoundary>
+      </LazyMotion>
       <Suspense fallback={null}>
         <Toaster
           position="top-center"
