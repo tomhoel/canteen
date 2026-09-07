@@ -2940,12 +2940,16 @@ body {
 }
 
 .info-overlay,
-.recipe-overlay {
+.recipe-overlay,
+.lightbox-overlay,
+.leaderboard-overlay {
   animation: overlayFadeIn 0.2s cubic-bezier(0, 0, 0.58, 1) both;
 }
 
 .info-modal,
-.recipe-modal {
+.recipe-modal,
+.lightbox-content,
+.leaderboard-modal {
   animation: modalPanelIn 0.26s cubic-bezier(0.2, 0, 0.35, 1.15) both;
 }
 
