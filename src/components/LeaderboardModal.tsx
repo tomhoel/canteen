@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import * as m from "motion/react-m";
 import { CANTEEN_ORDER, getCanteenMetadata } from "@/lib/constants";
@@ -62,7 +63,15 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
     return { date: entry.date, winners };
   });
 
-  return (
+  // Portalled to document.body, and it has to be. `useShellInert` above marks
+  // `.app-wrapper` inert while this is open — and this modal renders inside
+  // `.app-wrapper`, so without the portal the attribute meant to protect the
+  // page behind the overlay lands on the overlay too. Measured on production
+  // before this: zero of the panel's focusable elements could be focused, and
+  // a hit test at its centre never landed inside it. ui/sheet.tsx portals for
+  // exactly this reason, which is why the action sheet was the only overlay in
+  // the app that still worked.
+  return createPortal(
     <m.div
       className="leaderboard-overlay"
       role="presentation"
@@ -173,6 +182,7 @@ export default function LeaderboardModal({ isOpen, onClose }: LeaderboardModalPr
           </>
         )}
       </m.div>
-    </m.div>
+    </m.div>,
+    document.body
   );
 }
