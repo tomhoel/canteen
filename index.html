@@ -8,10 +8,15 @@
     />
     <!-- Tints the iOS status bar and Safari's chrome even before install. -->
     <meta name="theme-color" content="#f5f0e8" />
-    <!-- Must stay identical to the title in src/routes/__root.tsx, which
-         replaces it on mount; a different string here renames the tab a
-         moment after the page opens. -->
+    <!-- The only place a title is declared. __root.tsx used to re-set it on
+         mount, so the two strings had to match or the tab relabelled itself a
+         moment after opening; there is no router now and nothing sets it at
+         runtime. index.static-shell.test.ts holds that line. -->
     <title>🍽️ Dagens Lunsj | Telenor Fornebu</title>
+    <meta
+      name="description"
+      content="Daily lunch menus from The Hub, Telenor Expo, and Bygg B canteens at Telenor Fornebu."
+    />
 
     <!-- The app's own background, inline, so the very first paint is already
          the right colour. globals.css sets this too, but it is an 83 KB
