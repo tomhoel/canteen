@@ -1,4 +1,4 @@
-import React, { Suspense, use, useCallback, useState } from "react";
+import React, { Suspense, useCallback, useState } from "react";
 import { LazyMotion } from "motion/react";
 import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -6,7 +6,7 @@ import HomeClient from "@/components/HomeClient";
 import LoadingScreen from "@/components/LoadingScreen";
 import MenuError from "@/components/MenuError";
 import { useSearch } from "@/lib/useSearch";
-import { menuResource } from "@/lib/menu-resource";
+import { readMenu } from "@/lib/menu-resource";
 
 /**
  * The app, with the router's job done by React itself.
@@ -51,7 +51,7 @@ function Menu({ epoch }: { epoch: number }) {
     dishDescriptions,
     dishShortNames,
     plateImages,
-  } = use(menuResource(week, epoch));
+  } = readMenu(week, epoch);
 
   return (
     <HomeClient

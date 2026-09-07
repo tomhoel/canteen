@@ -34,4 +34,38 @@ export function menuResource(week: string | undefined, epoch: number) {
 /** Test seam: the module-level cache would otherwise leak between cases. */
 export function __resetMenuResource() {
   cache.clear();
+  status.clear();
+}
+
+type Settled =
+  | { state: "pending" }
+  | { state: "done"; value: WeeklyMenuResponse }
+  | { state: "error"; error: unknown };
+
+const status = new Map<string, Settled>();
+
+/**
+ * `use()`, written out.
+ *
+ * React 19's `use()` is the only React-19-only API this app has, and it is one
+ * call site. This is the same thing in the form every Suspense implementation
+ * has understood since the beginning: return the value if it has settled,
+ * rethrow the error if it failed, and throw the promise itself if it has not
+ * resolved yet. Suspense catches the throw and retries the render when the
+ * promise settles.
+ */
+export function readMenu(week: string | undefined, epoch: number): WeeklyMenuResponse {
+  const key = `${epoch}|${week ?? ""}`;
+  const p = menuResource(week, epoch);
+  const s = status.get(key);
+  if (s?.state === "done") return s.value;
+  if (s?.state === "error") throw s.error;
+  if (!s) {
+    status.set(key, { state: "pending" });
+    p.then(
+      (value) => status.set(key, { state: "done", value }),
+      (error) => status.set(key, { state: "error", error })
+    );
+  }
+  throw p;
 }

@@ -197,6 +197,13 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       tsconfigPaths: true,
+      // EXPERIMENT ONLY — measuring what preact/compat would save.
+      alias: {
+        react: "preact/compat",
+        "react-dom": "preact/compat",
+        "react-dom/client": "preact/compat/client",
+        "react/jsx-runtime": "preact/jsx-runtime",
+      },
     },
     build: {
       rollupOptions: {
@@ -211,7 +218,7 @@ export default defineConfig(({ mode }) => {
           // the function form of manualChunks, not the object shorthand.
           manualChunks(id) {
             if (id.includes("node_modules")) {
-              if (/[\\/]node_modules[\\/](react|react-dom)[\\/]/.test(id)) {
+              if (/[\\/]node_modules[\\/](react|react-dom|preact)[\\/]/.test(id)) {
                 return "vendor-react";
               }
               // react-query only. The router is gone (src/lib/useSearch.ts
