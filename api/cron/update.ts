@@ -180,6 +180,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
   }
 
+  // The cron is the only writer, and it has just dropped the response cache.
+  // Whoever arrives next would otherwise pay the cold origin — measured at
+  // 4.5s TTFB against 0.06-0.19s warm. Paying it here instead costs the cron
+  // nothing it is not already spending.
+  //
+  // The URL must be exactly `/api/menu` with no query string: that is
+  // byte-for-byte what index.html's head script requests, and it is the cache
+  // key for all three layers. A `?week=` variant would warm a Redis key and a
+  // CDN entry nobody asks for on load. Going out through the public edge (not
+  // an in-process call) is what repopulates the CDN entry as well as Redis.
+  const prodHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (prodHost) {
+    await fetch(`https://${prodHost}/api/menu`)
+      .then((r) => console.log(`🔥 [cron] warmed /api/menu → ${r.status}`))
+      .catch((err) => console.warn("⚠️ [cron] warm failed:", err.message));
+  }
+
   return res.status(200).json({
     status: "success",
     weekId: record.weekId,

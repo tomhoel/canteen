@@ -10,16 +10,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // origin round trip — measured at ~520ms for a 218-byte body, on a path
     // where nothing else about the response changes second to second.
     //
-    // The body is a fortnight of daily vote aggregates. 30 seconds of edge
-    // staleness is invisible: a voter's own vote is applied optimistically by
-    // useVoting and never waits on this, and the leaderboard is a two-week
-    // trend. `stale-while-revalidate` then means nobody ever waits for the
-    // refresh either.
+    // The body is a fortnight of daily vote aggregates. Edge staleness is
+    // invisible here: a voter's own vote is applied optimistically by useVoting
+    // and never waits on this, and the leaderboard is a two-week trend.
+    // `stale-while-revalidate` then means nobody ever waits for the refresh.
+    //
+    // s-maxage was 30s, which on an app this quiet meant essentially every
+    // visitor missed the edge and woke the function — a cold one costs ~2.9s.
+    // 120s still shows a colleague's 11:00 vote well inside the lunch hour
+    // while collapsing the miss rate during the only window anyone is here.
     //
     // POST deliberately keeps no caching — it is the write.
     res.setHeader(
       "Cache-Control",
-      "public, max-age=0, s-maxage=30, stale-while-revalidate=300"
+      "public, max-age=0, s-maxage=120, stale-while-revalidate=600"
     );
     return respond(res, () => getAttendanceHistory());
   }

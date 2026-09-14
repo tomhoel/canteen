@@ -1,4 +1,3 @@
-import { generateAIRecipe } from "./services/ai.service.js";
 import type { Recipe } from "../lib/types.js";
 import { getWeekNumber } from "../lib/dateUtils.js";
 import { getRedis, matchesCachedShape } from "./services/redis.service.js";
@@ -33,6 +32,11 @@ export async function generateRecipe(data: RecipeRequest) {
     }
   }
 
+  // Imported here rather than at module scope: ai.service.ts pulls in
+  // @google/genai (14 MB), and a recipe served from the 7-day cache above never
+  // needs it. Paying that on the miss path only keeps it off every cache hit's
+  // cold start.
+  const { generateAIRecipe } = await import("./services/ai.service.js");
   const recipe = await generateAIRecipe(dishName, lang);
 
   if (redis) {

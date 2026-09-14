@@ -6,9 +6,9 @@ import {
   isOsloWeekend,
 } from "../lib/dateUtils.js";
 import { DAY_KEYS } from "../lib/constants.js";
-import { fitDescription } from "./services/ai.service.js";
+import { fitDescription } from "./services/fit-description.js";
 import { pickMainDish } from "../lib/dish-ranking.js";
-import { getWeeklyMenuService, runWeeklyUpdateService } from "./services/menu.service.js";
+import { getWeeklyMenuService } from "./services/menu-read.service.js";
 import { loadDishCache, normalizeDishName } from "./services/dish-cache.service.js";
 import { getRedis, menuResponseKey } from "./services/redis.service.js";
 
@@ -331,4 +331,8 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
   return result;
 }
 
-export { runWeeklyUpdateService };
+// No `export { runWeeklyUpdateService }` here. This module is what /api/menu
+// loads, and re-exporting the write path from it pulls menu.service.ts — and
+// so cheerio and @google/genai — back into the read lambda, undoing the split.
+// The two callers that need it (api/cron/update.ts, smart-update.js) already
+// import it from menu.service.js directly.
