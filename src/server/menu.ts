@@ -257,10 +257,6 @@ async function readWeekForDisplay(weekId?: string) {
 
 let memoryCache: { key: string; data: WeeklyMenuResponse; expires: number } | null = null;
 
-export function clearMenuMemoryCache() {
-  memoryCache = null;
-}
-
 export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse> {
   const cacheKey = weekId || "current";
   const now = Date.now();
