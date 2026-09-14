@@ -78,12 +78,9 @@ export default defineConfig([
   // makes them runnable at all: "type": "module" applies to .js, so as .js every
   // one of them died on `require is not defined in ES module scope`.
   {
-    files: [
-      "generate-icon.cjs",
-      "scripts/rebuild-nobg.cjs",
-      "scripts/upload-closed-plates.cjs",
-      "scripts/upload-master-plate.cjs",
-    ],
+    // A glob rather than the four names that used to be listed here: every new
+    // maintenance script hit 23 no-undef errors and needed a config edit first.
+    files: ["*.cjs", "scripts/**/*.cjs"],
     languageOptions: {
       // These used to inherit node globals from the generic **/*.js block; as
       // .cjs they match nothing else, so declare the environment explicitly.
