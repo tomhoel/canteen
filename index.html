@@ -346,5 +346,19 @@
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Registered after load, not during it. The service worker's whole job is
+      // to make the NEXT launch fast; letting it compete for bandwidth with the
+      // launch that installs it would be exactly backwards.
+      //
+      // Dev has no sw.js — the plugin that emits it is build-only — and a
+      // registration that 404s leaves a failed registration on the origin, so
+      // the check is on the file existing rather than on NODE_ENV.
+      if ('serviceWorker' in navigator) {
+        addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+      }
+    </script>
   </body>
 </html>
