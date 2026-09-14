@@ -1,7 +1,5 @@
 export const DAYS_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
-export const DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 export const FULL_DAYS_NO = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag"];
-export const FULL_DAYS_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 export const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
 export const ALLERGEN_COLORS: Record<string, string> = {
@@ -16,14 +14,6 @@ export const ALLERGEN_NAMES_NO: Record<string, string> = {
   Nuts: "N\u00F8tter", Peanuts: "Pean\u00F8tter", Celery: "Selleri", Mustard: "Sennep",
   "Sesame seeds": "Sesamfr\u00F8", Shellfish: "Skalldyr", Soya: "Soya",
   Sulphites: "Sulfitter", Molluscs: "Bl\u00F8tdyr", Lupin: "Lupin"
-};
-
-/** Short allergen abbreviations — unique 2-3 letter codes to avoid collisions. */
-export const ALLERGEN_ABBREV: Record<string, string> = {
-  Egg: "Eg", Fish: "Fi", Gluten: "Gl", Milk: "Mi",
-  Nuts: "Nø", Peanuts: "Pn", Celery: "Se", Mustard: "Sn",
-  "Sesame seeds": "Ss", Shellfish: "Sk", Soya: "So",
-  Sulphites: "Su", Molluscs: "Bl", Lupin: "Lu",
 };
 
 /** Norwegian abbreviations for allergens on side dishes. */

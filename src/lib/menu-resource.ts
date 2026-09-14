@@ -30,8 +30,3 @@ export function menuResource(week: string | undefined, epoch: number) {
   }
   return p;
 }
-
-/** Test seam: the module-level cache would otherwise leak between cases. */
-export function __resetMenuResource() {
-  cache.clear();
-}

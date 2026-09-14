@@ -5,11 +5,6 @@
  */
 export const loadedImageUrls = new Set<string>();
 
-export function isImageCached(src?: string | null): boolean {
-  if (!src) return false;
-  return loadedImageUrls.has(src);
-}
-
 export function markImageCached(src?: string | null): void {
   if (src) loadedImageUrls.add(src);
 }

@@ -66,8 +66,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# TanStack Router's generate cache — written by `npm run build`, never committed
-
 # Moat task system
 .moat/
 
