@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@google/genai": "^1.41.0",
-    "@supabase/supabase-js": "^2.105.3",
     "@tanstack/react-query": "^5.101.4",
     "@upstash/redis": "^1.36.2",
+    "@vercel/blob": "^2.8.0",
     "canvas-confetti": "^1.9.4",
     "cheerio": "^1.2.0",
     "date-fns": "^4.4.0",

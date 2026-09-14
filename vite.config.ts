@@ -323,6 +323,11 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, loadEnv(mode, process.cwd(), ""));
 
   return {
+    define: {
+      "process.env.NEXT_PUBLIC_BLOB_BASE_URL": JSON.stringify(
+        process.env.NEXT_PUBLIC_BLOB_BASE_URL || "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com"
+      ),
+    },
     plugins: [
       shortenCriticalPath(),
       precacheServiceWorker(),

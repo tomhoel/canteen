@@ -1,6 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
 import sharp from "sharp";
 import { GoogleGenAI } from "@google/genai";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { put } from "@vercel/blob";
 import type { MenuData } from "../../lib/types.js";
 import { pickMainDish } from "../../lib/dish-ranking.js";
 import { generatePlatingBrief } from "./ai.service.js";
@@ -14,30 +16,6 @@ import {
 // The cache key function lives with the cache now; re-exported because other
 // modules already import it from here.
 export { normalizeDishName };
-
-/**
- * Storage writes need the service role key. This used to fall back to a
- * hardcoded anon key, under which every upload was rejected by RLS while the
- * run still reported success — which is why stale plate images kept being
- * served against new dishes.
- */
-let cachedClient: SupabaseClient | null = null;
-function getStorageClient(): SupabaseClient {
-  if (cachedClient) return cachedClient;
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set — cannot upload dish images.");
-  if (!key) {
-    throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY is not set — refusing to upload with the anon key, " +
-        "which RLS would reject while still reporting success."
-    );
-  }
-
-  cachedClient = createClient(url, key, { auth: { persistSession: false } });
-  return cachedClient;
-}
 
 const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const IMAGE_SIZE_PX = 1024;
@@ -254,96 +232,111 @@ export async function plateRimDistance(plateBuffer: Buffer): Promise<number | nu
  */
 const PLATE_DRAW_ATTEMPTS = 2;
 
-export async function uploadToSupabase(
+export async function uploadToStorage(
   bucket: string,
   filePath: string,
   buffer: Buffer,
-  contentType = "image/png"
+  contentType = "image/webp"
 ): Promise<boolean> {
-  const supabase = getStorageClient();
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    console.warn(`⚠️  BLOB_READ_WRITE_TOKEN is not set — cannot upload ${bucket}/${filePath}`);
+    return false;
+  }
+  const blobPath = `${bucket}/${filePath}`;
   try {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, buffer, { contentType, upsert: true });
-    if (error) throw error;
+    await put(blobPath, buffer, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType,
+      token,
+    });
     return true;
   } catch (err: any) {
-    console.error(`❌ Supabase upload failed (${filePath}): ${err.message}`);
+    console.error(`❌ Blob upload failed (${blobPath}): ${err?.message ?? err}`);
     return false;
   }
 }
 
-export async function copyInSupabaseBucket(
+// Keep alias for backwards compatibility
+export const uploadToSupabase = uploadToStorage;
+
+export async function copyInStorageBucket(
   bucket: string,
   srcPath: string,
   destPath: string
 ): Promise<boolean> {
   if (srcPath === destPath) return false;
-  const supabase = getStorageClient();
-  try {
-    const { error } = await supabase.storage.from(bucket).copy(srcPath, destPath);
-    if (!error) return true;
-  } catch {
-    // Server-side copy is an optimisation; fall through to download+upload.
-  }
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return false;
 
   try {
-    const { data, error } = await supabase.storage.from(bucket).download(srcPath);
-    if (error || !data) return false;
-    const buf = Buffer.from(await data.arrayBuffer());
-    return await uploadToSupabase(bucket, destPath, buf);
-  } catch (err) {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
+      process.env.BLOB_BASE_URL ||
+      "https://public.blob.vercel-storage.com";
+    const res = await fetch(`${baseUrl}/${bucket}/${srcPath}`);
+    if (!res.ok) return false;
+    const buf = Buffer.from(await res.arrayBuffer());
+    return await uploadToStorage(bucket, destPath, buf);
+  } catch {
     return false;
   }
 }
 
-/**
- * The one plate every dish is served on, as base64 PNG, or null if it cannot
- * be fetched.
- *
- * Sending the model a picture of the plate is the only thing that actually held
- * the crockery still. Describing it in words does not: a text-only prompt asking
- * for "round warm beige stoneware with a visible raised rim" yields a different
- * piece of stoneware every call — coupes, rimless plates, speckled bowls, a
- * different beige each time. The pre-migration generator passed this reference
- * and the plates matched; the rewrite dropped it and they drifted apart.
- *
- * It lives in Supabase rather than being read off disk because generation now
- * runs inside the Vercel cron function, whose bundle does not include public/.
- * Fetched once per process and cached: the cron draws a whole week per run.
- */
+// Keep alias for backwards compatibility
+export const copyInSupabaseBucket = copyInStorageBucket;
+
 let cachedPlateRef: string | undefined;
 export async function getMasterPlateRef(): Promise<string | null> {
   if (cachedPlateRef !== undefined) return cachedPlateRef;
 
-  try {
-    const { data, error } = await getStorageClient()
-      .storage.from("images")
-      .download(MASTER_PLATE_REF_PATH);
-    if (error || !data) throw error ?? new Error("no data");
+  // 1. Try local disk first (instant, free, works offline)
+  const localCandidates = [
+    path.join(process.cwd(), "assets", "source-images", "master-plate-ref.png"),
+    path.join(process.cwd(), "backups", "supabase", "buckets", "images", "reference", "master-plate-ref.png"),
+  ];
 
-    // Downscaled before sending: the stored reference is 1024px / 1.4 MB, and
-    // the plate's shape, rim and colour survive 512 intact. This travels on
-    // every generation call, so the size is worth paying attention to.
-    const resized = await sharp(Buffer.from(await data.arrayBuffer()))
-      .resize(512, 512, { fit: "contain" })
-      .png()
-      .toBuffer();
-    cachedPlateRef = resized.toString("base64");
-  } catch (err: any) {
-    // Deliberately NOT cached. This memo is process-wide and the cron draws a
-    // whole week per run, so caching a failure here means one transient
-    // download error sends every remaining plate of that run out referenceless
-    // — silently, and counted as a success. Ten such plates from 14-16 Aug 2026
-    // are still in the archive. A retry on the next dish costs one request.
-    console.warn(
-      `⚠️  Master plate reference unavailable (${MASTER_PLATE_REF_PATH}): ${err?.message ?? err}. ` +
-        "This plate will be described in words only and may not match the others. " +
-        "Run scripts/upload-master-plate.cjs to restore it."
-    );
-    return null;
+  for (const p of localCandidates) {
+    if (fs.existsSync(p)) {
+      try {
+        const raw = fs.readFileSync(p);
+        const resized = await sharp(raw)
+          .resize(512, 512, { fit: "contain" })
+          .png()
+          .toBuffer();
+        cachedPlateRef = resized.toString("base64");
+        return cachedPlateRef;
+      } catch {
+        // Fall back to next candidate
+      }
+    }
   }
-  return cachedPlateRef;
+
+  // 2. Try fetching from Blob if deployed
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
+      process.env.BLOB_BASE_URL ||
+      "https://public.blob.vercel-storage.com";
+    const res = await fetch(`${baseUrl}/images/${MASTER_PLATE_REF_PATH}`);
+    if (res.ok) {
+      const resized = await sharp(Buffer.from(await res.arrayBuffer()))
+        .resize(512, 512, { fit: "contain" })
+        .png()
+        .toBuffer();
+      cachedPlateRef = resized.toString("base64");
+      return cachedPlateRef;
+    }
+  } catch {
+    // Blob fetch failed, proceed to warning
+  }
+
+  console.warn(
+    `⚠️  Master plate reference unavailable (${MASTER_PLATE_REF_PATH}). ` +
+      "This plate will be described in words only and may not match the others."
+  );
+  return null;
 }
 
 /**

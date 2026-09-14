@@ -1,23 +1,10 @@
 /**
  * Tests for the lunch vote store.
  *
- * These exist because every layer of this feature reported success while doing
- * nothing. The service wrote to `canteen_attendance` — a table that was never
- * created — and supabase-js answers a missing table with `{ data: null, error }`
- * rather than throwing, so a destructure that took only `data` turned three
- * failed round trips into `{ success: true, canteens: {} }`. The endpoint
- * answered 200, the client overwrote its optimistic count with the empty tally,
- * and the vote vanished between one render and the next.
- *
- * So the rule the tests below encode is: a vote that was not stored must throw.
- * An empty tally is a legitimate answer only when nobody has voted yet, and it
- * must never be the way a failure looks.
- *
- * Seam and mocking rules are the same three as menu.service.update.test.ts —
- * one `mock.module` per specifier at top level, every mock reading from a
- * mutable holder, subject imported with a top-level await.
- *
- * Requires --experimental-test-module-mocks; see the `test` script.
+ * Backed by Upstash Redis hashes:
+ * - Voting uses atomic HINCRBY
+ * - History uses a pipeline across recent dates
+ * - A vote that was not stored must throw
  */
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
@@ -30,14 +17,12 @@ interface VoteRow {
 
 /** Everything a test can steer, and everything it can observe afterwards. */
 interface World {
-  /** Rows the table currently holds. */
   rows: VoteRow[];
-  /** When set, the vote RPC answers with this error instead of writing. */
-  rpcError: string | null;
-  /** When set, the history read answers with this error. */
-  selectError: string | null;
-  rpcCalls: Array<{ name: string; args: Record<string, unknown> }>;
-  selects: Array<{ table: string; since: string }>;
+  writeError: string | null;
+  readError: string | null;
+  incrCalls: Array<{ key: string; field: string; increment: number }>;
+  pipelineCalls: string[];
+  redisConfigured: boolean;
 }
 
 let world: World;
@@ -45,59 +30,70 @@ let world: World;
 function reset(overrides: Partial<World> = {}) {
   world = {
     rows: [],
-    rpcError: null,
-    selectError: null,
-    rpcCalls: [],
-    selects: [],
+    writeError: null,
+    readError: null,
+    incrCalls: [],
+    pipelineCalls: [],
+    redisConfigured: true,
     ...overrides,
   };
 
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+  process.env.UPSTASH_REDIS_REST_URL = "https://example-redis.upstash.io";
+  process.env.UPSTASH_REDIS_REST_TOKEN = "example-token";
 }
 
 reset();
 
-function makeSupabaseClient() {
+function makeRedisClient() {
   return {
-    rpc(name: string, args: Record<string, unknown>) {
-      world.rpcCalls.push({ name, args });
-      if (world.rpcError) return Promise.resolve({ data: null, error: { message: world.rpcError } });
+    async hincrby(key: string, field: string, increment: number) {
+      world.incrCalls.push({ key, field, increment });
+      if (world.writeError) throw new Error(world.writeError);
 
-      // Mirrors the SQL: increment the row, then return the whole day.
-      const date = String(args.p_date);
-      const canteen = String(args.p_canteen);
-      const existing = world.rows.find((r) => r.vote_date === date && r.canteen_name === canteen);
-      if (existing) existing.vote_count += 1;
-      else world.rows.push({ vote_date: date, canteen_name: canteen, vote_count: 1 });
-
-      const day = world.rows
-        .filter((r) => r.vote_date === date)
-        .map(({ canteen_name, vote_count }) => ({ canteen_name, vote_count }));
-      return Promise.resolve({ data: day, error: null });
+      const date = key.replace(/^attendance:/, "");
+      const existing = world.rows.find((r) => r.vote_date === date && r.canteen_name === field);
+      if (existing) existing.vote_count += increment;
+      else world.rows.push({ vote_date: date, canteen_name: field, vote_count: increment });
+      return 1;
     },
 
-    from(table: string) {
+    async hgetall(key: string) {
+      if (world.readError) throw new Error(world.readError);
+      const date = key.replace(/^attendance:/, "");
+      const dayRows = world.rows.filter((r) => r.vote_date === date);
+      if (dayRows.length === 0) return null;
+      const result: Record<string, number> = {};
+      for (const r of dayRows) result[r.canteen_name] = r.vote_count;
+      return result;
+    },
+
+    pipeline() {
+      const ops: string[] = [];
       return {
-        select: () => ({
-          gte: (_column: string, since: string) => {
-            world.selects.push({ table, since });
-            const result = world.selectError
-              ? { data: null, error: { message: world.selectError } }
-              : { data: world.rows.filter((r) => r.vote_date >= since), error: null };
-            return {
-              order: () => Promise.resolve(result),
-            };
-          },
-        }),
+        hgetall(key: string) {
+          ops.push(key);
+          world.pipelineCalls.push(key);
+          return this;
+        },
+        async exec() {
+          if (world.readError) throw new Error(world.readError);
+          return ops.map((key) => {
+            const date = key.replace(/^attendance:/, "");
+            const dayRows = world.rows.filter((r) => r.vote_date === date);
+            if (dayRows.length === 0) return null;
+            const res: Record<string, number> = {};
+            for (const r of dayRows) res[r.canteen_name] = r.vote_count;
+            return res;
+          });
+        },
       };
     },
   };
 }
 
-mock.module("@supabase/supabase-js", {
+mock.module("./redis.service.js", {
   namedExports: {
-    createClient: (_url: string, _key: string) => makeSupabaseClient(),
+    getRedis: () => (world.redisConfigured ? makeRedisClient() : null),
   },
 });
 
@@ -116,38 +112,33 @@ test("a vote comes back as the whole day's tally, not just the voter's own", asy
   assert.deepEqual(result.canteens, { Flow: 2, Fresh4you: 1 });
 });
 
-test("counting happens in the database, so two simultaneous voters cannot lose one", async () => {
-  // The previous implementation read the count, added one in JavaScript and
-  // wrote it back: two people voting during the same lunch rush would read the
-  // same number and store the same increment. The single RPC leaves the
-  // arithmetic to Postgres, which is the only place it can be atomic.
+test("counting happens atomically in Redis HINCRBY", async () => {
   reset();
 
   await submitVoteService("Flow");
 
-  assert.equal(world.rpcCalls.length, 1);
-  assert.equal(world.rpcCalls[0].name, "cast_attendance_vote");
-  assert.deepEqual(world.rpcCalls[0].args, { p_date: today(), p_canteen: "Flow" });
+  assert.equal(world.incrCalls.length, 1);
+  assert.deepEqual(world.incrCalls[0], {
+    key: `attendance:${today()}`,
+    field: "Flow",
+    increment: 1,
+  });
 });
 
 test("a vote that could not be stored throws instead of reporting success", async () => {
-  // The bug this whole file exists for.
-  reset({ rpcError: 'relation "public.canteen_attendance" does not exist' });
+  reset({ writeError: 'Connection closed' });
 
   await assert.rejects(
     () => submitVoteService("Flow"),
-    /could not be recorded.*does not exist/is,
+    /could not be recorded.*Connection closed/is,
     "a failed write must not look like a successful one"
   );
 });
 
 test("an unconfigured deployment throws rather than silently dropping votes", async () => {
-  reset();
-  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  reset({ redisConfigured: false });
 
   await assert.rejects(() => submitVoteService("Flow"), /not configured/i);
-
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
 });
 
 // ── Reading the history ───────────────────────────────────────────────────
@@ -172,17 +163,16 @@ test("history groups the flat rows into one entry per day, newest first", async 
 });
 
 test("history asks for exactly the window the leaderboard renders", async () => {
-  // The modal is titled "last 2 weeks" and its empty state says 14 days. If the
-  // query and the title disagree the bars are simply wrong, and nothing says so.
   reset();
 
   await getAttendanceHistoryService();
 
   assert.equal(HISTORY_DAYS, 14);
-  const expected = new Date(Date.parse(`${today()}T00:00:00Z`) - 13 * 86_400_000)
+  assert.equal(world.pipelineCalls.length, 14);
+  const expectedOldest = `attendance:${new Date(Date.parse(`${today()}T00:00:00Z`) - 13 * 86_400_000)
     .toISOString()
-    .slice(0, 10);
-  assert.equal(world.selects[0].since, expected, "13 days back plus today is a 14-day window");
+    .slice(0, 10)}`;
+  assert.equal(world.pipelineCalls[13], expectedOldest, "13 days back plus today is a 14-day window");
 });
 
 test("an empty history is an empty list, not a failure", async () => {
@@ -194,9 +184,7 @@ test("an empty history is an empty list, not a failure", async () => {
 });
 
 test("a failed history read throws instead of rendering an empty leaderboard", async () => {
-  // The stub this replaces returned `{ entries: [] }` unconditionally, so a
-  // broken read and a quiet fortnight looked identical in the UI.
-  reset({ selectError: "connection reset" });
+  reset({ readError: "connection reset" });
 
   await assert.rejects(() => getAttendanceHistoryService(), /connection reset/);
 });

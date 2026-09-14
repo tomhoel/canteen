@@ -1,20 +1,14 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getRedis } from "./redis.service.js";
 import type { DishOrigin, DishDescription } from "../../lib/types.js";
 
 /**
- * Per-dish cache backed by the Supabase `dish_cache` table.
+ * Per-dish cache backed by Upstash Redis `dish_cache` hash.
  *
  * A dish name is stable across weeks — "Slakterbiff med bearnaise" means the
  * same thing in week 33 and week 41 — so its origin, description and plate
- * image only ever need producing once. This table already held 205 fully
- * enriched dishes going back to May; the v2 pipeline ignored it and re-asked
- * the model for every dish on every run (twice daily), which was both
- * expensive and why descriptions changed wording between runs.
+ * image only ever need producing once.
  *
- * Table shape:
- *   cache_key TEXT PRIMARY KEY, original_name, clean_name, short_name,
- *   origin JSONB, description JSONB, image_path, image_nobg_path, first_seen,
- *   enrich_attempts INTEGER, last_enrich_attempt TIMESTAMPTZ
+ * Stored as fields in the `dish_cache` hash in Upstash Redis, keyed by `cacheKey`.
  */
 
 /** A cache row as stored. Every field is present, null where unfilled. */
@@ -59,13 +53,6 @@ export interface DishCacheEntry {
 /**
  * How many times a dish may be sent to the model before the updater gives up
  * on it and renders the pattern fallback instead.
- *
- * The model answers for essentially every dish, so a dish that keeps coming
- * back empty is almost certainly not going to start working: a name mangled by
- * the scraper, or one the reply keys off differently every time. Five is above
- * the four runs a full-day outage costs (2 cron runs × 2 weekdays), and far
- * below the ~10 runs a dish would otherwise soak up during its week on the
- * menu — and it repeats every time that dish comes back.
  */
 export const MAX_ENRICH_ATTEMPTS = 5;
 
@@ -106,191 +93,132 @@ export function normalizeDishName(name: string): string {
 
 /**
  * The archive object key for a dish — the cache key, folded to ASCII.
- *
- * Supabase Storage rejects an object key containing a non-ASCII character:
- * `archive/svinekjøtt toppet med søtpotet lokk.png` comes back "Invalid key",
- * while `archive/tandoori kylling med ris.png` uploads and serves fine. Spaces
- * are not the problem — å, ø and æ are.
- *
- * The archive path was built straight from normalizeDishName, which keeps
- * Norwegian letters on purpose because the dish_cache keys depend on it. So
- * every Norwegian-named dish failed to archive, silently: the plate landed in
- * the weekly slot, no image_nobg_path was recorded, and the next run found
- * nothing to reuse and generated it again. Ten of fifteen dishes in a typical
- * week, twice a day, each one a paid image — for a picture that already
- * existed.
- *
- * Folding is deliberately one-way and lossy ("søt" and "sot" collide). That is
- * the same trade the original slugifier made, and a collision costs one shared
- * plate between two dishes that are spelled almost identically. Not folding
- * costs every one of them, every run.
- *
- * The cache key itself is untouched: only the storage path folds, and the path
- * actually used is what gets recorded in image_nobg_path, so existing objects —
- * including the older hyphenated ones — keep resolving exactly as before.
  */
 export function archiveObjectKey(dishName: string): string {
   return normalizeDishName(dishName)
     .replace(/æ/g, "ae")
     .replace(/ø/g, "o")
     .replace(/å/g, "a")
-    // Anything else carrying a diacritic (é, ü, ñ …) decomposes and loses it.
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
-    // Whatever is still not plain ASCII cannot go in a key at all.
     .replace(/[^a-z0-9 ]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function getClient(): SupabaseClient | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
-}
-
 /** Cache rows keyed by normalised name, plus whether the read was trustworthy. */
 export interface DishCacheLoad {
   rows: Map<string, DishCacheRow>;
-  /**
-   * True when at least one chunk could not be read.
-   *
-   * "The cache holds nothing for these dishes" and "I could not find out what
-   * the cache holds" have to be different answers, for the same reason the
-   * weekly_menus read distinguishes them: a caller that treats a failed read as
-   * an empty result concludes every dish is new. Here that means re-asking the
-   * model about a whole week that was already fully answered — and, worse,
-   * recording a failed attempt against dishes that are perfectly fine.
-   */
   failed: boolean;
 }
 
+const HASH_KEY = "dish_cache";
+
 /**
- * Loads cache rows for the given dish names, keyed by normalised name.
- *
- * Fetched in chunks because the key list is a URL filter and a full week is
- * ~100 dishes.
+ * Loads cache rows for the given dish names from Upstash Redis, keyed by normalised name.
  */
 export async function loadDishCache(dishNames: string[]): Promise<DishCacheLoad> {
   const cache = new Map<string, DishCacheRow>();
-  const supabase = getClient();
-  if (!supabase) return { rows: cache, failed: true };
+  const redis = getRedis();
+  if (!redis) return { rows: cache, failed: true };
   if (dishNames.length === 0) return { rows: cache, failed: false };
 
   const keys = Array.from(new Set(dishNames.map(normalizeDishName).filter(Boolean)));
-  const CHUNK = 50;
-  let failed = false;
+  if (keys.length === 0) return { rows: cache, failed: false };
 
-  for (let i = 0; i < keys.length; i += CHUNK) {
-    const slice = keys.slice(i, i + CHUNK);
-    const { data, error } = await supabase
-      .from("dish_cache")
-      // One string literal, not a concatenation: supabase-js infers the row
-      // type from the select at the type level, and `string` degrades it to an
-      // error union that nothing type-checks against.
-      // prettier-ignore
-      .select("cache_key, original_name, origin, description, short_name, image_path, image_nobg_path, enrich_attempts, last_enrich_attempt")
-      .in("cache_key", slice);
-
-    if (error) {
-      console.warn(`⚠️  dish_cache read failed: ${error.message}`);
-      // One bad chunk poisons the whole answer: the caller cannot tell which
-      // dishes are genuinely absent from a partial map.
-      failed = true;
-      continue;
+  try {
+    const rawData = await redis.hmget<Record<string, unknown>>(HASH_KEY, ...keys);
+    if (rawData) {
+      for (const [key, val] of Object.entries(rawData)) {
+        if (!val) continue;
+        let row: any = val;
+        if (typeof val === "string") {
+          try {
+            row = JSON.parse(val);
+          } catch {
+            continue;
+          }
+        }
+        if (row && typeof row === "object") {
+          cache.set(key, {
+            cacheKey: row.cacheKey ?? row.cache_key ?? key,
+            originalName: row.originalName ?? row.original_name ?? "",
+            origin: row.origin ?? null,
+            description: row.description ?? null,
+            shortName: row.shortName ?? row.short_name ?? null,
+            imagePath: row.imagePath ?? row.image_path ?? null,
+            imageNoBgPath: row.imageNoBgPath ?? row.image_no_bg_path ?? null,
+            enrichAttempts: row.enrichAttempts ?? row.enrich_attempts ?? 0,
+            lastEnrichAttempt: row.lastEnrichAttempt ?? row.last_enrich_attempt ?? null,
+          });
+        }
+      }
     }
-
-    for (const row of data ?? []) {
-      cache.set(row.cache_key, {
-        cacheKey: row.cache_key,
-        originalName: row.original_name,
-        origin: row.origin ?? null,
-        description: row.description ?? null,
-        shortName: row.short_name ?? null,
-        imagePath: row.image_path ?? null,
-        imageNoBgPath: row.image_nobg_path ?? null,
-        enrichAttempts: row.enrich_attempts ?? 0,
-        lastEnrichAttempt: row.last_enrich_attempt ?? null,
-      });
-    }
+    return { rows: cache, failed: false };
+  } catch (err: any) {
+    console.warn(`⚠️  dish_cache read failed: ${err?.message ?? err}`);
+    return { rows: cache, failed: true };
   }
-
-  return { rows: cache, failed };
 }
 
 /**
- * Writes entries back, merging rather than overwriting: a row that already has
- * a description must not lose it because this run only produced an image.
- *
- * Omitting a key is *not* enough on its own. postgrest-js builds the request's
- * `columns` parameter from the union of the keys across the whole array
- * (@supabase/postgrest-js upsert(), `values.reduce(...Object.keys(x))`), and
- * without `Prefer: missing=default` PostgREST fills any listed column a given
- * row lacks with NULL. So one origin-only entry travelling alongside a
- * description-bearing one would blank that description — the exact data loss
- * this function's contract promises to prevent.
- *
- * Grouping by key signature and issuing one upsert per shape makes every batch
- * homogeneous, which is the only form where the union is what each row actually
- * carries.
+ * Writes entries back to Upstash Redis, merging rather than overwriting.
  */
 export async function saveDishCacheEntries(entries: DishCacheEntry[]): Promise<number> {
-  const supabase = getClient();
-  if (!supabase || entries.length === 0) return 0;
+  const redis = getRedis();
+  if (!redis || entries.length === 0) return 0;
 
-  const rows = entries
-    .filter((e) => e.cacheKey)
-    .map((e) => {
-      const row: Record<string, unknown> = {
-        cache_key: e.cacheKey,
-        original_name: e.originalName,
-      };
-      if (e.origin) row.origin = e.origin;
-      if (e.description) row.description = e.description;
-      if (e.shortName) row.short_name = e.shortName;
-      if (e.imagePath) row.image_path = e.imagePath;
-      if (e.imageNoBgPath) row.image_nobg_path = e.imageNoBgPath;
-      // 0 is a meaningful value here (a dish that just succeeded), so test for
-      // presence rather than truthiness.
-      if (e.enrichAttempts !== undefined && e.enrichAttempts !== null) {
-        row.enrich_attempts = e.enrichAttempts;
+  const validEntries = entries.filter((e) => e.cacheKey);
+  if (validEntries.length === 0) return 0;
+
+  const keys = Array.from(new Set(validEntries.map((e) => e.cacheKey)));
+
+  try {
+    // Read existing entries so we can merge partial updates
+    const existingRaw = (await redis.hmget<Record<string, unknown>>(HASH_KEY, ...keys)) ?? {};
+    const existing: Record<string, Partial<DishCacheRow>> = {};
+    for (const [k, v] of Object.entries(existingRaw)) {
+      if (!v) continue;
+      if (typeof v === "string") {
+        try {
+          existing[k] = JSON.parse(v);
+        } catch {
+          // Ignore invalid JSON in corrupted field
+        }
+      } else if (typeof v === "object") {
+        existing[k] = v as Partial<DishCacheRow>;
       }
-      if (e.lastEnrichAttempt !== undefined) row.last_enrich_attempt = e.lastEnrichAttempt;
-      return row;
-    });
-
-  // Deduplicate by key first. Two different dish names can normalise to the
-  // same cache_key — "Kylling m/ ris" and "Kylling m ris" differ only in
-  // punctuation the normaliser strips — and Postgres rejects an
-  // INSERT ... ON CONFLICT whose proposed rows collide on the conflict target
-  // ("cannot affect row a second time"). That aborts the *whole* statement, so
-  // one such pair would silently discard every other dish in its batch.
-  const deduped = new Map<string, Record<string, unknown>>();
-  for (const row of rows) {
-    const key = row.cache_key as string;
-    // Merge rather than overwrite, so a later origin-only row cannot drop an
-    // earlier description for the same key.
-    deduped.set(key, { ...(deduped.get(key) ?? {}), ...row });
-  }
-
-  const byShape = new Map<string, Array<Record<string, unknown>>>();
-  for (const row of deduped.values()) {
-    const shape = Object.keys(row).sort().join(",");
-    const group = byShape.get(shape);
-    if (group) group.push(row);
-    else byShape.set(shape, [row]);
-  }
-
-  let written = 0;
-  for (const group of byShape.values()) {
-    const { error } = await supabase.from("dish_cache").upsert(group, { onConflict: "cache_key" });
-    if (error) {
-      console.warn(`⚠️  dish_cache write failed: ${error.message}`);
-      continue;
     }
-    written += group.length;
-  }
 
-  return written;
+    const updates: Record<string, string> = {};
+    for (const entry of validEntries) {
+      const prev = existing[entry.cacheKey] || {};
+      const merged: DishCacheRow = {
+        cacheKey: entry.cacheKey,
+        originalName: entry.originalName ?? prev.originalName ?? "",
+        origin: entry.origin !== undefined ? entry.origin : (prev.origin ?? null),
+        description: entry.description !== undefined ? entry.description : (prev.description ?? null),
+        shortName: entry.shortName !== undefined ? entry.shortName : (prev.shortName ?? null),
+        imagePath: entry.imagePath !== undefined ? entry.imagePath : (prev.imagePath ?? null),
+        imageNoBgPath: entry.imageNoBgPath !== undefined ? entry.imageNoBgPath : (prev.imageNoBgPath ?? null),
+        enrichAttempts:
+          entry.enrichAttempts !== undefined && entry.enrichAttempts !== null
+            ? entry.enrichAttempts
+            : (prev.enrichAttempts ?? 0),
+        lastEnrichAttempt:
+          entry.lastEnrichAttempt !== undefined
+            ? entry.lastEnrichAttempt
+            : (prev.lastEnrichAttempt ?? null),
+      };
+
+      existing[entry.cacheKey] = merged;
+      updates[entry.cacheKey] = JSON.stringify(merged);
+    }
+
+    await redis.hset(HASH_KEY, updates);
+    return Object.keys(updates).length;
+  } catch (err: any) {
+    console.warn(`⚠️  dish_cache write failed: ${err?.message ?? err}`);
+    return 0;
+  }
 }

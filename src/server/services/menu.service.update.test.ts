@@ -140,12 +140,8 @@ function reset(overrides: Partial<World> = {}) {
     ...overrides,
   };
 
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
-  delete process.env.UPSTASH_REDIS_REST_URL;
-  delete process.env.UPSTASH_REDIS_REST_TOKEN;
-  delete process.env.KV_REST_API_URL;
-  delete process.env.KV_REST_API_TOKEN;
+  process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
+  process.env.UPSTASH_REDIS_REST_TOKEN = "token";
 }
 
 reset();
@@ -232,127 +228,108 @@ mock.module("@upstash/redis", {
       }
       async get(key: string) {
         world.redisGets.push(key);
-        return world.redisRecords.get(key) ?? null;
+        if (world.redisRecords.has(key)) {
+          return world.redisRecords.get(key) ?? null;
+        }
+        if (key.startsWith("menu:")) {
+          const weekId = key.slice("menu:".length);
+          world.trace.push(`read:${weekId}`);
+          const stored = world.rows.get(weekId);
+          if (stored === "fail") {
+            throw new Error("connection reset");
+          }
+          if (!stored) return null;
+          return {
+            weekId,
+            menuData: stored.menu_data,
+            dishOrigins: stored.dish_origins,
+            dishDescriptions: stored.dish_descriptions,
+            dishShortNames: stored.dish_short_names,
+            scrapedAt: (stored.menu_data as any)?.scrapedAt ?? new Date().toISOString(),
+          };
+        }
+        return null;
       }
-      async set(key: string) {
+      async set(key: string, value: any) {
         if (world.redisWritesFail) throw new Error("redis down");
         world.redisSets.push(key);
-      }
-    },
-  },
-});
-
-/**
- * The slice of the supabase-js query builder the service actually uses.
- * Deliberately hand-rolled rather than generic: if the service starts issuing a
- * query shape this does not model, the test should fail loudly.
- */
-function makeSupabaseClient() {
-  return {
-    from(table: string) {
-      if (table === "dish_cache") return dishCacheBuilder();
-      if (table === "weekly_menus") return weeklyMenusBuilder();
-      throw new Error(`unexpected table ${table}`);
-    },
-  };
-}
-
-function dishCacheBuilder() {
-  return {
-    select() {
-      return {
-        in(_col: string, keys: string[]) {
-          const data = keys.map((k) => world.cacheRows.get(k)).filter(Boolean);
-          return Promise.resolve({ data, error: null });
-        },
-      };
-    },
-    upsert(rows: Record<string, unknown>[]) {
-      world.cacheWrites.push(rows);
-
-      // Postgres rejects an INSERT ... ON CONFLICT whose proposed rows collide
-      // on the conflict target ("cannot affect row a second time"), and it
-      // aborts the whole statement — so a single duplicate would discard every
-      // other dish in the batch. Modelled here so the test can prove the
-      // dedup, rather than passing because the fake is more forgiving than
-      // the database.
-      const keys = rows.map((r) => r.cache_key as string);
-      if (new Set(keys).size !== keys.length) {
-        return Promise.resolve({
-          error: { message: "ON CONFLICT DO UPDATE command cannot affect row a second time" },
-        });
-      }
-
-      // Columns absent from a row in a *mixed* batch would be NULLed by
-      // PostgREST, since the ?columns= list is the union across the batch.
-      const columns = new Set(rows.flatMap((r) => Object.keys(r)));
-      for (const row of rows) {
-        const key = row.cache_key as string;
-        const stored = { ...(world.cacheRows.get(key) ?? {}) };
-        for (const column of columns) {
-          stored[column] = column in row ? row[column] : null;
+        if (key.startsWith("menu:")) {
+          const weekId = key.slice("menu:".length);
+          world.trace.push(`upsert:${weekId}`);
+          if (world.rejectUpsert.has(weekId)) {
+            throw new Error("permission denied");
+          }
+          const payload = {
+            week_id: weekId,
+            menu_data: value.menuData,
+            dish_origins: value.dishOrigins,
+            dish_descriptions: value.dishDescriptions,
+            dish_short_names: value.dishShortNames,
+          };
+          world.upserts.push({ weekId, payload });
+          world.rows.set(weekId, {
+            menu_data: value.menuData,
+            dish_origins: value.dishOrigins,
+            dish_descriptions: value.dishDescriptions,
+            dish_short_names: value.dishShortNames,
+          });
         }
-        world.cacheRows.set(key, stored);
       }
-      return Promise.resolve({ error: null });
-    },
-  };
-}
-
-function weeklyMenusBuilder() {
-  const builder: any = {
-    select() {
-      return builder;
-    },
-    eq(_col: string, weekId: string) {
-      builder._weekId = weekId;
-      return builder;
-    },
-    order() {
-      return builder;
-    },
-    limit() {
-      builder._latest = true;
-      return builder;
-    },
-    maybeSingle() {
-      if (builder._latest) {
-        const ids = [...world.rows.keys()].sort().reverse();
-        const id = ids.find((i) => world.rows.get(i) !== "fail");
-        const row = id ? (world.rows.get(id) as StoredRowShape) : null;
-        return Promise.resolve({ data: row ? { week_id: id, ...row } : null, error: null });
+      async zadd(_key: string, _member: any) {
+        return 1;
       }
-      const weekId = builder._weekId as string;
-      world.trace.push(`read:${weekId}`);
-      const stored = world.rows.get(weekId);
-      if (stored === "fail") {
-        return Promise.resolve({ data: null, error: { message: "connection reset" } });
+      async zrange(_key: string, _min: any, _max: any, _opts?: any) {
+        return [];
       }
-      if (!stored) return Promise.resolve({ data: null, error: null });
-      return Promise.resolve({ data: { week_id: weekId, ...stored }, error: null });
-    },
-    upsert(payload: Record<string, any>) {
-      const weekId = payload.week_id as string;
-      world.trace.push(`upsert:${weekId}`);
-      if (world.rejectUpsert.has(weekId)) {
-        return Promise.resolve({ error: { message: "permission denied" } });
+      async del(..._keys: string[]) {
+        return 1;
       }
-      world.upserts.push({ weekId, payload });
-      world.rows.set(weekId, {
-        menu_data: payload.menu_data,
-        dish_origins: payload.dish_origins,
-        dish_descriptions: payload.dish_descriptions,
-        dish_short_names: payload.dish_short_names,
-      });
-      return Promise.resolve({ error: null });
+      async hmget(hashKey: string, ...fields: string[]) {
+        if (hashKey === "dish_cache") {
+          const result: Record<string, unknown> = {};
+          for (const f of fields) {
+            const row = world.cacheRows.get(f);
+            if (row) {
+              result[f] = JSON.stringify({
+                cacheKey: row.cache_key ?? row.cacheKey ?? f,
+                originalName: row.original_name ?? row.originalName ?? f,
+                origin: row.origin ?? null,
+                description: row.description ?? null,
+                shortName: row.short_name ?? row.shortName ?? null,
+                imagePath: row.image_path ?? row.imagePath ?? null,
+                imageNoBgPath: row.image_no_bg_path ?? row.imageNoBgPath ?? null,
+                enrichAttempts: row.enrich_attempts ?? row.enrichAttempts ?? 0,
+                lastEnrichAttempt: row.last_enrich_attempt ?? row.lastEnrichAttempt ?? null,
+              });
+            }
+          }
+          return result;
+        }
+        return {};
+      }
+      async hset(hashKey: string, updates: Record<string, string | unknown>) {
+        if (hashKey === "dish_cache") {
+          const batch: Record<string, unknown>[] = [];
+          for (const [k, v] of Object.entries(updates)) {
+            const parsed = typeof v === "string" ? JSON.parse(v) : v;
+            const row: Record<string, any> = {
+              cache_key: parsed.cacheKey ?? k,
+              original_name: parsed.originalName ?? "",
+              origin: parsed.origin ?? undefined,
+              description: parsed.description ?? undefined,
+              short_name: parsed.shortName ?? undefined,
+              enrich_attempts: parsed.enrichAttempts ?? 0,
+              last_enrich_attempt: parsed.lastEnrichAttempt ?? null,
+            };
+            world.cacheRows.set(k, row);
+            batch.push(row);
+          }
+          world.cacheWrites.push(batch);
+          return Object.keys(updates).length;
+        }
+        return 0;
+      }
     },
-  };
-  return builder;
-}
-
-mock.module("@supabase/supabase-js", {
-  namedExports: {
-    createClient: (_url: string, _key: string) => makeSupabaseClient(),
   },
 });
 
@@ -556,23 +533,13 @@ test("a rejected upsert on the first week reports nothing as committed", async (
   });
 });
 
-test("a failing Redis does not fail the run", async () => {
-  // The cache is written after the database on purpose; a cache that cannot be
-  // reached must not turn a successful persist into a failed run.
+test("a failing Redis write throws PartialUpdateError", async () => {
   reset({ redisWritesFail: true });
-  process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
-  process.env.UPSTASH_REDIS_REST_TOKEN = "token";
 
-  try {
-    const result = await runWeeklyUpdateService();
-
-    assert.equal(result.weeksWritten.length, 1);
-    assert.equal(world.redisSets.length, 0, "nothing was cached");
-    assert.equal(world.upserts.length, 1, "but the row was still stored");
-  } finally {
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
-  }
+  await assert.rejects(runWeeklyUpdateService(), (err: any) => {
+    assert.ok(err instanceof PartialUpdateError);
+    return /Redis write failed/.test(err.message);
+  });
 });
 
 test("a successful run caches every week it wrote", async () => {
@@ -582,23 +549,17 @@ test("a successful run caches every week it wrote", async () => {
       Fresh4you: makeCanteen(label(1), ["Tacos"]),
     }),
   });
-  process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
-  process.env.UPSTASH_REDIS_REST_TOKEN = "token";
-
-  try {
-    await runWeeklyUpdateService();
-    assert.deepEqual(world.redisSets, [`menu:${W_A}`, `menu:${W_B}`]);
-  } finally {
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
-  }
-});
-
-test("no Redis configured means no client is ever constructed", async () => {
-  reset();
 
   await runWeeklyUpdateService();
+  assert.deepEqual(world.redisSets, [`menu:${W_A}`, `menu:${W_B}`]);
+});
 
+test("no Redis configured means update service cannot proceed", async () => {
+  reset();
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  delete process.env.KV_REST_API_URL;
+
+  await assert.rejects(runWeeklyUpdateService(), /Redis is not configured/);
   assert.equal(world.redisConstructed, 0);
 });
 
@@ -648,18 +609,19 @@ test("an empty scrape throws before anything is written", async () => {
   assert.equal(world.upserts.length, 0);
 });
 
-test("a missing service-role key refuses to write with the anon key", async () => {
+test("missing Redis credentials refuses to write", async () => {
   reset();
-  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  delete process.env.KV_REST_API_URL;
 
-  await assert.rejects(runWeeklyUpdateService(), /refusing to write with the anon key/);
+  await assert.rejects(runWeeklyUpdateService(), /Redis is not configured/);
   assert.deepEqual(
     world.trace,
     ["scrape", "daily:monday"],
     "the refusal comes after both widget reads, before any stored row is touched"
   );
 
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+  process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
 });
 
 test("canteens that failed to scrape are reported, not swallowed", async () => {
@@ -1006,12 +968,7 @@ test("a rollover asks about a new dish once and reuses it for the other week", a
   assert.equal(result.stats.durablyCached, 1);
 });
 
-test("the displayed week is read back from the database, not from Redis", async () => {
-  // When every canteen has rolled over, the displayed week is not written this
-  // run and has to be read back — and that record is what the image pass draws
-  // plates from. Redis holds this week under a seven-day TTL, so answering from
-  // the cache could have the run illustrate a version of the week that the
-  // database no longer agrees with.
+test("the displayed week is read back when every canteen has rolled over", async () => {
   reset({
     scrape: makeScrape({
       Flow: makeCanteen(label(1), ["Neste ukes rett"]),
@@ -1019,34 +976,16 @@ test("the displayed week is read back from the database, not from Redis", async 
     }),
   });
   world.rows.set(W_NOW, storedRow({ Flow: makeCanteen(label(0), ["Denne ukens rett"]) }));
-  world.redisRecords.set(`menu:${W_NOW}`, {
-    weekId: W_NOW,
-    menuData: { scrapedAt: "stale", canteens: { Flow: makeCanteen(label(0), ["Utdatert rett"]) } },
-    dishOrigins: {},
-    dishDescriptions: {},
-    scrapedAt: "stale",
-  });
-  process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
-  process.env.UPSTASH_REDIS_REST_TOKEN = "token";
 
-  try {
-    const result = await runWeeklyUpdateService();
+  const result = await runWeeklyUpdateService();
 
-    assert.deepEqual(result.weeksWritten.map((w) => w.weekId), [W_B], "only next week was written");
-    assert.equal(result.weekId, W_NOW, "but the displayed week is what comes back");
-    assert.equal(
-      result.menuData.canteens.Flow.menu[0].no!.items[0].dish,
-      "Denne ukens rett",
-      "read from the database"
-    );
-    assert.ok(
-      !world.redisGets.includes(`menu:${W_NOW}`),
-      "and the stale cached copy was never consulted"
-    );
-  } finally {
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
-  }
+  assert.deepEqual(result.weeksWritten.map((w) => w.weekId), [W_B], "only next week was written");
+  assert.equal(result.weekId, W_NOW, "but the displayed week is what comes back");
+  assert.equal(
+    result.menuData.canteens.Flow.menu[0].no!.items[0].dish,
+    "Denne ukens rett",
+    "read from stored record"
+  );
 });
 
 test("displayedWeekUnchanged is about the displayed week, not the whole run", async () => {

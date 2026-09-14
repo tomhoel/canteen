@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { getRedis, menuResponseKey } from "./redis.service.js";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   MenuData,
   DayEntry,
@@ -42,24 +41,6 @@ import {
   MAX_ENRICH_ATTEMPTS,
   type DishCacheEntry,
 } from "./dish-cache.service.js";
-// The read path lives apart so /api/menu never loads the scraper or the model
-// SDK this file imports above. Do not re-export getWeeklyMenuService from here.
-import { getReadClient, MENU_CACHE_TTL_SECONDS } from "./menu-read.service.js";
-
-/**
- * Write client. Deliberately throws rather than silently falling back to the
- * anon key: the anon key is a public credential, and the updater must not be
- * able to write with it.
- */
-function getWriteClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set — cannot persist the menu.");
-  if (!key) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set — refusing to write with the anon key.");
-  }
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 
 /** Every distinct non-empty dish name in a week, both languages. */
@@ -650,7 +631,6 @@ export async function runWeeklyUpdateService(
     );
   }
 
-  const supabase = getWriteClient();
   const redis = getRedis();
   const scrapedAt = new Date().toISOString();
   const weeksWritten: WeekWriteResult[] = [];
@@ -737,58 +717,26 @@ export async function runWeeklyUpdateService(
       scrapedAt,
     };
 
-    // Persist first, cache second: the cache must never hold data the database
-    // does not, or a failed write would be masked for the whole TTL.
-    const { error } = await supabase.from("weekly_menus").upsert(
-      {
-        week_id: weekId,
-        // The fingerprint rides inside menu_data so no schema change is needed.
-        menu_data: { ...weekMenuData, fingerprint },
-        dish_origins: dishOrigins,
-        dish_descriptions: dishDescriptions,
-        dish_short_names: dishShortNames,
-        scraped_at: scrapedAt,
-      },
-      { onConflict: "week_id" }
-    );
-
-    // supabase-js resolves with an `error` field rather than rejecting, so this
-    // check is what turns a rejected write into a visible failure. Weeks
-    // committed before this point stay committed, so the error carries them —
-    // an alert claiming nothing was touched would send someone looking in the
-    // wrong place.
-    if (error) {
+    if (!redis) {
       throw new PartialUpdateError(
-        `Supabase upsert failed for ${weekId}: ${error.message}`,
+        `Redis is not configured — cannot persist ${weekId}`,
         [...weeksWritten]
       );
     }
 
-    // Refreshing the cache is part of the write, not a nicety. getWeeklyMenuService
-    // reads `menu:<weekId>` *before* it reads Supabase, so a stored row the cache
-    // does not know about is a row nobody will ever be served.
-    if (redis) {
-      try {
-        await redis.set(`menu:${weekId}`, record, { ex: MENU_CACHE_TTL_SECONDS });
-        await redis.del(menuResponseKey(weekId), menuResponseKey());
-      } catch (err) {
-        console.error("Redis menu write error:", err);
-        console.warn(
-          `⚠️  ${weekId} is stored but its cache entry was not replaced. The app will ` +
-            `keep serving the previous copy for up to ${MENU_CACHE_TTL_SECONDS / 60} minutes.`
-        );
-      }
-    } else {
-      // The case that actually bit: a manual run from a machine whose .env has
-      // the Supabase keys but no Redis ones. The database gets the new menu,
-      // production keeps serving the old one out of a cache this run cannot
-      // reach, and every check against the database says everything is fine.
-      console.warn(
-        `⚠️  ${weekId} was written to the database, but no Redis credentials are set ` +
-          `here, so the cache the app reads first was not refreshed. Until it expires ` +
-          `(${MENU_CACHE_TTL_SECONDS / 60} minutes) the deployed app keeps serving the ` +
-          `previous menu. Set UPSTASH_REDIS_REST_URL/TOKEN (or KV_REST_API_URL/TOKEN) ` +
-          `to make a manual run take effect immediately.`
+    try {
+      await redis.set(`menu:${weekId}`, {
+        ...record,
+        menuData: { ...weekMenuData, fingerprint },
+      });
+      const match = weekId.match(/^(\d{4})-W(\d{1,2})$/);
+      const score = match ? parseInt(match[1], 10) * 100 + parseInt(match[2], 10) : 0;
+      await redis.zadd("menu:weeks", { score, member: weekId });
+      await redis.del(menuResponseKey(weekId), menuResponseKey());
+    } catch (err: any) {
+      throw new PartialUpdateError(
+        `Redis write failed for ${weekId}: ${err?.message ?? err}`,
+        [...weeksWritten]
       );
     }
 
@@ -874,29 +822,25 @@ export async function runWeeklyUpdateService(
  * return and to hand the image pass something it can trust.
  */
 async function readStoredRecord(weekId: string): Promise<WeeklyMenuRecord | null> {
-  const supabase = getReadClient();
-  if (!supabase) return null;
+  const redis = getRedis();
+  if (!redis) return null;
 
-  const { data, error } = await supabase
-    .from("weekly_menus")
-    .select("week_id, menu_data, dish_origins, dish_descriptions, dish_short_names, scraped_at")
-    .eq("week_id", weekId)
-    .maybeSingle();
+  try {
+    const data = await redis.get<any>(`menu:${weekId}`);
+    if (!data?.menuData) return null;
 
-  if (error) {
-    console.error(`Could not read back ${weekId}: ${error.message}`);
+    return {
+      weekId: data.weekId ?? weekId,
+      menuData: data.menuData,
+      dishOrigins: data.dishOrigins ?? {},
+      dishDescriptions: data.dishDescriptions ?? {},
+      dishShortNames: data.dishShortNames ?? {},
+      scrapedAt: data.scrapedAt ?? new Date().toISOString(),
+    };
+  } catch (err: any) {
+    console.error(`Could not read back ${weekId}: ${err?.message ?? err}`);
     return null;
   }
-  if (!data?.menu_data) return null;
-
-  return {
-    weekId: data.week_id,
-    menuData: data.menu_data,
-    dishOrigins: data.dish_origins ?? {},
-    dishDescriptions: data.dish_descriptions ?? {},
-    dishShortNames: data.dish_short_names ?? {},
-    scrapedAt: data.scraped_at,
-  };
 }
 
 interface StoredRow {
@@ -909,43 +853,31 @@ interface StoredRow {
 }
 
 /**
- * Reads the stored row for a week, including the embedded fingerprint.
- *
- * `ok: false` and `row: null` are deliberately different answers. The write path
- * merges this scrape into whatever is already stored, so "the row has no
- * canteens" and "I could not find out what the row holds" must never collapse
- * into the same value: treating a failed read as an empty row turns the merge
- * into a full replace and deletes the canteens this scrape did not see. Once
- * those kitchens have rolled over to the next week, their old page is gone
- * upstream and no later run can restore it.
+ * Reads the stored row for a week from Redis, including the embedded fingerprint.
  */
 async function getStoredRow(
   weekId: string
 ): Promise<{ ok: true; row: StoredRow | null } | { ok: false; error: string }> {
-  const supabase = getReadClient();
-  if (!supabase) return { ok: false, error: "Supabase is not configured" };
+  const redis = getRedis();
+  if (!redis) return { ok: false, error: "Redis is not configured" };
 
-  const { data, error } = await supabase
-    .from("weekly_menus")
-    .select("menu_data, dish_origins, dish_descriptions, dish_short_names")
-    .eq("week_id", weekId)
-    .maybeSingle();
+  try {
+    const data = await redis.get<any>(`menu:${weekId}`);
+    if (!data) return { ok: true, row: null };
 
-  // supabase-js resolves rather than rejects, so a network blip or a PostgREST
-  // 5xx arrives here as a populated `error` — not as a throw.
-  if (error) return { ok: false, error: error.message };
-  if (!data) return { ok: true, row: null };
-
-  return {
-    ok: true,
-    row: {
-      fingerprint: data.menu_data?.fingerprint,
-      dishOrigins: data.dish_origins ?? {},
-      dishDescriptions: data.dish_descriptions ?? {},
-      dishShortNames: data.dish_short_names ?? {},
-      menuData: (data.menu_data as MenuData) ?? null,
-    },
-  };
+    return {
+      ok: true,
+      row: {
+        fingerprint: data.menuData?.fingerprint,
+        dishOrigins: data.dishOrigins ?? {},
+        dishDescriptions: data.dishDescriptions ?? {},
+        dishShortNames: data.dishShortNames ?? {},
+        menuData: (data.menuData as MenuData) ?? null,
+      },
+    };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? String(err) };
+  }
 }
 
 /** What the row already holds, so a fallback never overwrites a real answer. */

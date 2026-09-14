@@ -314,74 +314,47 @@ export function getCanteenMetadata(rawName?: string): CanteenLocationInfo {
   };
 }
 
-// Hardcoded fallback so client-side image URLs work even when Vercel's
-// NEXT_PUBLIC_SUPABASE_URL env var is missing at build time.
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sloutnqpqfesyoycklgd.supabase.co';
-export const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
+export const DEFAULT_BLOB_BASE_URL = 'https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com';
+
+export const BLOB_BASE_URL =
+  process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
+  DEFAULT_BLOB_BASE_URL;
+
+export const SUPABASE_STORAGE_URL = `${BLOB_BASE_URL}/storage/v1/object/public`;
 
 /**
- * Two different endpoints, and picking the wrong one silently costs 60× the bytes.
- *
- * `/object/public` serves the stored file and ignores `?width`/`?format`
- * entirely — it answers 200 with the original, so nothing looks broken. Only
- * `/render/image/public` applies the transformation. Every plate the app
- * renders was asking for a 440px WebP and being handed the source PNG:
- * 1,490,718 bytes against 24,298 transformed. Three cards on screen plus the
- * adjacent-day preload made that ~13 MB per day browsed, on a phone.
- *
- * `resize=contain` is not optional. The render endpoint defaults to `cover`,
- * and with a width but no height that crops rather than scales: the same plate
- * comes back 440×1021 out of a 1024×1021 source — a vertical slice with the
- * left and right thirds of the food cut off. With `contain` it is 440×439, the
- * whole plate, and smaller again.
- *
- * Untransformed requests still go to `/object/public`, which is free and
- * cacheable; only sized requests take the render path.
- */
-/**
  * Transformed width to request for a card plate, by tier.
- *
- * Measured CSS boxes: 160px on a phone, 261px on desktop. A single 340 was
- * being sent to both, which is two different mistakes at once — a retina
- * desktop renders a 261px box at DPR 2, wanting 522, and got 0.65× of that
- * (visibly soft); a phone at DPR 2 wants 320 and was over-served.
- *
- * Deliberately NOT a `srcset`. The browser would multiply the phone's 160px by
- * its DPR and pick 480 on every iPhone — sharper, but ~30 KB more per card on
- * the one launch path where bytes are the constraint. 340 into a 160px box is
- * 2.1× on a DPR-3 phone, and the return above 2× on photographic content is
- * small enough that it is not worth three cards' worth of mobile data.
- *
- * Desktop has the room, so it gets the width that is actually correct. This is
- * the same tiering rule as useIsDesktop: the phone does less work, and the
- * difference is a decision made once rather than per-component.
- *
- * index.html's preload picks the same two values off the same 769px
- * breakpoint. If these change, change them there too, or a desktop cold load
- * downloads each plate twice — once at the preloaded width and once at the
- * width the card actually asks for.
  */
 export const PLATE_CARD_WIDTH = { mobile: 340, desktop: 640 } as const;
 
-export function getSupabaseImageUrl(bucket: string, path: string, options?: { width?: number; height?: number; format?: string; quality?: number }) {
-  // Paths are dish names now, not the tidy `monday/flow.png` slots they used to
-  // be — "archive/spanish pork casserole with potatoes.png" is a real object.
-  // Browsers happen to percent-encode a space themselves, but a "?" in a dish
-  // name would swallow the rest of the path into the query string, so encode
-  // each segment rather than depending on that. Slot paths are unaffected:
-  // encoding a segment with no special characters returns it unchanged.
+export function getSupabaseImageUrl(
+  bucket: string,
+  path: string,
+  options?: { width?: number; height?: number; format?: string; quality?: number }
+) {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+
   const encodedPath = path.split("/").map(encodeURIComponent).join("/");
-  const params = new URLSearchParams();
-  if (options?.width) params.set('width', options.width.toString());
-  if (options?.height) params.set('height', options.height.toString());
-  if (options?.format) params.set('format', options.format);
-  if (options?.quality) params.set('quality', options.quality.toString());
 
-  if ([...params.keys()].length === 0) return `${SUPABASE_STORAGE_URL}/${bucket}/${encodedPath}`;
+  // Legacy fallback if pointing to a Supabase host
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL || BLOB_BASE_URL.includes('supabase.co')) {
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL || BLOB_BASE_URL;
+    const params = new URLSearchParams();
+    if (options?.width) params.set('width', options.width.toString());
+    if (options?.height) params.set('height', options.height.toString());
+    if (options?.format) params.set('format', options.format);
+    if (options?.quality) params.set('quality', options.quality.toString());
 
-  params.set('resize', 'contain');
-  return `${SUPABASE_URL}/storage/v1/render/image/public/${bucket}/${encodedPath}?${params.toString()}`;
+    if ([...params.keys()].length === 0) return `${base}/storage/v1/object/public/${bucket}/${encodedPath}`;
+
+    params.set('resize', 'contain');
+    return `${base}/storage/v1/render/image/public/${bucket}/${encodedPath}?${params.toString()}`;
+  }
+
+  return `${BLOB_BASE_URL}/${bucket}/${encodedPath}`;
 }
+
+export const getImageUrl = getSupabaseImageUrl;
 
 /**
  * Closed canteens render one of 3 cutlery-and-napkin designs hosted at
