@@ -41,6 +41,38 @@ export function useVoting(): UseVotingReturn {
   }, []);
 
   /**
+   * Hold the tally request until the browser has nothing better to do.
+   *
+   * /api/attendance is a second serverless function, and a cold one costs a
+   * measured 2.9s. It used to fire the moment HomeClient mounted — which is the
+   * same instant the cards are laying out and pulling their plate images off
+   * Supabase — so it competed for connections and main thread with the only
+   * thing on screen anyone came for.
+   *
+   * Nothing waits on it: `votes` starts empty either way, your own vote is
+   * applied optimistically by the mutation below, and the seeding effect
+   * already fills the tally in whenever it lands. So the only thing deferral
+   * changes is which of the two finishes first.
+   *
+   * requestIdleCallback rather than a timer, because "after the cards have
+   * settled" is exactly what it means and no fixed delay is right on both a
+   * warm cache and a cold 4G start. The 2s timeout is the floor for a page that
+   * never goes idle; browsers without it (Safari < 17) just fetch immediately,
+   * which is the old behaviour.
+   */
+  const [tallyReady, setTallyReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.requestIdleCallback) {
+      setTallyReady(true);
+      return;
+    }
+    const id = window.requestIdleCallback(() => setTallyReady(true), { timeout: 2000 });
+    return () => window.cancelIdleCallback?.(id);
+  }, []);
+
+  /**
    * Today's tally, so the cards show where people are already going rather than
    * three zeroes until you vote yourself. `votes` started empty on every load
    * and was only ever filled by your own tap.
@@ -49,6 +81,7 @@ export function useVoting(): UseVotingReturn {
     queryKey: ["attendance-history"],
     queryFn: () => getAttendanceHistory(),
     staleTime: 60_000,
+    enabled: tallyReady,
   });
 
   const seeded = useRef(false);
