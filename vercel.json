@@ -3,6 +3,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "fluid": true,
   "regions": ["dub1"],
   "functions": {
     "api/cron/update.ts": {
