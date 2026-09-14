@@ -20,13 +20,16 @@ import type { ServerResponse } from "node:http";
  *    `#root { visibility: hidden }` in the inline <style> is released by a rule
  *    inside that file — so its discovery time is first paint's floor.
  *
- * 2. `routes-*.js` holds HomeClient and FoodCard and is reached by a dynamic
- *    import the preload scanner cannot see. It began downloading only after
- *    ~456 KB of raw JS had been parsed and executed: a second, serialized
- *    network wave for the chunk that actually draws the cards.
+ * 2. ~17 KB of explanatory comments sat in front of all of it, in HTML
+ *    comments and in the inline <style>. They are worth keeping in source and
+ *    worth nothing to a browser — and the inline <style> is render-blocking, so
+ *    its comments are the expensive kind. 1,763 of that block's 2,716 bytes.
  *
- * 3. ~17 KB of explanatory comments sat in front of all of it. They are worth
- *    keeping in source and worth nothing to a browser.
+ * A third problem used to live here: `routes-*.js` was reached by a dynamic
+ * import the preload scanner could not see, so this plugin injected
+ * modulepreload tags for it. The router was removed and HomeClient is a static
+ * import again — the build emits zero `routes-*` chunks, so that code matched
+ * nothing. Deleted rather than left looking load-bearing.
  *
  * Build only — the dev server has no <link> to move (Vite serves CSS through
  * JS there) and the comments help while editing.
@@ -37,7 +40,7 @@ function shortenCriticalPath(): Plugin {
     apply: "build",
     transformIndexHtml: {
       order: "post",
-      handler(html, ctx) {
+      handler(html) {
         // Strip HTML comments. Safe here because no <script> or <style> in this
         // document contains the literal `<!--`; the inline scripts use `//` and
         // the inline styles use `/* */`.
@@ -59,20 +62,20 @@ function shortenCriticalPath(): Plugin {
           out = out.slice(0, at) + "\n    " + link[0].trim() + out.slice(at);
         }
 
-        // Make the lazily-imported first-paint chunk discoverable. Both
-        // `routes-*` chunks are
-        // preloaded rather than just the big one: there are only two, the
-        // second is ~500 bytes gzipped, and picking by name is more robust
-        // than guessing which facade id the router's code-splitter produced.
-        const routeChunks = Object.keys(ctx.bundle ?? {}).filter((f) =>
-          /^assets\/routes-[^/]+\.js$/.test(f)
+        // Strip comments from the inline <style> only.
+        //
+        // That block is render-blocking twice over: it is parser-blocking where
+        // it sits, and it sets `#root { visibility: hidden }`, so nothing paints
+        // until the stylesheet hoisted above releases it. 1,763 of its 2,716
+        // bytes were prose explaining decisions to whoever edits index.html,
+        // which is worth keeping in source and worth nothing over the wire.
+        //
+        // Scoped to the <style> element rather than run over the whole document
+        // because `/* */` is not a comment inside the inline <script> strings or
+        // in any URL it builds.
+        out = out.replace(/(<style>)([\s\S]*?)(<\/style>)/g, (_m, open, css, close) =>
+          open + css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\n{2,}/g, "\n") + close
         );
-        if (routeChunks.length) {
-          const tags = routeChunks
-            .map((f) => `    <link rel="modulepreload" crossorigin href="/${f}">`)
-            .join("\n");
-          out = out.replace("</head>", `${tags}\n  </head>`);
-        }
 
         return out;
       },
