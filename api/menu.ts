@@ -15,7 +15,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Menus change at most twice a day (see the cron schedule), so let the browser
     // and CDN absorb the traffic and serve stale copies while it refreshes in the
     // background rather than hitting Supabase for every visitor.
-    res.setHeader("Cache-Control", "public, max-age=120, s-maxage=600, stale-while-revalidate=86400");
+    //
+    // s-maxage was 600s. On an app used in one 45-minute window a day that is
+    // long enough to go stale between two colleagues, and the visitor who finds
+    // it stale is the one who wakes the function. swr=86400 already guarantees
+    // nobody waits on a *revalidation*, so raising s-maxage costs no freshness —
+    // the cron invalidates this key explicitly after every write — and simply
+    // stops manufacturing origin hits nobody asked for.
+    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
     return res.status(200).json(menu);
   } catch (err: any) {
     if (err instanceof MenuUnavailableError) {
