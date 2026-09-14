@@ -83,16 +83,23 @@ async function main() {
             if (error) throw new Error(error.message);
             const input = Buffer.from(await blob.arrayBuffer());
 
-            // A plate without an alpha channel would composite as a solid
-            // rectangle on the card's warm gradient. Skip rather than bake that in.
             const meta = await sharp(input).metadata();
-            if (!meta.hasAlpha) {
-                console.warn(`  ⚠️  no alpha, skipping: ${obj.name}`);
+            const output = await sharp(input).webp(WEBP).toBuffer();
+
+            // The rule is "never silently destroy alpha", not "require it".
+            //
+            // images_nobg plates are cut out and composite onto the card's warm
+            // gradient, so losing their alpha would show as a solid rectangle.
+            // The images/ bucket holds the pre-removal sources, which are
+            // legitimately opaque — an earlier version of this guard demanded
+            // alpha and would have skipped every one of them.
+            const after = await sharp(output).metadata();
+            if (meta.hasAlpha && !after.hasAlpha) {
+                console.warn(`  ⚠️  alpha lost in re-encode, skipping: ${obj.name}`);
                 skipped++;
                 continue;
             }
 
-            const output = await sharp(input).webp(WEBP).toBuffer();
             if (output.length >= input.length) {
                 console.warn(`  ⚠️  would grow, skipping: ${obj.name}`);
                 skipped++;
