@@ -82,7 +82,12 @@ function record(weekId: string, canteens: Record<string, CanteenData>): WeeklyMe
   };
 }
 
-mock.module("./services/menu.service.js", {
+// The read path imports from menu-read.service.js, not menu.service.js — that
+// separation is what keeps cheerio and @google/genai out of the menu lambda.
+// There is no runWeeklyUpdateService stub here any more: menu.ts no longer
+// imports or re-exports it, so "the read path runs an update" is now a
+// compile-time impossibility rather than something a mock has to catch.
+mock.module("./services/menu-read.service.js", {
   namedExports: {
     getWeeklyMenuService: async (weekId?: string) => {
       world.weeksRequested.push(weekId);
@@ -92,9 +97,6 @@ mock.module("./services/menu.service.js", {
         return world.rowsByWeek.get(weekId ?? THIS_WEEK) ?? null;
       }
       return world.record;
-    },
-    runWeeklyUpdateService: async () => {
-      throw new Error("the read path must never run an update");
     },
   },
 });

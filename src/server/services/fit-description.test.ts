@@ -4,7 +4,7 @@ import {
   fitDescriptionText,
   fitDescription,
   DESCRIPTION_MAX_CHARS,
-} from "./ai.service.js";
+} from "./fit-description.js";
 
 /**
  * The card shows two lines of description and nothing more. What arrives from

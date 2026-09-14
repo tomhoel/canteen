@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import type {
   RecipeIngredient,
   MenyProduct,
@@ -32,6 +31,11 @@ async function translateIngredients(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
+  // Imported here rather than at module scope: this SDK is 14 MB, and
+  // searchMeny checks its 3-day Redis cache first, so the common request never
+  // translates anything. Keeping it off module scope keeps it off that path's
+  // cold start.
+  const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
   const ingredientList = ingredients
     .map((i) => `${i.amount} ${i.unit} ${i.item}`)
