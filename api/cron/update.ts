@@ -190,12 +190,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // key for all three layers. A `?week=` variant would warm a Redis key and a
   // CDN entry nobody asks for on load. Going out through the public edge (not
   // an in-process call) is what repopulates the CDN entry as well as Redis.
-  const prodHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (prodHost) {
-    await fetch(`https://${prodHost}/api/menu`)
-      .then((r) => console.log(`🔥 [cron] warmed /api/menu → ${r.status}`))
-      .catch((err) => console.warn("⚠️ [cron] warm failed:", err.message));
-  }
+  // The host is hardcoded rather than read from VERCEL_PROJECT_PRODUCTION_URL,
+  // and that is not laziness. Of this project's three production aliases only
+  // fbueat.vercel.app answers 200; canteen-tom-hoels-projects.vercel.app and
+  // canteen-git-main-... both 302 into Vercel's SSO, which is an edge redirect
+  // the function never sees. Warming one of those would warm nothing at all,
+  // and would look like it had worked. WARM_HOST overrides it if the public
+  // domain ever changes.
+  const warmHost = process.env.WARM_HOST || "fbueat.vercel.app";
+  await fetch(`https://${warmHost}/api/menu`, { redirect: "manual" })
+    .then((r) => {
+      // A redirect means we hit an SSO-protected alias and warmed nothing.
+      // Say so loudly — the failure mode this replaces was a silent success.
+      if (r.status >= 300 && r.status < 400) {
+        console.warn(
+          `⚠️ [cron] warm hit a redirect (${r.status}) on ${warmHost} — the origin was NOT warmed. ` +
+            `Set WARM_HOST to a publicly reachable domain.`
+        );
+      } else {
+        console.log(`🔥 [cron] warmed /api/menu on ${warmHost} → ${r.status}`);
+      }
+    })
+    .catch((err) => console.warn("⚠️ [cron] warm failed:", err.message));
 
   return res.status(200).json({
     status: "success",
