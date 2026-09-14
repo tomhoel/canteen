@@ -168,6 +168,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `${ahead.generated} generated, ${ahead.deferred} deferred.`
       );
     }
+    // Dishes whose plate came back on a plate that is not the shared reference
+    // one, twice running. The closest draw was archived — a slightly wrong
+    // plate beats a foodless card — but the archive is write-once, so it will
+    // be reused for that dish forever unless someone clears it. Nothing else
+    // surfaces this: it looks exactly like a successful generation.
+    if (images.offTemplate.length > 0) {
+      await sendCronAlert("warning", "Some plates did not match the reference plate", [
+        `${images.offTemplate.length} dish(es) drawn on the wrong plate: ` +
+          images.offTemplate.slice(0, 10).join("; ") +
+          (images.offTemplate.length > 10 ? " …" : ""),
+        "The closest attempt was kept. Clearing the dish's archive object and its " +
+          "dish_cache.image_nobg_path makes the next run redraw it.",
+      ]);
+    }
+
     // Both halves exist now. The response cached between the write and the
     // drawing has the menu and no pictures; drop it rather than serve it.
     await invalidateMenuResponseCache(record.weeksWritten.map((w) => w.weekId));

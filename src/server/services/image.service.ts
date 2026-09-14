@@ -148,6 +148,112 @@ export async function removeBgBuffer(inputBuffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+/**
+ * The reference plate's rim, measured by the function below across all 335
+ * archived plates on 2026-09-14: hue 33 +/- 3, saturation 0.39 +/- 0.04.
+ *
+ * The tolerances are set at roughly twice the observed spread of the 324
+ * plates that match, which is wide enough that none of them is rejected and
+ * still tight enough to catch both ways this has actually failed:
+ *
+ *   - a terracotta plate drawn 2026-09-09 with the reference attached and
+ *     ignored by the model — hue 22, saturation 0.62
+ *   - ten pale plates drawn 14-16 Aug 2026 while no reference was being sent
+ *     at all — right hue, saturation 0.19-0.28
+ */
+const PLATE_RIM_HUE = 33;
+const PLATE_RIM_HUE_TOLERANCE = 6;
+const PLATE_RIM_SATURATION = 0.39;
+const PLATE_RIM_SATURATION_TOLERANCE = 0.1;
+
+/**
+ * How far this plate's rim is from the reference plate's, as a multiple of the
+ * tolerance: <= 1 is on-template, > 1 is not, and a smaller number is closer.
+ * One number so the same measurement both rejects a draw and ranks the
+ * attempts when every draw is rejected.
+ *
+ * Returns null when the rim cannot be located — a plate that could not be
+ * measured is not the same thing as a plate that is wrong, and redrawing it
+ * would not make it measurable.
+ *
+ * The rim is sampled relative to *this plate's own outer edge*, not the canvas.
+ * removeBgBuffer resizes to PLATE_RESIZE_PX and centre-extends to IMAGE_SIZE_PX,
+ * so a plate only ever covers ~86% of the frame, and the trim before it varies
+ * per image — a fixed annulus lands in the transparent margin and measures
+ * nothing.
+ */
+export async function plateRimDistance(plateBuffer: Buffer): Promise<number | null> {
+  const { data, info } = await sharp(plateBuffer)
+    .resize(160, 160, { fit: "fill" })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { width, height } = info;
+  const cx = width / 2;
+  const cy = height / 2;
+  const opaqueAt = (x: number, y: number) => data[(y * width + x) * 4 + 3] >= 200;
+
+  let outerRadius = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!opaqueAt(x, y)) continue;
+      const d = Math.hypot(x - cx, y - cy);
+      if (d > outerRadius) outerRadius = d;
+    }
+  }
+  if (outerRadius < 10) return null;
+
+  let sumR = 0;
+  let sumG = 0;
+  let sumB = 0;
+  let count = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!opaqueAt(x, y)) continue;
+      const d = Math.hypot(x - cx, y - cy) / outerRadius;
+      if (d < 0.86 || d > 0.96) continue;
+      const i = (y * width + x) * 4;
+      sumR += data[i];
+      sumG += data[i + 1];
+      sumB += data[i + 2];
+      count++;
+    }
+  }
+  if (count < 40) return null;
+
+  const r = sumR / count;
+  const g = sumG / count;
+  const b = sumB / count;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const chroma = max - min;
+
+  let hue = 0;
+  if (chroma > 0) {
+    hue =
+      60 *
+      (max === r ? (((g - b) / chroma) % 6) : max === g ? (b - r) / chroma + 2 : (r - g) / chroma + 4);
+    if (hue < 0) hue += 360;
+  }
+  const saturation = max > 0 ? chroma / max : 0;
+
+  let hueDelta = Math.abs(hue - PLATE_RIM_HUE);
+  if (hueDelta > 180) hueDelta = 360 - hueDelta;
+
+  return Math.max(
+    hueDelta / PLATE_RIM_HUE_TOLERANCE,
+    Math.abs(saturation - PLATE_RIM_SATURATION) / PLATE_RIM_SATURATION_TOLERANCE
+  );
+}
+
+/**
+ * Draws per dish. The model ignores the reference plate about 1 time in 335, so
+ * a single redraw clears essentially all of it; a third attempt would triple
+ * the worst-case cost of a rejected dish to chase the remaining ~0.001%.
+ */
+const PLATE_DRAW_ATTEMPTS = 2;
+
 export async function uploadToSupabase(
   bucket: string,
   filePath: string,
@@ -206,7 +312,7 @@ export async function copyInSupabaseBucket(
  * runs inside the Vercel cron function, whose bundle does not include public/.
  * Fetched once per process and cached: the cron draws a whole week per run.
  */
-let cachedPlateRef: string | null | undefined;
+let cachedPlateRef: string | undefined;
 export async function getMasterPlateRef(): Promise<string | null> {
   if (cachedPlateRef !== undefined) return cachedPlateRef;
 
@@ -225,12 +331,17 @@ export async function getMasterPlateRef(): Promise<string | null> {
       .toBuffer();
     cachedPlateRef = resized.toString("base64");
   } catch (err: any) {
+    // Deliberately NOT cached. This memo is process-wide and the cron draws a
+    // whole week per run, so caching a failure here means one transient
+    // download error sends every remaining plate of that run out referenceless
+    // — silently, and counted as a success. Ten such plates from 14-16 Aug 2026
+    // are still in the archive. A retry on the next dish costs one request.
     console.warn(
       `⚠️  Master plate reference unavailable (${MASTER_PLATE_REF_PATH}): ${err?.message ?? err}. ` +
-        "Plates will be described in words only and will not match each other. " +
+        "This plate will be described in words only and may not match the others. " +
         "Run scripts/upload-master-plate.cjs to restore it."
     );
-    cachedPlateRef = null;
+    return null;
   }
   return cachedPlateRef;
 }
@@ -348,6 +459,12 @@ export interface ImageRunResult {
   /** Main dishes left without an image because the budget ran out. */
   deferred: number;
   budgetExhausted: boolean;
+  /**
+   * Dishes whose plate was still off-template after every attempt. The closest
+   * draw was archived anyway — a slightly wrong plate beats a foodless card,
+   * and it stays fixable by hand — but nothing else would ever surface it.
+   */
+  offTemplate: string[];
 }
 
 interface ImageJob {
@@ -452,6 +569,7 @@ export async function processAllCanteenAIImages(
     failed: 0,
     deferred: 0,
     budgetExhausted: false,
+    offTemplate: [],
   };
 
   const { rows: cache, failed: cacheUnreadable } = await loadDishCache(jobs.map((j) => j.dish));
@@ -508,8 +626,35 @@ export async function processAllCanteenAIImages(
     const platingBrief = await generatePlatingBrief(job.dish);
     if (platingBrief) console.log(`  🍽️  "${job.dish}" → ${platingBrief}`);
 
-    const aiBuffer = await generateSingleAIImage(job.dish, platingBrief);
-    if (!aiBuffer) {
+    // Draw, then check the plate the model actually returned and redraw once if
+    // it ignored the reference. Nothing downstream reads the plate, so without
+    // this an off-template draw is archived permanently and reused for that
+    // dish forever — the archive is write-once and only `force` redraws it.
+    let best: { buffer: Buffer; distance: number } | null = null;
+    for (let attempt = 1; attempt <= PLATE_DRAW_ATTEMPTS; attempt++) {
+      const aiBuffer = await generateSingleAIImage(job.dish, platingBrief);
+      if (!aiBuffer) continue;
+
+      const transparent = await removeBgBuffer(aiBuffer);
+      const distance = await plateRimDistance(transparent);
+
+      // Unmeasurable is not the same as wrong, and a redraw will not make it
+      // measurable. Take it and stop.
+      if (distance === null) {
+        best = { buffer: transparent, distance: 0 };
+        break;
+      }
+
+      if (!best || distance < best.distance) best = { buffer: transparent, distance };
+      if (distance <= 1) break;
+
+      console.warn(
+        `  🎨 "${job.dish}": plate is ${distance.toFixed(2)}x off-template on attempt ${attempt}` +
+          (attempt < PLATE_DRAW_ATTEMPTS ? " — redrawing." : " — keeping the closest draw.")
+      );
+    }
+
+    if (!best) {
       const failCount = needsGeneration.filter(
         (j) => normalizeDishName(j.dish) === normalizeDishName(job.dish)
       ).length;
@@ -517,7 +662,8 @@ export async function processAllCanteenAIImages(
       return;
     }
 
-    const transparentBuffer = await removeBgBuffer(aiBuffer);
+    if (best.distance > 1) result.offTemplate.push(job.dish);
+    const transparentBuffer = best.buffer;
     // Explicit contentType at the call site rather than flipping the default in
     // uploadToSupabase: copyInSupabaseBucket falls through to that default when
     // a server-side copy fails, and it would then relabel a legacy PNG body as
@@ -569,7 +715,8 @@ export async function processAllCanteenAIImages(
     );
   }
   console.log(
-    `📸 Images: ${result.reused} reused, ${result.generated} generated, ${result.failed} failed, ${result.deferred} deferred.`
+    `📸 Images: ${result.reused} reused, ${result.generated} generated, ${result.failed} failed, ` +
+      `${result.deferred} deferred, ${result.offTemplate.length} off-template.`
   );
 
   return result;
