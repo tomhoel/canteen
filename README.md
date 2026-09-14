@@ -81,6 +81,16 @@ GitHub, because push and pull_request triggers are never disabled.
 
 ## Running it locally
 
+> **If your clone predates 14 September 2026, delete it and clone again.**
+> History was rewritten that day (`git filter-repo`) to drop 668 image blobs
+> that had already been deleted from the tree but were still costing every
+> clone 478 MB — the pack went from 488 MiB to 10.3 MiB. No file content
+> changed; the HEAD tree hash is identical either side. But every commit has a
+> new SHA, so `git pull` cannot reconcile an older clone and will either refuse
+> or produce a duplicated history. Two branches could not survive and were
+> deleted: `feat/canteen-metadata-campus-map` (already merged, empty) and
+> `experiment/preact` (superseded — the bundle was never the bottleneck).
+
 ```bash
 npm install
 cp .env.example .env      # then fill it in — every variable is documented there
