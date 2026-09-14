@@ -129,7 +129,22 @@ export async function removeBgBuffer(inputBuffer: Buffer): Promise<Buffer> {
       right: Math.ceil((IMAGE_SIZE_PX - PLATE_RESIZE_PX) / 2),
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
-    .png()
+    // WebP, not PNG. Nothing ever fetches this object directly — every display
+    // path goes through Supabase's /render/image/ transform, which re-encodes
+    // to WebP at 340, 640 or 1080 px. So the stored PNG was a 1.6 MB master
+    // whose only job was to be re-encoded down to ~24 KB, 335 times over: 556 MB
+    // to serve bytes nobody ever received.
+    //
+    // Dimensions are deliberately unchanged at 1024². The lightbox asks for
+    // 1080, so the master is already the smallest size that serves every
+    // variant at native resolution; shrinking it would be the first real
+    // quality loss this pipeline has ever taken.
+    //
+    // q90 with alphaQuality 100 measured at 8.4% of the PNG across a sample of
+    // 12 real plates (7.0-9.4%, none grew, none lost alpha). The alpha is not
+    // negotiable — these are cut-out plates composited on a warm gradient, and
+    // a damaged alpha edge shows as a grey fringe at the plate rim.
+    .webp({ quality: 90, alphaQuality: 100, effort: 4 })
     .toBuffer();
 }
 
@@ -364,6 +379,15 @@ function buildImageJobs(menuData: MenuData): ImageJob[] {
       const mainDish = pickMainDish(rawItems, canteenName);
       if (!mainDish?.dish) continue;
 
+      // The `.png` suffix is a historical key, not a format claim. These
+      // objects hold WebP bytes as of 2026-09-14; the extension stays because
+      // 319 dish_cache.image_nobg_path rows end in `.png` and
+      // src/server/menu.ts resolves them verbatim. Renaming would mean a
+      // 319-row migration with a window — Redis 10 min, CDN swr up to 24 h —
+      // where cached responses point at objects that no longer exist, i.e. a
+      // blank card for every dish, for hours, to buy a tidier filename.
+      // Nothing reads the extension: imgproxy sniffs the body and Supabase
+      // serves the stored contentType.
       jobs.push({
         canteenName,
         dayKey,
@@ -494,7 +518,17 @@ export async function processAllCanteenAIImages(
     }
 
     const transparentBuffer = await removeBgBuffer(aiBuffer);
-    const archiveOk = await uploadToSupabase("images_nobg", job.archivePath, transparentBuffer);
+    // Explicit contentType at the call site rather than flipping the default in
+    // uploadToSupabase: copyInSupabaseBucket falls through to that default when
+    // a server-side copy fails, and it would then relabel a legacy PNG body as
+    // WebP. The bytes are what matter — Supabase serves the stored contentType
+    // and imgproxy sniffs the body — but a wrong label is a lie that outlives us.
+    const archiveOk = await uploadToSupabase(
+      "images_nobg",
+      job.archivePath,
+      transparentBuffer,
+      "image/webp"
+    );
 
     const matchingJobs = needsGeneration.filter(
       (j) => normalizeDishName(j.dish) === normalizeDishName(job.dish)
@@ -502,7 +536,7 @@ export async function processAllCanteenAIImages(
 
     if (writeSlots) {
       for (const mJob of matchingJobs) {
-        await uploadToSupabase("images_nobg", mJob.slotPath, transparentBuffer);
+        await uploadToSupabase("images_nobg", mJob.slotPath, transparentBuffer, "image/webp");
       }
     }
 
