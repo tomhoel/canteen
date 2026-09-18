@@ -6,7 +6,6 @@ import { isCanteenClosed } from "@/lib/canteen-utils";
 import FoodCard from "@/components/FoodCard";
 import ClosedCard from "@/components/ClosedCard";
 import AllClosedCard from "@/components/AllClosedCard";
-import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 
 /**
  * One weekday's cards, and its own arrival or departure.
@@ -151,11 +150,6 @@ function DayPanel({
         <AllClosedCard closedCanteens={closedCanteens} />
       ) : (
         <>
-          {closedCanteens.length > 0 && (
-            <div className="closed-pill-mobile">
-              <ClosedCanteensPill closedCanteens={closedCanteens} />
-            </div>
-          )}
           {data.map((d, cardIdx) =>
             isCanteenClosed(d) ? (
               <ClosedCard key={d.canteenName} data={d} cardIdx={cardIdx} />

@@ -849,27 +849,14 @@ body {
   display: none;
 }
 
-/* Mobile: header pill hidden, in-cards pill visible above first card */
+/* Mobile: header pill and in-cards pill hidden (space dedicated to cards) */
 @media (max-width: 768px) {
   header .closed-pill-wrapper {
     display: none;
   }
 
   .closed-pill-mobile {
-    display: flex;
-    justify-content: center;
-    flex-shrink: 0;
-    padding-bottom: clamp(4px, 0.6dvh, 8px);
-  }
-
-  .closed-pill-mobile .closed-pill-wrapper {
-    position: static;
-    transform: none;
-  }
-
-  .closed-pill {
-    font-size: clamp(10px, 1.3dvh, 12px);
-    padding: 5px 12px;
+    display: none;
   }
 
   .closed-pill-tooltip {
@@ -2110,33 +2097,9 @@ body {
     overflow: hidden;
   }
 
-  /* Header - fixed at top */
+  /* Header - hidden on mobile to give space to food cards */
   .app-header {
-    padding: calc(6px + env(safe-area-inset-top)) 16px 6px;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0;
-    min-height: 40px;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: var(--z-chrome);
-    background: linear-gradient(
-      to bottom,
-      var(--bg-cream) 0%,
-      var(--bg-warm) 100%
-    );
-    box-shadow: 0 2px 8px var(--shadow-soft);
-  }
-
-  .hero-title {
-    font-size: 22px;
-  }
-
-  .hero-subtitle {
-    font-size: 11px;
+    display: none;
   }
 
   /* Main content */
@@ -2243,7 +2206,7 @@ body {
        constants. */
     --stack-gap: clamp(6px, 1dvh, 14px);
     padding:
-      calc(52px + var(--stack-gap) + env(safe-area-inset-top, 0px))
+      calc(var(--stack-gap) + env(safe-area-inset-top, 0px))
       8px
       calc(74px + var(--stack-gap) + env(safe-area-inset-bottom, 0px));
     flex: 1;
