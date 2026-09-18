@@ -2250,6 +2250,45 @@ body {
     will-change: transform, opacity;
   }
 
+  /* Mobile day slide & continuous swiping */
+  .day-panel {
+    --day-travel: 100%;
+    --day-scale: 1;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .day-panel-enter,
+  .day-panel-exit {
+    opacity: 1;
+  }
+
+  .day-panel-neighbor-left {
+    transform: translate3d(-100%, 0, 0) !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+
+  .day-panel-neighbor-right {
+    transform: translate3d(100%, 0, 0) !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+
+  .cards-track.is-swiping .day-panel {
+    transition: none !important;
+  }
+
+  /* Card parallax during swipe: top card leads slightly, bottom card lags */
+  .cards-track.is-swiping .cards-animated-wrapper > :nth-child(1) {
+    transform: translate3d(calc(var(--drag-offset, 0px) * 0.08), 0, 0);
+  }
+  .cards-track.is-swiping .cards-animated-wrapper > :nth-child(2) {
+    transform: translate3d(0, 0, 0);
+  }
+  .cards-track.is-swiping .cards-animated-wrapper > :nth-child(3) {
+    transform: translate3d(calc(var(--drag-offset, 0px) * -0.08), 0, 0);
+  }
+
   /* Card layout - horizontal, grows to fill viewport */
   .food-card {
     width: 100%;

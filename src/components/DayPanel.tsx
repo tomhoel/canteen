@@ -84,6 +84,8 @@ export interface DayPanelProps {
   yoloWinner: number;
   /** Fired once when the exit is over. Only passed to a leaving panel. */
   onExited?: () => void;
+  /** Position offset for swiping neighbor on mobile (-1 for left, 1 for right). */
+  swipePosition?: -1 | 1;
 }
 
 function DayPanel({
@@ -99,6 +101,7 @@ function DayPanel({
   yoloHighlight,
   yoloWinner,
   onExited,
+  swipePosition,
 }: DayPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [entered, setEntered] = useState(phase !== "enter");
@@ -130,7 +133,15 @@ function DayPanel({
 
   const cls =
     "cards-animated-wrapper day-panel" +
-    (phase === "exit" ? " day-panel-exit" : !entered ? " day-panel-enter" : "");
+    (swipePosition === -1
+      ? " day-panel-neighbor-left"
+      : swipePosition === 1
+      ? " day-panel-neighbor-right"
+      : phase === "exit"
+      ? " day-panel-exit"
+      : !entered
+      ? " day-panel-enter"
+      : "");
 
   return (
     <div
@@ -144,7 +155,7 @@ function DayPanel({
         tab order, the accessibility tree and hit-testing together. The app
         already uses it for exactly this state in useShellInert.
       */
-      inert={phase === "exit" || undefined}
+      inert={phase === "exit" || swipePosition !== undefined || undefined}
     >
       {openCanteens.length === 0 ? (
         <AllClosedCard closedCanteens={closedCanteens} />

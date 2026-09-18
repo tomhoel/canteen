@@ -137,6 +137,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const [current, setCurrent] = useState({ seq: 0, day: selectedDay });
   const [leaving, setLeaving] = useState<{ seq: number; day: number; dir: number } | null>(null);
   const [dayDir, setDayDir] = useState(0);
+  const [swipingNeighbor, setSwipingNeighbor] = useState<{ day: number; position: -1 | 1 } | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -447,6 +448,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     blocked: anyOverlayOpen,
     ready: menuData !== null,
     markSwipe,
+    onNeighborChange: setSwipingNeighbor,
   });
 
   const fullDayLabels = FULL_DAYS_NO;
@@ -707,10 +709,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     if (!menuData) {
       // Keep the panels in step with the day, without producing a transition.
       setCurrent({ seq: 0, day: selectedDay });
+    } else if (fromSwipe) {
+      // Handled by touch swipe and swipingNeighbor — commit day without creating a duplicate leaving panel.
+      setFromSwipe(false);
+      setDayDir(0);
+      setCurrent({ seq: current.seq + 1, day: selectedDay });
     } else {
-      const d = fromSwipe ? 0 : selectedDay > current.day ? 1 : -1;
+      const d = selectedDay > current.day ? 1 : -1;
       setDayDir(d);
-      if (fromSwipe) setFromSwipe(false);
       setLeaving({ seq: current.seq, day: current.day, dir: d });
       setCurrent({ seq: current.seq + 1, day: selectedDay });
     }
@@ -815,7 +821,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             <DayPanel
               key={current.seq}
               day={current.day}
-              data={canteenDayData}
+              data={allDaysData[current.day] ?? canteenDayData}
               phase={current.seq === 0 ? "static" : "enter"}
               dir={dayDir}
               todayIndex={todayIndex}
@@ -826,6 +832,23 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
               yoloHighlight={yoloHighlight}
               yoloWinner={yoloWinner}
             />
+            {swipingNeighbor && (
+              <DayPanel
+                key={`swiping-${swipingNeighbor.day}`}
+                day={swipingNeighbor.day}
+                data={allDaysData[swipingNeighbor.day] ?? []}
+                phase="static"
+                dir={0}
+                todayIndex={todayIndex}
+                votes={voting.votes}
+                maxVotes={maxVotes}
+                onImageClick={handleImageClick}
+                onCardClick={handleCardClick}
+                yoloHighlight={-1}
+                yoloWinner={-1}
+                swipePosition={swipingNeighbor.position}
+              />
+            )}
           </div>
         </ErrorBoundary>
       </main>

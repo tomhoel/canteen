@@ -491,3 +491,42 @@ test("flicking the sheet upward cancels the drag instead of dismissing it", asyn
     "an upward flick dismissed the sheet — vy is unsigned, so the direction guard is missing"
   ).toHaveCount(1);
 });
+
+test("horizontal day swipe displays neighbor panel and settles cleanly on mobile", async ({ page }) => {
+  test.skip(test.info().project.name === "desktop", "day swipe gesture is touch-only");
+  await page.goto("/");
+  await loaded(page);
+
+  // Start on Tuesday (day index 1)
+  await page.click(".day-selector button:nth-of-type(2)");
+  await settled(page);
+
+  const cdp = await page.context().newCDPSession(page);
+  const track = (await page.locator(".cards-track").boundingBox())!;
+  const startX = track.x + track.width / 2;
+  const startY = track.y + track.height / 2;
+
+  // 1. Swipe right (pulling Monday from the left)
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: startX, y: startY }] });
+  for (const dx of [20, 60, 110]) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: startX + dx, y: startY }] });
+    await page.waitForTimeout(20);
+  }
+
+  // Both the current and the left-neighbor panels are mounted during the swipe
+  const panelCountDuringSwipe = await page.$$eval(".day-panel", (p) => p.length);
+  expect(panelCountDuringSwipe).toBe(2);
+  const hasLeftNeighbor = await page.locator(".day-panel-neighbor-left").count();
+  expect(hasLeftNeighbor).toBe(1);
+
+  // Release and let it turn to Monday
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(450);
+
+  // Monday should now be active, and panel count settles back to 1
+  const activeBtn = page.locator(".day-selector button.active");
+  await expect(activeBtn).toContainText("Mandag");
+  const panelCountAfter = await page.$$eval(".day-panel", (p) => p.length);
+  expect(panelCountAfter).toBe(1);
+});
+
