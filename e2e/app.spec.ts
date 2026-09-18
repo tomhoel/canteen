@@ -151,18 +151,29 @@ test("an open overlay is usable and the page behind it is not", async ({ page })
   await page.goto("/");
   await loaded(page);
 
-  await page.click('button[aria-label="Om appen"]');
-  await page.waitForSelector(".info-modal");
+  const infoBtn = page.locator('button[aria-label="Om appen"]');
+  const isDesktop = await infoBtn.isVisible();
+  let overlaySelector: string;
 
-  const state = await page.evaluate(() => {
+  if (isDesktop) {
+    await infoBtn.click();
+    await page.waitForSelector(".info-modal");
+    overlaySelector = ".info-modal";
+  } else {
+    await page.locator(".food-card").first().click();
+    await page.waitForSelector(".action-sheet");
+    overlaySelector = ".action-sheet";
+  }
+
+  const state = await page.evaluate((sel) => {
     const wrapper = document.querySelector(".app-wrapper")!;
-    const modal = document.querySelector(".info-modal")!;
+    const modal = document.querySelector(sel)!;
     const focusables = [...modal.querySelectorAll("button, a[href]")];
     const reachable = focusables.filter((el) => {
       (el as HTMLElement).focus();
       return document.activeElement === el;
     });
-    const behind = [...document.querySelectorAll(".app-header button")].filter((el) => {
+    const behind = [...document.querySelectorAll(".app-wrapper button, .app-header button")].filter((el) => {
       (el as HTMLElement).focus();
       return document.activeElement === el;
     });
@@ -173,7 +184,7 @@ test("an open overlay is usable and the page behind it is not", async ({ page })
       reachable: reachable.length,
       behindReachable: behind.length,
     };
-  });
+  }, overlaySelector);
 
   expect(state.wrapperInert).toBe(true);
   expect(state.modalInsideWrapper).toBe(false); // portalled out
@@ -301,14 +312,25 @@ test("a platform close request closes the overlay instead of the app", async ({ 
   );
   test.skip(!supported, "no CloseWatcher here — iOS keeps the plain Escape path");
 
-  await page.click('button[aria-label="Om appen"]');
-  await page.waitForSelector(".info-modal");
+  const infoBtn = page.locator('button[aria-label="Om appen"]');
+  const isDesktop = await infoBtn.isVisible();
+  let overlaySelector: string;
+
+  if (isDesktop) {
+    await infoBtn.click();
+    await page.waitForSelector(".info-modal");
+    overlaySelector = ".info-modal";
+  } else {
+    await page.locator(".food-card").first().click();
+    await page.waitForSelector(".action-sheet");
+    overlaySelector = ".action-sheet";
+  }
 
   await page.keyboard.press("Escape"); // the same close request the back gesture raises
   await page.waitForTimeout(600);
 
   await expect(
-    page.locator(".info-modal"),
+    page.locator(overlaySelector),
     "the close request never reached the app — on a phone, back would have exited it"
   ).toHaveCount(0);
 
