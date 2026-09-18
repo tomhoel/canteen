@@ -83,6 +83,7 @@ function PlateImage({
   alt,
   isDesktop,
   priority,
+  isInitial = false,
   onLoad,
   onError,
 }: {
@@ -90,18 +91,17 @@ function PlateImage({
   alt: string;
   isDesktop: boolean;
   priority: boolean;
+  isInitial?: boolean;
   onLoad: () => void;
   onError: () => void;
 }) {
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(!isInitial);
 
   useEffect(() => {
-    // A frame late on purpose. Flipping this in the same commit as the mount
-    // would give the browser one style resolution holding both the start and
-    // the end value, and no transition at all.
+    if (!isInitial) return;
     const id = requestAnimationFrame(() => setShown(true));
     return () => cancelAnimationFrame(id);
-  }, []);
+  }, [isInitial]);
 
   return (
     <img
@@ -110,16 +110,17 @@ function PlateImage({
       className="food-image loaded"
       style={{
         opacity: shown ? 1 : 0,
-        // Desktop only, matching what actually rendered before: the plate
-        // slides 28px in from the right and settles out of a 1.1 scale.
-        transform: isDesktop
+        // Desktop initial load only: the plate slides 28px in from the right and settles out of a 1.1 scale.
+        transform: isDesktop && isInitial
           ? shown
             ? "translateX(0) scale(1)"
             : "translateX(28px) scale(1.1)"
           : undefined,
-        transition: isDesktop
-          ? "opacity 280ms linear, transform 460ms cubic-bezier(0.22, 1, 0.36, 1)"
-          : "opacity 280ms linear",
+        transition: isInitial
+          ? isDesktop
+            ? "opacity 280ms linear, transform 460ms cubic-bezier(0.22, 1, 0.36, 1)"
+            : "opacity 280ms linear"
+          : "none",
       }}
       loading="eager"
       decoding="async"
@@ -144,6 +145,8 @@ interface FoodCardProps {
   yoloHighlighted?: boolean;
   /** True after YOLO landed and this card is the chosen one. */
   yoloWinner?: boolean;
+  /** True strictly on the first initial app load, enabling card launch entrance animations. */
+  isInitial?: boolean;
 }
 
 const FoodCard = memo(function FoodCard({
@@ -157,6 +160,7 @@ const FoodCard = memo(function FoodCard({
   onCardClick,
   yoloHighlighted = false,
   yoloWinner = false,
+  isInitial = false,
 }: FoodCardProps) {
   const {
     canteenName,
@@ -183,12 +187,16 @@ const FoodCard = memo(function FoodCard({
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
       className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
-      style={{
-        // The row cascades: card 0 leads, each following card starts 55ms
-        // later and takes 40ms longer, so they do not move at the same rate.
-        animationDelay: `${cardIdx * 55}ms`,
-        animationDuration: `${0.28 + cardIdx * 0.04}s`,
-      }}
+      style={
+        isInitial
+          ? {
+              // The row cascades: card 0 leads, each following card starts 55ms
+              // later and takes 40ms longer, so they do not move at the same rate.
+              animationDelay: `${cardIdx * 55}ms`,
+              animationDuration: `${0.28 + cardIdx * 0.04}s`,
+            }
+          : undefined
+      }
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
       data-yolo-card-key={canteenName}
     >
@@ -215,6 +223,7 @@ const FoodCard = memo(function FoodCard({
                 alt={mainDish?.dish || "Matrett"}
                 isDesktop={isDesktop}
                 priority={cardIdx === 0}
+                isInitial={isInitial}
                 onLoad={() => markImageCached(imagePath)}
                 onError={() => setImgError(true)}
               />
@@ -247,9 +256,9 @@ const FoodCard = memo(function FoodCard({
         The third rate, on a desktop: text rises 8px and fades the last of the
         way in, faster than either the card or the plate, so it settles first.
         It is `cardContentEnter` in the stylesheet now rather than a spring
-        here, but `key` stays exactly where it was — remounting on the day
-        change is what re-fires the animation, the same event that used to
-        replay motion's `initial`.
+        here, but `key` stays exactly where it was on initial launch.
+        On subsequent day changes, key is undefined so React does not discard
+        and rebuild the content node.
 
         Off on a phone, which is why the rule sits behind `min-width: 769px`.
         y and opacity are compositor properties, so the animation itself is
@@ -258,7 +267,7 @@ const FoodCard = memo(function FoodCard({
         the layer it has to rasterise is ~190x150 CSS px of pure text at 3x.
         Three cards, three promote-and-discard cycles, on every day change.
       */}
-      <div key={selectedDay} className="card-content">
+      <div key={isInitial ? selectedDay : undefined} className="card-content">
         <div className="card-header">
           {(() => {
             const meta = getCanteenMetadata(canteenName);

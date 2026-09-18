@@ -834,6 +834,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                    exiting child's props; this panel renders live. */
                 yoloHighlight={-1}
                 yoloWinner={-1}
+                isInitial={false}
                 onExited={() =>
                   setLeaving(l => (l && l.seq === leaving.seq ? null : l))
                 }
@@ -852,6 +853,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
               onCardClick={handleCardClick}
               yoloHighlight={yoloHighlight}
               yoloWinner={yoloWinner}
+              isInitial={current.seq === 0}
             />
             {swipingNeighbor && (
               <DayPanel
@@ -868,6 +870,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                 yoloHighlight={-1}
                 yoloWinner={-1}
                 swipePosition={swipingNeighbor.position}
+                isInitial={false}
               />
             )}
           </div>

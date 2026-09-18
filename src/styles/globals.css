@@ -541,12 +541,6 @@ body {
 }
 
 .food-card {
-  /* The three cards do not arrive together. Each one is handed its own
-     animation-delay and animation-duration inline by FoodCard, keyed on its
-     index, so they rise 55ms apart and at slightly different speeds — 0.28s,
-     0.32s, 0.36s. That difference in rate across the row is the cascade, and
-     losing it is what made the day change land as one flat block. */
-  animation: cardReveal 0.28s var(--smooth) both;
   background: linear-gradient(180deg, #fffaf0 0%, #fef3e2 38%, var(--card-white) 52%);
   border-radius: 24px;
   width: 100%;
@@ -561,6 +555,17 @@ body {
   border: 1px solid rgba(236, 228, 216, 0.6);
   display: flex;
   flex-direction: column;
+}
+
+/* Card cascade entrance animation ONLY on the very first initial page launch */
+.day-panel-initial .food-card {
+  animation: cardReveal 0.28s var(--smooth) both;
+}
+
+.day-panel:not(.day-panel-initial) .food-card,
+.day-panel:not(.day-panel-initial) .allergen-chip,
+.day-panel:not(.day-panel-initial) .card-content {
+  animation: none !important;
 }
 
 .food-card.clickable {
@@ -1301,7 +1306,7 @@ body {
    promotes it to a layer for the duration and drops it again, rasterising
    ~190x150 CSS px of text at 3x, three times per swipe. */
 @media (min-width: 769px) {
-  .card-content {
+  .day-panel-initial .card-content {
     animation: cardContentEnter 0.26s var(--smooth) both;
   }
 }
@@ -1428,6 +1433,10 @@ body {
   border: 1px solid;
   line-height: 1.2;
   flex-shrink: 0;
+}
+
+/* Allergen chip entrance animation ONLY on initial launch */
+.day-panel-initial .allergen-chip {
   animation: chipPop 0.3s var(--spring) both;
 }
 
@@ -2262,12 +2271,10 @@ body {
     transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Prevent individual cards from vertically bumping/jiggering during swipe and day transitions */
-  .cards-track.is-swiping .food-card,
-  .day-panel-enter .food-card,
-  .day-panel-exit .food-card,
-  .day-panel-neighbor-left .food-card,
-  .day-panel-neighbor-right .food-card {
+  /* Only the initial page launch runs card/chip entrance animations; all day-to-day panels are completely static */
+  .day-panel:not(.day-panel-initial) .food-card,
+  .day-panel:not(.day-panel-initial) .allergen-chip,
+  .cards-track.is-swiping .food-card {
     animation: none !important;
   }
 
@@ -4697,8 +4704,8 @@ body {
 }
 
 @media (max-width: 768px) {
-  /* Same cascade, without the glyph re-rasterisation. */
-  .food-card {
+  /* Same cascade on initial launch, without the glyph re-rasterisation. */
+  .day-panel-initial .food-card {
     animation-name: cardRevealFlat;
   }
 }

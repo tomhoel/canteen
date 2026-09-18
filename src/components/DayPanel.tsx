@@ -86,6 +86,8 @@ export interface DayPanelProps {
   onExited?: () => void;
   /** Position offset for swiping neighbor on mobile (-1 for left, 1 for right). */
   swipePosition?: -1 | 1;
+  /** True strictly on the first initial app load, enabling card launch entrance animations. */
+  isInitial?: boolean;
 }
 
 function DayPanel({
@@ -102,6 +104,7 @@ function DayPanel({
   yoloWinner,
   onExited,
   swipePosition,
+  isInitial = false,
 }: DayPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [entered, setEntered] = useState(phase !== "enter");
@@ -133,6 +136,7 @@ function DayPanel({
 
   const cls =
     "cards-animated-wrapper day-panel" +
+    (isInitial ? " day-panel-initial" : "") +
     (swipePosition === -1
       ? " day-panel-neighbor-left"
       : swipePosition === 1
@@ -177,6 +181,7 @@ function DayPanel({
                 onCardClick={onCardClick}
                 yoloHighlighted={yoloHighlight === cardIdx}
                 yoloWinner={yoloWinner === cardIdx}
+                isInitial={isInitial}
               />
             )
           )}
