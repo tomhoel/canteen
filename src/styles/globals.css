@@ -2769,7 +2769,7 @@ body {
 
   /* Day bar — liquid glass floating pill for mobile */
   .day-bar {
-    position: fixed;
+    position: absolute;
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     left: calc(16px + env(safe-area-inset-left, 0px));
     right: calc(16px + env(safe-area-inset-right, 0px));

@@ -723,9 +723,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const todayKey = getLocalDateKey();
   const alreadyShared = typeof window !== "undefined" && !!localStorage.getItem(`slack_shared_${todayKey}`);
 
-  const ShareButton = ({ className }: { className?: string }) => (
+  const shareButton = (
     <button
-      className={`share-btn${alreadyShared ? " disabled" : ""}${voting.shareState === "sent" ? " sent" : ""}${className ? ` ${className}` : ""}`}
+      className={`share-btn${alreadyShared ? " disabled" : ""}${voting.shareState === "sent" ? " sent" : ""}`}
       disabled={alreadyShared || voting.shareState === "loading"}
       onClick={handleShareSlackWrapped}
       title={alreadyShared ? ("Allerede delt i dag") : undefined}
@@ -933,7 +933,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             onVote={voting.handleVote}
             onRecipeClick={handleRecipeClick}
             onClose={closeSheet}
-            shareButton={<ShareButton />}
+            shareButton={shareButton}
           />
           </Suspense>
         );

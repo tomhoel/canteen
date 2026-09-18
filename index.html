@@ -78,10 +78,9 @@
          waiting for the CSSOM (and therefore this very <style>) to be built
          first the way a plain @font-face reference would. -->
     <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <!-- Preconnect to Supabase Storage for both credentials and image requests -->
-    <link rel="preconnect" href="https://sloutnqpqfesyoycklgd.supabase.co" />
-    <link rel="preconnect" href="https://sloutnqpqfesyoycklgd.supabase.co" crossorigin />
-    <link rel="dns-prefetch" href="https://sloutnqpqfesyoycklgd.supabase.co" />
+    <!-- Preconnect to Vercel Blob Storage for plate images -->
+    <link rel="preconnect" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" />
+    <link rel="dns-prefetch" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" />
 
     <!-- Starts the menu request in parallel with the JS bundle, so the app has
          its data before React has finished booting. api-client picks the result
@@ -185,9 +184,8 @@
                     link.rel = "preload";
                     link.as = "image";
                     link.href =
-                      "https://sloutnqpqfesyoycklgd.supabase.co/storage/v1/render/image/public/images_nobg/" +
-                      enc +
-                      "?width=" + PLATE_WIDTH + "&format=webp&quality=75&resize=contain";
+                      "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com/images_nobg/" +
+                      enc;
                     if (first) {
                       link.fetchPriority = "high";
                       first = false;
