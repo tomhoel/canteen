@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCloseRequest";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
@@ -138,6 +138,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const [leaving, setLeaving] = useState<{ seq: number; day: number; dir: number } | null>(null);
   const [dayDir, setDayDir] = useState(0);
   const [swipingNeighbor, setSwipingNeighbor] = useState<{ day: number; position: -1 | 1 } | null>(null);
+  const handleNeighborChange = useCallback((neighbor: { day: number; position: -1 | 1 } | null) => {
+    if (neighbor) {
+      setLeaving(null);
+    }
+    setSwipingNeighbor(neighbor);
+  }, []);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -246,8 +252,11 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    */
   const [fromSwipe, setFromSwipe] = useState(false);
   const markSwipe = useCallback(() => setFromSwipe(true), []);
+  const [previewDay, setPreviewDay] = useState<number | null>(null);
+  const isSettlingRef = useRef<() => boolean>(() => false);
 
   const handleDaySelect = useCallback((i: number) => {
+    if (isSettlingRef.current()) return;
     setSelectedDay(prev => (i === prev ? prev : i));
     // replaceState, as before: tapping through the weekdays must not stack
     // history entries, or Back walks Friday -> Thursday instead of leaving the
@@ -441,15 +450,17 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // MotionValue the strip rides on, the non-passive listener and the release
   // threshold are one mechanism, and every bug here came from moving one
   // without the others.
-  const { trackRef, handleWheel, handleTouchStart, handleTouchEnd } = useDaySwipe({
+  const { trackRef, handleWheel, handleTouchStart, handleTouchEnd, isSettling } = useDaySwipe({
     scrollRef,
     selectedDay,
     onSelectDay: handleDaySelect,
     blocked: anyOverlayOpen,
     ready: menuData !== null,
     markSwipe,
-    onNeighborChange: setSwipingNeighbor,
+    onNeighborChange: handleNeighborChange,
+    onPreviewDay: setPreviewDay,
   });
+  isSettlingRef.current = isSettling;
 
   const fullDayLabels = FULL_DAYS_NO;
 
@@ -722,6 +733,16 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     }
   }
 
+  // Synchronously reset track transform before browser paint when a swipe commit lands
+  useLayoutEffect(() => {
+    const el = trackRef.current;
+    if (el && el.classList.contains("is-swiping")) {
+      el.style.transition = "";
+      el.style.transform = "";
+      el.classList.remove("is-swiping");
+    }
+  }, [current.seq, trackRef]);
+
   if (!menuData) {
     return <LoadingScreen />;
   }
@@ -858,7 +879,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       <DaySelector
         fullDayLabels={fullDayLabels}
         dayLabelsData={dayLabelsData}
-        selectedDay={selectedDay}
+        selectedDay={previewDay ?? selectedDay}
         todayIndex={todayIndex}
         mode={mode}
         onDaySelect={handleDaySelect}

@@ -2223,6 +2223,7 @@ body {
 
   /* Cards track — mobile grid stack ensuring enter and exit share same bounds */
   .cards-track {
+    --day-gap: 16px;
     display: grid;
     grid-template-columns: 100%;
     grid-template-rows: 100%;
@@ -2251,10 +2252,23 @@ body {
   }
 
   /* Mobile day slide & continuous swiping */
+  .cards-track.is-swiping {
+    will-change: transform;
+  }
+
   .day-panel {
-    --day-travel: 100%;
+    --day-travel: calc(100% + var(--day-gap));
     --day-scale: 1;
-    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Prevent individual cards from vertically bumping/jiggering during swipe and day transitions */
+  .cards-track.is-swiping .food-card,
+  .day-panel-enter .food-card,
+  .day-panel-exit .food-card,
+  .day-panel-neighbor-left .food-card,
+  .day-panel-neighbor-right .food-card {
+    animation: none !important;
   }
 
   .day-panel-enter,
@@ -2263,30 +2277,19 @@ body {
   }
 
   .day-panel-neighbor-left {
-    transform: translate3d(-100%, 0, 0) !important;
+    transform: translate3d(calc(-100% - var(--day-gap)), 0, 0) !important;
     opacity: 1 !important;
     transition: none !important;
   }
 
   .day-panel-neighbor-right {
-    transform: translate3d(100%, 0, 0) !important;
+    transform: translate3d(calc(100% + var(--day-gap)), 0, 0) !important;
     opacity: 1 !important;
     transition: none !important;
   }
 
   .cards-track.is-swiping .day-panel {
     transition: none !important;
-  }
-
-  /* Card parallax during swipe: top card leads slightly, bottom card lags */
-  .cards-track.is-swiping .cards-animated-wrapper > :nth-child(1) {
-    transform: translate3d(calc(var(--drag-offset, 0px) * 0.08), 0, 0);
-  }
-  .cards-track.is-swiping .cards-animated-wrapper > :nth-child(2) {
-    transform: translate3d(0, 0, 0);
-  }
-  .cards-track.is-swiping .cards-animated-wrapper > :nth-child(3) {
-    transform: translate3d(calc(var(--drag-offset, 0px) * -0.08), 0, 0);
   }
 
   /* Card layout - horizontal, grows to fill viewport */

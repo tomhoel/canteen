@@ -52,6 +52,8 @@ export interface UseDaySwipeOptions {
   markSwipe: () => void;
   /** Reports the neighbor day to mount alongside current day during swipe. */
   onNeighborChange?: (neighbor: { day: number; position: -1 | 1 } | null) => void;
+  /** Previews target day to glide day-bar pill immediately upon gesture commit. */
+  onPreviewDay?: (day: number | null) => void;
 }
 
 export interface DaySwipe {
@@ -68,6 +70,7 @@ export interface DaySwipe {
   handleWheel: (e: React.WheelEvent) => void;
   handleTouchStart: (e: React.TouchEvent) => void;
   handleTouchEnd: (e: React.TouchEvent) => void;
+  isSettling: () => boolean;
 }
 
 /** Below this the gesture is a tap, not a swipe. */
@@ -85,6 +88,7 @@ export function useDaySwipe({
   ready,
   markSwipe,
   onNeighborChange,
+  onPreviewDay,
 }: UseDaySwipeOptions): DaySwipe {
   // Trackpad horizontal swipe detection
   const lastWheelTimeRef = useRef(0);
@@ -122,6 +126,12 @@ export function useDaySwipe({
   useEffect(() => {
     onNeighborChangeRef.current = onNeighborChange;
   });
+
+  const onPreviewDayRef = useRef(onPreviewDay);
+  useEffect(() => {
+    onPreviewDayRef.current = onPreviewDay;
+  });
+
   const activeNeighborRef = useRef<{ day: number; position: -1 | 1 } | null>(null);
 
   /**
@@ -137,7 +147,6 @@ export function useDaySwipe({
     if (!el) return;
     el.style.transition = "";
     el.style.transform = "";
-    el.style.removeProperty("--drag-offset");
     el.classList.remove("is-swiping");
     activeNeighborRef.current = null;
     onNeighborChangeRef.current?.(null);
@@ -167,7 +176,6 @@ export function useDaySwipe({
     const el = trackRef.current;
     if (el) {
       el.style.transform = `translate3d(${px}px, 0, 0)`;
-      el.style.setProperty("--drag-offset", `${px}px`);
       if (!el.classList.contains("is-swiping")) {
         el.classList.add("is-swiping");
       }
@@ -180,7 +188,8 @@ export function useDaySwipe({
   }, [selectedDay]);
 
   /**
-   * Settle a completed page turn: slide track to target day and commit change.
+   * Settle a completed page turn: smoothly glide track into destination with 16px gap,
+   * then commit day state on completion without layout jigger.
    */
   const settleTurn = useCallback(
     (dir: -1 | 1, targetDay: number) => {
@@ -191,15 +200,21 @@ export function useDaySwipe({
       }
 
       settlingRef.current = true;
-      const duration = 280;
+      const duration = 240;
       el.style.transition = `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-      el.style.transform = dir === -1 ? "translate3d(-100%, 0, 0)" : "translate3d(100%, 0, 0)";
+      el.style.transform = dir === -1
+        ? "translate3d(calc(-100% - 16px), 0, 0)"
+        : "translate3d(calc(100% + 16px), 0, 0)";
       offsetRef.current = 0;
 
-      markSwipe();
-      onSelectDay(targetDay);
+      // Update bottom day-bar pill immediately on release
+      onPreviewDayRef.current?.(targetDay);
 
       settleTimer.current = setTimeout(() => {
+        settlingRef.current = false;
+        markSwipe();
+        onSelectDay(targetDay);
+        onPreviewDayRef.current?.(null);
         releaseTrack();
       }, duration);
     },
@@ -219,10 +234,11 @@ export function useDaySwipe({
     }
 
     settlingRef.current = true;
-    const duration = 240;
+    const duration = 200;
     el.style.transition = `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`;
     el.style.transform = "translate3d(0px, 0, 0)";
     offsetRef.current = 0;
+    onPreviewDayRef.current?.(null);
 
     settleTimer.current = setTimeout(() => {
       releaseTrack();
@@ -230,6 +246,7 @@ export function useDaySwipe({
   }, [releaseTrack]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (settlingRef.current) return;
     if (e.touches.length === 1) {
       swipeAxis.current = "undecided";
       touchStartRef.current = {
@@ -245,6 +262,7 @@ export function useDaySwipe({
     if (!el) return;
 
     const onTouchMove = (e: TouchEvent) => {
+      if (settlingRef.current) return;
       const start = touchStartRef.current;
       if (!start || e.touches.length !== 1) return;
 
@@ -315,6 +333,7 @@ export function useDaySwipe({
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
+      if (settlingRef.current) return;
       if (!touchStartRef.current) return;
       const touch = e.changedTouches[0];
       const deltaX = touch.clientX - touchStartRef.current.x;
@@ -353,10 +372,13 @@ export function useDaySwipe({
     [blocked, releaseTrack, settleTurn, settleCancel]
   );
 
+  const isSettling = useCallback(() => settlingRef.current, []);
+
   return {
     trackRef,
     handleWheel,
     handleTouchStart,
     handleTouchEnd,
+    isSettling,
   };
 }

@@ -499,6 +499,7 @@ test("horizontal day swipe displays neighbor panel and settles cleanly on mobile
 
   // Start on Tuesday (day index 1)
   await page.click(".day-selector button:nth-of-type(2)");
+  await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 3_000 }).toBe(1);
   await settled(page);
 
   const cdp = await page.context().newCDPSession(page);
