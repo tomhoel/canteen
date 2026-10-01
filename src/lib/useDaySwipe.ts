@@ -74,11 +74,11 @@ export interface DaySwipe {
 }
 
 /** Below this the gesture is a tap, not a swipe. */
-const MIN_SWIPE_PX = 24;
-/** A release turns the page when where the finger was heading passes this share of the width (a quarter). */
-const TURN_FRACTION = 0.25;
+const MIN_SWIPE_PX = 16;
+/** A release turns the page when where the finger was heading passes this share of the width (15%). */
+const TURN_FRACTION = 0.15;
 /** How far ahead of the finger, in ms, "where it was heading" looks. */
-const PROJECT_MS = 200;
+const PROJECT_MS = 260;
 /** Only the last stretch of the drag counts as its speed; a pause before lifting means zero. */
 const VELOCITY_WINDOW_MS = 100;
 /** Past this share of the width the day-bar pill already shows the target day. */
@@ -92,7 +92,7 @@ const WHEEL_COOLDOWN_MS = 350;
 
 /**
  * Whether a release turns the page: where the finger was heading (position plus
- * a short run-out at its release speed) must pass a quarter of the width, in the
+ * a short run-out at its release speed) must pass 15% of the width, in the
  * direction it is already displaced. A slow nudge never turns; a short quick
  * flick does; a flick against the displacement cancels.
  */
@@ -198,7 +198,9 @@ export function useDaySwipe({
     if (!el) return;
     el.style.transition = "";
     el.style.transform = "";
-    el.classList.remove("is-swiping");
+    el.style.removeProperty("--swipe-p");
+    el.style.removeProperty("--swipe-x");
+    el.classList.remove("is-swiping", "is-settling");
     activeNeighborRef.current = null;
     onNeighborChangeRef.current?.(null);
   }, [clearSettleTimer]);
@@ -215,6 +217,7 @@ export function useDaySwipe({
       clearSettleTimer();
     }
     el.style.transition = "none";
+    el.classList.remove("is-settling");
     el.classList.add("is-swiping");
   }, [clearSettleTimer]);
 
@@ -223,6 +226,9 @@ export function useDaySwipe({
     const el = trackRef.current;
     if (el) {
       el.style.transform = `translate3d(${px}px, 0, 0)`;
+      // 0 centred .. 1 one full panel away; the CSS drives the push of both panels with it.
+      el.style.setProperty("--swipe-p", String(Math.min(1, Math.abs(px) / (window.innerWidth + DAY_GAP_PX))));
+      el.style.setProperty("--swipe-x", `${px}px`);
       if (!el.classList.contains("is-swiping")) {
         el.classList.add("is-swiping");
       }
@@ -270,6 +276,11 @@ export function useDaySwipe({
       el.addEventListener("transitionend", onEnd);
       settleTimer.current = setTimeout(finish, duration + 80);
 
+      // The panels' scale and fade glide to their end state over the same time.
+      el.style.setProperty("--settle-ms", `${duration}ms`);
+      el.classList.toggle("is-settling", duration > 0);
+      el.style.setProperty("--swipe-p", kind === "turn" ? "1" : "0");
+      el.style.setProperty("--swipe-x", kind === "turn" ? (transform.includes("-100%") ? "-" : "") + `${window.innerWidth + DAY_GAP_PX}px` : "0px");
       el.style.transition = duration ? `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)` : "none";
       el.style.transform = transform;
       offsetRef.current = 0;

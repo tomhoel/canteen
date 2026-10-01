@@ -2283,6 +2283,35 @@ body {
     transition: none !important;
   }
 
+  /* A push, not a slide: the day you leave only travels 30% as far as your finger and
+     recedes beneath, while the day that arrives glides over it, carrying its own shadow.
+     useDaySwipe writes --swipe-x (the track's px offset) and --swipe-p (0..1) on every
+     move and sets both to their end values when it releases. */
+  .cards-track.is-swiping .day-panel {
+    translate: calc(var(--swipe-x, 0px) * -0.7) 0;
+    scale: calc(1 - var(--swipe-p, 0) * 0.06);
+  }
+  .cards-track.is-swiping .day-panel-neighbor-left,
+  .cards-track.is-swiping .day-panel-neighbor-right {
+    translate: none;
+    scale: 1;
+    position: relative;
+    z-index: 2;
+    background: var(--bg-cream);
+  }
+  .cards-track.is-swiping .day-panel-neighbor-right {
+    box-shadow: calc(-18px * (1 - var(--swipe-p, 0))) 0 calc(36px * (1 - var(--swipe-p, 0))) rgba(60, 40, 10, 0.2);
+  }
+  .cards-track.is-swiping .day-panel-neighbor-left {
+    box-shadow: calc(18px * (1 - var(--swipe-p, 0))) 0 calc(36px * (1 - var(--swipe-p, 0))) rgba(60, 40, 10, 0.2);
+  }
+  .cards-track.is-swiping.is-settling .day-panel {
+    transition:
+      translate var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1),
+      scale var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
   /* Card layout - horizontal, grows to fill viewport */
   .food-card {
     width: 100%;
@@ -2431,9 +2460,15 @@ body {
     transition: none !important;
   }
 
-  /* Disable heavy infinite blur flame animation on mobile — saves GPU & battery */
+  /* The ember glow stays on a phone, but still: the infinite blur animation is what cost
+     GPU and battery, so it is frozen at its brightest frame and left on its own layer
+     for the compositor instead of being repainted. */
   .card-image-circle::after {
-    display: none !important;
+    animation: none;
+    will-change: auto;
+    opacity: 1;
+    inset: -30px;
+    filter: blur(22px);
   }
 
   /* Prevent sticky hover from keeping food image enlarged / glowing */

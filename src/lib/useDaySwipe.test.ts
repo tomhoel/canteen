@@ -9,7 +9,7 @@ test("shouldTurn - a slow nudge never turns, however long it lasts", () => {
   assert.equal(shouldTurn(-24, 0, W), false);
 });
 
-test("shouldTurn - a short quick flick turns, a drag past a quarter turns", () => {
+test("shouldTurn - a short quick flick turns, a drag past 15% turns", () => {
   assert.equal(shouldTurn(-70, -1, W), true);
   assert.equal(shouldTurn(-150, 0, W), true);
 });
@@ -37,5 +37,5 @@ test("rubberBand - follows the finger at first and never reaches the width", () 
 
 test("shouldTurn - a casual 70px swipe at a relaxed pace turns (measured: 0.36 px/ms)", () => {
   assert.equal(shouldTurn(-70, -0.36, W), true);
-  assert.equal(shouldTurn(-60, -0.15, W), false);
+  assert.equal(shouldTurn(-30, -0.05, W), false);
 });
