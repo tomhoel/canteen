@@ -54,12 +54,18 @@ function shortenCriticalPath(): Plugin {
         // with `#root { visibility: visible }` — equal specificity, so the
         // later rule wins. Moving the stylesheet above the inline style would
         // invert that and leave the app permanently blank.
+        //
+        // And after the inline head script that fires /api/menu: a script that
+        // follows a pending stylesheet waits for it, so with the link above the
+        // script the menu fetch started only when the CSS finished (measured
+        // 687ms vs ~225ms on throttled 4G). The preload scanner still finds a
+        // link below an inline script, so the CSS download is not delayed.
         const linkRe = /\s*<link[^>]+rel="stylesheet"[^>]*>/;
         const link = out.match(linkRe);
-        const styleEnd = out.indexOf("</style>");
-        if (link && styleEnd !== -1) {
+        const scriptEnd = out.indexOf("</script>");
+        if (link && out.indexOf("</style>") < scriptEnd) {
           out = out.replace(linkRe, "");
-          const at = out.indexOf("</style>") + "</style>".length;
+          const at = out.indexOf("</script>") + "</script>".length;
           out = out.slice(0, at) + "\n    " + link[0].trim() + out.slice(at);
         }
 
