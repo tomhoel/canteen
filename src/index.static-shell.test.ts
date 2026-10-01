@@ -211,3 +211,34 @@ test("the tab is never renamed after it opens", () => {
     "something sets the title at runtime again — the tab will relabel itself on boot"
   );
 });
+
+// ─── The head script's week math ────────────────────────────────────────────
+// The head script picks menu-response/<week>.json from the Oslo calendar, and it
+// cannot import dateUtils. This is the guard that keeps its copy of the ISO week
+// rule identical to the app's: a day on which they differ is a day the page asks
+// for the wrong file, or none.
+
+test("the head script's weekIdFor agrees with dateUtils.getWeekIdForDate on every day", async () => {
+  const { getWeekIdForDate } = await import("./lib/dateUtils.js");
+  const source = indexHtml.match(/\/\/ <weekIdFor>([\s\S]*?)\/\/ <\/weekIdFor>/)?.[1];
+  assert.ok(source, "index.html must keep the // <weekIdFor> markers");
+  const weekIdFor = new Function(`${source}; return weekIdFor;`)() as (y: number, m: number, d: number) => string;
+
+  // Five years of days, which includes 53-week years and both year boundaries,
+  // plus the +7 overflow the script uses for "next week".
+  let checked = 0;
+  for (let t = Date.UTC(2024, 0, 1); t < Date.UTC(2030, 0, 1); t += 864e5) {
+    const d = new Date(t);
+    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1, day = d.getUTCDate();
+    assert.equal(weekIdFor(y, m, day), getWeekIdForDate(y, m, day), `${y}-${m}-${day}`);
+
+    const next = new Date(Date.UTC(y, m - 1, day + 7));
+    assert.equal(
+      weekIdFor(y, m, day + 7),
+      getWeekIdForDate(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate()),
+      `${y}-${m}-${day} + 7`
+    );
+    checked++;
+  }
+  assert.ok(checked > 2000);
+});

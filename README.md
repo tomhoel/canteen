@@ -40,14 +40,14 @@ Everything server-side now sits behind `/api`.
           ▼                            ▼
    Upstash Redis                Vercel Blob
    menu:<week>, dish_cache      plates (+ 512px thumbs),
-   attendance:<date>, caches    menu-response/current.json
+   attendance:<date>            menu-response/<week>.json
           │                            │
           ▼                            ▼
    ┌──────────────┐     ┌─────────────────────────┐
    │  /api/*      │◀────│  React SPA (Vite)       │
    │  functions   │     │  reads the static menu  │
-   └──────────────┘     │  file Mon–Fri, /api/menu│
-          │             │  at weekends            │
+   └──────────────┘     │  file for the week, /api│
+          │             │  /menu only as fallback │
           ▼             └─────────────────────────┘
     Gemini · kassal.app · meny.no · Slack
 ```
@@ -212,22 +212,27 @@ in git history if ever needed).
 | Key / path | Contents |
 | --- | --- |
 | `menu:<week>` / `menu:weeks` | One record per ISO week (`2026-W34`) and the sorted index of weeks |
-| `dish_cache` (hash) | One entry per distinct dish: origin, description, plate path, retry counters |
+| `dish_cache` (hash) | One entry per distinct dish: origin, description, short title, course label, plate path |
 | `attendance:<date>` | Votes per canteen per day |
-| `response:menu:v5:*` | Short-lived caches of the `/api/menu` response |
 | Blob `images_nobg/archive/*` | Plates, addressed by dish; `images_nobg/thumb/*` holds the 512px card thumbs |
-| Blob `menu-response/current.json` | The finished `/api/menu` response, rewritten by every cron run |
+| Blob `menu-response/<week>.json` | The finished menu response for one week, rewritten by every cron run |
 
 `dish_cache` is what keeps the twice-daily cron from re-billing the model for
 dishes it has already seen: a dish means the same thing in every week it
 appears, so its origin, description and plate are produced once and reused.
 
-**First load.** Monday to Friday (Europe/Oslo) the page reads
-`menu-response/current.json` directly: no function, so no cold start. At
-weekends it uses `/api/menu`, because the live endpoint switches to next week at
-Saturday 00:00 with no cron run to rewrite the file. A missing file falls back
-to `/api/menu`. A returning visitor is painted from `localStorage` at once and
-the fresh response replaces it when it arrives.
+**First load.** The page works out the week from the Oslo calendar and reads
+`menu-response/<week>.json` directly: no function, so no cold start. On a
+weekday that is this week; at the weekend it tries next week first (once the
+kitchens have published it) and falls back to this week. A missing file falls
+back to `/api/menu?week=`, the only thing that endpoint is still for. The
+cron publishes this week, next week and every week it just wrote, after the
+plates are drawn. The head script's week math is checked against `dateUtils` by
+a test, because it cannot import it. A returning visitor is painted from
+`localStorage` at once and the fresh response replaces it when it arrives.
+
+Changing the shape of the response needs no cache-key bump any more: the next
+cron run republishes the files (run it by hand to see the change sooner).
 
 Any plate written outside `uploadToStorage` has no thumb; run
 `node --env-file=.env scripts/backfill-thumbs.cjs` (idempotent).

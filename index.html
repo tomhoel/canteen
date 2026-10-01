@@ -127,39 +127,19 @@
           // A preload the <img> does not reuse is downloaded twice.
 
           // Which day's plates to warm. All three are above the fold on a
-          // 390x844 phone, so all three are worth preloading — but only for the
-          // day the app will actually open on.
-          //
-          // The response says which (`landingDay`), because working it out here
-          // is not possible: at the weekend it depends on whether the served
-          // week is ahead of the current one, which needs the week-comparison
-          // rules in dateUtils. This script used to guess by warming Monday
-          // *and* Friday, and threw away three pictures — 54 KB measured — on
-          // every weekend cold load.
-          //
-          // The fallback is the old weekday-only guess, for a response served
-          // from a cache written before `landingDay` existed. It resolves the
-          // day in Europe/Oslo rather than from the device clock, matching
-          // dateUtils' todayOsloParts: a phone an hour the other side of
-          // midnight would otherwise warm yesterday's picture and leave the
-          // real one cold.
+          // 390x844 phone, so all three are worth preloading, but only for the
+          // day the app will actually open on: today on a weekday; at the
+          // weekend Monday when the page loaded next week's menu (the app is in
+          // preview and lands on Monday), otherwise Friday (the recap of the
+          // week that just ended). The Oslo calendar, not the device clock, as
+          // in dateUtils: a phone an hour the other side of midnight would
+          // otherwise warm yesterday's picture and leave the real one cold.
           function daysToWarm(data) {
             var pinned = (params.get("day") || "").toLowerCase();
             if (DAY_KEYS.indexOf(pinned) >= 0) return [pinned];
 
-            if (DAY_KEYS.indexOf(data.landingDay) >= 0) return [data.landingDay];
-
-            var short = null;
-            try {
-              short = new Intl.DateTimeFormat("en-US", {
-                timeZone: "Europe/Oslo",
-                weekday: "short",
-              }).format(new Date());
-            } catch (e) {}
-
-            var index = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(short);
-            if (index >= 0) return [DAY_KEYS[index]];
-            return ["monday", "friday"];
+            if (weekend) return [data.weekId === nextWeek ? "monday" : "friday"];
+            return [DAY_KEYS[oslodow - 1]];
           }
 
           function getJson(url) {
@@ -172,31 +152,67 @@
               });
           }
 
-          // Monday-Friday (Europe/Oslo) the cron's static copy of the response:
-          // no function behind it, so no cold start (2.7s measured on a CDN
-          // miss of /api/menu). Weekends keep /api/menu, because from Saturday
-          // the live endpoint switches to next week with no cron run to
-          // rewrite the file. A missing or unreadable file falls through to
-          // /api/menu either way.
-          var weekday = false;
+          // The page reads a static file per week, menu-response/<week>.json,
+          // published by the cron: no function behind it, so no cold start (2.7s
+          // measured on a CDN miss of /api/menu). Which week is decided here from
+          // the Oslo calendar: this week on a weekday, next week first at the
+          // weekend (when the kitchens have published it), then this week.
+          // A missing file falls back to /api/menu?week=, and failing that the
+          // next candidate. weekIdFor is ISO 8601 and is checked against
+          // dateUtils.getWeekIdForDate in index.static-shell.test.ts.
+          // <weekIdFor>
+          function weekIdFor(y, m, d) {
+            var t = new Date(Date.UTC(y, m - 1, d));
+            t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+            var wk = Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+            return t.getUTCFullYear() + "-W" + (wk < 10 ? "0" : "") + wk;
+          }
+          // </weekIdFor>
+
+          var thisWeek = null;
+          var nextWeek = null;
+          var weekend = false;
+          var oslodow = 1;
           try {
-            weekday =
-              ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(
-                new Intl.DateTimeFormat("en-US", {
-                  timeZone: "Europe/Oslo",
-                  weekday: "short",
-                }).format(new Date())
-              ) >= 0;
+            var parts = {};
+            new Intl.DateTimeFormat("en-CA", {
+              timeZone: "Europe/Oslo",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
+              .formatToParts(new Date())
+              .forEach(function (p) {
+                parts[p.type] = Number(p.value);
+              });
+            var dow = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+            weekend = dow === 0 || dow === 6;
+            oslodow = dow;
+            thisWeek = weekIdFor(parts.year, parts.month, parts.day);
+            nextWeek = weekIdFor(parts.year, parts.month, parts.day + 7);
           } catch (e) {}
 
-          window.__MENU_FETCH_PROMISE__ = (weekday
-            ? getJson(
-                "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com/menu-response/current.json"
-              ).then(function (data) {
-                return data && data.menuData ? data : getJson("/api/menu");
+          function hasMenu(data) {
+            return !!(data && data.menuData && Object.keys(data.menuData.canteens || {}).length);
+          }
+
+          var candidates = thisWeek ? (weekend ? [nextWeek, thisWeek] : [thisWeek]) : [];
+
+          function loadWeek(i) {
+            if (i >= candidates.length) return Promise.resolve(null);
+            var week = candidates[i];
+            return getJson(
+              "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com/menu-response/" + week + ".json"
+            )
+              .then(function (data) {
+                return hasMenu(data) ? data : getJson("/api/menu?week=" + week);
               })
-            : getJson("/api/menu")
-          )
+              .then(function (data) {
+                return hasMenu(data) ? data : loadWeek(i + 1);
+              });
+          }
+
+          window.__MENU_FETCH_PROMISE__ = loadWeek(0)
             .then(function (data) {
               if (!data || !data.menuData) return data;
               window.__INITIAL_MENU_DATA__ = data;

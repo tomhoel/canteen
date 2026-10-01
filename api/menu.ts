@@ -12,17 +12,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const menu = await getWeeklyMenu(queryParam(req, "week"));
 
-    // Menus change at most twice a day (see the cron schedule), so let the browser
-    // and CDN absorb the traffic and serve stale copies while it refreshes in the
-    // background rather than hitting Redis for every visitor.
-    //
-    // s-maxage was 600s. On an app used in one 45-minute window a day that is
-    // long enough to go stale between two colleagues, and the visitor who finds
-    // it stale is the one who wakes the function. swr=86400 already guarantees
-    // nobody waits on a *revalidation*, so raising s-maxage costs no freshness —
-    // the cron invalidates this key explicitly after every write — and simply
-    // stops manufacturing origin hits nobody asked for.
-    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
+    // This is the fallback path: the page reads the per-week files the updater
+    // publishes to Blob (menu-response/<week>.json) and only comes here when one
+    // is missing, or for a ?week= it has no file for. Short caching, so a fresh
+    // update is never hidden behind a CDN copy for long.
+    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");
     return res.status(200).json(menu);
   } catch (err: any) {
     if (err instanceof MenuUnavailableError) {

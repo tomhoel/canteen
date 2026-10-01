@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   runWeeklyUpdateService,
-  invalidateMenuResponseCache,
   type WeekWriteResult,
 } from "../../src/server/services/menu.service.js";
 import { processAllCanteenAIImages } from "../../src/server/services/image.service.js";
 import { sendCronAlert } from "../../src/server/notify.js";
-import { publishStaticMenu } from "../../src/server/services/menu-publish.service.js";
+import { publishStaticMenus } from "../../src/server/services/menu-publish.service.js";
+import { getWeekId, getWeekIdOffset } from "../../src/lib/dateUtils.js";
 
 /**
  * The weekly updater. This is the only thing that writes menu data.
@@ -151,10 +151,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "dish_cache.image_nobg_path makes the next run redraw it.",
       ]);
     }
-
-    // Both halves exist now. The response cached between the write and the
-    // drawing has the menu and no pictures; drop it rather than serve it.
-    await invalidateMenuResponseCache(record.weeksWritten.map((w) => w.weekId));
   } catch (err: any) {
     imageError = err.message;
     console.warn("⚠️ [cron] Image processing failed:", err.message);
@@ -164,46 +160,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
   }
 
-  // The static copy index.html reads on weekdays. Published after the cache
-  // drop above so it is built from the finished record, and before the warm
-  // below, which only helps /api/menu. Failure is not fatal: the head script
-  // falls back to /api/menu when the file is missing.
-  await publishStaticMenu()
-    .then((url) => console.log(`📄 [cron] published static menu → ${url}`))
+  // Publish what the page reads: one static file per week (this run's weeks,
+  // plus this week and next, which are the two the page can ask for). Built
+  // after the plates are drawn, so the files carry the pictures. Failure is not
+  // fatal: the page falls back to /api/menu for a week with no file.
+  await publishStaticMenus([
+    ...record.weeksWritten.map((w) => w.weekId),
+    getWeekId(),
+    getWeekIdOffset(1),
+  ])
+    .then((weeks) => console.log(`📄 [cron] published ${weeks.join(", ") || "no weeks"}`))
     .catch((err) => console.warn("⚠️ [cron] static menu publish failed:", err.message));
-
-  // The cron is the only writer, and it has just dropped the response cache.
-  // Whoever arrives next would otherwise pay the cold origin — measured at
-  // 4.5s TTFB against 0.06-0.19s warm. Paying it here instead costs the cron
-  // nothing it is not already spending.
-  //
-  // The URL must be exactly `/api/menu` with no query string: that is
-  // byte-for-byte what index.html's head script requests, and it is the cache
-  // key for all three layers. A `?week=` variant would warm a Redis key and a
-  // CDN entry nobody asks for on load. Going out through the public edge (not
-  // an in-process call) is what repopulates the CDN entry as well as Redis.
-  // The host is hardcoded rather than read from VERCEL_PROJECT_PRODUCTION_URL,
-  // and that is not laziness. Of this project's three production aliases only
-  // fbueat.vercel.app answers 200; canteen-tom-hoels-projects.vercel.app and
-  // canteen-git-main-... both 302 into Vercel's SSO, which is an edge redirect
-  // the function never sees. Warming one of those would warm nothing at all,
-  // and would look like it had worked. WARM_HOST overrides it if the public
-  // domain ever changes.
-  const warmHost = process.env.WARM_HOST || "fbueat.vercel.app";
-  await fetch(`https://${warmHost}/api/menu`, { redirect: "manual" })
-    .then((r) => {
-      // A redirect means we hit an SSO-protected alias and warmed nothing.
-      // Say so loudly — the failure mode this replaces was a silent success.
-      if (r.status >= 300 && r.status < 400) {
-        console.warn(
-          `⚠️ [cron] warm hit a redirect (${r.status}) on ${warmHost} — the origin was NOT warmed. ` +
-            `Set WARM_HOST to a publicly reachable domain.`
-        );
-      } else {
-        console.log(`🔥 [cron] warmed /api/menu on ${warmHost} → ${r.status}`);
-      }
-    })
-    .catch((err) => console.warn("⚠️ [cron] warm failed:", err.message));
 
   return res.status(200).json({
     status: "success",

@@ -30,10 +30,7 @@
  */
 
 import { pathToFileURL } from "node:url";
-import {
-  runWeeklyUpdateService,
-  invalidateMenuResponseCache,
-} from "./src/server/services/menu.service.js";
+import { runWeeklyUpdateService } from "./src/server/services/menu.service.js";
 import { processAllCanteenAIImages } from "./src/server/services/image.service.js";
 
 /**
@@ -96,11 +93,6 @@ async function main() {
         `${ahead.failed} failed`
     );
   }
-
-  // The plates were drawn after the menu was written, so the response cached in
-  // between has the food and none of the pictures. Drop it now that both halves
-  // exist, or the week that was just illustrated keeps looking unillustrated.
-  await invalidateMenuResponseCache(record.weeksWritten.map((w) => w.weekId));
 
   console.log("\n🏁 Finished.");
   console.log(

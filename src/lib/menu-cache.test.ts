@@ -25,7 +25,6 @@ const response = (over: Partial<WeeklyMenuResponse> = {}): WeeklyMenuResponse =>
   dishDescriptions: {},
   dishShortNames: {},
   plateImages: {},
-  landingDay: "monday",
   ...over,
 });
 
