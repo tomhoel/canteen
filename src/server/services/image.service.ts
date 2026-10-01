@@ -232,6 +232,11 @@ export async function plateRimDistance(plateBuffer: Buffer): Promise<number | nu
  */
 const PLATE_DRAW_ATTEMPTS = 2;
 
+/** 512px WebP card thumb: ~20 KB against ~130 KB for the 1024px plate. */
+export function makePlateThumb(plate: Buffer): Promise<Buffer> {
+  return sharp(plate).resize(512).webp({ quality: 78, alphaQuality: 85 }).toBuffer();
+}
+
 export async function uploadToStorage(
   bucket: string,
   filePath: string,
@@ -251,6 +256,22 @@ export async function uploadToStorage(
       contentType,
       token,
     });
+    // Cards show a 512px thumb at images_nobg/thumb/<path>; every plate write
+    // (new draw, archive copy, slot copy) lands here, so this is the one place
+    // that keeps them in step. Best effort: a missing thumb only costs a retry
+    // on the next write, the full plate above is already stored.
+    if (bucket === "images_nobg" && !filePath.startsWith("thumb/") && contentType === "image/webp") {
+      try {
+        await put(`${bucket}/thumb/${filePath}`, await makePlateThumb(buffer), {
+          access: "public",
+          addRandomSuffix: false,
+          contentType,
+          token,
+        });
+      } catch (err: any) {
+        console.error(`⚠️  Thumb upload failed (${blobPath}): ${err?.message ?? err}`);
+      }
+    }
     return true;
   } catch (err: any) {
     console.error(`❌ Blob upload failed (${blobPath}): ${err?.message ?? err}`);

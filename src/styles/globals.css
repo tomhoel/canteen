@@ -1207,7 +1207,16 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
   pointer-events: none;
-  transition: opacity 0.25s ease-out;
+  z-index: 1; /* above the aura (::before), below the plate (.food-image is 2) */
+  transition: opacity 0.42s ease-out;
+}
+
+/* The plate's own inline transition (FoodCard PlateImage) is not !important,
+   so this wins: reduced motion gets a bare crossfade, no scale or slide. */
+@media (prefers-reduced-motion: reduce) {
+  .food-image {
+    transition-duration: 1ms !important;
+  }
 }
 
 .image-shimmer.loaded {

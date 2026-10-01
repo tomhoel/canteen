@@ -13,6 +13,12 @@ test("getSupabaseImageUrl - an untransformed request goes to the blob object pat
   assert.ok(!url.includes("?"), "no query string when nothing was asked for");
 });
 
+test("getSupabaseImageUrl - card widths get the thumb, the lightbox width the full plate", () => {
+  assert.ok(getSupabaseImageUrl("images_nobg", "archive/a b.png", { width: 340 }).endsWith("/images_nobg/thumb/archive/a%20b.png"));
+  assert.ok(getSupabaseImageUrl("images_nobg", "archive/a b.png", { width: 640 }).includes("/images_nobg/thumb/"));
+  assert.ok(!getSupabaseImageUrl("images_nobg", "archive/a b.png", { width: 1080 }).includes("/thumb/"));
+});
+
 test("getClosedPlateUrl - picks one of three plates, stably, per seed", () => {
   const first = getClosedPlateUrl("Flow-monday");
   assert.equal(first, getClosedPlateUrl("Flow-monday"), "the same seed always resolves the same");

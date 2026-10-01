@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, memo } from "react";
 import { Users, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
@@ -95,39 +95,57 @@ function PlateImage({
   onLoad: () => void;
   onError: () => void;
 }) {
-  const [shown, setShown] = useState(!isInitial);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [shown, setShown] = useState(false);
+  // Already in the HTTP cache when this mounted: show it at once, no reveal.
+  // Decided before first paint so a cached plate never flashes the shimmer.
+  const [cached, setCached] = useState(false);
 
-  useEffect(() => {
-    if (!isInitial) return;
-    const id = requestAnimationFrame(() => setShown(true));
-    return () => cancelAnimationFrame(id);
-  }, [isInitial]);
+  useLayoutEffect(() => {
+    const el = imgRef.current;
+    if (el?.complete && el.naturalWidth > 0) {
+      setCached(true);
+      setShown(true);
+    }
+  }, []);
+
+  // The reveal waits for the bytes (the old fade ran on a timer and showed
+  // the plate half-painted, top to bottom). decode() makes the first frame of
+  // the fade a finished picture.
+  const reveal = () => {
+    const el = imgRef.current;
+    (el?.decode?.() ?? Promise.resolve()).catch(() => {}).then(() => setShown(true));
+    onLoad();
+  };
+
+  const animate = !cached || isInitial;
+  const slide = isDesktop && isInitial;
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      className="food-image loaded"
-      style={{
-        opacity: shown ? 1 : 0,
-        // Desktop initial load only: the plate slides 28px in from the right and settles out of a 1.1 scale.
-        transform: isDesktop && isInitial
-          ? shown
-            ? "translateX(0) scale(1)"
-            : "translateX(28px) scale(1.1)"
-          : undefined,
-        transition: isInitial
-          ? isDesktop
-            ? "opacity 280ms linear, transform 460ms cubic-bezier(0.22, 1, 0.36, 1)"
-            : "opacity 280ms linear"
-          : "none",
-      }}
-      loading="eager"
-      decoding="async"
-      fetchPriority={priority ? "high" : undefined}
-      onLoad={onLoad}
-      onError={onError}
-    />
+    <>
+      <span className={`image-shimmer${shown ? " loaded" : ""}`} aria-hidden="true" />
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        className="food-image loaded"
+        style={{
+          opacity: shown ? 1 : 0,
+          // Unshown plate waits slightly small (and 28px right on the desktop
+          // launch) and settles to the stylesheet's own transform, so the
+          // hover scale is not pinned by an inline value afterwards.
+          transform: shown ? undefined : slide ? "translateX(28px) scale(1.1)" : "scale(0.92)",
+          transition: animate
+            ? "opacity 420ms ease-out, transform 560ms cubic-bezier(0.22, 1, 0.36, 1)"
+            : "none",
+        }}
+        loading="eager"
+        decoding="async"
+        fetchPriority={priority ? "high" : undefined}
+        onLoad={reveal}
+        onError={onError}
+      />
+    </>
   );
 }
 

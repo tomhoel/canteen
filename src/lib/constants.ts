@@ -351,6 +351,12 @@ export function getSupabaseImageUrl(
     return `${base}/storage/v1/render/image/public/${bucket}/${encodedPath}?${params.toString()}`;
   }
 
+  // Blob does not resize on request. Card-sized asks (<= PLATE_CARD_WIDTH.desktop)
+  // get the pre-made 512px thumb the updater writes beside every plate.
+  if (bucket === 'images_nobg' && options?.width && options.width <= PLATE_CARD_WIDTH.desktop) {
+    return `${BLOB_BASE_URL}/${bucket}/thumb/${encodedPath}`;
+  }
+
   return `${BLOB_BASE_URL}/${bucket}/${encodedPath}`;
 }
 
