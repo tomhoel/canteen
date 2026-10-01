@@ -1,5 +1,5 @@
 import type { MenuItem, DishCourse } from "./types";
-import { courseOverride } from "./dish-course-overrides";
+import { courseOverride } from "./dish-course-overrides.js";
 
 /**
  * Single source of truth for "which of today's dishes is the main dish".
