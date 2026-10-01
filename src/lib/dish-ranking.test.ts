@@ -150,3 +150,13 @@ test("a hand-set override beats the model label and the name rules", () => {
   // The same words with a different dish are not caught by it.
   assert.ok(scoreMainDish("Marinerte kyllinglår med karrisaus og ris", "Flow", "meat_plate") >= 80);
 });
+
+test("a vegetable wok the model called meat_mixed does not tie with a chicken dish", () => {
+  // 2026-10-01 Eat the street: both scored 60 and the kitchen's order picked the wok.
+  const items = [item("Hoisin wok med nudler og grønnsaker"), item("Butterkylling med ris")];
+  const ranked = rankItems(items, "Eat the street", {
+    "Hoisin wok med nudler og grønnsaker": "meat_mixed",
+    "Butterkylling med ris": "meat_mixed",
+  });
+  assert.equal(ranked[0].dish, "Butterkylling med ris");
+});

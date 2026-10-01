@@ -18,6 +18,10 @@ export const COURSE_OVERRIDES: Record<string, DishCourse> = {
   // (W37 Friday, Eat the street, next to Biff Szechuan med nudler).
   "marinerte økologiske blåskjell": "meat_mixed",
   "marinated organic mussels": "meat_mixed",
+  // The model called this meat_mixed although the name mentions no meat or fish,
+  // so it tied with Butterkylling and won on the kitchen's listing order
+  // (2026-10-01, Eat the street).
+  "hoisin wok med nudler og grønnsaker": "veg",
 };
 
 export function courseOverride(dish: string): DishCourse | undefined {

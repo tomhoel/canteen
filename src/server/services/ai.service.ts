@@ -273,6 +273,7 @@ export async function classifyCourses(dishes: string[]): Promise<Record<string, 
 
 Rules:
 - Judge by the dish name only. The name is usually Norwegian.
+- Go by what the NAME says. If it names no meat, poultry or fish, it is "veg" (or "soup"/"side"), never "meat_mixed": "Hoisin wok med nudler og grønnsaker" is "veg".
 - A soup is always "soup", even if it names meat or fish.
 - Pizza is always "side".
 - If it names meat or fish and is a stew, wok, pasta or curry, it is "meat_mixed"; if it is served with potatoes, rice or vegetables as separate components, it is "meat_plate".
