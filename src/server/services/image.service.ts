@@ -250,9 +250,14 @@ export async function uploadToStorage(
   }
   const blobPath = `${bucket}/${filePath}`;
   try {
+    // allowOverwrite: the day slots (thursday/flow.png, ...) are rewritten on
+    // every run. @vercel/blob refuses to replace an existing object without it,
+    // so every slot copy failed, "reuse" never counted, and each run redrew
+    // (and paid for) ~13 plates whose uploads were then rejected as well.
     await put(blobPath, buffer, {
       access: "public",
       addRandomSuffix: false,
+      allowOverwrite: true,
       contentType,
       token,
     });
@@ -265,6 +270,7 @@ export async function uploadToStorage(
         await put(`${bucket}/thumb/${filePath}`, await makePlateThumb(buffer), {
           access: "public",
           addRandomSuffix: false,
+          allowOverwrite: true,
           contentType,
           token,
         });
