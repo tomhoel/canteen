@@ -40,31 +40,44 @@ export async function ensureCourses(dishes: string[]): Promise<CourseLabels> {
 }
 
 /**
- * Re-ranks every day of a week with the course labels, in place, and returns
- * how many days changed winner.
+ * Re-ranks every day of a week with the course labels and returns how many days
+ * changed winner.
  *
  * This is the one place the day's main dish is decided; the result is stored
  * (items in ranked order, `isMain` on the first) and everything downstream
- * reads it. Items are matched to labels by trimmed name, the way
- * extractDishes keyed them.
+ * reads it. Items are matched to labels by trimmed name, the way extractDishes
+ * keyed them.
+ *
+ * Builds new canteen/day/list objects and replaces `menuData.canteens`, rather
+ * than editing in place: the canteen objects are shared with the raw scrape,
+ * which the write loop reuses for every other week in the run, so an in-place
+ * edit for one week would leak into the next. `menuData` itself must be the
+ * week's own object, as `weekMenuData` is.
  */
 export function rerankMenu(menuData: MenuData, labels: CourseLabels): number {
   const byTrimmed: CourseLabels = {};
   for (const [dish, course] of Object.entries(labels)) byTrimmed[dish.trim()] = course;
 
   let changed = 0;
-  for (const [canteenName, canteen] of Object.entries(menuData.canteens || {})) {
-    for (const day of canteen.menu || []) {
-      const list = day.no;
-      if (!list?.items?.length) continue;
+  menuData.canteens = Object.fromEntries(
+    Object.entries(menuData.canteens || {}).map(([canteenName, canteen]) => [
+      canteenName,
+      {
+        ...canteen,
+        menu: (canteen.menu || []).map((day) => {
+          const list = day.no;
+          if (!list?.items?.length) return day;
 
-      const forItems: CourseLabels = {};
-      for (const item of list.items) forItems[item.dish] = byTrimmed[item.dish.trim()];
+          const forItems: CourseLabels = {};
+          for (const item of list.items) forItems[item.dish] = byTrimmed[item.dish.trim()];
 
-      const before = list.items.find((i) => i.isMain)?.dish;
-      list.items = rankItems(list.items.map((i) => ({ ...i, isMain: false })), canteenName, forItems);
-      if (before !== undefined && before !== list.items[0].dish) changed++;
-    }
-  }
+          const before = list.items.find((i) => i.isMain)?.dish;
+          const items = rankItems(list.items.map((i) => ({ ...i, isMain: false })), canteenName, forItems);
+          if (before !== undefined && before !== items[0].dish) changed++;
+          return { ...day, no: { ...list, items } };
+        }),
+      },
+    ])
+  );
   return changed;
 }

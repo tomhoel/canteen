@@ -5,10 +5,27 @@ import type { DishOrigin, DishDescription, DishCourse, Recipe } from "../../lib/
 // this file's 14 MB of model SDK. See fit-description.ts.
 import { DESCRIPTION_MAX_CHARS } from "./fit-description.js";
 
-function getAIClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
+let client: { key: string; ai: GoogleGenAI } | undefined;
+
+/** The one Gemini client (also used for plate images), built once per key. */
+export function getAIClient(): GoogleGenAI | null {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  if (client?.key !== key) client = { key, ai: new GoogleGenAI({ apiKey: key }) };
+  return client.ai;
+}
+
+/** No call may hold the run longer than this; the cron has 300s in total. */
+const AI_TEXT_TIMEOUT_MS = 30_000;
+/** A model that just failed is skipped for this long (a warm instance keeps module state). */
+const MODEL_COOLDOWN_MS = 10 * 60 * 1000;
+const modelFailedAt = new Map<string, number>();
+
+/** The cascade without the models that failed recently; all of it if every one did. */
+function liveModels(): string[] {
+  const now = Date.now();
+  const live = FLASH_MODELS.filter((m) => now - (modelFailedAt.get(m) ?? 0) > MODEL_COOLDOWN_MS);
+  return live.length ? live : FLASH_MODELS;
 }
 
 /**
@@ -37,23 +54,33 @@ function chunk<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-/** Runs one prompt through the cascade, returning parsed JSON or null. */
+/**
+ * Runs one prompt through the cascade, returning parsed JSON or null.
+ *
+ * Every call has a timeout, and a model that errors is skipped for the next ten
+ * minutes: with the preview model down, each of the ~10 batches in a run used to
+ * pay for one failed call before reaching the model that works, and a hung call
+ * could hold the whole run until the 300s kill.
+ */
 async function generateJson<T>(prompt: string, label: string): Promise<T | null> {
   const ai = getAIClient();
   if (!ai) return null;
 
-  for (const model of FLASH_MODELS) {
+  for (const model of liveModels()) {
     try {
       const response = await ai.models.generateContent({
         model,
         contents: { parts: [{ text: prompt }] },
-        config: { responseMimeType: "application/json" },
+        config: { responseMimeType: "application/json", abortSignal: AbortSignal.timeout(AI_TEXT_TIMEOUT_MS) },
       });
 
       const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) continue;
-      return JSON.parse(text) as T;
+      const parsed = JSON.parse(text) as T;
+      modelFailedAt.delete(model);
+      return parsed;
     } catch (err: any) {
+      modelFailedAt.set(model, Date.now());
       console.warn(`Model ${model} failed for ${label}: ${err?.message ?? err}`);
     }
   }
@@ -350,13 +377,17 @@ export function validateTitleCorrection(original: string, corrected: string): bo
  * Proofreads Norwegian dish titles using Gemini to fix typos, compound words,
  * and capitalization errors. Conservative validation rejects translations
  * and wholesale rewrites.
+ *
+ * `answered` is every title in a batch the model replied to, whether or not it
+ * changed anything. A reply of `{}` means "these are fine", which is a different
+ * thing from a call that failed, and only the first is worth remembering.
  */
 export async function cleanDishTitles(
   dishes: string[]
-): Promise<Record<string, string>> {
-  if (dishes.length === 0) return {};
-
+): Promise<{ corrections: Record<string, string>; answered: Set<string> }> {
   const result: Record<string, string> = {};
+  const answered = new Set<string>();
+  if (dishes.length === 0) return { corrections: result, answered };
 
   for (const batch of chunk(dishes, BATCH_SIZE)) {
     const prompt = `You are a proofreader for a Norwegian workplace canteen menu. The titles below were scraped from a website and may contain errors.
@@ -390,6 +421,7 @@ If nothing needs fixing, respond with {}`;
 
     if (parsed && typeof parsed === "object") {
       const batchSet = new Set(batch);
+      for (const original of batch) answered.add(original);
       for (const [original, corrected] of Object.entries(parsed)) {
         if (batchSet.has(original) && validateTitleCorrection(original, corrected)) {
           result[original] = corrected.trim();
@@ -398,7 +430,7 @@ If nothing needs fixing, respond with {}`;
     }
   }
 
-  return result;
+  return { corrections: result, answered };
 }
 
 /**
@@ -618,8 +650,6 @@ Return ONLY JSON: {"plating": "..."}`;
 }
 
 export async function generateAIRecipe(dishName: string): Promise<Recipe> {
-  const ai = getAIClient();
-
   const promptText = `You are an expert Scandinavian chef with a touch of culinary wit. Generate a home recipe for: "${dishName}".
 
 Respond entirely in Norwegian (bokmål).
@@ -641,24 +671,8 @@ Return ONLY valid JSON:
 }
 Also include an "itemLocal" field with the Norwegian name for each ingredient.`;
 
-  if (ai) {
-    for (const model of FLASH_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: { parts: [{ text: promptText }] },
-          config: { responseMimeType: "application/json" },
-        });
-
-        const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          return JSON.parse(text) as Recipe;
-        }
-      } catch (err) {
-        console.warn(`Model ${model} failed for recipe generation, trying next model...`);
-      }
-    }
-  }
+  const recipe = await generateJson<Recipe>(promptText, `recipe: ${dishName}`);
+  if (recipe) return recipe;
 
   // Fallback recipe structure
   return {

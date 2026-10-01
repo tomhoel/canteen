@@ -127,11 +127,18 @@ export function isLikelyThemeHeader(text: string): boolean {
 }
 
 /**
- * Splits lines where the kitchen ran two dishes together, e.g. an allergen
- * group immediately followed by the next capitalised dish name.
+ * Splits lines where the kitchen ran two dishes together: an allergen group
+ * immediately followed by the next capitalised dish name, or a lowercase letter
+ * immediately followed by a capitalised word ("Rotgrønnsak i karriGrønnsakssuppe
+ * fra Toscana" is a curry and a soup typed with no space between them).
+ *
+ * The second rule was checked against every dish ever stored (1,156): all 8
+ * matches were real jams and none was a legitimate camel-case name, which is why
+ * it is safe to split on a pure case change. Left joined, the AI proofreader
+ * glued the two into one title and the soup lost its identity.
  */
 export function splitJammedDishes(text: string): string[] {
-  const regex = /(?<=\(\d+(?:[,\s]+\d+)*\)|[\d,]{1,5})(?=[A-ZÆØÅ])/;
+  const regex = /(?<=\(\d+(?:[,\s]+\d+)*\)|[\d,]{1,5})(?=[A-ZÆØÅ])|(?<=[a-zæøåé])(?=[A-ZÆØÅ][a-zæøå])/;
   return text
     .split(regex)
     .map((s) => s.trim())
@@ -297,16 +304,18 @@ export function mergeItems(rawItems: string[]): string[] {
     }, []);
 }
 
+/** A failure another attempt cannot fix: a 4xx other than "timed out" and "slow down". */
+const isPermanent = (status: number) => status >= 400 && status < 500 && status !== 408 && status !== 429;
+
 async function fetchWithRetry(url: string, retries = 2, timeoutMs = 10000): Promise<string> {
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
+      // The timeout covers the headers and the body, and the signal needs no
+      // timer to clear.
       const res = await fetch(url, {
-        signal: controller.signal,
+        signal: AbortSignal.timeout(timeoutMs),
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -314,21 +323,20 @@ async function fetchWithRetry(url: string, retries = 2, timeoutMs = 10000): Prom
         },
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { permanent: isPermanent(res.status) });
       return await res.text();
     } catch (err) {
       lastError = err;
+      // A wrong token will be a 404 on the second try as well: fail now instead
+      // of spending ~1.5s of backoff to learn it again.
+      if ((err as { permanent?: boolean }).permanent) break;
       if (attempt < retries) {
         await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
       }
-    } finally {
-      clearTimeout(timer);
     }
   }
 
-  throw new Error(
-    `Failed after ${retries + 1} attempts: ${(lastError as Error)?.message ?? lastError}`
-  );
+  throw new Error(`Failed after retries: ${(lastError as Error)?.message ?? lastError}`);
 }
 
 /** One `<h1>` heading and the lines that followed it. */
@@ -341,9 +349,10 @@ interface RawSection {
  * Walks the widget markup and groups text lines under their day heading.
  *
  * The markup nests menu text in containers that also repeat their children's
- * text, so a naive walk double-counts every dish. Two guards handle it: skip
- * any element that has child divs (its text is the concatenation of theirs),
- * and skip a first child whose text equals the joined text of its siblings.
+ * text, so a naive walk double-counts every dish. The guard is to skip any
+ * element that has child divs (its text is the concatenation of theirs); on the
+ * real widgets removing it changes the output for two of three canteens. Any
+ * repeated line that still gets through is dropped by the Set in parseSection.
  */
 function extractSections($: cheerio.CheerioAPI): RawSection[] {
   const sections: RawSection[] = [];
@@ -378,17 +387,6 @@ function extractSections($: cheerio.CheerioAPI): RawSection[] {
 
     if (!current) return;
     if ($(el).children("div").length > 0) return;
-
-    const parent = $(el).parent();
-    const siblings = parent.children("div");
-    if (siblings.length > 1 && $(siblings[0]).get(0) === el) {
-      const restText = siblings
-        .slice(1)
-        .map((_i, s) => $(s).text().trim())
-        .get()
-        .join("");
-      if (text.replace(/\s+/g, "") === restText.replace(/\s+/g, "")) return;
-    }
 
     for (const line of text.split("\n").map((l) => l.trim()).filter((l) => l.length > 1)) {
       current.lines.push(...splitJammedDishes(line));

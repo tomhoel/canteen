@@ -62,6 +62,14 @@ interface World {
   declinedShortTitles: Set<string>;
   /** When true the shortening call fails outright: nothing is answered. */
   shortTitleCallFails: boolean;
+  /** Remembered proofreading answers (the title_fixes hash), raw -> fixed. */
+  titleFixes: Map<string, string>;
+  /** Titles put to the proofreader, per call. */
+  titlesAsked: string[][];
+  /** The proofreading call fails: nothing is answered. */
+  proofreadFails: boolean;
+  /** Titles the fake proofreader corrects, raw -> fixed. */
+  titleCorrections: Record<string, string>;
   cacheRows: Map<string, Record<string, any>>;
   redisAvailable: boolean;
   redisWritesFail: boolean;
@@ -122,6 +130,10 @@ function reset(overrides: Partial<World> = {}) {
     longTitles: new Set(),
     declinedShortTitles: new Set(),
     shortTitleCallFails: false,
+    titleFixes: new Map(),
+    titlesAsked: [],
+    proofreadFails: false,
+    titleCorrections: {},
     cacheRows: new Map(),
     redisAvailable: false,
     redisWritesFail: false,
@@ -192,7 +204,13 @@ mock.module("./ai.service.js", {
       }
       return { values, fromModel };
     },
-    cleanDishTitles: async (_dishes: string[]) => ({}),
+    cleanDishTitles: async (dishes: string[]) => {
+      world.titlesAsked.push([...dishes]);
+      if (world.proofreadFails) return { corrections: {}, answered: new Set<string>() };
+      const corrections: Record<string, string> = {};
+      for (const d of dishes) if (world.titleCorrections[d]) corrections[d] = world.titleCorrections[d];
+      return { corrections, answered: new Set(dishes) };
+    },
     // No labels: the run falls back to the name rules, which is what these
     // tests (about ordering of scrape/read/enrich/write) already assume.
     classifyCourses: async (_dishes: string[]) => ({}),
@@ -306,9 +324,18 @@ mock.module("@upstash/redis", {
           }
           return result;
         }
+        if (hashKey === "title_fixes") {
+          const result: Record<string, unknown> = {};
+          for (const f of fields) if (world.titleFixes.has(f)) result[f] = world.titleFixes.get(f);
+          return result;
+        }
         return {};
       }
       async hset(hashKey: string, updates: Record<string, string | unknown>) {
+        if (hashKey === "title_fixes") {
+          for (const [k, v] of Object.entries(updates)) world.titleFixes.set(k, String(v));
+          return Object.keys(updates).length;
+        }
         if (hashKey === "dish_cache") {
           const batch: Record<string, unknown>[] = [];
           for (const [k, v] of Object.entries(updates)) {
@@ -1132,4 +1159,46 @@ test("a board for a canteen the week has never seen is ignored", async () => {
 
   const upsert = world.upserts.find((u) => u.weekId === W_NOW);
   assert.deepEqual(Object.keys(upsert?.payload?.menu_data?.canteens ?? {}), ["Flow"]);
+});
+
+test("a title is proofread once: the second run asks the model about nothing", async () => {
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Tomat suppe", "Kylling med ris"]) }),
+    titleCorrections: { "Tomat suppe": "Tomatsuppe" },
+  });
+
+  await runWeeklyUpdateService();
+  assert.deepEqual(world.titlesAsked[0].sort(), ["Kylling med ris", "Tomat suppe"], "first run asks about both");
+  // The unchanged title is remembered too, as itself.
+  assert.equal(world.titleFixes.get("Tomat suppe"), "Tomatsuppe");
+  assert.equal(world.titleFixes.get("Kylling med ris"), "Kylling med ris");
+
+  // A real second run scrapes the kitchen's raw text again; the fake scraper
+  // would otherwise hand back run 1's already-corrected objects.
+  world.scrape = makeScrape({ Flow: makeCanteen(label(0), ["Tomat suppe", "Kylling med ris"]) });
+  world.titlesAsked = [];
+  await runWeeklyUpdateService();
+  assert.deepEqual(world.titlesAsked.flat(), [], "nothing is put to the model on the second run");
+  const stored = world.rows.get(W_A);
+  const menuData = stored && stored !== "fail" ? (stored.menu_data as unknown as MenuData) : undefined;
+  const dishes = menuData?.canteens.Flow.menu.flatMap((d) => d.no?.items.map((i) => i.dish) ?? []) ?? [];
+  assert.ok(dishes.includes("Tomatsuppe"), "and the remembered fix is still applied");
+  assert.ok(!dishes.includes("Tomat suppe"));
+});
+
+test("a proofreading call that fails is not remembered as 'nothing to fix'", async () => {
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Tomat suppe"]) }),
+    proofreadFails: true,
+    titleCorrections: { "Tomat suppe": "Tomatsuppe" },
+  });
+
+  await runWeeklyUpdateService();
+  assert.equal(world.titleFixes.size, 0, "a failed call must not store an identity answer");
+
+  world.proofreadFails = false;
+  world.titlesAsked = [];
+  await runWeeklyUpdateService();
+  assert.deepEqual(world.titlesAsked.flat(), ["Tomat suppe"], "so the next run asks again");
+  assert.equal(world.titleFixes.get("Tomat suppe"), "Tomatsuppe");
 });

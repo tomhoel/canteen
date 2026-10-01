@@ -110,13 +110,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
   }
 
-  // Images are best-effort: the menu itself is already safely stored, and a
-  // missing plate photo is far less bad than a missing menu.
+  // What the page reads is one static file per week (this run's weeks plus this
+  // week and next, the two the page can ask for). Failure is not fatal: the page
+  // falls back to /api/menu for a week with no file.
+  const publish = (when: string) =>
+    publishStaticMenus([...record.weeksWritten.map((w) => w.weekId), getWeekId(), getWeekIdOffset(1)])
+      .then((weeks) => console.log(`📄 [cron] published ${weeks.join(", ") || "no weeks"} (${when})`))
+      .catch((err) => console.warn(`⚠️ [cron] static menu publish failed (${when}):`, err.message));
+
+  // Publish now, before the slow part. A run killed or hung during the image
+  // work used to leave the pages on yesterday's file while Redis held today's
+  // menu; with this, the menu is live the moment it is stored, and the plates
+  // already in the archive come with it.
+  await publish("menu stored");
+
+  // Images are best-effort: the menu itself is already safely stored and
+  // published, and a missing plate photo is far less bad than a missing menu.
   //
   // The displayed week goes first: if the budget runs out, it must run out on
   // the week nobody is looking at yet.
   let images = null;
   let imageError: string | null = null;
+  let plateDrawn = false;
   try {
     const remainingBudget = () =>
       Math.max(0, MAX_DURATION_MS - (Date.now() - startedAt) - SAFETY_MARGIN_MS);
@@ -125,6 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       budgetMs: remainingBudget(),
       force,
     });
+    plateDrawn = images.generated > 0;
 
     for (const week of record.weeksWritten) {
       if (week.weekId === record.weekId) continue;
@@ -132,6 +148,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         budgetMs: remainingBudget(),
         force,
       });
+      plateDrawn ||= ahead.generated > 0;
       console.log(
         `📸 [cron] ${week.weekId}: ${ahead.reused} reused, ` +
           `${ahead.generated} generated, ${ahead.deferred} deferred.`
@@ -160,17 +177,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
   }
 
-  // Publish what the page reads: one static file per week (this run's weeks,
-  // plus this week and next, which are the two the page can ask for). Built
-  // after the plates are drawn, so the files carry the pictures. Failure is not
-  // fatal: the page falls back to /api/menu for a week with no file.
-  await publishStaticMenus([
-    ...record.weeksWritten.map((w) => w.weekId),
-    getWeekId(),
-    getWeekIdOffset(1),
-  ])
-    .then((weeks) => console.log(`📄 [cron] published ${weeks.join(", ") || "no weeks"}`))
-    .catch((err) => console.warn("⚠️ [cron] static menu publish failed:", err.message));
+  // A plate drawn this run is only in the files once they are built again; if
+  // nothing was drawn, the first publish already carried everything.
+  if (plateDrawn) await publish("plates drawn");
 
   return res.status(200).json({
     status: "success",

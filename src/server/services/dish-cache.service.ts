@@ -189,3 +189,43 @@ export async function saveDishCacheEntries(entries: DishCacheEntry[]): Promise<n
     return 0;
   }
 }
+
+const TITLE_FIXES_KEY = "title_fixes";
+
+/**
+ * Remembered proofreading answers: the title as scraped -> the title to use
+ * (the same text when the model found nothing to fix).
+ *
+ * The updater used to proofread every title on every run, 3 model calls
+ * that mostly changed nothing, and the model is not deterministic: a title it
+ * fixed on one run and left alone on the next got a different dish_cache key, so
+ * the dish was enriched, and sometimes drawn, twice. Asking once and keeping the
+ * answer makes the key stable.
+ *
+ * Fails soft in both directions: an unreadable hash just means those titles are
+ * asked about again.
+ */
+export async function loadTitleFixes(titles: string[]): Promise<Map<string, string>> {
+  const known = new Map<string, string>();
+  const redis = getRedis();
+  if (!redis || titles.length === 0) return known;
+  try {
+    const raw = (await redis.hmget<Record<string, unknown>>(TITLE_FIXES_KEY, ...titles)) ?? {};
+    for (const [title, fixed] of Object.entries(raw)) {
+      if (typeof fixed === "string" && fixed.trim()) known.set(title, fixed);
+    }
+  } catch (err: any) {
+    console.warn(`⚠️  title_fixes read failed: ${err?.message ?? err}`);
+  }
+  return known;
+}
+
+export async function saveTitleFixes(fixes: Record<string, string>): Promise<void> {
+  const redis = getRedis();
+  if (!redis || Object.keys(fixes).length === 0) return;
+  try {
+    await redis.hset(TITLE_FIXES_KEY, fixes);
+  } catch (err: any) {
+    console.warn(`⚠️  title_fixes write failed: ${err?.message ?? err}`);
+  }
+}

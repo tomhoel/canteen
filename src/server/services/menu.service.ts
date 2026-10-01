@@ -35,6 +35,8 @@ import {
 import {
   loadDishCache,
   saveDishCacheEntries,
+  loadTitleFixes,
+  saveTitleFixes,
   normalizeDishName,
   type DishCacheEntry,
 } from "./dish-cache.service.js";
@@ -68,7 +70,8 @@ export function applyTitleCorrections(
   for (const canteen of Object.values(menuData.canteens || {})) {
     for (const dayEntry of canteen.menu || []) {
       for (const item of dayEntry.no?.items || []) {
-        if (item.dish && corrections[item.dish]) {
+        // hasOwn: a dish called "constructor" must not match Object.prototype.
+        if (item.dish && Object.hasOwn(corrections, item.dish) && corrections[item.dish]) {
           item.dish = corrections[item.dish];
           count++;
         }
@@ -379,7 +382,10 @@ function itemsOf(entry: DayEntry | undefined): MenuItem[] {
  * - It never adds a canteen. If the week's row has never heard of a canteen,
  *   a single day's dishes are not enough to introduce it — the card would have
  *   one day of food and four blanks.
-* PLACEHOLDER * - It never mutates in place. The `CanteenData` objects here are shared with
+ * - It never blanks a day. A board with no Norwegian list leaves the weekly
+ *   menu in place, rather than emptying a day the kitchen simply did not fill
+ *   in that morning.
+ * - It never mutates in place. The `CanteenData` objects here are shared with
  *   the raw scrape, which the write loop reuses for every other week in the
  *   run, so an in-place edit for this week would leak into the next one.
  */
@@ -531,7 +537,18 @@ export async function runWeeklyUpdateService(
     ]),
   ];
   try {
-    const titleCorrections = await cleanDishTitles(rawNoDishes);
+    // Only titles never proofread before go to the model; the rest reuse the
+    // stored answer (see loadTitleFixes). Steady state: no call at all.
+    const remembered = await loadTitleFixes(rawNoDishes);
+    const { corrections, answered } = await cleanDishTitles(rawNoDishes.filter((d) => !remembered.has(d)));
+    const learned: Record<string, string> = {};
+    for (const d of answered) learned[d] = corrections[d] ?? d;
+    await saveTitleFixes(learned);
+
+    const titleCorrections: Record<string, string> = {};
+    for (const [raw, fixed] of [...remembered, ...Object.entries(learned)]) {
+      if (fixed !== raw) titleCorrections[raw] = fixed;
+    }
     if (Object.keys(titleCorrections).length > 0) {
       const updatedCount =
         applyTitleCorrections(menuData, titleCorrections) +

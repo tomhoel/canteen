@@ -35,3 +35,17 @@ test("rerankMenu matches labels by trimmed name", () => {
   rerankMenu(data, { "Stekt sei": "meat_plate", Grøt: "veg" });
   assert.equal(data.canteens.Flow.menu[0].no!.items[0].dish, "Stekt sei ");
 });
+
+test("rerankMenu does not edit the scrape's own objects", () => {
+  // The canteen objects are shared with the raw scrape, which the write loop reuses
+  // for every other week in the run; an in-place edit would leak into the next week.
+  const data = week([it("Havregrøt med tomater", true), it("Stekt sei med erter")]);
+  const originalCanteen = data.canteens.Flow;
+  const originalFirst = originalCanteen.menu[0].no!.items[0];
+
+  rerankMenu(data, { "Havregrøt med tomater": "veg", "Stekt sei med erter": "meat_plate" });
+
+  assert.equal(originalCanteen.menu[0].no!.items[0], originalFirst, "the old list is untouched");
+  assert.equal(originalFirst.dish, "Havregrøt med tomater");
+  assert.equal(data.canteens.Flow.menu[0].no!.items[0].dish, "Stekt sei med erter", "the week got the new order");
+});

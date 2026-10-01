@@ -1,11 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { GoogleGenAI } from "@google/genai";
 import { put } from "@vercel/blob";
 import type { MenuData } from "../../lib/types.js";
 import { pickMainDish } from "../../lib/dish-ranking.js";
-import { generatePlatingBrief } from "./ai.service.js";
+import { generatePlatingBrief, getAIClient } from "./ai.service.js";
 import {
   loadDishCache,
   saveDishCacheEntries,
@@ -34,12 +33,6 @@ const MASTER_PLATE_REF_PATH = "reference/master-plate-ref.png";
  * inlineData at all, so every generation silently yields null.
  */
 const IMAGE_MODEL = "gemini-3.1-flash-image-preview";
-
-function getAIClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
-}
 
 export async function removeBgBuffer(inputBuffer: Buffer): Promise<Buffer> {
   const { data, info } = await sharp(inputBuffer)
@@ -408,6 +401,8 @@ outside the plate, NO angled views.`;
       config: {
         responseModalities: ["Text", "Image"],
         imageConfig: { aspectRatio: "1:1" },
+        // A drawing takes tens of seconds; two minutes is a hung call.
+        abortSignal: AbortSignal.timeout(120_000),
       },
     });
 

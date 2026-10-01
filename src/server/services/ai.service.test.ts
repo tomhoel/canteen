@@ -117,3 +117,19 @@ test("applyTitleCorrections - updates matching Norwegian dishes and leaves Engli
   assert.equal(menuData.canteens.Flow.menu[0].no!.items[0].dish, "Pastagrateng med grønnsaker");
   assert.equal(menuData.canteens.Flow.menu[0].no!.items[1].dish, "Klar kyllingsuppe");
 });
+
+test("applyTitleCorrections - a dish named like an Object.prototype key is not 'corrected'", () => {
+  const menuData = {
+    scrapedAt: "",
+    canteens: {
+      Flow: {
+        week: "40",
+        openingHours: "",
+        menu: [{ day: "Monday", no: { label: "MANDAG", items: [{ dish: "constructor", isMain: true, allergens: [] }] } }],
+      },
+    },
+  } as unknown as MenuData;
+
+  assert.equal(applyTitleCorrections(menuData, { Tomat: "Tomatsuppe" }), 0);
+  assert.equal(menuData.canteens.Flow.menu[0].no!.items[0].dish, "constructor");
+});
