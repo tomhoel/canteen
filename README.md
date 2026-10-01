@@ -256,5 +256,9 @@ menu file returned 403 and no second store could be created. Supabase Storage
 (project `canteen`, buckets `images_nobg`, `menu-response`, `images`) has no
 write cap on the free plan, and 1 GB / 5 GB egress is far above what this uses.
 Writes need `SUPABASE_SERVICE_ROLE_KEY`; reads are public URLs
-(`src/lib/storage-url.ts`). A free project pauses after a week of no
-activity, which the 11 cron runs a week prevent.
+(`src/lib/storage-url.ts`). A free project is paused after a week of low
+*database* activity (storage requests do not count), so every cron run writes one
+row to the `keepalive` table (`keepProjectAlive`). The free plan's real limits here
+are 1 GB of storage and 5 GB + 5 GB of bandwidth a month; this uses about 80 MB and
+well under 1 GB, and a steady-state update run takes about 2 seconds with no
+Gemini calls.

@@ -58,3 +58,29 @@ export async function objectExists(bucket: string, path: string): Promise<boolea
     return null;
   }
 }
+
+/**
+ * A tiny database write, so the Supabase project is not paused.
+ *
+ * Free-plan projects are paused after a week of low *database* activity, and this
+ * one otherwise uses Storage only: left alone it would pause, and every plate and
+ * menu file with it (restorable for 90 days, but an outage). The updater calls
+ * this on each run, 11 times a week. A no-op without the service key.
+ */
+export async function keepProjectAlive(): Promise<void> {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return;
+
+  const res = await fetch(`${new URL(STORAGE_BASE_URL).origin}/rest/v1/keepalive?on_conflict=id`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${key}`,
+      apikey: key,
+      "content-type": "application/json",
+      prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify({ id: 1, seen_at: new Date().toISOString() }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) throw new Error(`keep-alive write failed: HTTP ${res.status}`);
+}

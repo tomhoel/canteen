@@ -6,6 +6,7 @@ import {
 import { processAllCanteenAIImages } from "../../src/server/services/image.service.js";
 import { sendCronAlert } from "../../src/server/notify.js";
 import { publishStaticMenus } from "../../src/server/services/menu-publish.service.js";
+import { keepProjectAlive } from "../../src/server/services/storage.service.js";
 import { getWeekId, getWeekIdOffset } from "../../src/lib/dateUtils.js";
 
 /**
@@ -67,6 +68,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const force = req.query?.force === "1" || req.query?.force === "true";
 
   console.log(`🚀 [cron] Weekly menu update starting${force ? " (force)" : ""}...`);
+  // One tiny database write per run keeps the free Supabase project from being paused.
+  await keepProjectAlive().catch((err) => console.warn("⚠️ [cron] keep-alive failed:", err.message));
 
   let record;
   try {
