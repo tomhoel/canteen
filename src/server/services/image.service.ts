@@ -285,9 +285,6 @@ export async function uploadToStorage(
   }
 }
 
-// Keep alias for backwards compatibility
-export const uploadToSupabase = uploadToStorage;
-
 export async function copyInStorageBucket(
   bucket: string,
   srcPath: string,
@@ -311,9 +308,6 @@ export async function copyInStorageBucket(
   }
 }
 
-// Keep alias for backwards compatibility
-export const copyInSupabaseBucket = copyInStorageBucket;
-
 let cachedPlateRef: string | undefined;
 export async function getMasterPlateRef(): Promise<string | null> {
   if (cachedPlateRef !== undefined) return cachedPlateRef;
@@ -321,7 +315,6 @@ export async function getMasterPlateRef(): Promise<string | null> {
   // 1. Try local disk first (instant, free, works offline)
   const localCandidates = [
     path.join(process.cwd(), "assets", "source-images", "master-plate-ref.png"),
-    path.join(process.cwd(), "backups", "supabase", "buckets", "images", "reference", "master-plate-ref.png"),
   ];
 
   for (const p of localCandidates) {
@@ -606,7 +599,7 @@ export async function processAllCanteenAIImages(
     if (!force) {
       if (writeSlots) {
         const source = knownPath ?? job.archivePath;
-        const copied = await copyInSupabaseBucket("images_nobg", source, job.slotPath);
+        const copied = await copyInStorageBucket("images_nobg", source, job.slotPath);
         if (copied) {
           result.reused++;
           if (!knownPath) newlyDrawn.push({ dish: job.dish, archivePath: source });
@@ -689,7 +682,7 @@ export async function processAllCanteenAIImages(
     // a server-side copy fails, and it would then relabel a legacy PNG body as
     // WebP. The bytes are what matter — Supabase serves the stored contentType
     // and imgproxy sniffs the body — but a wrong label is a lie that outlives us.
-    const archiveOk = await uploadToSupabase(
+    const archiveOk = await uploadToStorage(
       "images_nobg",
       job.archivePath,
       transparentBuffer,
@@ -702,7 +695,7 @@ export async function processAllCanteenAIImages(
 
     if (writeSlots) {
       for (const mJob of matchingJobs) {
-        await uploadToSupabase("images_nobg", mJob.slotPath, transparentBuffer, "image/webp");
+        await uploadToStorage("images_nobg", mJob.slotPath, transparentBuffer, "image/webp");
       }
     }
 

@@ -6,7 +6,7 @@ import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCl
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
 import { Share2 } from "lucide-react";
-import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getSupabaseImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
+import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import {
   getLocalDateKey,
@@ -436,7 +436,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     CANTEEN_ORDER.forEach(name => {
       const plateImage = plateImages[`${dk}|${name}`];
       if (!plateImage) return;
-      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth });
+      const src = getImageUrl("images_nobg", plateImage, { width: plateWidth });
 
       if (preloadedRef.current.has(src)) return;
       preloadedRef.current.add(src);
@@ -515,7 +515,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const imagePath = isClosed
           ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: plateWidth })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth })
+            ? getImageUrl("images_nobg", plateImage, { width: plateWidth })
             : "";
         // The lightbox asks for 1080, which is past the thumb cut-off, so it gets
         // the full 1024px plate: WebP with alpha, so the cut-out still sits on
@@ -523,7 +523,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const highResImagePath = isClosed
           ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 1080 })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 1080 })
+            ? getImageUrl("images_nobg", plateImage, { width: 1080 })
             : "";
         // CanteenDayItem models "no usable week label" as undefined, not null.
         const canteenWeekNum = parseCanteenWeekNumber(canteen.week) ?? undefined;

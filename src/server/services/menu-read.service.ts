@@ -7,8 +7,6 @@ import { getWeekId } from "../../lib/dateUtils.js";
  * Backed by Upstash Redis: reads `menu:<weekId>` directly.
  */
 
-export const MENU_CACHE_TTL_SECONDS = 60 * 60;
-
 export async function getWeeklyMenuService(weekId?: string): Promise<WeeklyMenuRecord | null> {
   const targetWeekId = weekId || getWeekId();
   const redis = getRedis();

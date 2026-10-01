@@ -115,10 +115,6 @@
   margin-bottom: 16px;
 }
 
-.deals-ingredient-group:first-of-type .deals-ingredient-title {
-  border-top: none;
-  padding-top: 0;
-}
 
 /* ─── Deals Carousel ─── */
 .deals-carousel {
@@ -199,9 +195,6 @@
   color: var(--accent-orange);
 }
 
-.deals-card:hover .deals-card-flyer-link {
-  opacity: 1;
-}
 
 /* ─── Campaign Cards ─── */
 

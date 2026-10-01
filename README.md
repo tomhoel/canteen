@@ -205,10 +205,9 @@ invocation.
 
 ## Data
 
-Everything lives in Upstash Redis and Vercel Blob. There is no SQL database:
-Supabase was the original store, was migrated away from, and nothing at runtime
-reads it any more. `supabase/schema.sql` and the `migrate-*`/`backup-supabase`
-scripts are kept as the record of that schema and move.
+Everything lives in Upstash Redis and Vercel Blob. There is no SQL database
+(the app started on Supabase; that setup and its scripts were removed, and are
+in git history if ever needed).
 
 | Key / path | Contents |
 | --- | --- |

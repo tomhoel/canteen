@@ -322,7 +322,7 @@ export const BLOB_BASE_URL =
 
 /**
  * Width a card plate is asked for, by tier. Blob does not resize on request, so
- * the number only selects the pre-made 512px thumb (see getSupabaseImageUrl);
+ * the number only selects the pre-made 512px thumb (see getImageUrl);
  * the tiers stay separate because HomeClient also keys its preload cache on it.
  */
 export const PLATE_CARD_WIDTH = { mobile: 340, desktop: 640 } as const;
@@ -335,7 +335,7 @@ export const PLATE_CARD_WIDTH = { mobile: 340, desktop: 640 } as const;
  * a card-sized `width` (<= PLATE_CARD_WIDTH.desktop) in `images_nobg` maps to
  * `images_nobg/thumb/<path>`; anything larger, or no width, is the full plate.
  */
-export function getSupabaseImageUrl(
+export function getImageUrl(
   bucket: string,
   path: string,
   options?: { width?: number }
@@ -351,8 +351,6 @@ export function getSupabaseImageUrl(
   return `${BLOB_BASE_URL}/${bucket}/${encodedPath}`;
 }
 
-export const getImageUrl = getSupabaseImageUrl;
-
 /**
  * Closed canteens render one of 3 cutlery-and-napkin designs hosted at
  * `images_nobg/closed-plates/`. The variant is picked deterministically
@@ -362,5 +360,5 @@ export function getClosedPlateUrl(seed: string, options?: { width?: number }) {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash + seed.charCodeAt(i)) | 0;
   const variant = (Math.abs(hash) % 3) + 1;
-  return getSupabaseImageUrl('images_nobg', `closed-plates/closed-plate-${variant}.png`, options);
+  return getImageUrl('images_nobg', `closed-plates/closed-plate-${variant}.png`, options);
 }

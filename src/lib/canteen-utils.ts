@@ -1,10 +1,5 @@
 import type { CanteenDayItem, MenuItem } from "@/lib/types";
-import { rankItems, scoreMainDish } from "@/lib/dish-ranking";
-
-// Ranking lives in dish-ranking.ts so the client, the scraper and the updater
-// cannot disagree about which dish is the main one. Re-exported here to keep
-// this module's existing public surface unchanged for its callers.
-export { scoreMainDish };
+import { rankItems } from "@/lib/dish-ranking";
 
 const CLOSED_KEYWORDS = ["stengt", "closed", "lukket"];
 

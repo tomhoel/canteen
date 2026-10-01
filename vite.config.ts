@@ -1,8 +1,3 @@
-import WebSocket from "ws";
-if (!globalThis.WebSocket) {
-  (globalThis as any).WebSocket = WebSocket;
-}
-
 import { defineConfig, loadEnv, type Connect, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";

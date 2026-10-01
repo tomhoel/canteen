@@ -374,14 +374,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Language Switcher */
-
-.lang-btn.active {
-  background: var(--accent-orange);
-  color: white;
-  transform: scale(1.08);
-  box-shadow: 0 3px 16px rgba(200, 116, 26, 0.55);
-}
 
 /* ─── Hero (inline with header) ─── */
 .hero-inline {
@@ -850,9 +842,6 @@ body {
   z-index: 10;
 }
 
-.closed-pill-mobile {
-  display: none;
-}
 
 /* Mobile: header pill and in-cards pill hidden (space dedicated to cards) */
 @media (max-width: 768px) {
@@ -860,9 +849,6 @@ body {
     display: none;
   }
 
-  .closed-pill-mobile {
-    display: none;
-  }
 
   .closed-pill-tooltip {
     display: none;
@@ -1236,9 +1222,6 @@ body {
     will-change: transform;
   }
 
-  .food-card-3d-wrapper.card-returning .card-image-circle {
-    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-  }
 
   .food-card-3d-wrapper:hover .card-image-circle {
     transform:
@@ -1694,20 +1677,12 @@ body {
   line-height: 1.3;
 }
 
-/* ─── Allergen Section ─── */
-
-.allergen-toggle-arrow.open {
-  transform: rotate(180deg);
-}
 
 @keyframes panelReveal {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.allergen-panel .allergen-item {
-  animation: chipPop 0.3s var(--spring) both;
-}
 
 .allergen-item {
   display: flex;
@@ -3369,12 +3344,6 @@ body {
   }
 }
 
-/* ─── #7 Vote Progress Bar ─── */
-
-.vote-progress-fill.leader {
-  background: linear-gradient(90deg, var(--accent-yellow), var(--accent-orange));
-  opacity: 0.8;
-}
 
 /* ─── #6 Lightbox Navigation ─── */
 .lightbox-nav {

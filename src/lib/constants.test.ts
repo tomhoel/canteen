@@ -1,22 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getSupabaseImageUrl, getClosedPlateUrl, getCanteenMetadata } from "./constants";
+import { getImageUrl, getClosedPlateUrl, getCanteenMetadata } from "./constants";
 
 /**
  * These assertions look pedantic and are not. Every one of them corresponds to
  * a way this URL has silently returned the wrong bytes with a 200 status.
  */
 
-test("getSupabaseImageUrl - an untransformed request goes to the blob object path", () => {
-  const url = getSupabaseImageUrl("images_nobg", "monday/flow.png");
+test("getImageUrl - an untransformed request goes to the blob object path", () => {
+  const url = getImageUrl("images_nobg", "monday/flow.png");
   assert.ok(url.endsWith("/images_nobg/monday/flow.png"));
   assert.ok(!url.includes("?"), "no query string when nothing was asked for");
 });
 
-test("getSupabaseImageUrl - card widths get the thumb, the lightbox width the full plate", () => {
-  assert.ok(getSupabaseImageUrl("images_nobg", "archive/a b.png", { width: 340 }).endsWith("/images_nobg/thumb/archive/a%20b.png"));
-  assert.ok(getSupabaseImageUrl("images_nobg", "archive/a b.png", { width: 640 }).includes("/images_nobg/thumb/"));
-  assert.ok(!getSupabaseImageUrl("images_nobg", "archive/a b.png", { width: 1080 }).includes("/thumb/"));
+test("getImageUrl - card widths get the thumb, the lightbox width the full plate", () => {
+  assert.ok(getImageUrl("images_nobg", "archive/a b.png", { width: 340 }).endsWith("/images_nobg/thumb/archive/a%20b.png"));
+  assert.ok(getImageUrl("images_nobg", "archive/a b.png", { width: 640 }).includes("/images_nobg/thumb/"));
+  assert.ok(!getImageUrl("images_nobg", "archive/a b.png", { width: 1080 }).includes("/thumb/"));
 });
 
 test("getClosedPlateUrl - picks one of three plates, stably, per seed", () => {
@@ -34,18 +34,18 @@ test("getClosedPlateUrl - picks one of three plates, stably, per seed", () => {
   assert.ok(variants.size > 1, "a whole week of closed canteens should not be one image");
 });
 
-test("getSupabaseImageUrl - percent-encodes each path segment, but not the slashes", () => {
+test("getImageUrl - percent-encodes each path segment, but not the slashes", () => {
   // Paths are dish names now: "archive/spanish pork casserole with potatoes.png"
   // is a real object. A raw space happens to survive because browsers encode it,
   // but a "?" would swallow the rest of the path into the query string.
-  const url = getSupabaseImageUrl("images_nobg", "archive/spanish pork casserole.png");
+  const url = getImageUrl("images_nobg", "archive/spanish pork casserole.png");
   assert.ok(url.includes("/images_nobg/archive/spanish%20pork%20casserole.png"));
   assert.ok(!url.includes("archive%2F"), "the separator must stay a separator");
 });
 
-test("getSupabaseImageUrl - a plain slot path is untouched by the encoding", () => {
+test("getImageUrl - a plain slot path is untouched by the encoding", () => {
   assert.ok(
-    getSupabaseImageUrl("images_nobg", "monday/flow.png").endsWith("/images_nobg/monday/flow.png")
+    getImageUrl("images_nobg", "monday/flow.png").endsWith("/images_nobg/monday/flow.png")
   );
 });
 
