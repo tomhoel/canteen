@@ -11,8 +11,8 @@ Production: <https://fbueat.vercel.app>
 ## The one rule
 
 **A page view never scrapes anything.** The canteens are scraped, enriched and
-photographed twice a day by a cron job that writes to Upstash Redis and Vercel
-Blob; the app only ever reads what is already stored.
+photographed twice a day by a cron job that writes to Upstash Redis and Supabase
+Storage; the app only ever reads what is already stored.
 
 This is worth stating first because the app broke this rule once and it was
 invisible: `src/server/*` was imported straight into components, and since the
@@ -38,7 +38,7 @@ Everything server-side now sits behind `/api`.
                         │
           ┌─────────────┴──────────────┐
           ▼                            ▼
-   Upstash Redis                Vercel Blob
+   Upstash Redis                Supabase Storage
    menu:<week>, dish_cache      plates (+ 512px thumbs),
    attendance:<date>            menu-response/<week>.json
           │                            │
@@ -63,7 +63,7 @@ that hangs in the canteen — which is HTML meant for a TV, not an API. Most of
 | App | React 19 + Vite, TanStack Query, plain CSS |
 | Server | Vercel Functions under `api/`, thin wrappers over `src/server/*` |
 | Data | Upstash Redis: stored weeks, `dish_cache`, attendance, response caches |
-| Images | Vercel Blob, generated with Gemini and background-removed; each plate has a 512px thumb under `images_nobg/thumb/` |
+| Images | Supabase Storage, generated with Gemini and background-removed; each plate has a 512px thumb under `images_nobg/thumb/` |
 | Schedule | Vercel Cron (`vercel.json`) |
 
 It is a PWA: `public/manifest.json` plus the iOS meta tags in `index.html`, and
@@ -100,7 +100,7 @@ loads the same handler modules through Vite's SSR pipeline and adapts Node's
 req/res to the slice of the Vercel signature they use, so endpoint edits
 hot-reload and no `vercel dev` is needed.
 
-The client itself needs no environment: the Blob base URL has a hardcoded
+The client itself needs no environment: the storage base URL has a hardcoded
 fallback in `src/lib/constants.ts`, which is why the client build works with
 nothing set. The functions are what read `.env`.
 
@@ -116,8 +116,8 @@ npm run update -- --week 2026-W34 # a specific week
 `--force` costs real money — it regenerates every plate. `--week` writes to the
 week you name, so a typo overwrites a real one.
 
-This writes to the same Redis and Blob the deployed app reads, so it needs
-`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, `BLOB_READ_WRITE_TOKEN`
+This writes to the same Redis and storage the deployed app reads, so it needs
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`
 and `GEMINI_API_KEY` in `.env`.
 
 ## Commands
@@ -205,7 +205,7 @@ invocation.
 
 ## Data
 
-Everything lives in Upstash Redis and Vercel Blob. There is no SQL database
+Everything lives in Upstash Redis and Supabase Storage. There is no SQL database
 (the app started on Supabase; that setup and its scripts were removed, and are
 in git history if ever needed).
 
@@ -214,8 +214,8 @@ in git history if ever needed).
 | `menu:<week>` / `menu:weeks` | One record per ISO week (`2026-W34`) and the sorted index of weeks |
 | `dish_cache` (hash) | One entry per distinct dish: origin, description, short title, course label, plate path |
 | `attendance:<date>` | Votes per canteen per day |
-| Blob `images_nobg/archive/*` | Plates, addressed by dish; `images_nobg/thumb/*` holds the 512px card thumbs |
-| Blob `menu-response/<week>.json` | The finished menu response for one week, rewritten by every cron run |
+| Storage `images_nobg/archive/*` | Plates, addressed by dish; `images_nobg/thumb/*` holds the 512px card thumbs |
+| Storage `menu-response/<week>.json` | The finished menu response for one week, rewritten by every cron run |
 
 `dish_cache` is what keeps the twice-daily cron from re-billing the model for
 dishes it has already seen: a dish means the same thing in every week it
@@ -246,3 +246,15 @@ each one says so in that file.
 A green build is not evidence that anything runs. The functions, the cron and
 the data are all separately capable of being broken behind a successful
 deployment — check the endpoint, the runtime log and the stored row.
+
+## Why Supabase Storage and not Vercel Blob
+
+The files lived in Vercel Blob until 2026-10-01. On the free plan every upload
+counts against a monthly allowance of 2,000 *account-wide*, and going over
+suspends the store for the rest of the month, reads included: every plate and
+menu file returned 403 and no second store could be created. Supabase Storage
+(project `canteen`, buckets `images_nobg`, `menu-response`, `images`) has no
+write cap on the free plan, and 1 GB / 5 GB egress is far above what this uses.
+Writes need `SUPABASE_SERVICE_ROLE_KEY`; reads are public URLs
+(`src/lib/storage-url.ts`). A free project pauses after a week of no
+activity, which the 11 cron runs a week prevent.

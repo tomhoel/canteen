@@ -1,3 +1,4 @@
+import { STORAGE_BASE_URL } from './storage-url';
 export const DAYS_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
 export const FULL_DAYS_NO = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag"];
 export const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -298,23 +299,17 @@ export function getCanteenMetadata(rawName?: string): CanteenLocationInfo {
   };
 }
 
-export const DEFAULT_BLOB_BASE_URL = 'https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com';
-
-export const BLOB_BASE_URL =
-  process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
-  DEFAULT_BLOB_BASE_URL;
-
 /**
- * Width a card plate is asked for, by tier. Blob does not resize on request, so
+ * Width a card plate is asked for, by tier. Storage does not resize on request, so
  * the number only selects the pre-made 512px thumb (see getImageUrl);
  * the tiers stay separate because HomeClient also keys its preload cache on it.
  */
 export const PLATE_CARD_WIDTH = { mobile: 340, desktop: 640 } as const;
 
 /**
- * URL of a stored image. The name is historical: the store is Vercel Blob.
+ * URL of a stored image (Supabase Storage; see storage-url.ts).
  *
- * Blob serves the object as written and ignores transforms, so the only
+ * Storage serves the object as written and ignores transforms, so the only
  * "resize" on offer is the thumb the updater writes beside every plate:
  * a card-sized `width` (<= PLATE_CARD_WIDTH.desktop) in `images_nobg` maps to
  * `images_nobg/thumb/<path>`; anything larger, or no width, is the full plate.
@@ -329,10 +324,10 @@ export function getImageUrl(
   const encodedPath = path.split("/").map(encodeURIComponent).join("/");
 
   if (bucket === 'images_nobg' && options?.width && options.width <= PLATE_CARD_WIDTH.desktop) {
-    return `${BLOB_BASE_URL}/${bucket}/thumb/${encodedPath}`;
+    return `${STORAGE_BASE_URL}/${bucket}/thumb/${encodedPath}`;
   }
 
-  return `${BLOB_BASE_URL}/${bucket}/${encodedPath}`;
+  return `${STORAGE_BASE_URL}/${bucket}/${encodedPath}`;
 }
 
 /**

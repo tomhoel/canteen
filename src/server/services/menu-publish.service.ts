@@ -1,16 +1,13 @@
 import { createHash } from "node:crypto";
-import { put } from "@vercel/blob";
 import { getWeeklyMenu } from "../menu.js";
 import { getRedis } from "./redis.service.js";
+import { putObject } from "./storage.service.js";
 
 /** Redis hash: week id -> hash of the file last written for it. */
 const HASH_KEY = "static_menu_hash";
 
-/** Where a week's published response lives; index.html builds the same path. */
-export const staticMenuPath = (weekId: string) => `menu-response/${weekId}.json`;
-
 /**
- * Writes the finished `/api/menu` response for each given week to Blob, one
+ * Writes the finished `/api/menu` response for each given week to storage, one
  * static file per week.
  *
  * The page reads these instead of calling the function: a file has no cold
@@ -20,7 +17,7 @@ export const staticMenuPath = (weekId: string) => `menu-response/${weekId}.json`
  * canteens yet (a kitchen that has not published ahead), gets no file, and the
  * page falls back to /api/menu for it.
  *
- * 60s is Blob's minimum edge TTL, so a new menu lags the cron by at most that.
+ * Cached for 60s, so a new menu lags the cron by at most that.
  *
  * A file whose content has not changed is not written again (its hash is kept in
  * Redis): the cron runs 11 times a week and the menu changes a handful of times,
@@ -30,9 +27,6 @@ export const staticMenuPath = (weekId: string) => `menu-response/${weekId}.json`
  * Returns the weeks it wrote.
  */
 export async function publishStaticMenus(weekIds: Iterable<string>): Promise<string[]> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set");
-
   const published: string[] = [];
   for (const weekId of new Set(weekIds)) {
     let menu;
@@ -50,14 +44,8 @@ export async function publishStaticMenus(weekIds: Iterable<string>): Promise<str
     const redis = getRedis();
     if (redis && (await redis.hget<string>(HASH_KEY, weekId).catch(() => null)) === hash) continue;
 
-    await put(staticMenuPath(weekId), body, {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-      cacheControlMaxAge: 60,
-      token,
-    });
+    // Bucket "menu-response", object "<week>.json"; index.html builds the same URL.
+    await putObject("menu-response", `${weekId}.json`, body, "application/json", 60);
     await redis?.hset(HASH_KEY, { [weekId]: hash }).catch(() => undefined);
     published.push(weekId);
   }

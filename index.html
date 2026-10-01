@@ -78,10 +78,10 @@
          waiting for the CSSOM (and therefore this very <style>) to be built
          first the way a plain @font-face reference would. -->
     <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <!-- Preconnect to Vercel Blob Storage for plate images -->
-    <link rel="preconnect" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" />
-    <link rel="dns-prefetch" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" />
-    <link rel="preconnect" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" crossorigin />
+    <!-- Preconnect to the image and menu-file storage -->
+    <link rel="preconnect" href="__STORAGE_ORIGIN__" />
+    <link rel="dns-prefetch" href="__STORAGE_ORIGIN__" />
+    <link rel="preconnect" href="__STORAGE_ORIGIN__" crossorigin />
 
     <!-- Starts the menu request in parallel with the JS bundle, so the app has
          its data before React has finished booting. api-client picks the result
@@ -202,7 +202,7 @@
             if (i >= candidates.length) return Promise.resolve(null);
             var week = candidates[i];
             return getJson(
-              "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com/menu-response/" + week + ".json"
+              "__STORAGE_BASE__/menu-response/" + week + ".json"
             )
               .then(function (data) {
                 return hasMenu(data) ? data : getJson("/api/menu?week=" + week);
@@ -230,7 +230,7 @@
                     link.rel = "preload";
                     link.as = "image";
                     link.href =
-                      "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com/images_nobg/thumb/" +
+                      "__STORAGE_BASE__/images_nobg/thumb/" +
                       enc;
                     if (first) {
                       link.fetchPriority = "high";

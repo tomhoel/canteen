@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const menu = await getWeeklyMenu(queryParam(req, "week"));
 
     // This is the fallback path: the page reads the per-week files the updater
-    // publishes to Blob (menu-response/<week>.json) and only comes here when one
+    // publishes to storage (menu-response/<week>.json) and only comes here when one
     // is missing, or for a ?week= it has no file for. Short caching, so a fresh
     // update is never hidden behind a CDN copy for long.
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");

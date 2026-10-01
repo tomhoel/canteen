@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { put } from "@vercel/blob";
 import type { MenuData } from "../../lib/types.js";
 import { pickMainDish } from "../../lib/dish-ranking.js";
 import { generatePlatingBrief, getAIClient } from "./ai.service.js";
+import { putObject, objectExists, publicUrl } from "./storage.service.js";
 import {
   loadDishCache,
   saveDishCacheEntries,
@@ -230,88 +230,53 @@ export function makePlateThumb(plate: Buffer): Promise<Buffer> {
   return sharp(plate).resize(512).webp({ quality: 78, alphaQuality: 85 }).toBuffer();
 }
 
+/** Plates never change once drawn, so browsers and the CDN may keep them a month. */
+const PLATE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+
 export async function uploadToStorage(
   bucket: string,
   filePath: string,
   buffer: Buffer,
   contentType = "image/webp"
 ): Promise<boolean> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    console.warn(`⚠️  BLOB_READ_WRITE_TOKEN is not set — cannot upload ${bucket}/${filePath}`);
-    return false;
-  }
-  const blobPath = `${bucket}/${filePath}`;
   try {
-    // allowOverwrite: @vercel/blob refuses to replace an existing object
-    // without it, so a forced redraw of an archived plate would be rejected
-    // after the model had already been paid for.
-    await put(blobPath, buffer, {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType,
-      token,
-    });
+    await putObject(bucket, filePath, buffer, contentType, PLATE_MAX_AGE_SECONDS);
     // Cards show a 512px thumb at images_nobg/thumb/<path>; every plate write
-    // lands here, so this is the one place that keeps them in step. Best effort: a missing thumb only costs a retry
-    // on the next write, the full plate above is already stored.
+    // lands here, so this is the one place that keeps them in step. Best effort:
+    // a missing thumb only costs a retry on the next write, the full plate above
+    // is already stored.
     if (bucket === "images_nobg" && !filePath.startsWith("thumb/") && contentType === "image/webp") {
       try {
-        await put(`${bucket}/thumb/${filePath}`, await makePlateThumb(buffer), {
-          access: "public",
-          addRandomSuffix: false,
-          allowOverwrite: true,
-          contentType,
-          token,
-        });
+        await putObject(bucket, `thumb/${filePath}`, await makePlateThumb(buffer), contentType, PLATE_MAX_AGE_SECONDS);
       } catch (err: any) {
-        console.error(`⚠️  Thumb upload failed (${blobPath}): ${err?.message ?? err}`);
+        console.error(`⚠️  Thumb upload failed (${bucket}/${filePath}): ${err?.message ?? err}`);
       }
     }
     return true;
   } catch (err: any) {
-    console.error(`❌ Blob upload failed (${blobPath}): ${err?.message ?? err}`);
+    console.error(`❌ Storage upload failed (${bucket}/${filePath}): ${err?.message ?? err}`);
     return false;
   }
 }
 
 /**
  * Whether a plate is already in the archive, so it is reused rather than redrawn.
- *
- * Only a 404 means "no": any other answer (a 403 from a suspended store, a 5xx,
- * a network error) is "cannot tell", and the caller must not treat that as
- * permission to pay for a drawing it then cannot upload. Returns null for it.
+ * Null means "cannot tell" (see objectExists), and the caller must not draw on it.
  */
-async function archiveExists(archivePath: string): Promise<boolean | null> {
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
-      process.env.BLOB_BASE_URL ||
-      "https://public.blob.vercel-storage.com";
-    const encoded = archivePath.split("/").map(encodeURIComponent).join("/");
-    const res = await fetch(`${baseUrl}/images_nobg/${encoded}`, { method: "HEAD" });
-    if (res.ok) return true;
-    return res.status === 404 ? false : null;
-  } catch {
-    return null;
-  }
-}
+const archiveExists = (archivePath: string) => objectExists("images_nobg", archivePath);
 
 /**
  * Whether a plate can be stored right now. A tiny write, made only when there is
- * something to draw: on 2026-10-01 the Blob store was suspended (free-plan limit),
+ * something to draw: on 2026-10-01 the storage was suspended (free-plan limit),
  * every upload failed, and each run would have paid Gemini for plates it then
  * threw away. Cheaper to find out before the first drawing than after.
  */
 async function canStorePlates(): Promise<boolean> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) return false;
   try {
-    await put("images_nobg/.probe", "ok", { access: "public", addRandomSuffix: false, allowOverwrite: true, token });
+    await putObject("images_nobg", ".probe", "ok", "image/webp", 60);
     return true;
   } catch (err: any) {
-    console.error(`❌ Blob is not accepting writes (${err?.message ?? err}) — not drawing plates this run.`);
+    console.error(`❌ Storage is not accepting writes (${err?.message ?? err}) — not drawing plates this run.`);
     return false;
   }
 }
@@ -341,13 +306,9 @@ export async function getMasterPlateRef(): Promise<string | null> {
     }
   }
 
-  // 2. Try fetching from Blob if deployed
+  // 2. Try fetching from storage if deployed
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
-      process.env.BLOB_BASE_URL ||
-      "https://public.blob.vercel-storage.com";
-    const res = await fetch(`${baseUrl}/images/${MASTER_PLATE_REF_PATH}`);
+    const res = await fetch(publicUrl("images", MASTER_PLATE_REF_PATH));
     if (res.ok) {
       const resized = await sharp(Buffer.from(await res.arrayBuffer()))
         .resize(512, 512, { fit: "contain" })
@@ -357,7 +318,7 @@ export async function getMasterPlateRef(): Promise<string | null> {
       return cachedPlateRef;
     }
   } catch {
-    // Blob fetch failed, proceed to warning
+    // Storage fetch failed, proceed to warning
   }
 
   console.warn(

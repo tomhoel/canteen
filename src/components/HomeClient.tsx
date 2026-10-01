@@ -266,7 +266,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   useEffect(() => {
     cleanupLocalStorage();
     // Menu, origins, descriptions arrive as props from the server component
-    // (loaded directly from Blob). No fetch waterfall on initial paint.
+    // (loaded directly from storage). No fetch waterfall on initial paint.
     setMounted(true);
   }, []);
 
@@ -483,7 +483,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const sideDishes = items.filter(i => !i.isMain && i.dish.trim()).slice(0, 3);
         const mainAllergens = mainDish?.allergens || [];
         // Closed canteens point at one of 3 static cutlery-and-napkin plates
-        // hosted in Blob. We don't generate dish images for closed days.
+        // hosted in storage. We don't generate dish images for closed days.
         const isClosed = !mainDish || ["stengt", "closed", "lukket"].some(kw => mainDish.dish.toLowerCase().includes(kw));
 
         // The server resolves which stored plate belongs to this card; an absent

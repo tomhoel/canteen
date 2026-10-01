@@ -12,7 +12,7 @@
  *   npm run update -- --week 2026-W34
  *
  * Requires GEMINI_API_KEY, UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
- * and BLOB_READ_WRITE_TOKEN in the environment.
+ * and SUPABASE_SERVICE_ROLE_KEY in the environment.
  *
  * The npm script loads .env with node's --env-file-if-exists. tsx does *not*
  * read .env on its own, whatever this comment used to claim: `tsx smart-update.js`

@@ -1,10 +1,29 @@
 import { defineConfig, loadEnv, type Connect, type Plugin } from "vite";
+import { DEFAULT_STORAGE_BASE_URL } from "./src/lib/storage-url";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import type { ServerResponse } from "node:http";
+
+/**
+ * Fills the storage placeholders in index.html.
+ *
+ * The head script and the preconnect hints need the storage address before any
+ * JavaScript bundle exists, and an inline script cannot import it, so the one
+ * definition (src/lib/storage-url.ts) is substituted into the markup here, in
+ * dev and in the build alike.
+ */
+function storagePlaceholders(): Plugin {
+  return {
+    name: "canteen-storage-placeholders",
+    transformIndexHtml(html) {
+      const base = process.env.NEXT_PUBLIC_STORAGE_BASE_URL || DEFAULT_STORAGE_BASE_URL;
+      return html.replaceAll("__STORAGE_BASE__", base).replaceAll("__STORAGE_ORIGIN__", new URL(base).origin);
+    },
+  };
+}
 
 /**
  * Shortens the production critical path, all inside index.html.
@@ -325,11 +344,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     define: {
-      "process.env.NEXT_PUBLIC_BLOB_BASE_URL": JSON.stringify(
-        process.env.NEXT_PUBLIC_BLOB_BASE_URL || "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com"
+      "process.env.NEXT_PUBLIC_STORAGE_BASE_URL": JSON.stringify(
+        process.env.NEXT_PUBLIC_STORAGE_BASE_URL || DEFAULT_STORAGE_BASE_URL
       ),
     },
     plugins: [
+      storagePlaceholders(),
       shortenCriticalPath(),
       precacheServiceWorker(),
       devApiPlugin(),
