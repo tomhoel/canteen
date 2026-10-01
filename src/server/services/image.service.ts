@@ -276,8 +276,14 @@ export async function uploadToStorage(
   }
 }
 
-/** Whether a plate is already in the archive, so it is reused rather than redrawn. */
-async function archiveExists(archivePath: string): Promise<boolean> {
+/**
+ * Whether a plate is already in the archive, so it is reused rather than redrawn.
+ *
+ * Only a 404 means "no": any other answer (a 403 from a suspended store, a 5xx,
+ * a network error) is "cannot tell", and the caller must not treat that as
+ * permission to pay for a drawing it then cannot upload. Returns null for it.
+ */
+async function archiveExists(archivePath: string): Promise<boolean | null> {
   try {
     const baseUrl =
       process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
@@ -285,8 +291,27 @@ async function archiveExists(archivePath: string): Promise<boolean> {
       "https://public.blob.vercel-storage.com";
     const encoded = archivePath.split("/").map(encodeURIComponent).join("/");
     const res = await fetch(`${baseUrl}/images_nobg/${encoded}`, { method: "HEAD" });
-    return res.ok;
+    if (res.ok) return true;
+    return res.status === 404 ? false : null;
   } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether a plate can be stored right now. A tiny write, made only when there is
+ * something to draw: on 2026-10-01 the Blob store was suspended (free-plan limit),
+ * every upload failed, and each run would have paid Gemini for plates it then
+ * threw away. Cheaper to find out before the first drawing than after.
+ */
+async function canStorePlates(): Promise<boolean> {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return false;
+  try {
+    await put("images_nobg/.probe", "ok", { access: "public", addRandomSuffix: false, allowOverwrite: true, token });
+    return true;
+  } catch (err: any) {
+    console.error(`❌ Blob is not accepting writes (${err?.message ?? err}) — not drawing plates this run.`);
     return false;
   }
 }
@@ -570,15 +595,26 @@ export async function processAllCanteenAIImages(
       // dish_cache has no path, but the plate may already be there: a retitled
       // dish normalises to the same archive key. Redrawing it would cost a
       // model call to overwrite an identical picture.
-      if (await archiveExists(job.archivePath)) {
+      const exists = await archiveExists(job.archivePath);
+      if (exists) {
         result.reused++;
         newlyDrawn.push({ dish: job.dish, archivePath: job.archivePath });
+        return;
+      }
+      // Cannot tell: leave the card without a picture this run rather than draw.
+      if (exists === null) {
+        result.deferred++;
         return;
       }
     }
 
     needsGeneration.push(job);
   });
+
+  if (needsGeneration.length > 0 && !(await canStorePlates())) {
+    result.deferred += needsGeneration.length;
+    needsGeneration.length = 0;
+  }
 
   // Phase 2: Deduplicate and generate missing dish images in parallel (concurrency 2)
   const uniqueGenJobs: ImageJob[] = [];

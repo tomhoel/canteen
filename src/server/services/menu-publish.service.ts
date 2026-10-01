@@ -1,5 +1,10 @@
+import { createHash } from "node:crypto";
 import { put } from "@vercel/blob";
 import { getWeeklyMenu } from "../menu.js";
+import { getRedis } from "./redis.service.js";
+
+/** Redis hash: week id -> hash of the file last written for it. */
+const HASH_KEY = "static_menu_hash";
 
 /** Where a week's published response lives; index.html builds the same path. */
 export const staticMenuPath = (weekId: string) => `menu-response/${weekId}.json`;
@@ -16,7 +21,13 @@ export const staticMenuPath = (weekId: string) => `menu-response/${weekId}.json`
  * page falls back to /api/menu for it.
  *
  * 60s is Blob's minimum edge TTL, so a new menu lags the cron by at most that.
- * Returns the weeks it published.
+ *
+ * A file whose content has not changed is not written again (its hash is kept in
+ * Redis): the cron runs 11 times a week and the menu changes a handful of times,
+ * and on the free plan every upload counts against a monthly allowance whose
+ * overrun suspends the store, plates included. `scrapedAt` is left out of the
+ * hash because it changes on every scrape and nothing reads it.
+ * Returns the weeks it wrote.
  */
 export async function publishStaticMenus(weekIds: Iterable<string>): Promise<string[]> {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -32,7 +43,14 @@ export async function publishStaticMenus(weekIds: Iterable<string>): Promise<str
     }
     if (Object.keys(menu.menuData.canteens || {}).length === 0) continue;
 
-    await put(staticMenuPath(weekId), JSON.stringify(menu), {
+    const body = JSON.stringify(menu);
+    const hash = createHash("sha256")
+      .update(JSON.stringify({ ...menu, menuData: { ...menu.menuData, scrapedAt: "" } }))
+      .digest("hex");
+    const redis = getRedis();
+    if (redis && (await redis.hget<string>(HASH_KEY, weekId).catch(() => null)) === hash) continue;
+
+    await put(staticMenuPath(weekId), body, {
       access: "public",
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -40,6 +58,7 @@ export async function publishStaticMenus(weekIds: Iterable<string>): Promise<str
       cacheControlMaxAge: 60,
       token,
     });
+    await redis?.hset(HASH_KEY, { [weekId]: hash }).catch(() => undefined);
     published.push(weekId);
   }
   return published;
