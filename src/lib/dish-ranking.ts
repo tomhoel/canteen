@@ -1,4 +1,5 @@
 import type { MenuItem, DishCourse } from "./types";
+import { courseOverride } from "./dish-course-overrides";
 
 /**
  * Single source of truth for "which of today's dishes is the main dish".
@@ -112,7 +113,7 @@ function composedBonus(lower: string): number {
  * the absolute values carry no meaning beyond their ordering.
  *
  * `course` is the stored label for this dish when there is one; without it the
- * name is guessed.
+ * name is guessed. A hand-set override (dish-course-overrides.ts) beats both.
  */
 export function scoreMainDish(dish: string, canteenName: string, course?: DishCourse | null): number {
   const lower = (dish || "").toLowerCase();
@@ -121,7 +122,7 @@ export function scoreMainDish(dish: string, canteenName: string, course?: DishCo
   // Hard rule: this canteen's daily pizza is never the headline.
   if (canteenName === PIZZA_IS_NEVER_MAIN_AT && lower.includes("pizza")) return -100;
 
-  const resolved = forcedCourse(lower) ?? course ?? guessCourse(dish);
+  const resolved = courseOverride(dish) ?? forcedCourse(lower) ?? course ?? guessCourse(dish);
   const base = resolved ? COURSE_SCORE[resolved] : UNKNOWN_HOT_SCORE;
   // The bonus is at most 15 and the smallest gap between tiers is 20, so it can
   // only ever break a tie inside one tier.

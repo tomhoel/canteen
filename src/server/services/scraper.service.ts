@@ -196,7 +196,22 @@ export function parseItem(text: string): MenuItem {
     dish = dish.replace(trailing, "").trim();
   }
 
-  return { dish: dish.replace(/\s+/g, " ").trim(), isMain: false, allergens };
+  return { dish: unwrapAnnouncement(dish.replace(/\s+/g, " ").trim()), isMain: false, allergens };
+}
+
+/**
+ * Some kitchens write the line as an announcement instead of a dish name:
+ * "Siste torsdag i september serverer vi fårikål som seg hør og bør". Printed
+ * as is it becomes the card title, the plate prompt and the dish_cache key.
+ * Keep the dish. Only the "serverer vi" / "we serve" phrasings; a dish that
+ * merely says "serveres med" is untouched.
+ */
+export function unwrapAnnouncement(dish: string): string {
+  const m =
+    dish.match(/\bserverer vi\s+(.+)$/i) ?? dish.match(/\bwe(?:'re| are)?\s+serv(?:e|ing)\s+(.+)$/i);
+  if (!m) return dish;
+  const core = m[1].replace(/\s+som seg hør og bør\.?$/i, "").replace(/[.!\s]+$/, "").trim();
+  return core ? core.charAt(0).toUpperCase() + core.slice(1) : dish;
 }
 
 /**

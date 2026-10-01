@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseItem,
+  unwrapAnnouncement,
   foldAllergenLabels,
   mergeItems,
   extractAvailabilityNote,
@@ -243,4 +244,24 @@ test("foldAllergenLabels - does not duplicate an allergen the dish already has",
     ] },
   ]);
   assert.deepEqual(folded[0].allergens.map((a) => a.name).sort(), ["Fish", "Gluten"]);
+});
+
+test("unwrapAnnouncement - keeps the dish when the line is an announcement", () => {
+  // Seen on W39 Thursday: the kitchen printed a sentence, which became the card title.
+  assert.equal(
+    unwrapAnnouncement("Siste torsdag i september serverer vi fårikål som seg hør og bør"),
+    "Fårikål"
+  );
+  assert.equal(unwrapAnnouncement("Today we serve roast pork with crackling."), "Roast pork with crackling");
+  assert.equal(parseItem("Siste torsdag i september serverer vi fårikål som seg hør og bør 1,3").dish, "Fårikål");
+});
+
+test("unwrapAnnouncement - an ordinary dish, even one that says 'serveres med', is untouched", () => {
+  for (const dish of [
+    "Tortilla med skavet kyllinglårfilet, tortilla chips serveres med salsa eller hvitløksdressing",
+    "Stekt sei med erter, kål og dill",
+    "Served with rice",
+  ]) {
+    assert.equal(unwrapAnnouncement(dish), dish);
+  }
 });

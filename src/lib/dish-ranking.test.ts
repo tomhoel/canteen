@@ -138,3 +138,15 @@ test("the composed-dish bonus only breaks ties inside a tier", () => {
   // Maximum bonus must stay below the smallest gap between tiers.
   assert.ok(scoreMainDish("Tomatsuppe med ris og brød, og mer med med", "Flow", "soup") < scoreMainDish("Vegetar bolle", "Flow", "veg"));
 });
+
+test("a hand-set override beats the model label and the name rules", () => {
+  // W37 Friday: marinated mussels out-tiered Biff Szechuan med nudler.
+  const items = [item("Biff Szechuan med nudler"), item("Marinerte økologiske blåskjell"), item("Tom Kha soppsuppe")];
+  const ranked = rankItems(items, "Eat the street", {
+    "Biff Szechuan med nudler": "meat_mixed",
+    "Marinerte økologiske blåskjell": "meat_plate",
+  });
+  assert.equal(ranked[0].dish, "Biff Szechuan med nudler");
+  // The same words with a different dish are not caught by it.
+  assert.ok(scoreMainDish("Marinerte kyllinglår med karrisaus og ris", "Flow", "meat_plate") >= 80);
+});
