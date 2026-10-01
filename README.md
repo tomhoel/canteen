@@ -179,7 +179,11 @@ costs a worse pick, never a failed run.
 The updater decides once and stores the result: items in ranked order, `isMain`
 on the first. The server, the client and the image job read that and never
 re-rank (`rankItems` returns already-decided items untouched), so they cannot
-disagree. Past weeks keep the pick they were stored with. To label dishes that
+disagree. Past weeks keep the pick they were stored with.
+
+A dish the model or the rules get wrong is corrected by a line in
+`src/lib/dish-course-overrides.ts`, which beats every other source and is
+reviewable in git; it applies the next time the updater re-ranks the week. To label dishes that
 predate this: `node --env-file=.env --import tsx scripts/label-courses.ts`.
 
 ## Endpoints
