@@ -172,6 +172,34 @@ export function setCachedWeeklyMenu(data: WeeklyMenuResponse, week?: string) {
   }
 }
 
+/**
+ * The background revalidation's result, for the app to swap in.
+ *
+ * Remembered as well as broadcast: the revalidation can settle before the
+ * component that wants it has subscribed (the head's fetch is usually done by
+ * the time React mounts), and a missed broadcast would drop the update.
+ */
+const freshMenus = new Map<string, WeeklyMenuResponse>();
+const freshListeners = new Set<(week: string | undefined, fresh: WeeklyMenuResponse) => void>();
+
+function publishFreshMenu(week: string | undefined, fresh: WeeklyMenuResponse) {
+  freshMenus.set(week || "current", fresh);
+  freshListeners.forEach((l) => l(week, fresh));
+}
+
+/** Calls back with the revalidated menu for `week`, now if it already arrived. */
+export function onFreshMenu(week: string | undefined, cb: (fresh: WeeklyMenuResponse) => void) {
+  const listener = (w: string | undefined, fresh: WeeklyMenuResponse) => {
+    if ((w || "current") === (week || "current")) cb(fresh);
+  };
+  freshListeners.add(listener);
+  const already = freshMenus.get(week || "current");
+  if (already) cb(already);
+  return () => {
+    freshListeners.delete(listener);
+  };
+}
+
 export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> {
   const query = week ? `?week=${encodeURIComponent(week)}` : "";
   const cached = getCachedWeeklyMenu(week);
@@ -202,6 +230,9 @@ export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> 
       .then((fresh) => {
         if (fresh?.menuData) {
           setCachedWeeklyMenu(fresh, week);
+          // The cached copy was already painted; hand the app the fresh one
+          // too, or a reopen within six hours shows yesterday's menu all session.
+          if (JSON.stringify(fresh) !== JSON.stringify(cached)) publishFreshMenu(week, fresh);
         }
       })
       .catch(() => {

@@ -1,4 +1,4 @@
-import React, { Suspense, use, useCallback, useState } from "react";
+import React, { Suspense, use, useCallback, useEffect, useState } from "react";
 import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import HomeClient from "@/components/HomeClient";
@@ -6,6 +6,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import MenuError from "@/components/MenuError";
 import { useSearch } from "@/lib/useSearch";
 import { menuResource } from "@/lib/menu-resource";
+import { onFreshMenu, type WeeklyMenuResponse } from "@/lib/api-client";
 
 /**
  * The app, with the router's job done by React itself.
@@ -33,6 +34,12 @@ function Menu({ epoch }: { epoch: number }) {
   // change suspends again, which is precisely what the router expressed as
   // `loaderDeps: ({ search }) => ({ week: search.week })`.
   const { week } = useSearch();
+  const initial = use(menuResource(week, epoch));
+  // A returning user is painted from the localStorage copy at once; the fresh
+  // response lands a moment later and replaces it. Keyed by week so a ?week=
+  // change never shows the previous week's update.
+  const [fresh, setFresh] = useState<{ week: string | undefined; data: WeeklyMenuResponse } | null>(null);
+  useEffect(() => onFreshMenu(week, (data) => setFresh({ week, data })), [week]);
   const {
     weekId,
     menuData,
@@ -40,7 +47,7 @@ function Menu({ epoch }: { epoch: number }) {
     dishDescriptions,
     dishShortNames,
     plateImages,
-  } = use(menuResource(week, epoch));
+  } = fresh && fresh.week === week ? fresh.data : initial;
 
   return (
     <HomeClient
