@@ -35,9 +35,6 @@ export interface DishCacheRow {
   course: DishCourse | null;
   imagePath: string | null;
   imageNoBgPath: string | null;
-  /** How many consecutive runs have asked the model about this dish and got nothing. */
-  enrichAttempts: number;
-  lastEnrichAttempt: string | null;
 }
 
 /**
@@ -53,35 +50,6 @@ export interface DishCacheEntry {
   course?: DishCourse | null;
   imagePath?: string | null;
   imageNoBgPath?: string | null;
-  enrichAttempts?: number | null;
-  lastEnrichAttempt?: string | null;
-}
-
-/**
- * How many times a dish may be sent to the model before the updater gives up
- * on it and renders the pattern fallback instead.
- */
-export const MAX_ENRICH_ATTEMPTS = 5;
-
-/**
- * After this long, a given-up dish is worth one more try: the model has moved
- * on, the outage is over, and a dish that reappears months later is cheap to
- * re-ask about exactly once.
- */
-export const ENRICH_RETRY_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
-
-/** Attempts that still count against the cap, ignoring ones the cooldown retired. */
-export function activeEnrichAttempts(row: DishCacheRow | undefined, now: number): number {
-  if (!row || !row.enrichAttempts) return 0;
-  if (!row.lastEnrichAttempt) return row.enrichAttempts;
-  const last = Date.parse(row.lastEnrichAttempt);
-  if (Number.isNaN(last)) return row.enrichAttempts;
-  return now - last >= ENRICH_RETRY_COOLDOWN_MS ? 0 : row.enrichAttempts;
-}
-
-/** True when this dish has used up its retries and must not be sent again. */
-export function isEnrichmentExhausted(row: DishCacheRow | undefined, now: number): boolean {
-  return activeEnrichAttempts(row, now) >= MAX_ENRICH_ATTEMPTS;
 }
 
 /**
@@ -156,8 +124,6 @@ export async function loadDishCache(dishNames: string[]): Promise<DishCacheLoad>
             course: row.course ?? null,
             imagePath: row.imagePath ?? row.image_path ?? null,
             imageNoBgPath: row.imageNoBgPath ?? row.image_no_bg_path ?? null,
-            enrichAttempts: row.enrichAttempts ?? row.enrich_attempts ?? 0,
-            lastEnrichAttempt: row.lastEnrichAttempt ?? row.last_enrich_attempt ?? null,
           });
         }
       }
@@ -210,14 +176,6 @@ export async function saveDishCacheEntries(entries: DishCacheEntry[]): Promise<n
         course: entry.course !== undefined ? entry.course : (prev.course ?? null),
         imagePath: entry.imagePath !== undefined ? entry.imagePath : (prev.imagePath ?? null),
         imageNoBgPath: entry.imageNoBgPath !== undefined ? entry.imageNoBgPath : (prev.imageNoBgPath ?? null),
-        enrichAttempts:
-          entry.enrichAttempts !== undefined && entry.enrichAttempts !== null
-            ? entry.enrichAttempts
-            : (prev.enrichAttempts ?? 0),
-        lastEnrichAttempt:
-          entry.lastEnrichAttempt !== undefined
-            ? entry.lastEnrichAttempt
-            : (prev.lastEnrichAttempt ?? null),
       };
 
       existing[entry.cacheKey] = merged;

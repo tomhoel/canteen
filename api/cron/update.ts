@@ -110,32 +110,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
   }
 
-  // Dishes the model has now been asked about MAX_ENRICH_ATTEMPTS times without
-  // ever answering. They render canned copy from here on and cost nothing more,
-  // which is the point — but nobody would ever find out otherwise, and the
-  // usual cause is a dish name the scraper mangled rather than a model problem.
-  // Only the ones that crossed the line on this run: an exhausted dish stays
-  // exhausted for the rest of its week on the menu, and alerting on the whole
-  // set would repeat the same message ten times.
-  if (record.stats.newlyExhausted.length > 0) {
-    await sendCronAlert("warning", "Some dishes have been given up on", [
-      `${record.stats.newlyExhausted.length} dish(es) the model never answered for: ` +
-        record.stats.newlyExhausted.slice(0, 10).join("; ") +
-        (record.stats.newlyExhausted.length > 10 ? " …" : ""),
-      "They now render the pattern fallback and are no longer sent. Nothing is cached for them, " +
-        "so fixing the cause and clearing dish_cache.enrich_attempts brings them back.",
-    ]);
-  }
-
-  // Normal late in the week, but worth seeing: it means the canteens disagree
-  // about which week it is, and the app is rendering only one of them.
-  if (record.weeksWritten.length > 1) {
-    await sendCronAlert("warning", "Canteens are mid-rollover across two weeks", [
-      ...record.weeksWritten.map((w) => `${w.weekId}: ${w.canteens.join(", ")}`),
-      `Showing ${record.weekId}.`,
-    ]);
-  }
-
   // Images are best-effort: the menu itself is already safely stored, and a
   // missing plate photo is far less bad than a missing menu.
   //
@@ -246,7 +220,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // watching: a run that asks and durably caches nothing is a broken model
     // key or a rate limit, and looks identical to a quiet day without this.
     dishesUnresolved: record.stats.unresolved.length,
-    dishesGivenUpOn: record.stats.exhausted.length,
     failedCanteens: record.stats.failedCanteens,
     // Which canteens landed in which week's row. More than one entry means the
     // kitchens are rolling over and `weekId` above is only the displayed one.

@@ -36,9 +36,6 @@ import {
   loadDishCache,
   saveDishCacheEntries,
   normalizeDishName,
-  activeEnrichAttempts,
-  isEnrichmentExhausted,
-  MAX_ENRICH_ATTEMPTS,
   type DishCacheEntry,
 } from "./dish-cache.service.js";
 import { ensureCourses, rerankMenu } from "./course.service.js";
@@ -124,17 +121,6 @@ export interface EnrichmentCounts {
   durablyCached: number;
   /** Dishes still rendering a pattern fallback for origin or description. */
   unresolved: string[];
-  /** Dishes that have used up their retries and will not be sent again. */
-  exhausted: string[];
-  /**
-   * Dishes that used up their last retry on *this* run.
-   *
-   * Separate from `exhausted` so the alert fires once. An exhausted dish stays
-   * exhausted for as long as it is on the menu — up to ten cron runs — and an
-   * alert keyed on `exhausted` would repeat every one of them, which is how a
-   * channel gets muted.
-   */
-  newlyExhausted: string[];
 }
 
 export interface UpdateStats extends EnrichmentCounts {
@@ -735,8 +721,6 @@ export async function runWeeklyUpdateService(
       sentToModel: enriched.sentToModel,
       durablyCached: enriched.durablyCached,
       unresolved: enriched.unresolved,
-      exhausted: enriched.exhausted,
-      newlyExhausted: enriched.newlyExhausted,
       unchanged,
       menuData: weekMenuData,
     });
@@ -784,8 +768,6 @@ export async function runWeeklyUpdateService(
     // Deduplicated: the two weeks of a rollover share most of their dishes, so
     // concatenating would double-count every dish that failed in both.
     unresolved: [...new Set(weeksWritten.flatMap((w) => w.unresolved))],
-    exhausted: [...new Set(weeksWritten.flatMap((w) => w.exhausted))],
-    newlyExhausted: [...new Set(weeksWritten.flatMap((w) => w.newlyExhausted))],
     failedCanteens: scrape.failed,
     // Scoped to the displayed week on purpose: it answers "is there anything to
     // regenerate downstream", and a week this run did not write has nothing.
@@ -901,12 +883,12 @@ interface EnrichmentRun {
  *    cache nor the stored row has anything better — otherwise a single bad
  *    afternoon at the model would rewrite the whole week as boilerplate and the
  *    fingerprint would then freeze it there.
- * 3. **Give up eventually.** A dish the model never answers for is re-asked on
- *    every run, forever, at no benefit. After MAX_ENRICH_ATTEMPTS it stops
- *    being sent and renders the fallback instead — recorded in `exhausted`, so
- *    it is a number someone can look at rather than a silent recurring cost.
- *    The fallback is still never written to dish_cache: a cache hit is
- *    permanent, and this decision has to stay reversible.
+ * 3. **Retry next run.** A dish the model does not answer for is simply asked
+ *    again on the next run, until it does. That is a few tokens per run for a
+ *    handful of dishes, so there is no attempt counter or cap. Until it
+ *    answers it renders the fallback, listed in `unresolved`, which is never
+ *    written to dish_cache: a cache hit is permanent, and this has to stay
+ *    reversible.
  */
 async function enrichDishes(
   dishes: string[],
@@ -918,11 +900,10 @@ async function enrichDishes(
   shortNames: Record<string, string>;
 } & EnrichmentCounts> {
   const { rows: cache, failed: cacheUnreadable } = await loadDishCache(dishes);
-  const now = Date.now();
 
   // A cache we could not read is not a cache with nothing in it. Treating the
   // two the same would re-ask the model about an entire week that is already
-  // fully answered, and record a failed attempt against every dish in it.
+  // fully answered.
   // Reusing what the row already holds costs nothing and loses nothing; the
   // next run reads the cache again.
   if (cacheUnreadable) {
@@ -949,8 +930,6 @@ async function enrichDishes(
       sentToModel: 0,
       durablyCached: 0,
       unresolved,
-      exhausted: [],
-      newlyExhausted: [],
     };
   }
 
@@ -960,7 +939,6 @@ async function enrichDishes(
   const needOrigin: string[] = [];
   const needDescription: string[] = [];
   const needShortName: string[] = [];
-  const givenUp: string[] = [];
   let fromCache = 0;
 
   for (const dish of dishes) {
@@ -979,13 +957,9 @@ async function enrichDishes(
       continue;
     }
 
-    if (isEnrichmentExhausted(hit, now)) {
-      givenUp.push(dish);
-      continue;
-    }
     // Already sent earlier in this same run, for the other week of a rollover.
     // The answer did not arrive then and will not arrive now; asking again just
-    // doubles the bill and burns a second attempt on one run.
+    // doubles the bill.
     if (run.attempted.has(dish)) continue;
 
     if (!hit?.origin) needOrigin.push(dish);
@@ -998,9 +972,7 @@ async function enrichDishes(
   console.log(
     `🗃️  ${fromCache} dishes fully cached, ${asked.size} to ask about ` +
       `(${needOrigin.length} origins, ${needDescription.length} descriptions, ` +
-      `${needShortName.length} long titles)` +
-      (givenUp.length ? `, ${givenUp.length} given up on` : "") +
-      "."
+      `${needShortName.length} long titles).`
   );
 
   // detectDishOrigins/generateDishDescriptions short-circuit on an empty list,
@@ -1041,20 +1013,14 @@ async function enrichDishes(
     if (!durableOrigins.has(dish) || !durableDescriptions.has(dish)) unresolved.push(dish);
   }
 
-  const askedOrigin = new Set(needOrigin);
-  const askedDescription = new Set(needDescription);
   const askedShortName = new Set(needShortName);
   const entries: DishCacheEntry[] = [];
-  const newlyExhausted: string[] = [];
   let durablyCached = 0;
 
   for (const dish of asked) {
     const key = normalizeDishName(dish);
     const gainedOrigin = newOrigins.fromModel.has(dish);
     const gainedDescription = newDescriptions.fromModel.has(dish);
-    const failed =
-      (askedOrigin.has(dish) && !gainedOrigin) ||
-      (askedDescription.has(dish) && !gainedDescription);
 
     if (gainedOrigin || gainedDescription || newShortNames.fromModel.has(dish)) {
       durablyCached++;
@@ -1077,31 +1043,15 @@ async function enrichDishes(
       entry.shortName = dish;
     }
 
-    if (failed) {
-      const hit = cache.get(key);
-      const attempts = activeEnrichAttempts(hit, now) + 1;
-      entry.enrichAttempts = attempts;
-      entry.lastEnrichAttempt = new Date(now).toISOString();
-      if (attempts >= MAX_ENRICH_ATTEMPTS) newlyExhausted.push(dish);
-    } else {
-      // Fully answered — clear the counter so a dish that recovers is not one
-      // bad run away from being given up on next time it goes missing.
-      entry.enrichAttempts = 0;
-      entry.lastEnrichAttempt = null;
-    }
-
-    entries.push(entry);
+    // Only an answer is worth a row: a dish the model stayed silent on is simply
+    // asked again next run, and writing an empty row for it would be noise.
+    if (entry.origin || entry.description || entry.shortName !== undefined) entries.push(entry);
   }
-
-  // Dishes already past the cap were never sent, so they carry no new attempt —
-  // but they are still the thing an operator wants to see in the run report.
-  const exhausted = [...newlyExhausted, ...givenUp];
 
   const saved = await saveDishCacheEntries(entries);
   console.log(
     `🗃️  ${saved} dish_cache rows written` +
       (unresolved.length ? `; ${unresolved.length} dish(es) still on a fallback` : "") +
-      (exhausted.length ? `; ${exhausted.length} given up on after ${MAX_ENRICH_ATTEMPTS} tries` : "") +
       "."
   );
 
@@ -1113,7 +1063,5 @@ async function enrichDishes(
     sentToModel: asked.size,
     durablyCached,
     unresolved,
-    exhausted,
-    newlyExhausted,
   };
 }

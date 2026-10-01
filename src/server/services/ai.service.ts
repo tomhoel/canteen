@@ -80,9 +80,8 @@ const ORIGIN_PATTERNS: Array<{ regex: RegExp; code: string; country: string }> =
 /**
  * Pattern-based origin, used for anything the model didn't cover.
  *
- * Exported because the updater also needs it for dishes it has deliberately
- * stopped asking about (see MAX_ENRICH_ATTEMPTS in dish-cache.service): those
- * never reach a pass, so nothing else would give them a flag.
+ * Exported because the updater also needs it for dishes the model did not
+ * answer for this run, which render a flag until a later run gets an answer.
  */
 export function fallbackOrigin(dish: string): DishOrigin {
   const match = ORIGIN_PATTERNS.find((p) => p.regex.test(dish));

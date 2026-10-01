@@ -301,8 +301,6 @@ mock.module("@upstash/redis", {
                 shortName: row.short_name ?? row.shortName ?? null,
                 imagePath: row.image_path ?? row.imagePath ?? null,
                 imageNoBgPath: row.image_no_bg_path ?? row.imageNoBgPath ?? null,
-                enrichAttempts: row.enrich_attempts ?? row.enrichAttempts ?? 0,
-                lastEnrichAttempt: row.last_enrich_attempt ?? row.lastEnrichAttempt ?? null,
               });
             }
           }
@@ -321,8 +319,6 @@ mock.module("@upstash/redis", {
               origin: parsed.origin ?? undefined,
               description: parsed.description ?? undefined,
               short_name: parsed.shortName ?? undefined,
-              enrich_attempts: parsed.enrichAttempts ?? 0,
-              last_enrich_attempt: parsed.lastEnrichAttempt ?? null,
             };
             world.cacheRows.set(k, row);
             batch.push(row);
@@ -687,7 +683,6 @@ test("a half-answered dish keeps the half that worked", async () => {
   const row = world.cacheRows.get("fiskesuppe")!;
   assert.ok(row.origin, "the origin the model did answer is persisted");
   assert.equal(row.description, undefined, "the fallback description is not");
-  assert.equal(row.enrich_attempts, 1, "and the failed half is counted");
   assert.deepEqual(first.stats.unresolved, ["Fiskesuppe"]);
 
   // Second run: only the missing half is re-asked.
@@ -699,7 +694,6 @@ test("a half-answered dish keeps the half that worked", async () => {
   assert.deepEqual(world.originsAsked, [[]], "the stored origin is not paid for twice");
   assert.deepEqual(world.descriptionsAsked, [["Fiskesuppe"]]);
   assert.deepEqual(second.stats.unresolved, []);
-  assert.equal(world.cacheRows.get("fiskesuppe")!.enrich_attempts, 0, "recovery clears the counter");
 });
 
 test("only titles too long for the card are sent to be shortened", async () => {
@@ -787,10 +781,9 @@ test("a shortening call that never lands stays retryable", async () => {
   assert.equal(world.cacheRows.get("en veldig lang rett")!.short_name, "kort:En veldig lang rett");
 });
 
-test("a missing short title does not burn the dish's enrichment attempts", async () => {
-  // enrich_attempts is what eventually stops asking about origins and
-  // descriptions. A display-only field with no fallback must not consume it, or
-  // one unshortenable title would give up on a dish that renders perfectly.
+test("a title the model declines to shorten is settled, not re-asked", async () => {
+  // A display-only field with no fallback: once the model has looked at the
+  // title and answered, the dish must not be put to it again on every run.
   reset({
     scrape: makeScrape({ Flow: makeCanteen(label(0), ["Uforkortbar rett"]) }),
     longTitles: new Set(["Uforkortbar rett"]),
@@ -802,7 +795,10 @@ test("a missing short title does not burn the dish's enrichment attempts", async
   const row = world.cacheRows.get("uforkortbar rett")!;
   assert.ok(row.origin, "the origin still landed");
   assert.ok(row.description, "so did the description");
-  assert.equal(row.enrich_attempts, 0, "and nothing was counted against the dish");
+
+  world.shortTitlesAsked = [];
+  await runWeeklyUpdateService();
+  assert.deepEqual(world.shortTitlesAsked.filter((b) => b.length > 0), [], "and it is not asked again");
 });
 
 test("a partial write does not blank the field another run filled in", async () => {
@@ -824,37 +820,24 @@ test("a partial write does not blank the field another run filled in", async () 
   assert.equal(world.cacheRows.get("halvveis")!.description, undefined);
 });
 
-test("a dish the model never answers for is counted, and eventually dropped", async () => {
+test("a dish the model never answers for is asked again every run, and nothing is cached for it", async () => {
   reset({
     scrape: makeScrape({ Flow: makeCanteen(label(0), ["Ukjent rett"]) }),
     silentOrigins: new Set(["Ukjent rett"]),
     silentDescriptions: new Set(["Ukjent rett"]),
   });
 
-  // Four consecutive silent runs: the counter climbs and the dish keeps being
-  // asked about, because giving up after one bad afternoon would be wrong.
-  for (let i = 1; i <= 4; i++) {
+  // No attempt counter and no cap: a failed dish costs a few tokens per run
+  // until the model answers, and it renders the fallback in the meantime.
+  for (let i = 1; i <= 7; i++) {
     world.originsAsked = [];
     const result = await runWeeklyUpdateService();
     assert.deepEqual(world.originsAsked, [["Ukjent rett"]], `run ${i} still asks`);
     assert.deepEqual(result.stats.unresolved, ["Ukjent rett"]);
-    assert.deepEqual(result.stats.exhausted, [], `run ${i} has not given up yet`);
-    assert.equal(world.cacheRows.get("ukjent rett")!.enrich_attempts, i);
     // Nothing durable is ever written for it — the fallback must stay out of
     // the cache, or the dish is silently canned forever.
-    assert.equal(world.cacheRows.get("ukjent rett")!.origin, undefined);
+    assert.equal(world.cacheRows.get("ukjent rett")?.origin, undefined);
   }
-
-  world.originsAsked = [];
-  const fifth = await runWeeklyUpdateService();
-  assert.deepEqual(fifth.stats.exhausted, ["Ukjent rett"], "the fifth try is the last");
-  assert.deepEqual(fifth.stats.newlyExhausted, ["Ukjent rett"], "and that is the run that alerts");
-
-  world.originsAsked = [];
-  const sixth = await runWeeklyUpdateService();
-  assert.deepEqual(world.originsAsked, [[]], "and it is never sent again");
-  assert.deepEqual(sixth.stats.exhausted, ["Ukjent rett"], "but it stays visible");
-  assert.deepEqual(sixth.stats.newlyExhausted, [], "without alerting a second time");
 });
 
 test("a fallback never overwrites what the row already stores", async () => {
@@ -926,12 +909,10 @@ test("two dish names that normalise to one key do not abort the batch", async ()
   assert.ok(world.cacheRows.get("fiskesuppe"), "and its batch-mate survives");
 });
 
-test("a rollover charges a failing dish one attempt per run, not one per week", async () => {
+test("a rollover asks about a failing dish once per run, not once per week", async () => {
   // Both weeks of a rollover hold nearly the same dishes, because every canteen
   // is seeded into every week's row. Enriching each week independently would
-  // send the same dish to the model twice in one run and burn two of its five
-  // attempts — halving the budget in exactly the week where brand-new, uncached
-  // dishes first appear.
+  // send the same dish to the model twice in one run and pay for it twice.
   reset({
     scrape: makeScrape({
       Flow: makeCanteen(label(0), ["Ukjent rett"]),
@@ -949,7 +930,6 @@ test("a rollover charges a failing dish one attempt per run, not one per week", 
     [["Ukjent rett"]],
     "the dish is put to the model exactly once for the whole run"
   );
-  assert.equal(world.cacheRows.get("ukjent rett")!.enrich_attempts, 1);
   assert.deepEqual(result.stats.unresolved, ["Ukjent rett"], "and is reported once, not twice");
 });
 

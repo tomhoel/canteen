@@ -123,9 +123,6 @@ async function main() {
         (record.stats.unresolved.length > 5 ? " …" : "")
     );
   }
-  if (record.stats.exhausted.length > 0) {
-    console.warn(`   ⚠️  ${record.stats.exhausted.length} dish(es) given up on (no longer sent).`);
-  }
   if (record.stats.failedCanteens.length > 0) {
     console.warn(`   ⚠️  canteens that failed: ${record.stats.failedCanteens.join(", ")}`);
   }
