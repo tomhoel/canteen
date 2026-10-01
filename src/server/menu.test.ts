@@ -1,12 +1,9 @@
 /**
  * Which stored image each card gets.
  *
- * The client used to build `<day>/<canteen>.png` itself. That slot carries no
- * week, so only one week's plates can exist at a time — which is why the
- * updater had to build plates for whichever week the app happened to be
- * rendering, and why any other week's cards showed the wrong food. The server
- * resolves the path now, because only it knows (via dish_cache) which dish a
- * stored plate actually depicts.
+ * The server resolves the path, because only it knows (via dish_cache) which
+ * dish a stored plate actually depicts. A dish with no recorded plate gets no
+ * entry and its card shows the placeholder: no picture beats the wrong one.
  *
  * Requires --experimental-test-module-mocks; see the `test` script.
  */
@@ -135,7 +132,7 @@ function mondayDish(menu: { menuData: { canteens: Record<string, CanteenData> } 
   return menu.menuData.canteens[canteenName]?.menu[0]?.no?.items[0]?.dish;
 }
 
-test("a plate that dish_cache can address is served by dish, not by weekday slot", async () => {
+test("a plate that dish_cache can address is served by dish", async () => {
   reset({ record: record(THIS_WEEK, { Flow: canteen({ Monday: ["Fiskesuppe"] }) }) });
   world.images.set("fiskesuppe", "archive/fiskesuppe.png");
 
@@ -144,21 +141,8 @@ test("a plate that dish_cache can address is served by dish, not by weekday slot
   assert.equal(menu.plateImages["monday|Flow"], "archive/fiskesuppe.png");
 });
 
-test("the calendar week still falls back to its weekday slot", async () => {
-  // Not every plate has its path recorded yet — 8 of 29 stored main dishes did
-  // not when this shipped — and for the week the app is actually rendering the
-  // slot does hold the right food. Losing those would be a straight regression.
+test("a dish with no recorded plate gets no picture rather than the wrong one", async () => {
   reset({ record: record(THIS_WEEK, { Flow: canteen({ Monday: ["Ukjent rett"] }) }) });
-
-  const menu = await getWeeklyMenu();
-
-  assert.equal(menu.plateImages["monday|Flow"], "monday/flow.png");
-});
-
-test("any other week gets no picture rather than the wrong one", async () => {
-  // The slot holds the calendar week's food. Showing it under next week's dish
-  // name is the photo/dish mismatch this whole scheme exists to end.
-  reset({ record: record(NEXT_WEEK, { Flow: canteen({ Monday: ["Ukjent rett"] }) }) });
 
   const menu = await getWeeklyMenu();
 
@@ -190,7 +174,7 @@ test("the image follows the ranked main dish, not the first line on the menu", a
   assert.equal(menu.plateImages["monday|Flow"], "archive/kylling-med-ris.png");
 });
 
-test("an unreadable dish_cache falls back to slots rather than blanking every card", async () => {
+test("an unreadable dish_cache yields no pictures, not a failed response", async () => {
   reset({
     record: record(THIS_WEEK, { Flow: canteen({ Monday: ["Fiskesuppe"] }) }),
     cacheReadFails: true,
@@ -198,7 +182,7 @@ test("an unreadable dish_cache falls back to slots rather than blanking every ca
 
   const menu = await getWeeklyMenu();
 
-  assert.equal(menu.plateImages["monday|Flow"], "monday/flow.png");
+  assert.deepEqual(menu.plateImages, {});
 });
 
 test("keys cover every canteen and weekday, and nothing else", async () => {
@@ -208,6 +192,7 @@ test("keys cover every canteen and weekday, and nothing else", async () => {
       "Eat the street": canteen({ Monday: ["C"], Saturday: ["D"] }),
     }),
   });
+  for (const d of ["a", "b", "c", "d"]) world.images.set(d, `archive/${d}.png`);
 
   const menu = await getWeeklyMenu();
 
@@ -216,7 +201,7 @@ test("keys cover every canteen and weekday, and nothing else", async () => {
     "monday|Eat the street",
     "monday|Flow",
   ]);
-  assert.equal(menu.plateImages["monday|Eat the street"], "monday/eat_the_street.png");
+  assert.equal(menu.plateImages["monday|Eat the street"], "archive/c.png");
 });
 
 test("a day with no dishes contributes no key", async () => {

@@ -86,20 +86,11 @@ async function main() {
   // kitchen published ahead: a manual run enriched next week's dishes but never
   // drew them, and the weekend preview — which is exactly when next week's menu
   // is on screen — showed cards with no picture.
-  //
-  // `writeSlots: false` is not optional. A slot path is `<day>/<canteen>.png`
-  // and carries no week, so writing next week's plate into one would overwrite
-  // the picture this week is still showing. The archive is dish-addressed,
-  // which is what the read path resolves through for any week that is not the
-  // current one.
   for (const week of record.weeksWritten) {
     if (week.weekId === record.weekId) continue;
     console.log(`
-🔍 Ensuring dish images for ${week.weekId} (archive only)...`);
-    const ahead = await processAllCanteenAIImages(week.menuData, {
-      force,
-      writeSlots: false,
-    });
+🔍 Ensuring dish images for ${week.weekId} ...`);
+    const ahead = await processAllCanteenAIImages(week.menuData, { force });
     console.log(
       `   ${week.weekId}: ${ahead.reused} reused, ${ahead.generated} generated, ` +
         `${ahead.failed} failed`

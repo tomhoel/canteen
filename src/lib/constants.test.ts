@@ -43,7 +43,7 @@ test("getImageUrl - percent-encodes each path segment, but not the slashes", () 
   assert.ok(!url.includes("archive%2F"), "the separator must stay a separator");
 });
 
-test("getImageUrl - a plain slot path is untouched by the encoding", () => {
+test("getImageUrl - a plain path is untouched by the encoding", () => {
   assert.ok(
     getImageUrl("images_nobg", "monday/flow.png").endsWith("/images_nobg/monday/flow.png")
   );

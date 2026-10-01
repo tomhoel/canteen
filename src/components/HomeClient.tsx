@@ -6,7 +6,7 @@ import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCl
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
 import { Share2 } from "lucide-react";
-import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, CANTEEN_IMAGE_SLUGS, getImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
+import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, getImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import {
   getLocalDateKey,
@@ -63,10 +63,7 @@ export interface HomeClientProps {
   /**
    * Storage path per card, keyed `"<day>|<canteen name>"`, resolved server-side.
    *
-   * The client used to build `<day>/<canteen>.png` itself — a slot with no week
-   * in it, so only one week's plates could exist and any other week's cards
-   * showed the wrong food. Only the server can do better: it knows, via
-   * dish_cache, which dish each stored plate depicts.
+   * Only the server knows, via dish_cache, which dish each stored plate depicts.
    */
   plateImages: Record<string, string>;
 }
@@ -498,12 +495,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           ...item,
           allergens: noSideDishes[idx]?.allergens || item.allergens,
         }));
-        const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
-
         // Closed canteens point at one of 3 static cutlery-and-napkin plates
-        // hosted in Blob. We don't generate dish images for closed days,
-        // so without this branch the slot URL would resolve to a stale image
-        // from whenever the canteen was last open on this weekday.
+        // hosted in Blob. We don't generate dish images for closed days.
         const isClosed = !mainDish || ["stengt", "closed", "lukket"].some(kw => mainDish.dish.toLowerCase().includes(kw));
 
         // The server resolves which stored plate belongs to this card; an absent
@@ -554,7 +547,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           dishShortNames[lookupMainDish?.dish || ""] || mainDish?.dish || null;
         return {
           canteenName, canteen, dayEntry, items, mainDish, sideDishes,
-          mainAllergens, imageSlug, imagePath, highResImagePath,
+          mainAllergens, imagePath, highResImagePath,
           isOutdated, isAhead, canteenWeekNum, origin, description,
           displayDishName, availabilityNotes,
         };

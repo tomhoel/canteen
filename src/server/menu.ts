@@ -1,7 +1,6 @@
 import type { MenuData, DishOrigin, DishDescription } from "../lib/types.js";
 import {
   computeDisplayContext,
-  getWeekId,
   getWeekIdOffset,
   isOsloWeekend,
 } from "../lib/dateUtils.js";
@@ -146,31 +145,23 @@ function plateKey(dayKey: string, canteenName: string): string {
 /**
  * Resolves which stored image belongs to each card.
  *
- * The client used to build this path itself as `<day>/<canteen>.png` — a slot
- * with no week in it, so only one week's plates can exist at a time and any
- * other week's cards showed the wrong food. The server already knows better:
  * `dish_cache.image_nobg_path` addresses a plate by the dish it depicts, which
- * is stable across every week that dish appears in.
+ * is stable across every week that dish appears in. (The client once built a
+ * per-day path with no week in it, so only one week's plates could exist and
+ * any other week showed the wrong food.)
  *
  * Resolved at read time rather than when the row is written, because the cron
  * stores the menu before it generates any images and the record is cached for
  * days afterwards — a map built at write time would be missing exactly the
  * plates that run went on to draw.
  *
- * The per-day slot remains the fallback, but only for the calendar week. For
- * any other week that slot holds a different week's food, and a card with no
- * picture is better than a card with the wrong one.
+ * A dish with no stored plate gets no entry, and its card shows the letter
+ * placeholder: a card with no picture beats one with the wrong picture.
  */
-async function resolvePlateImages(
-  menuData: MenuData,
-  weekId: string
-): Promise<Record<string, string>> {
-  const slotsApply = weekId === getWeekId();
-  const targets: Array<{ key: string; dish: string; slotPath: string }> = [];
+async function resolvePlateImages(menuData: MenuData): Promise<Record<string, string>> {
+  const targets: Array<{ key: string; dish: string }> = [];
 
   for (const [canteenName, canteen] of Object.entries(menuData.canteens || {})) {
-    const slug = canteenName.toLowerCase().replace(/\s+/g, "_");
-
     for (const dayItem of canteen.menu || []) {
       const dayKey = dayItem.day.toLowerCase();
       if (!DAY_ORDER.includes(dayKey)) continue;
@@ -184,22 +175,18 @@ async function resolvePlateImages(
       targets.push({
         key: plateKey(dayKey, canteenName),
         dish: mainDish.dish.trim(),
-        slotPath: `${dayKey}/${slug}.png`,
       });
     }
   }
 
   if (targets.length === 0) return {};
 
-  // A failed cache read must not strip every card of its picture, so fall back
-  // to the slots exactly as the client used to.
   const { rows, failed } = await loadDishCache(targets.map((t) => t.dish));
-  if (failed) console.warn("dish_cache unreadable — plate images fall back to the weekly slots.");
+  if (failed) console.warn("dish_cache unreadable — this response carries no plate images.");
 
   const plateImages: Record<string, string> = {};
   for (const target of targets) {
-    const archived = rows.get(normalizeDishName(target.dish))?.imageNoBgPath;
-    const path = archived ?? (slotsApply ? target.slotPath : undefined);
+    const path = rows.get(normalizeDishName(target.dish))?.imageNoBgPath;
     if (path) plateImages[target.key] = path;
   }
 
@@ -300,7 +287,7 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     dishShortNames: pickReachable(record.dishShortNames ?? {}, reachable),
     // Keyed off the week that was actually served, which is not always the one
     // that was asked for: the read falls back to the most recent stored week.
-    plateImages: await resolvePlateImages(record.menuData, record.weekId),
+    plateImages: await resolvePlateImages(record.menuData),
     // No canteen week numbers and no pinned week: with `servedWeekId` given,
     // computeDisplayContext needs neither, and passing the labels would
     // reintroduce the disagreement `servedWeekId` was added to settle.

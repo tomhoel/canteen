@@ -139,13 +139,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Images are best-effort: the menu itself is already safely stored, and a
   // missing plate photo is far less bad than a missing menu.
   //
-  // The displayed week goes first and is the only one that fills the per-day
-  // slots — those carry no week, so a second week written there would overwrite
-  // it. Every other week this run wrote gets its plates into the dish-addressed
-  // archive instead, which is what the read path resolves through and what
-  // gives a week-ahead view pictures at all. Ordering matters for the same
-  // reason: if the budget runs out, it must run out on the week nobody is
-  // looking at yet.
+  // The displayed week goes first: if the budget runs out, it must run out on
+  // the week nobody is looking at yet.
   let images = null;
   let imageError: string | null = null;
   try {
@@ -162,10 +157,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const ahead = await processAllCanteenAIImages(week.menuData, {
         budgetMs: remainingBudget(),
         force,
-        writeSlots: false,
       });
       console.log(
-        `📸 [cron] ${week.weekId} (archive only): ${ahead.reused} reused, ` +
+        `📸 [cron] ${week.weekId}: ${ahead.reused} reused, ` +
           `${ahead.generated} generated, ${ahead.deferred} deferred.`
       );
     }

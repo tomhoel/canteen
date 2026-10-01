@@ -778,10 +778,9 @@ export async function runWeeklyUpdateService(
     );
   }
 
-  // Plate images live in per-day, per-canteen slots with no week dimension, so
-  // only one week's plates can exist at a time. They must therefore depict the
-  // week the app is actually rendering — not whichever week this scrape
-  // happened to catch, which on a Friday afternoon is already the next one.
+  // The week returned (and drawn plates for) is the one the app is actually
+  // rendering — not whichever week this scrape happened to catch, which on a
+  // Friday afternoon is already the next one.
   //
   // An explicit weekIdInput is the exception: the caller named a week, so that
   // is the one to return and to build plates for.

@@ -250,10 +250,9 @@ export async function uploadToStorage(
   }
   const blobPath = `${bucket}/${filePath}`;
   try {
-    // allowOverwrite: the day slots (thursday/flow.png, ...) are rewritten on
-    // every run. @vercel/blob refuses to replace an existing object without it,
-    // so every slot copy failed, "reuse" never counted, and each run redrew
-    // (and paid for) ~13 plates whose uploads were then rejected as well.
+    // allowOverwrite: @vercel/blob refuses to replace an existing object
+    // without it, so a forced redraw of an archived plate would be rejected
+    // after the model had already been paid for.
     await put(blobPath, buffer, {
       access: "public",
       addRandomSuffix: false,
@@ -262,8 +261,7 @@ export async function uploadToStorage(
       token,
     });
     // Cards show a 512px thumb at images_nobg/thumb/<path>; every plate write
-    // (new draw, archive copy, slot copy) lands here, so this is the one place
-    // that keeps them in step. Best effort: a missing thumb only costs a retry
+    // lands here, so this is the one place that keeps them in step. Best effort: a missing thumb only costs a retry
     // on the next write, the full plate above is already stored.
     if (bucket === "images_nobg" && !filePath.startsWith("thumb/") && contentType === "image/webp") {
       try {
@@ -285,24 +283,16 @@ export async function uploadToStorage(
   }
 }
 
-export async function copyInStorageBucket(
-  bucket: string,
-  srcPath: string,
-  destPath: string
-): Promise<boolean> {
-  if (srcPath === destPath) return false;
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) return false;
-
+/** Whether a plate is already in the archive, so it is reused rather than redrawn. */
+async function archiveExists(archivePath: string): Promise<boolean> {
   try {
     const baseUrl =
       process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
       process.env.BLOB_BASE_URL ||
       "https://public.blob.vercel-storage.com";
-    const res = await fetch(`${baseUrl}/${bucket}/${srcPath}`);
-    if (!res.ok) return false;
-    const buf = Buffer.from(await res.arrayBuffer());
-    return await uploadToStorage(bucket, destPath, buf);
+    const encoded = archivePath.split("/").map(encodeURIComponent).join("/");
+    const res = await fetch(`${baseUrl}/images_nobg/${encoded}`, { method: "HEAD" });
+    return res.ok;
   } catch {
     return false;
   }
@@ -451,18 +441,6 @@ export interface ImageRunOptions {
    * main dish of the week.
    */
   force?: boolean;
-
-  /**
-   * Whether to fill the per-day slots as well as the archive.
-   *
-   * The slots (`<day>/<canteen>.png`) carry no week, so exactly one week can
-   * occupy them — writing a second week's plates there would overwrite the
-   * displayed week's. Only the week the app is rendering gets slots; every
-   * other week this run wrote gets its plates into the dish-addressed archive,
-   * which the read path resolves through `dish_cache.image_nobg_path`. That is
-   * what lets a week-ahead view have pictures at all.
-   */
-  writeSlots?: boolean;
 }
 
 export interface ImageRunResult {
@@ -484,7 +462,6 @@ interface ImageJob {
   canteenName: string;
   dayKey: string;
   dish: string;
-  slotPath: string;
   archivePath: string;
 }
 
@@ -493,8 +470,6 @@ function buildImageJobs(menuData: MenuData): ImageJob[] {
   const jobs: ImageJob[] = [];
 
   for (const [canteenName, canteen] of Object.entries(menuData.canteens || {})) {
-    const slug = canteenName.toLowerCase().replace(/\s+/g, "_");
-
     for (const dayItem of canteen.menu || []) {
       const dayKey = dayItem.day.toLowerCase();
       if (!DAY_ORDER.includes(dayKey)) continue;
@@ -522,7 +497,6 @@ function buildImageJobs(menuData: MenuData): ImageJob[] {
         canteenName,
         dayKey,
         dish: mainDish.dish,
-        slotPath: `${dayKey}/${slug}.png`,
         archivePath: `archive/${archiveObjectKey(mainDish.dish)}.png`,
       });
     }
@@ -552,11 +526,11 @@ async function asyncPool<T, R>(
 }
 
 /**
- * Ensures every main dish of the week has a plate image in its daily slot.
+ * Ensures every main dish of the week has a plate image in the archive.
  *
- * Work is ordered cheap-first: dishes already in the archive are copied
- * (fast, free, in parallel), and only genuine cache misses hit the image model
- * in a concurrent worker pool (concurrency 2). With a budget set, unfinished
+ * Work is ordered cheap-first: dishes already in the archive are reused
+ * (fast, free, in parallel), and only genuine misses hit the image model in a
+ * concurrent worker pool (concurrency 2). With a budget set, unfinished
  * generations are simply deferred — the next run picks them up, because the
  * archive check makes the whole pass idempotent.
  */
@@ -564,7 +538,7 @@ export async function processAllCanteenAIImages(
   menuData: MenuData,
   options: ImageRunOptions = {}
 ): Promise<ImageRunResult> {
-  const { budgetMs, force = false, writeSlots = true } = options;
+  const { budgetMs, force = false } = options;
   const startedAt = Date.now();
   const outOfTime = () => budgetMs !== undefined && Date.now() - startedAt >= budgetMs;
 
@@ -572,7 +546,6 @@ export async function processAllCanteenAIImages(
   console.log(
     `📸 ${jobs.length} main dishes to ensure images for` +
       (force ? " (force: ignoring archive)" : "") +
-      (writeSlots ? "" : " (archive only — not the displayed week)") +
       "..."
   );
 
@@ -592,22 +565,21 @@ export async function processAllCanteenAIImages(
   const newlyDrawn: Array<{ dish: string; archivePath: string }> = [];
   const needsGeneration: ImageJob[] = [];
 
-  // Phase 1: Parallel slot sync & archive reuse (concurrency 5)
+  // Phase 1: reuse what the archive already holds (concurrency 5)
   await asyncPool(5, jobs, async (job) => {
     const knownPath = cache.get(normalizeDishName(job.dish))?.imageNoBgPath ?? null;
 
     if (!force) {
-      if (writeSlots) {
-        const source = knownPath ?? job.archivePath;
-        const copied = await copyInStorageBucket("images_nobg", source, job.slotPath);
-        if (copied) {
-          result.reused++;
-          if (!knownPath) newlyDrawn.push({ dish: job.dish, archivePath: source });
-          console.log(`  ♻️ Reused image for "${job.dish}" (${job.canteenName}/${job.dayKey})`);
-          return;
-        }
-      } else if (knownPath) {
+      if (knownPath) {
         result.reused++;
+        return;
+      }
+      // dish_cache has no path, but the plate may already be there: a retitled
+      // dish normalises to the same archive key. Redrawing it would cost a
+      // model call to overwrite an identical picture.
+      if (await archiveExists(job.archivePath)) {
+        result.reused++;
+        newlyDrawn.push({ dish: job.dish, archivePath: job.archivePath });
         return;
       }
     }
@@ -677,11 +649,6 @@ export async function processAllCanteenAIImages(
 
     if (best.distance > 1) result.offTemplate.push(job.dish);
     const transparentBuffer = best.buffer;
-    // Explicit contentType at the call site rather than flipping the default in
-    // uploadToSupabase: copyInSupabaseBucket falls through to that default when
-    // a server-side copy fails, and it would then relabel a legacy PNG body as
-    // WebP. The bytes are what matter — Supabase serves the stored contentType
-    // and imgproxy sniffs the body — but a wrong label is a lie that outlives us.
     const archiveOk = await uploadToStorage(
       "images_nobg",
       job.archivePath,
@@ -692,12 +659,6 @@ export async function processAllCanteenAIImages(
     const matchingJobs = needsGeneration.filter(
       (j) => normalizeDishName(j.dish) === normalizeDishName(job.dish)
     );
-
-    if (writeSlots) {
-      for (const mJob of matchingJobs) {
-        await uploadToStorage("images_nobg", mJob.slotPath, transparentBuffer, "image/webp");
-      }
-    }
 
     if (archiveOk) {
       result.generated += matchingJobs.length;

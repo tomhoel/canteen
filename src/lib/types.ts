@@ -49,7 +49,6 @@ export interface CanteenDayItem {
   mainDish?: MenuItem;
   sideDishes?: MenuItem[];
   mainAllergens?: Allergen[];
-  imageSlug?: string;
   imagePath?: string;
   highResImagePath?: string;
   isOutdated?: boolean;
