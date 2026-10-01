@@ -208,7 +208,10 @@ test("a day change overlaps two panels and settles back to one", async ({ page }
   const before = await page.$$eval(".day-panel", (p) => p.length);
   expect(before).toBe(1);
 
-  await page.click(".day-selector button:nth-of-type(4)");
+  // Thursday, unless the app opened on Thursday: clicking the selected day
+  // changes nothing, and this test went red every Thursday.
+  const opensOnThursday = (await page.locator(".day-selector button:nth-of-type(4).active").count()) > 0;
+  await page.click(`.day-selector button:nth-of-type(${opensOnThursday ? 3 : 4})`);
 
   // Both days share the screen for the length of the change.
   await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 2_000 }).toBe(2);
