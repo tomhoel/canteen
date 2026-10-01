@@ -183,7 +183,6 @@ function delay(ms: number): Promise<void> {
 export interface MenySearchPayload {
   ingredients: RecipeIngredient[];
   dishName: string;
-  lang?: string;
   storeId?: string;
 }
 

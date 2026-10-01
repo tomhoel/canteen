@@ -44,7 +44,7 @@ export function useRecipe(): UseRecipeReturn {
       const cached = queryClient.getQueryData<Recipe>(["recipe", dishName]);
       if (cached) return cached;
 
-      const recipe = (await generateRecipe({ dishName, lang: "no" })) as Recipe;
+      const recipe = (await generateRecipe({ dishName })) as Recipe;
       queryClient.setQueryData(["recipe", dishName], recipe);
       return recipe;
     },

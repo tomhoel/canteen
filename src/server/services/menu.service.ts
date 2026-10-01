@@ -44,23 +44,8 @@ import {
 import { ensureCourses, rerankMenu } from "./course.service.js";
 
 
-/** Every distinct non-empty dish name in a week, both languages. */
-function extractAllDishes(menuData: MenuData): string[] {
-  const dishes = new Set<string>();
-  Object.values(menuData.canteens || {}).forEach((canteen) => {
-    (canteen.menu || []).forEach((dayItem) => {
-      (["no", "en"] as const).forEach((lang) => {
-        (dayItem[lang]?.items ?? []).forEach((it) => {
-          if (it.dish?.trim()) dishes.add(it.dish.trim());
-        });
-      });
-    });
-  });
-  return Array.from(dishes);
-}
-
-/** Every distinct non-empty Norwegian dish name in a week. */
-export function extractNoDishes(menuData: MenuData): string[] {
+/** Every distinct non-empty dish name in a week (the Norwegian menu). */
+export function extractDishes(menuData: MenuData): string[] {
   const dishes = new Set<string>();
   Object.values(menuData.canteens || {}).forEach((canteen) => {
     (canteen.menu || []).forEach((dayItem) => {
@@ -110,9 +95,7 @@ function fingerprintScrape(menuData: MenuData): string {
       const canteen = menuData.canteens[name];
       const days = (canteen.menu || [])
         .map((d) => {
-          const items = (["no", "en"] as const)
-            .map((lang) => (d[lang]?.items ?? []).map((i) => i.dish).join("|"))
-            .join("~");
+          const items = (d.no?.items ?? []).map((i) => i.dish).join("|");
           return `${d.day}:${items}`;
         })
         .join(";");
@@ -308,13 +291,13 @@ export function buildDailyMenuData(
 
   for (const result of results) {
     if (!result.daily) continue;
-    const { no, en } = result.daily;
+    const { no } = result.daily;
     canteens[result.canteen.displayName] = {
       // No week label: the daily board does not carry one, and inventing one
       // would feed `groupCanteensByPublishedWeek` a number it did not publish.
       week: "",
       openingHours: result.canteen.hours,
-      menu: [{ day: dayEntryName(todayKey), ...(no ? { no } : {}), ...(en ? { en } : {}) }],
+      menu: [{ day: dayEntryName(todayKey), ...(no ? { no } : {}) }],
     };
   }
 
@@ -394,9 +377,9 @@ export function boardLooksLikeNextDay(
   return matchTomorrow - dayMatch(board, today) >= ROLLOVER_MIN_MARGIN;
 }
 
-/** The items a day entry published, in whichever language it filled in. */
+/** The items a day entry published. */
 function itemsOf(entry: DayEntry | undefined): MenuItem[] {
-  return entry?.no?.items ?? entry?.en?.items ?? [];
+  return entry?.no?.items ?? [];
 }
 
 /**
@@ -410,10 +393,7 @@ function itemsOf(entry: DayEntry | undefined): MenuItem[] {
  * - It never adds a canteen. If the week's row has never heard of a canteen,
  *   a single day's dishes are not enough to introduce it — the card would have
  *   one day of food and four blanks.
- * - It never drops a language. A board published only in Norwegian overrides
- *   the Norwegian column and leaves the English weekly menu in place, rather
- *   than blanking a column the kitchen simply did not fill in that morning.
- * - It never mutates in place. The `CanteenData` objects here are shared with
+* PLACEHOLDER * - It never mutates in place. The `CanteenData` objects here are shared with
  *   the raw scrape, which the write loop reuses for every other week in the
  *   run, so an in-place edit for this week would leak into the next one.
  */
@@ -437,7 +417,7 @@ export function applyDailyOverride(
     if (!target) continue;
 
     const source = dailyCanteen.menu?.[0];
-    if (!source || (!source.no && !source.en)) continue;
+    if (!source?.no) continue;
 
     const menu = [...(target.menu ?? [])];
     const index = menu.findIndex((d) => d.day?.toLowerCase() === todayKey);
@@ -455,8 +435,7 @@ export function applyDailyOverride(
 
     const replacement: DayEntry = {
       day: existing?.day ?? dayEntryName(todayKey),
-      ...(source.no ? { no: source.no } : existing?.no ? { no: existing.no } : {}),
-      ...(source.en ? { en: source.en } : existing?.en ? { en: existing.en } : {}),
+      no: source.no,
     };
 
     if (index >= 0) {
@@ -586,8 +565,8 @@ export async function runWeeklyUpdateService(
   // Proofread Norwegian dish titles (typos, compound words) before grouping & cache keys.
   const rawNoDishes = [
     ...new Set([
-      ...extractNoDishes(menuData),
-      ...(dailyData ? extractNoDishes(dailyData) : []),
+      ...extractDishes(menuData),
+      ...(dailyData ? extractDishes(dailyData) : []),
     ]),
   ];
   try {
@@ -661,7 +640,7 @@ export async function runWeeklyUpdateService(
     const weekMenuData: MenuData = { ...menuData, canteens: mergedCanteens };
 
     // Only the week the app is showing gets today's board. Today is in exactly
-    // one week, and this runs before extractAllDishes and fingerprintScrape so
+    // one week, and this runs before extractDishes and fingerprintScrape so
     // the overridden dishes are enriched, fingerprinted and cached like any
     // other — not bolted on afterwards where nothing would look at them.
     if (dailyData && todayKey && weekId === displayWeekId) {
@@ -679,7 +658,7 @@ export async function runWeeklyUpdateService(
       }
     }
 
-    const allDishes = extractAllDishes(weekMenuData);
+    const allDishes = extractDishes(weekMenuData);
     const fingerprint = fingerprintScrape(weekMenuData);
     const unchanged = !force && existing?.fingerprint === fingerprint;
 
@@ -798,7 +777,7 @@ export async function runWeeklyUpdateService(
   const primaryWrite = weeksWritten.find((w) => w.weekId === primary.weekId);
   const stats: UpdateStats = {
     weekId: primary.weekId,
-    dishCount: primaryWrite?.dishCount ?? extractAllDishes(primary.menuData).length,
+    dishCount: primaryWrite?.dishCount ?? extractDishes(primary.menuData).length,
     fromCache: weeksWritten.reduce((n, w) => n + w.fromCache, 0),
     sentToModel: weeksWritten.reduce((n, w) => n + w.sentToModel, 0),
     durablyCached: weeksWritten.reduce((n, w) => n + w.durablyCached, 0),

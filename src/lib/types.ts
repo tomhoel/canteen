@@ -5,7 +5,7 @@ export interface DayMenu { label: string; items: MenuItem[]; availabilityNotes?:
 // only one language — see the scraper test of the same name. Declaring them
 // required made every `dayItem.no?.items` guard in the pipeline look like
 // defensive paranoia rather than the load-bearing check it is.
-export interface DayEntry { day: string; no?: DayMenu; en?: DayMenu; }
+export interface DayEntry { day: string; no?: DayMenu; }
 export interface CanteenData { week: string; openingHours: string; menu: DayEntry[]; }
 export interface MenuData { scrapedAt: string; canteens: Record<string, CanteenData>; }
 
@@ -18,7 +18,7 @@ export interface DishOrigin { code: string; country: string; }
  */
 export type DishCourse = "meat_plate" | "meat_mixed" | "veg" | "soup" | "side";
 export const DISH_COURSES: readonly DishCourse[] = ["meat_plate", "meat_mixed", "veg", "soup", "side"];
-export interface DishDescription { en?: string; no?: string; }
+export interface DishDescription { no?: string; }
 
 export interface WeeklyMenuRecord {
   weekId: string;

@@ -466,7 +466,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // Shared with LoadingScreen so the shell shown while the menu loads and the
   // header that replaces it cannot print different dates for the same week.
   const { dateStr, dayLabelsData } = useMemo(() => ({
-    dateStr: formatLongDate(displayMonday, selectedDay, "no"),
+    dateStr: formatLongDate(displayMonday, selectedDay),
     dayLabelsData: weekDayLabels(displayMonday),
   }), [selectedDay, displayMonday]);
 
@@ -474,27 +474,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     return DAY_KEYS.map(dk => {
       return sortedCanteens.map(([canteenName, canteen]) => {
         const dayEntry = canteen.menu.find(d => d.day.toLowerCase() === dk);
-        const noItems = dayEntry?.no?.items;
-        const enItems = dayEntry?.en?.items;
-        const rawItems = (noItems && noItems.length > 0 ? noItems : enItems);
-        const items = getRankedItems(rawItems, canteenName);
-        const mainDish = items?.find(i => i.isMain && i.dish.trim());
-        // Defense in depth: drop items whose `dish` field is empty (older
-        // weekly_menus rows have empty entries from a scraper bug fixed in
-        // a later commit; new rows shouldn't ever land here).
-        const displaySideDishes = items?.filter(i => !i.isMain && i.dish.trim()).slice(0, 3) || [];
-        // Rank the Norwegian list with the SAME function rather than trusting
-        // the stored `isMain` flag. Rows written by an earlier version of the
-        // ranking disagree with today's, and reading the flag straight from
-        // the database attached the wrong dish's allergens to the card.
-        const noRanked = getRankedItems(noItems, canteenName);
-        const noMainDish = noRanked.find(i => i.isMain && i.dish.trim());
-        const noSideDishes = noRanked.filter(i => !i.isMain && i.dish.trim());
-        const mainAllergens = noMainDish?.allergens || mainDish?.allergens || [];
-        const sideDishes = displaySideDishes.map((item, idx) => ({
-          ...item,
-          allergens: noSideDishes[idx]?.allergens || item.allergens,
-        }));
+        // The ranking was decided once by the updater and stored (see
+        // dish-ranking.ts); getRankedItems returns it as stored.
+        const items = getRankedItems(dayEntry?.no?.items, canteenName);
+        const mainDish = items.find(i => i.isMain && i.dish.trim());
+        // Items with an empty `dish` are dropped: older stored weeks have them
+        // from a scraper bug fixed long ago.
+        const sideDishes = items.filter(i => !i.isMain && i.dish.trim()).slice(0, 3);
+        const mainAllergens = mainDish?.allergens || [];
         // Closed canteens point at one of 3 static cutlery-and-napkin plates
         // hosted in Blob. We don't generate dish images for closed days.
         const isClosed = !mainDish || ["stengt", "closed", "lukket"].some(kw => mainDish.dish.toLowerCase().includes(kw));
@@ -523,28 +510,15 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const cmp = canteenWeekNum !== undefined ? compareWeeks(canteenWeekNum, displayWeek) : 0;
         const isOutdated = cmp === -1;
         const isAhead = cmp === 1;
-        const enLookup = dayEntry?.en?.items || [];
-        // Origin + description follow the kitchen's language (NO). The EN title
-        // is a translation maintained by the canteen and occasionally points at
-        // a completely different dish (e.g. NO "Svensk kjøttgrateng" vs.
-        // EN "Braised chicken leg"). Trust NO for cross-references.
-        const lookupMainDish =
-          noMainDish ?? getRankedItems(enLookup, canteenName).find(i => i.isMain);
-        const origin = dishOrigins[lookupMainDish?.dish || ""] ?? null;
-        const descEntry = dishDescriptions[lookupMainDish?.dish || ""];
+        const origin = dishOrigins[mainDish?.dish || ""] ?? null;
+        const descEntry = dishDescriptions[mainDish?.dish || ""];
         const description = descEntry
-          ? (typeof descEntry === "string" ? descEntry : descEntry["no"] || descEntry["en"] || null)
+          ? (typeof descEntry === "string" ? descEntry : descEntry["no"] || null)
           : null;
-        // Pull availability notes from the user's preferred language; fall back
-        // to the other language if the canteen only published one side.
-        const langNotes = dayEntry?.["no"]?.availabilityNotes;
-        const otherNotes = dayEntry?.["en"]?.availabilityNotes;
-        const availabilityNotes = (langNotes?.length ? langNotes : otherNotes) || [];
-        // The headline the card prints. Keyed on the same NO lookup dish as the
-        // origin and description above, for the same reason: the EN title the
-        // canteen publishes sometimes names a different dish entirely.
+        const availabilityNotes = dayEntry?.no?.availabilityNotes || [];
+        // The headline the card prints: the short title when the updater made one.
         const displayDishName =
-          dishShortNames[lookupMainDish?.dish || ""] || mainDish?.dish || null;
+          dishShortNames[mainDish?.dish || ""] || mainDish?.dish || null;
         return {
           canteenName, canteen, dayEntry, items, mainDish, sideDishes,
           mainAllergens, imagePath, highResImagePath,

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validateTitleCorrection } from "./ai.service.js";
-import { extractNoDishes, applyTitleCorrections } from "./menu.service.js";
+import { extractDishes, applyTitleCorrections } from "./menu.service.js";
 import type { MenuData, CanteenData } from "../../lib/types.js";
 
 // ─── validateTitleCorrection Heuristics ───────────────────────────────────────
@@ -54,9 +54,9 @@ test("validateTitleCorrection - rejects wholesale rewrites", () => {
   );
 });
 
-// ─── extractNoDishes & applyTitleCorrections ──────────────────────────────────
+// ─── extractDishes & applyTitleCorrections ──────────────────────────────────
 
-test("extractNoDishes - extracts unique Norwegian dish names", () => {
+test("extractDishes - extracts unique Norwegian dish names", () => {
   const menuData: MenuData = {
     scrapedAt: "2026-08-26T00:00:00.000Z",
     canteens: {
@@ -73,19 +73,13 @@ test("extractNoDishes - extracts unique Norwegian dish names", () => {
                 { dish: "Klar kyllingsuppe", isMain: false, allergens: [] },
               ],
             },
-            en: {
-              label: "MONDAY",
-              items: [
-                { dish: "Pasta gratin with vegetables", isMain: true, allergens: [] },
-              ],
-            },
           },
         ],
       } as CanteenData,
     },
   };
 
-  const noDishes = extractNoDishes(menuData);
+  const noDishes = extractDishes(menuData);
   assert.deepEqual(noDishes.sort(), [
     "Klar kyllingsuppe",
     "Pasta grateng med grgrønnsaker",
@@ -109,12 +103,6 @@ test("applyTitleCorrections - updates matching Norwegian dishes and leaves Engli
                 { dish: "Klar kyllingsuppe", isMain: false, allergens: [] },
               ],
             },
-            en: {
-              label: "MONDAY",
-              items: [
-                { dish: "Pasta grateng with vegetable", isMain: true, allergens: [] },
-              ],
-            },
           },
         ],
       } as CanteenData,
@@ -128,6 +116,4 @@ test("applyTitleCorrections - updates matching Norwegian dishes and leaves Engli
   assert.equal(count, 1);
   assert.equal(menuData.canteens.Flow.menu[0].no!.items[0].dish, "Pastagrateng med grønnsaker");
   assert.equal(menuData.canteens.Flow.menu[0].no!.items[1].dish, "Klar kyllingsuppe");
-  // English dish is unchanged
-  assert.equal(menuData.canteens.Flow.menu[0].en!.items[0].dish, "Pasta grateng with vegetable");
 });

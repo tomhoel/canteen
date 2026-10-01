@@ -84,27 +84,24 @@ test("parseCanteenHtml - groups dishes under their day and language", () => {
     data.menu[0].no!.items.map((i) => i.dish),
     ["Torsk med sitron", "Tomatsuppe"]
   );
-  assert.deepEqual(
-    data.menu[0].en!.items.map((i) => i.dish),
-    ["Cod with lemon", "Tomato soup"]
-  );
+  assert.ok(!("en" in data.menu[0]), "the English copy of the day is recognised and dropped");
 });
 
 test("parseCanteenHtml - recovers dishes the widget jams into an <h1>", () => {
-  // Flow really emits this: a day's whole English menu inside a heading.
+  // Flow really emits this: a day's whole menu inside a heading.
   const data = parseCanteenHtml(
     html(`
-      <h1>Tuesday</h1>
-      <h1>Lentil curry with coconut milk (7)Root vegetable soup (7)Tandoori chicken with rice (4)</h1>
+      <h1>Tirsdag</h1>
+      <h1>Linsekarri med kokosmelk (7)Rotgrønnsaksuppe (7)Tandoori kylling med ris (4)</h1>
     `),
     flow
   );
 
-  const items = data.menu[0].en!.items.map((i) => i.dish);
+  const items = data.menu[0].no!.items.map((i) => i.dish);
   assert.deepEqual(items.sort(), [
-    "Lentil curry with coconut milk",
-    "Root vegetable soup",
-    "Tandoori chicken with rice",
+    "Linsekarri med kokosmelk",
+    "Rotgrønnsaksuppe",
+    "Tandoori kylling med ris",
   ].sort());
 });
 
@@ -124,14 +121,20 @@ test("parseCanteenHtml - returns days in Monday-to-Friday order", () => {
   );
 });
 
-test("parseCanteenHtml - a day published in only one language still appears", () => {
+test("parseCanteenHtml - a day published only in English is dropped, not shown as dishes", () => {
+  // The app is Norwegian-only. The English heading is still recognised, so its
+  // lines are never mistaken for Norwegian dishes.
+  const data = parseCanteenHtml(html(`<h1>Thursday</h1><div>Chicken salsa with pasta</div>`), flow);
+  assert.equal(data.menu.length, 0);
+});
+
+test("parseCanteenHtml - a Norwegian day appears and carries no English", () => {
   const data = parseCanteenHtml(html(`<h1>Torsdag</h1><div>Kylling salsa med pasta</div>`), flow);
   assert.equal(data.menu.length, 1);
   assert.equal(data.menu[0].no!.items.length, 1);
-  assert.equal(data.menu[0].en, undefined);
 });
 
-test("parseCanteenHtml - marks exactly one main dish per language", () => {
+test("parseCanteenHtml - marks exactly one main dish", () => {
   const data = parseCanteenHtml(
     html(`<h1>Mandag</h1><div>Tomatsuppe</div><div>Kylling med ris</div><div>Couscous</div>`),
     flow

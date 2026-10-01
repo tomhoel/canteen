@@ -41,7 +41,6 @@ export function useMenySearch(): UseMenySearchReturn {
       const data = (await searchMeny({
         ingredients: recipe.ingredients,
         dishName,
-        lang: "no",
       })) as MenyResponse;
 
       queryClient.setQueryData(["meny", dishName], data);

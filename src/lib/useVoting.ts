@@ -186,7 +186,7 @@ export function useVoting(): UseVotingReturn {
       );
 
       try {
-        await sendSlackNotification({ canteens: votes, dishes, date: todayKey, lang: "no" });
+        await sendSlackNotification({ canteens: votes, dishes, date: todayKey });
         if (typeof window !== "undefined") {
           localStorage.setItem(`slack_shared_${todayKey}`, "1");
         }

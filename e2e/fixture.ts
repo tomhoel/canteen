@@ -55,7 +55,6 @@ export function buildMenuFixture() {
       menu: DAYS.map((day, dayIdx) => ({
         day,
         no: dayMenu(name, dayIdx, sideCount, DAYS_NO[dayIdx]),
-        en: dayMenu(name, dayIdx, sideCount, DAYS[dayIdx].toUpperCase()),
       })),
     };
   });

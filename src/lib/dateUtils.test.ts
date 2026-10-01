@@ -220,12 +220,9 @@ test("weekDayLabels - produces 5 zero-padded day.month strings", () => {
   assert.deepEqual(labels, ["17.08", "18.08", "19.08", "20.08", "21.08"]);
 });
 
-test("formatLongDate - formats long date for Norwegian and English", () => {
+test("formatLongDate - formats a long Norwegian date", () => {
   const monday = new Date(2026, 7, 17, 12, 0, 0); // 17 Aug 2026
-  const no = formatLongDate(monday, 1, "no"); // Tuesday 18 August
-  const en = formatLongDate(monday, 1, "en");
-  assert.match(no, /18\.\s*august/i);
-  assert.match(en, /18\s*August/i);
+  assert.match(formatLongDate(monday, 1), /18\.\s*august/i); // Tuesday 18 August
 });
 
 

@@ -269,13 +269,9 @@ export function weekDayLabels(anchorMonday: Date): string[] {
 }
 
 /** The long-form date ("18. august") of day `dayIndex` of that same week. */
-export function formatLongDate(
-  anchorMonday: Date,
-  dayIndex: number,
-  lang: 'no' | 'en',
-): string {
+export function formatLongDate(anchorMonday: Date, dayIndex: number): string {
   const d = addDays(anchorMonday, dayIndex);
-  return d.toLocaleDateString(lang === 'no' ? 'nb-NO' : 'en-GB', {
+  return d.toLocaleDateString('nb-NO', {
     day: 'numeric',
     month: 'long',
   });

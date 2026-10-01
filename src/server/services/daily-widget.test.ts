@@ -56,14 +56,12 @@ test("parseDailyHtml - pairs each dish with its own allergen line", () => {
   );
 });
 
-test("parseDailyHtml - both language columns are read", () => {
+test("parseDailyHtml - only the Norwegian column is read", () => {
   const daily = parseDailyHtml(fixture("fresh4you"), canteen("Fresh4you"), "friday");
   assert.equal(daily.no?.items.length, 3);
-  assert.equal(daily.en?.items.length, 3);
-  assert.ok(dishes(daily.en).includes("Fried rice with egg, curry and vegetables"));
+  assert.ok(!("en" in daily), "the English column is not read");
   // The label comes from the caller's day, since the widget never says.
   assert.equal(daily.no?.label, "FREDAG");
-  assert.equal(daily.en?.label, "FRIDAY");
 });
 
 test("parseDailyHtml - an empty 'Allergener:' line is not a dish", () => {
@@ -73,7 +71,6 @@ test("parseDailyHtml - an empty 'Allergener:' line is not a dish", () => {
   const daily = parseDailyHtml(fixture("eat-the-street"), canteen("Eat the street"), "friday");
 
   assert.equal(daily.no?.items.length, 4);
-  assert.equal(daily.en?.items.length, 4);
   assert.deepEqual(allergenIds(daily.no, "Kikertsuppe med urte"), []);
   assert.deepEqual(allergenIds(daily.no, "Pizza med salami og ruccola"), ["3", "4"]);
 });
@@ -110,7 +107,7 @@ test("parseDailyHtml - the allergen legend is never read as dishes", () => {
   // allergens. Scoping to `.menu-item-holder` is what keeps it out.
   for (const [name, display] of ALL) {
     const daily = parseDailyHtml(fixture(name), canteen(display), "friday");
-    const all = [...dishes(daily.no), ...dishes(daily.en)];
+    const all = [...dishes(daily.no)];
     assert.ok(all.length > 0 && all.length <= 8, `${name}: ${all.length} dishes`);
     for (const legend of ["Nøtter/Nuts", "Sulfitter/Sulfites", "Bløtdyr/Mulluscs"]) {
       assert.ok(!all.includes(legend), `${name} leaked the legend row "${legend}"`);
@@ -123,7 +120,7 @@ test("parseDailyHtml - the 'DAGENS LUNSj' heading is never read as a dish", () =
   // mixed, so the all-caps test it relies on returns false.
   for (const [name, display] of ALL) {
     const daily = parseDailyHtml(fixture(name), canteen(display), "friday");
-    const all = [...dishes(daily.no), ...dishes(daily.en)].map((d) => d.toUpperCase());
+    const all = [...dishes(daily.no)].map((d) => d.toUpperCase());
     assert.ok(!all.includes("DAGENS LUNSJ"), name);
     assert.ok(!all.includes("TODAYS LUNCH"), name);
   }
@@ -134,17 +131,14 @@ test("parseDailyHtml - exactly one dish is ranked as the main", () => {
   // image is shown. If those two can disagree the picture names another dish.
   for (const [name, display] of ALL) {
     const daily = parseDailyHtml(fixture(name), canteen(display), "friday");
-    for (const lang of ["no", "en"] as const) {
-      const mains = (daily[lang]?.items ?? []).filter((i) => i.isMain);
-      assert.equal(mains.length, 1, `${name}/${lang}: ${mains.length} mains`);
-    }
+    const mains = (daily.no?.items ?? []).filter((i) => i.isMain);
+    assert.equal(mains.length, 1, `${name}: ${mains.length} mains`);
   }
 });
 
 test("parseDailyHtml - unrecognised markup yields nothing rather than junk", () => {
   const daily = parseDailyHtml("<html><body><p>Stengt</p></body></html>", canteen("Flow"), "friday");
   assert.equal(daily.no, undefined);
-  assert.equal(daily.en, undefined);
 });
 
 test("parseDailyHtml - a single-dish board is rejected", () => {

@@ -89,39 +89,30 @@ export function fallbackOrigin(dish: string): DishOrigin {
   return match ? { code: match.code, country: match.country } : { code: "no", country: "Norway" };
 }
 
-/** Canned bilingual copy, keyed off whatever the dish name gives away. */
+/** Canned Norwegian copy, keyed off whatever the dish name gives away. */
 export function fallbackDescription(dish: string): DishDescription {
   const lower = dish.toLowerCase();
   let noDesc = `Chef's special fra kantinens helter. Tilberedt med stolthet og friske råvarer.`;
-  let enDesc = `Chef's special crafted by canteen heroes. Made with pride and fresh ingredients.`;
 
   if (lower.includes("suppe") || lower.includes("soup")) {
     noDesc = `Varmende trøst på boks. Garanti mot vestavind og dårlig mandagsstemning.`;
-    enDesc = `Liquid comfort in a bowl. Scientifically proven to cure Monday morning blues.`;
   } else if (lower.includes("pizza")) {
     noDesc = `Nystekt italiensk magi. Kantinens ubestridte stjerne – kom før kollegaene spiser alt.`;
-    enDesc = `Freshly baked crispy perfection. The crown jewel of the canteen floor.`;
   } else if (lower.includes("pasta")) {
     noDesc = `Karbo-glede på sitt beste. Serveres med nok parmesan til å glemme neste møte.`;
-    enDesc = `Carb-loaded bliss. Topped with enough parmesan to make your next meeting bearable.`;
   } else if (lower.includes("gryte") || lower.includes("stew") || lower.includes("curry")) {
     noDesc = `Langsomt kokt kjærlighet. Så mør og smaksrik at du vurderer porsjon nummer to.`;
-    enDesc = `Slow-cooked culinary magic. So rich and tender you'll secretly contemplate seconds.`;
   } else if (lower.includes("schnitzel") || lower.includes("panert")) {
     noDesc = `Sprø utside, saftig innside. Gylden lykke som løfter humøret tre hakk.`;
-    enDesc = `Golden crispy perfection on the outside, pure joy on the inside.`;
   } else if (lower.includes("biff") || lower.includes("beef") || lower.includes("karbonad") || lower.includes("pølse")) {
     noDesc = `Saftig proteinkick tilberedt med tradisjon. Kjøkkenets stolthet i dag.`;
-    enDesc = `Hearty protein feast crafted with pride. Today's undisputed hero dish.`;
   } else if (lower.includes("fisk") || lower.includes("fish") || lower.includes("rødspette") || lower.includes("torsk") || lower.includes("laks")) {
     noDesc = `Fersk fangst i gourmetdrakt. Så godt at selv fiskeskeptikere blir omvendt.`;
-    enDesc = `Fresh catch done right. So delicious it'll convert even the fiercest fish skeptics.`;
   } else if (lower.includes("taco") || lower.includes("burrito") || lower.includes("tortilla") || lower.includes("meksikansk")) {
     noDesc = `Fiesta midt i arbeidsdagen. Litt krydder for å våkne før ettermiddagsøkta.`;
-    enDesc = `A workday fiesta in a tortilla. Just enough spice to revive your post-lunch focus.`;
   }
 
-  return { no: noDesc, en: enDesc };
+  return { no: noDesc };
 }
 
 /**
@@ -202,11 +193,10 @@ Guidelines:
 - Write ONE short sentence, or two very short ones, and count the characters.
 - Do not end with an ellipsis; finish the thought inside the budget.
 - Describe the dish named, not a different one.
-- Return ONLY a JSON object mapping each dish name EXACTLY as given above to bilingual descriptions, each at most ${DESCRIPTION_MAX_CHARS} characters:
+- Return ONLY a JSON object mapping each dish name EXACTLY as given above to a Norwegian (Bokmål) description of at most ${DESCRIPTION_MAX_CHARS} characters:
 {
   "Dish Name": {
-    "no": "Appetizing and quietly witty description in Norwegian (Bokmål)",
-    "en": "Appetizing and quietly witty description in English"
+    "no": "Appetizing and quietly witty description in Norwegian (Bokmål)"
   }
 }`;
 
@@ -217,7 +207,7 @@ Guidelines:
     if (parsed) {
       for (const dish of batch) {
         const entry = parsed[dish];
-        if (entry && (entry.no || entry.en)) {
+        if (entry?.no) {
           result[dish] = entry;
           fromModel.add(dish);
         }
@@ -256,7 +246,7 @@ export async function classifyCourses(dishes: string[]): Promise<Record<string, 
 - "side": pizza, salad, bread, dessert, plain rice or other sides, anything that is not a main dish.
 
 Rules:
-- Judge by the dish name only. The name may be Norwegian or English.
+- Judge by the dish name only. The name is usually Norwegian.
 - A soup is always "soup", even if it names meat or fish.
 - Pizza is always "side".
 - If it names meat or fish and is a stew, wok, pasta or curry, it is "meat_mixed"; if it is served with potatoes, rice or vegetables as separate components, it is "meat_plate".
@@ -628,30 +618,12 @@ Return ONLY JSON: {"plating": "..."}`;
   return plating ? plating : null;
 }
 
-export async function generateAIRecipe(
-  dishName: string,
-  lang: "no" | "en"
-): Promise<Recipe> {
+export async function generateAIRecipe(dishName: string): Promise<Recipe> {
   const ai = getAIClient();
-
-  const langInstruction =
-    lang === "no"
-      ? "Respond entirely in Norwegian (bokmål)."
-      : "Respond entirely in English.";
-
-  const itemLocalField =
-    lang === "no"
-      ? `\n    { "amount": "4", "unit": "fileter", "item": "Salmon", "itemLocal": "Laks" }`
-      : `\n    { "amount": "4", "unit": "fillets", "item": "Salmon" }`;
-
-  const itemLocalRule =
-    lang === "no"
-      ? `\n- Also include an "itemLocal" field with the Norwegian name for each ingredient.`
-      : "";
 
   const promptText = `You are an expert Scandinavian chef with a touch of culinary wit. Generate a home recipe for: "${dishName}".
 
-${langInstruction}
+Respond entirely in Norwegian (bokmål).
 
 Return ONLY valid JSON:
 {
@@ -659,14 +631,16 @@ Return ONLY valid JSON:
   "servings": 4,
   "prepTime": "20 min",
   "cookTime": "30 min",
-  "ingredients": [${itemLocalField}
+  "ingredients": [
+    { "amount": "4", "unit": "fileter", "item": "Salmon", "itemLocal": "Laks" }
   ],
   "steps": [
     "Step 1 instruction...",
     "Step 2 instruction..."
   ],
   "tip": "Useful and witty cooking tip"
-}${itemLocalRule}`;
+}
+Also include an "itemLocal" field with the Norwegian name for each ingredient.`;
 
   if (ai) {
     for (const model of FLASH_MODELS) {
@@ -699,10 +673,10 @@ Return ONLY valid JSON:
       { amount: "1", unit: "klype", item: "Salt and pepper", itemLocal: "Salt og pepper" },
     ],
     steps: [
-      lang === "no" ? "Forbered ingrediensene og varm opp pannen eller gryten." : "Prepare the ingredients and heat the pan or pot.",
-      lang === "no" ? `Tilbered ${dishName} over middels varme til det er gjennomvarmt og saftig.` : `Cook ${dishName} over medium heat until tender and well combined.`,
-      lang === "no" ? "Server varmt med friskt tilbehør." : "Serve hot with fresh sides.",
+      "Forbered ingrediensene og varm opp pannen eller gryten.",
+      `Tilbered ${dishName} over middels varme til det er gjennomvarmt og saftig.`,
+      "Server varmt med friskt tilbehør.",
     ],
-    tip: lang === "no" ? "Server med et smil og et ekstra dryss kjærlighet!" : "Serve with a smile and an extra sprinkle of love!",
+    tip: "Server med et smil og et ekstra dryss kjærlighet!",
   };
 }

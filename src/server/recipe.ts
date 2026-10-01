@@ -4,21 +4,20 @@ import { getRedis, matchesCachedShape } from "./services/redis.service.js";
 
 export interface RecipeRequest {
   dishName: string;
-  lang: "no" | "en";
 }
 
 /** What a cached recipe must still have to be usable — the fields the sheet renders. */
 const RECIPE_CACHE_FIELDS = ["title", "ingredients", "steps"] as const;
 
 export async function generateRecipe(data: RecipeRequest) {
-  const { dishName, lang } = data;
+  const { dishName } = data;
 
-  if (!dishName || !["no", "en"].includes(lang)) {
+  if (!dishName) {
     throw new Error("Invalid request");
   }
 
   const weekNum = getWeekNumber();
-  const cacheKey = `recipe:wk${weekNum}:${dishName}:${lang}`;
+  const cacheKey = `recipe:wk${weekNum}:${dishName}`;
   const redis = getRedis();
 
   if (redis) {
@@ -37,7 +36,7 @@ export async function generateRecipe(data: RecipeRequest) {
   // needs it. Paying that on the miss path only keeps it off every cache hit's
   // cold start.
   const { generateAIRecipe } = await import("./services/ai.service.js");
-  const recipe = await generateAIRecipe(dishName, lang);
+  const recipe = await generateAIRecipe(dishName);
 
   if (redis) {
     try {

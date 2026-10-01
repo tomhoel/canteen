@@ -63,10 +63,9 @@ export function fitDescriptionText(text: string, max = DESCRIPTION_MAX_CHARS): s
   return `${head}…`;
 }
 
-/** fitDescriptionText across both languages of a stored description. */
+/** fitDescriptionText on a stored description. */
 export function fitDescription(d: DishDescription): DishDescription {
   const out: DishDescription = {};
   if (d?.no) out.no = fitDescriptionText(d.no);
-  if (d?.en) out.en = fitDescriptionText(d.en);
   return out;
 }

@@ -116,13 +116,11 @@ test("every canned fallback fits after trimming", () => {
   }
 });
 
-test("both languages are trimmed, and a missing one stays missing", () => {
+test("a description is trimmed, and a missing one stays missing", () => {
   const out = fitDescription({
     no: "Mørt lammegryte med urter, servert med fyldige kokte poteter. En varmende nytelse.",
-    en: "Tender lamb stew with herbs, served with rich boiled potatoes. A warming delight.",
   });
   assert.ok(out.no!.length <= DESCRIPTION_MAX_CHARS + 1);
-  assert.ok(out.en!.length <= DESCRIPTION_MAX_CHARS + 1);
 
   const noEnglish = fitDescription({ no: "Kort og godt." });
   assert.equal(noEnglish.no, "Kort og godt.");

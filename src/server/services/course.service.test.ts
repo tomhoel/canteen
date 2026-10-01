@@ -5,11 +5,11 @@ import type { MenuData, MenuItem } from "../../lib/types";
 
 const it = (dish: string, isMain = false): MenuItem => ({ dish, isMain, allergens: [] });
 
-function week(items: MenuItem[], en: MenuItem[] = []): MenuData {
+function week(items: MenuItem[]): MenuData {
   return {
     scrapedAt: "",
     canteens: {
-      Flow: { week: "40", openingHours: "", menu: [{ day: "thursday", no: { label: "", items }, ...(en.length ? { en: { label: "", items: en } } : {}) }] },
+      Flow: { week: "40", openingHours: "", menu: [{ day: "thursday", no: { label: "", items } }] },
     },
   };
 }
@@ -30,10 +30,8 @@ test("rerankMenu with no labels falls back to the name rules and reports no chan
   assert.equal(data.canteens.Flow.menu[0].no!.items[0].dish, "Kyllingbryst med ris");
 });
 
-test("rerankMenu matches labels by trimmed name and ranks each language on its own", () => {
-  const data = week([it("Stekt sei ", true), it("Grøt")], [it("Porridge", true), it("Fried pollock")]);
-  rerankMenu(data, { "Stekt sei": "meat_plate", Grøt: "veg", Porridge: "veg", "Fried pollock": "meat_plate" });
-  const day = data.canteens.Flow.menu[0];
-  assert.equal(day.no!.items[0].dish, "Stekt sei ");
-  assert.equal(day.en!.items[0].dish, "Fried pollock");
+test("rerankMenu matches labels by trimmed name", () => {
+  const data = week([it("Grøt", true), it("Stekt sei ")]);
+  rerankMenu(data, { "Stekt sei": "meat_plate", Grøt: "veg" });
+  assert.equal(data.canteens.Flow.menu[0].no!.items[0].dish, "Stekt sei ");
 });

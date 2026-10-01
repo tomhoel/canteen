@@ -11,9 +11,9 @@ import type { MenuData, MenuItem } from "../lib/types.js";
  *
  * These tests pin the rule from the client's side. HomeClient does:
  *
- *   const noMainDish   = noRanked.find(i => i.isMain && i.dish.trim());
- *   const lookupMainDish = noMainDish ?? getRankedItems(enLookup, canteen).find(i => i.isMain);
- *   dishDescriptions[lookupMainDish?.dish || ""]
+ *   const items = getRankedItems(dayEntry?.no?.items, canteenName);
+ *   const mainDish = items.find(i => i.isMain && i.dish.trim());
+ *   dishDescriptions[mainDish?.dish || ""]
  *
  * so whatever that expression can produce must survive the trim.
  */
@@ -21,23 +21,17 @@ import type { MenuData, MenuItem } from "../lib/types.js";
 const item = (dish: string): MenuItem => ({ dish, isMain: false, allergens: [] });
 
 /** The client's lookup key for one canteen-day, transcribed from HomeClient. */
-function clientLookupKey(
-  no: MenuItem[] | undefined,
-  en: MenuItem[] | undefined,
-  canteenName: string
-): string | undefined {
-  const noMain = rankItems(no, canteenName).find((i) => i.isMain && i.dish.trim());
-  const lookup = noMain ?? rankItems(en, canteenName).find((i) => i.isMain);
-  return lookup?.dish;
+function clientLookupKey(no: MenuItem[] | undefined, canteenName: string): string | undefined {
+  return rankItems(no, canteenName).find((i) => i.isMain && i.dish.trim())?.dish;
 }
 
-const week = (no?: MenuItem[], en?: MenuItem[]): MenuData => ({
+const week = (no?: MenuItem[]): MenuData => ({
   scrapedAt: "2026-09-04T06:00:00.000Z",
   canteens: {
     Flow: {
       week: "Uke 36",
       openingHours: "10:30 - 13:00",
-      menu: [{ day: "Friday", ...(no ? { no: { label: "FREDAG", items: no } } : {}), ...(en ? { en: { label: "FRIDAY", items: en } } : {}) }],
+      menu: [{ day: "Friday", ...(no ? { no: { label: "FREDAG", items: no } } : {}) }],
     },
   },
 });
@@ -47,25 +41,23 @@ function serverKeys(data: MenuData): Set<string> {
   const names = new Set<string>();
   for (const [canteenName, canteen] of Object.entries(data.canteens)) {
     for (const day of canteen.menu) {
-      for (const items of [day.no?.items, day.en?.items]) {
-        const main = rankItems(items, canteenName)[0]?.dish?.trim();
-        if (main) names.add(main);
-      }
+      const main = rankItems(day.no?.items, canteenName)[0]?.dish?.trim();
+      if (main) names.add(main);
     }
   }
   return names;
 }
 
 test("the trimmed key set contains whatever the card will ask for", () => {
-  const cases: Array<[MenuItem[] | undefined, MenuItem[] | undefined]> = [
-    [[item("Ovnsbakt torsk"), item("Suppe")], [item("Oven baked cod"), item("Soup")]],
-    [[item("Kyllinggryte")], undefined],
-    [undefined, [item("Chicken stew")]],
+  const cases: Array<MenuItem[] | undefined> = [
+    [item("Ovnsbakt torsk"), item("Suppe")],
+    [item("Kyllinggryte")],
+    undefined,
   ];
 
-  for (const [no, en] of cases) {
-    const wanted = clientLookupKey(no, en, "Flow");
-    const shipped = serverKeys(week(no, en));
+  for (const no of cases) {
+    const wanted = clientLookupKey(no, "Flow");
+    const shipped = serverKeys(week(no));
     assert.ok(
       wanted === undefined || shipped.has(wanted),
       `card would look up ${JSON.stringify(wanted)}, which the trim drops`
@@ -73,20 +65,9 @@ test("the trimmed key set contains whatever the card will ask for", () => {
   }
 });
 
-test("a blank Norwegian main falls through to the English one, on both sides", () => {
-  // The case that makes the plate-image key set the WRONG thing to reuse:
-  // resolvePlateImages skips this day entirely, while the card falls through
-  // to the English main and still wants its description.
-  const no = [item("   ")];
-  const en = [item("Oven baked cod with ratatouille")];
-
-  assert.equal(clientLookupKey(no, en, "Flow"), "Oven baked cod with ratatouille");
-  assert.ok(serverKeys(week(no, en)).has("Oven baked cod with ratatouille"));
-});
-
 test("side dishes are never shipped — they are never looked up", () => {
   const no = [item("Ovnsbakt torsk"), item("Kikertsuppe"), item("Pad Thai")];
-  const shipped = serverKeys(week(no, undefined));
+  const shipped = serverKeys(week(no));
 
   assert.equal(shipped.size, 1, `expected only the main, got ${[...shipped].join(", ")}`);
   assert.ok(!shipped.has("Kikertsuppe"));
@@ -94,6 +75,6 @@ test("side dishes are never shipped — they are never looked up", () => {
 });
 
 test("an empty week ships nothing rather than everything", () => {
-  assert.equal(serverKeys(week(undefined, undefined)).size, 0);
+  assert.equal(serverKeys(week(undefined)).size, 0);
   assert.equal(serverKeys({ scrapedAt: "", canteens: {} }).size, 0);
 });

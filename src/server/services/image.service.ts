@@ -474,9 +474,7 @@ function buildImageJobs(menuData: MenuData): ImageJob[] {
       const dayKey = dayItem.day.toLowerCase();
       if (!DAY_ORDER.includes(dayKey)) continue;
 
-      const noItems = dayItem.no?.items || [];
-      const enItems = dayItem.en?.items || [];
-      const rawItems = noItems.length > 0 ? noItems : enItems;
+      const rawItems = dayItem.no?.items || [];
       if (rawItems.length === 0) continue;
 
       // Same ranking the client uses, so the generated plate belongs to the

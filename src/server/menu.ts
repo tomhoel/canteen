@@ -65,34 +65,19 @@ export interface WeeklyMenuResponse {
 /**
  * The dish names the cards can actually look up.
  *
- * `dishOrigins` and `dishDescriptions` are stored for every dish of every day —
- * mains and sides, both languages — but exactly one place reads them, and it
- * reads them by one key per canteen-day: HomeClient.tsx looks up
- * `lookupMainDish.dish`, which is the Norwegian ranked main when it has a name
- * and the English one when it does not. Sides are never asked about. On the
- * live payload that is 14 keys out of 87, and the two maps are ~58% of the
- * response.
- *
- * This deliberately does NOT reuse the key set `resolvePlateImages` builds,
- * even though it looks like the same thing. That one takes
- * `no.items?.length ? no.items : en.items` and then skips the day entirely if
- * the winner has a blank name — where the card falls through to the English
- * main instead. The sets are a subset relation, not an identity, and trimming
- * to the smaller one would drop a description the card still wants.
- *
- * Both mains are kept rather than only the one the rule selects. The extra
- * entry per canteen-day is a few hundred bytes and it means a future change to
- * the client's fallback cannot silently start missing data.
+ * `dishOrigins` and `dishDescriptions` are stored for every dish of every day,
+ * mains and sides, but the cards read them by one key per canteen-day: the
+ * ranked main dish's name. Sides are never asked about. On a live payload that
+ * is 14 keys out of 87, and the two maps were ~58% of the response, so the
+ * response carries only the reachable ones.
  */
 function reachableDishNames(menuData: MenuData): Set<string> {
   const names = new Set<string>();
 
   for (const [canteenName, canteen] of Object.entries(menuData.canteens || {})) {
     for (const dayItem of canteen.menu || []) {
-      for (const items of [dayItem.no?.items, dayItem.en?.items]) {
-        const main = pickMainDish(items, canteenName)?.dish?.trim();
-        if (main) names.add(main);
-      }
+      const main = pickMainDish(dayItem.no?.items, canteenName)?.dish?.trim();
+      if (main) names.add(main);
     }
   }
 
@@ -166,7 +151,7 @@ async function resolvePlateImages(menuData: MenuData): Promise<Record<string, st
       const dayKey = dayItem.day.toLowerCase();
       if (!DAY_ORDER.includes(dayKey)) continue;
 
-      const items = dayItem.no?.items?.length ? dayItem.no.items : dayItem.en?.items;
+      const items = dayItem.no?.items;
       // The same ranking the card uses to choose its title, so the picture and
       // the name can never come from different dishes.
       const mainDish = pickMainDish(items, canteenName);

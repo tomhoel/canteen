@@ -17,14 +17,13 @@ const week = (): MenuData => ({
         {
           day: "Friday",
           no: { label: "FREDAG", items: [item("Planlagt fredagsrett", true)] },
-          en: { label: "FRIDAY", items: [item("Planned Friday dish", true)] },
         },
       ],
     },
   },
 });
 
-const board = (no?: MenuItem[], en?: MenuItem[]): MenuData => ({
+const board = (no?: MenuItem[]): MenuData => ({
   scrapedAt: "2026-09-04T06:00:00.000Z",
   canteens: {
     Flow: {
@@ -34,7 +33,6 @@ const board = (no?: MenuItem[], en?: MenuItem[]): MenuData => ({
         {
           day: "Friday",
           ...(no ? { no: { label: "FREDAG", items: no } } : {}),
-          ...(en ? { en: { label: "FRIDAY", items: en } } : {}),
         },
       ],
     },
@@ -63,17 +61,6 @@ test("applyDailyOverride - leaves every other day untouched", () => {
     dayOf(data, "Flow", "thursday")?.no?.items.map((i) => i.dish),
     ["Torsdagsgryte"]
   );
-});
-
-test("applyDailyOverride - a language the board skipped keeps the weekly menu", () => {
-  // The kitchen fills in the Norwegian column first and sometimes never gets
-  // to the English one. Blanking it would be worse than a stale translation.
-  const data = week();
-  applyDailyOverride(data, board([item("Faktisk servert", true)], undefined), "friday");
-
-  const friday = dayOf(data, "Flow", "friday");
-  assert.deepEqual(friday?.no?.items.map((i) => i.dish), ["Faktisk servert"]);
-  assert.deepEqual(friday?.en?.items.map((i) => i.dish), ["Planned Friday dish"]);
 });
 
 test("applyDailyOverride - never introduces a canteen the week does not have", () => {
@@ -122,7 +109,7 @@ test("applyDailyOverride - does not mutate the object it read from", () => {
 test("applyDailyOverride - an empty board changes nothing", () => {
   const data = week();
   const before = JSON.stringify(data);
-  assert.deepEqual(applyDailyOverride(data, board(undefined, undefined), "friday").overridden, []);
+  assert.deepEqual(applyDailyOverride(data, board(undefined), "friday").overridden, []);
   assert.equal(JSON.stringify(data), before);
 });
 

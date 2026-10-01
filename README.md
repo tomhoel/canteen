@@ -2,7 +2,7 @@
 
 The lunch menu for three workplace canteens — **Eat the street**, **Fresh4you**
 and **Flow** — as an installable phone app. It shows the week's dishes in
-Norwegian or English, a plate photo for each day's main dish, where the dish
+Norwegian, a plate photo for each day's main dish, where the dish
 comes from, a recipe for it, grocery prices for its ingredients, and a vote for
 where people are eating today.
 

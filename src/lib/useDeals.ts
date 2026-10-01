@@ -45,7 +45,6 @@ export function useDeals(): UseDealsReturn {
         dishName,
         // The API still takes a language — it decides what the model writes
         // back. The UI is Norwegian-only, so it is a constant, not a setting.
-        lang: "no",
       })) as DealsResponse;
 
       queryClient.setQueryData(["deals", dishName], deals);

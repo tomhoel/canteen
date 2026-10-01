@@ -58,7 +58,7 @@ export default function LoadingScreen() {
         mode={mode}
         displayWeek={weekNumber}
         dayLabel={fullDayLabels[selectedDay]}
-        dateStr={formatLongDate(anchor, selectedDay, "no")}
+        dateStr={formatLongDate(anchor, selectedDay)}
       />
 
       <main

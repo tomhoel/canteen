@@ -46,7 +46,7 @@ export async function ensureCourses(dishes: string[]): Promise<CourseLabels> {
  * This is the one place the day's main dish is decided; the result is stored
  * (items in ranked order, `isMain` on the first) and everything downstream
  * reads it. Items are matched to labels by trimmed name, the way
- * extractAllDishes keyed them.
+ * extractDishes keyed them.
  */
 export function rerankMenu(menuData: MenuData, labels: CourseLabels): number {
   const byTrimmed: CourseLabels = {};
@@ -55,17 +55,15 @@ export function rerankMenu(menuData: MenuData, labels: CourseLabels): number {
   let changed = 0;
   for (const [canteenName, canteen] of Object.entries(menuData.canteens || {})) {
     for (const day of canteen.menu || []) {
-      for (const lang of ["no", "en"] as const) {
-        const list = day[lang];
-        if (!list?.items?.length) continue;
+      const list = day.no;
+      if (!list?.items?.length) continue;
 
-        const forItems: CourseLabels = {};
-        for (const item of list.items) forItems[item.dish] = byTrimmed[item.dish.trim()];
+      const forItems: CourseLabels = {};
+      for (const item of list.items) forItems[item.dish] = byTrimmed[item.dish.trim()];
 
-        const before = list.items.find((i) => i.isMain)?.dish;
-        list.items = rankItems(list.items.map((i) => ({ ...i, isMain: false })), canteenName, forItems);
-        if (lang === "no" && before !== undefined && before !== list.items[0].dish) changed++;
-      }
+      const before = list.items.find((i) => i.isMain)?.dish;
+      list.items = rankItems(list.items.map((i) => ({ ...i, isMain: false })), canteenName, forItems);
+      if (before !== undefined && before !== list.items[0].dish) changed++;
     }
   }
   return changed;

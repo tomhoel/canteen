@@ -44,8 +44,8 @@ export interface CanteenLocationInfo {
   darkColor: string;
   badgeBg: string;
   badgeBorder: string;
-  description: { no: string; en: string };
-  specialNote?: { no: string; en: string };
+  description: { no: string };
+  specialNote?: { no: string };
   hasMenu: boolean;
 }
 
@@ -68,11 +68,9 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(37, 99, 235, 0.28)",
     description: {
       no: "Hovedkantinen i Bygg J/K med varmmat, buffet, salatbar og middagstilbud.",
-      en: "Main canteen in Building J/K with hot dishes, buffet, salad bar and dinner."
     },
     specialNote: {
       no: "Middagsservering mandag–torsdag kl. 15:00–17:00.",
-      en: "Dinner served Monday–Thursday 15:00–17:00."
     },
     hasMenu: true,
   },
@@ -94,7 +92,6 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(5, 150, 105, 0.28)",
     description: {
       no: "Kantine i Bygg C/D med fokus på ferske råvarer, sunne retter og salater.",
-      en: "Canteen in Building C/D with a focus on fresh produce, healthy meals and salads."
     },
     hasMenu: true,
   },
@@ -117,7 +114,6 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(8, 145, 178, 0.28)",
     description: {
       no: "Kantine i 2. etasje i Bygg M med variert varmmatmeny og lunsjretter.",
-      en: "Canteen on the 2nd floor of Building M offering varied hot dishes and lunches."
     },
     hasMenu: true,
   },
@@ -140,11 +136,9 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(217, 119, 6, 0.28)",
     description: {
       no: "Nystekt brød, ferske bakevarer, sandwicher og varm lunsjrett.",
-      en: "Freshly baked bread, pastries, sandwiches and daily hot lunch dish."
     },
     specialNote: {
       no: "Bakevarer hele dagen (07:00–15:00). Varm lunsjrett serveres 10:30–13:00.",
-      en: "Bakery goods all day (07:00–15:00). Hot lunch dish served 10:30–13:00."
     },
     hasMenu: false,
   },
@@ -166,11 +160,9 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(124, 58, 237, 0.28)",
     description: {
       no: "Kaffebar og møtested i Expo-bygget med barista-kaffe, bakverk og snacks.",
-      en: "Coffee bar and hub in the Expo building with barista coffee, pastries and snacks."
     },
     specialNote: {
       no: "☕ Fredager: Gratis kaffe frem til kl. 11:00 for Telenor-ansatte!",
-      en: "☕ Fridays: Free coffee until 11:00 for Telenor employees!"
     },
     hasMenu: false,
   },
@@ -192,7 +184,6 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(219, 39, 119, 0.28)",
     description: {
       no: "Populær kaffebar og uformelt møtested midt i Bygg G ved torget.",
-      en: "Popular coffee bar and casual meeting place in the heart of Building G by the plaza."
     },
     hasMenu: false,
   },
@@ -214,7 +205,6 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(13, 148, 136, 0.28)",
     description: {
       no: "Kaffebar og pauseområde i 1. etasje i Bygg M under kantinen.",
-      en: "Coffee bar and break area on the 1st floor of Building M below the canteen."
     },
     hasMenu: false,
   },
@@ -236,11 +226,9 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
     badgeBorder: "rgba(234, 88, 12, 0.28)",
     description: {
       no: "Middagsservering mandag til torsdag i Eat The Street for overtidsarbeidende og ettermiddagsgjester.",
-      en: "Dinner served Monday through Thursday in Eat The Street for evening workers and guests."
     },
     specialNote: {
       no: "Serveres mandag–torsdag kl. 15:00–17:00 (stengt fredager).",
-      en: "Served Monday–Thursday 15:00–17:00 (closed Fridays)."
     },
     hasMenu: false,
   },
@@ -305,7 +293,7 @@ export function getCanteenMetadata(rawName?: string): CanteenLocationInfo {
     darkColor: "#9ca3af",
     badgeBg: "rgba(107, 114, 128, 0.12)",
     badgeBorder: "rgba(107, 114, 128, 0.28)",
-    description: { no: "Kantine på Fornebu", en: "Canteen at Fornebu" },
+    description: { no: "Kantine på Fornebu" },
     hasMenu: true,
   };
 }

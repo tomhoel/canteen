@@ -274,7 +274,6 @@ export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> 
 export function fetchDeals(payload: {
   ingredients: RecipeIngredient[];
   dishName: string;
-  lang: "no" | "en";
 }): Promise<DealsResponse> {
   return post<DealsResponse>("/api/deals", payload);
 }
@@ -282,7 +281,6 @@ export function fetchDeals(payload: {
 export function searchMeny(payload: {
   ingredients: RecipeIngredient[];
   dishName: string;
-  lang: "no" | "en";
   storeId?: string;
 }): Promise<MenyResponse> {
   return post<MenyResponse>("/api/meny", payload);
@@ -290,7 +288,6 @@ export function searchMeny(payload: {
 
 export function generateRecipe(payload: {
   dishName: string;
-  lang: "no" | "en";
 }): Promise<Recipe> {
   return post<Recipe>("/api/recipe", payload);
 }
@@ -324,7 +321,6 @@ export function sendSlackNotification(payload: {
   canteens: Record<string, number>;
   dishes: Record<string, string>;
   date: string;
-  lang: "no" | "en";
 }): Promise<{ skipped?: boolean }> {
   return post("/api/notify", payload);
 }

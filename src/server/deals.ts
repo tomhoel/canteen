@@ -135,7 +135,6 @@ async function searchTjekOffers(query: string): Promise<TjekOffer[]> {
 export interface FetchDealsPayload {
   ingredients: RecipeIngredient[];
   dishName: string;
-  lang?: string;
 }
 
 export async function fetchDeals(data: FetchDealsPayload): Promise<DealsResponse> {

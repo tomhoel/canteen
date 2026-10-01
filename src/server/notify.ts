@@ -2,7 +2,6 @@ export interface NotifyPayload {
   canteens: Record<string, number>;
   dishes?: Record<string, string>;
   date: string;
-  lang?: "no" | "en";
 }
 
 /**
@@ -86,7 +85,7 @@ export async function sendSlackNotification(data: NotifyPayload) {
     return { skipped: true };
   }
 
-  const { canteens, dishes = {}, date, lang = "no" } = data;
+  const { canteens, dishes = {}, date } = data;
 
   const sorted = Object.entries(canteens)
     .filter(([, count]) => count > 0)
@@ -106,7 +105,7 @@ export async function sendSlackNotification(data: NotifyPayload) {
 
   const d = new Date(date.includes("T") ? date : `${date}T12:00:00`);
   const formattedDate = d.toLocaleDateString(
-    lang === "no" ? "nb-NO" : "en-GB",
+    "nb-NO",
     { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Oslo" }
   );
 
@@ -115,14 +114,11 @@ export async function sendSlackNotification(data: NotifyPayload) {
     const dish = dishes[name] ? ` — ${dishes[name]}` : "";
     const filled = totalVotes > 0 ? Math.round((count / totalVotes) * 8) : 0;
     const bar = "█".repeat(filled) + "░".repeat(8 - filled);
-    const votesLabel = lang === "no" ? "stemmer" : "votes";
+    const votesLabel = "stemmer";
     return `${isWinner ? "⭐ " : "     "}*${name}*${dish}\n${bar} ${count} ${votesLabel}`;
   });
 
-  const headerText =
-    lang === "no"
-      ? `🍽️ Lunsjresultater — ${formattedDate}`
-      : `🍽️ Lunch results — ${formattedDate}`;
+  const headerText = `🍽️ Lunsjresultater — ${formattedDate}`;
 
   const body = {
     blocks: [

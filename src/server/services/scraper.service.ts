@@ -446,11 +446,13 @@ export function parseCanteenHtml(html: string, canteen: CanteenConfig): CanteenD
   const $ = cheerio.load(html);
 
   const week = $("h2").first().text().trim() || "Unknown";
-  const byDay = new Map<string, { day: string; no?: DayMenu; en?: DayMenu }>();
+  const byDay = new Map<string, { day: string; no?: DayMenu }>();
 
   for (const section of extractSections($)) {
     const heading = DAY_HEADINGS[section.heading];
-    if (!heading) continue;
+    // The widget publishes every day twice; the English copy is recognised (so it
+    // is never mistaken for dishes) and dropped. The app is Norwegian-only.
+    if (!heading || heading.lang !== "no") continue;
 
     const { items, availabilityNotes } = parseSection(section.lines, canteen.displayName);
     if (items.length === 0) continue;
@@ -458,7 +460,7 @@ export function parseCanteenHtml(html: string, canteen: CanteenConfig): CanteenD
     const entry = byDay.get(heading.day) ?? {
       day: heading.day.charAt(0).toUpperCase() + heading.day.slice(1),
     };
-    entry[heading.lang] = {
+    entry.no = {
       label: section.heading,
       items,
       ...(availabilityNotes.length ? { availabilityNotes } : {}),
@@ -478,7 +480,7 @@ export async function scrapeSingleCanteen(canteen: CanteenConfig): Promise<Cante
   return parseCanteenHtml(html, canteen);
 }
 
-/** Flags days that came back in only one language, or a short week. */
+/** Flags days with no Norwegian list, or a short week. */
 function inspect(data: CanteenData): string[] {
   const warnings: string[] = [];
 
@@ -489,10 +491,7 @@ function inspect(data: CanteenData): string[] {
   }
 
   for (const day of data.menu) {
-    const no = day.no?.items?.length ?? 0;
-    const en = day.en?.items?.length ?? 0;
-    if (no === 0) warnings.push(`${day.day}: no Norwegian items`);
-    else if (en === 0) warnings.push(`${day.day}: no English items`);
+    if (!day.no?.items?.length) warnings.push(`${day.day}: no Norwegian items`);
   }
 
   if (!/\d/.test(data.week)) {
@@ -577,10 +576,9 @@ const DAILY_ALLERGEN_LINE = /^allergen(?:er|s)?\s*:?\s*([\d,\s]*)$/i;
  */
 const MIN_DAILY_DISHES = 2;
 
-/** One canteen's daily board, in whichever languages it published. */
+/** One canteen's daily board (the Norwegian column). */
 export interface DailyMenu {
   no?: DayMenu;
-  en?: DayMenu;
 }
 
 /**
@@ -682,7 +680,7 @@ function parseDailyHolder(
 /**
  * Turns one daily widget's HTML into today's menu.
  *
- * `dayKey` is only used for the language labels — the widget itself says
+ * `dayKey` is only used for the day label — the widget itself says
  * nothing about which day it is showing, which is the whole reason the caller
  * has to supply the day and has to be sure it is calling on the right one.
  */
@@ -693,25 +691,17 @@ export function parseDailyHtml(
 ): DailyMenu {
   const $ = cheerio.load(html);
 
-  // The first heading DAY_HEADINGS lists for this day in each language — so a
-  // daily override carries the same label the weekly parser would have written
-  // ("FREDAG" / "FRIDAY"), rather than a second vocabulary for the same thing.
-  const found = Object.entries(DAY_HEADINGS).reduce<{ no?: string; en?: string }>(
-    (acc, [heading, meta]) => {
-      if (meta.day === dayKey && !acc[meta.lang]) acc[meta.lang] = heading;
-      return acc;
-    },
-    {}
-  );
-  const labels = {
-    no: found.no ?? dayKey.toUpperCase(),
-    en: found.en ?? dayKey.toUpperCase(),
-  };
+  // The first Norwegian heading DAY_HEADINGS lists for this day, so a daily
+  // override carries the same label the weekly parser would have written
+  // ("FREDAG"), rather than a second vocabulary for the same thing. The
+  // English column of the board is not read.
+  const label =
+    Object.entries(DAY_HEADINGS).find(([, meta]) => meta.day === dayKey && meta.lang === "no")?.[0] ??
+    dayKey.toUpperCase();
 
-  const no = parseDailyHolder($, $(".menu-item-holder.first-holder"), canteen.displayName, labels.no);
-  const en = parseDailyHolder($, $(".menu-item-holder.second-holder"), canteen.displayName, labels.en);
+  const no = parseDailyHolder($, $(".menu-item-holder.first-holder"), canteen.displayName, label);
 
-  return { ...(no ? { no } : {}), ...(en ? { en } : {}) };
+  return no ? { no } : {};
 }
 
 export interface DailyScrapeResult {
@@ -742,7 +732,7 @@ export async function scrapeAllDailyMenus(dayKey: string): Promise<DailyScrapeRe
     CANTEENS.map(async (canteen): Promise<DailyScrapeResult> => {
       try {
         const daily = await scrapeDailyCanteen(canteen, dayKey);
-        if (!daily.no && !daily.en) {
+        if (!daily.no) {
           return { canteen, daily: null, error: "no dishes on the daily board" };
         }
         return { canteen, daily, error: null };
