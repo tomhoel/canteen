@@ -21,7 +21,11 @@ const root = path.resolve(import.meta.dirname, "..");
 function relativeSpecifiers(source: string): string[] {
   const out: string[] = [];
   // from "x", bare import "x", and dynamic import("x") — but not `import type`.
-  const re = /(?:^|\n)\s*(?:import|export)\s+(?!type\b)[^"'\n;]*?from\s+["'](\.[^"']+)["']|(?:^|\n)\s*import\s+["'](\.[^"']+)["']|\bimport\(\s*["'](\.[^"']+)["']\s*\)/g;
+  // The clause may span lines (`import {\n  a,\n  b,\n} from "x"`), so it is matched up to
+  // the closing quote rather than to the end of a line. A version that stopped at the
+  // newline skipped every multi-line import, never walked into menu.service.ts, and
+  // missed ./storage-url in constants.ts, which crashed the cron on 2026-10-01.
+  const re = /(?:^|\n)\s*(?:import|export)\s+(?!type\b)[^"';]*?\sfrom\s+["'](\.[^"']+)["']|(?:^|\n)\s*import\s+["'](\.[^"']+)["']|\bimport\(\s*["'](\.[^"']+)["']\s*\)/g;
   for (const m of source.matchAll(re)) out.push(m[1] ?? m[2] ?? m[3]);
   return out;
 }
@@ -58,5 +62,6 @@ test("every relative import under api/ and what it loads ends in .js", () => {
 
   const offenders = [...seen].filter(([, bad]) => bad.length).map(([file, bad]) => `${path.relative(root, file)}: ${bad.join(", ")}`);
   assert.deepEqual(offenders, [], "these would crash the serverless function at invocation");
-  assert.ok(seen.size > 15, `walked ${seen.size} files`);
+  assert.ok(seen.size > 30, `walked ${seen.size} files`);
+  assert.ok([...seen.keys()].some((f) => f.endsWith("menu.service.ts")), "the walk must reach menu.service.ts (multi-line imports)");
 });

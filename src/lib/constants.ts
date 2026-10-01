@@ -1,4 +1,4 @@
-import { STORAGE_BASE_URL } from './storage-url';
+import { STORAGE_BASE_URL } from './storage-url.js';
 export const DAYS_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
 export const FULL_DAYS_NO = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag"];
 export const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
