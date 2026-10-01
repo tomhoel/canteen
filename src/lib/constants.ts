@@ -320,39 +320,30 @@ export const BLOB_BASE_URL =
   process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
   DEFAULT_BLOB_BASE_URL;
 
-export const SUPABASE_STORAGE_URL = `${BLOB_BASE_URL}/storage/v1/object/public`;
-
 /**
- * Transformed width to request for a card plate, by tier.
+ * Width a card plate is asked for, by tier. Blob does not resize on request, so
+ * the number only selects the pre-made 512px thumb (see getSupabaseImageUrl);
+ * the tiers stay separate because HomeClient also keys its preload cache on it.
  */
 export const PLATE_CARD_WIDTH = { mobile: 340, desktop: 640 } as const;
 
+/**
+ * URL of a stored image. The name is historical: the store is Vercel Blob.
+ *
+ * Blob serves the object as written and ignores transforms, so the only
+ * "resize" on offer is the thumb the updater writes beside every plate:
+ * a card-sized `width` (<= PLATE_CARD_WIDTH.desktop) in `images_nobg` maps to
+ * `images_nobg/thumb/<path>`; anything larger, or no width, is the full plate.
+ */
 export function getSupabaseImageUrl(
   bucket: string,
   path: string,
-  options?: { width?: number; height?: number; format?: string; quality?: number }
+  options?: { width?: number }
 ) {
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
 
   const encodedPath = path.split("/").map(encodeURIComponent).join("/");
 
-  // Legacy fallback if pointing to a Supabase host
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL || BLOB_BASE_URL.includes('supabase.co')) {
-    const base = process.env.NEXT_PUBLIC_SUPABASE_URL || BLOB_BASE_URL;
-    const params = new URLSearchParams();
-    if (options?.width) params.set('width', options.width.toString());
-    if (options?.height) params.set('height', options.height.toString());
-    if (options?.format) params.set('format', options.format);
-    if (options?.quality) params.set('quality', options.quality.toString());
-
-    if ([...params.keys()].length === 0) return `${base}/storage/v1/object/public/${bucket}/${encodedPath}`;
-
-    params.set('resize', 'contain');
-    return `${base}/storage/v1/render/image/public/${bucket}/${encodedPath}?${params.toString()}`;
-  }
-
-  // Blob does not resize on request. Card-sized asks (<= PLATE_CARD_WIDTH.desktop)
-  // get the pre-made 512px thumb the updater writes beside every plate.
   if (bucket === 'images_nobg' && options?.width && options.width <= PLATE_CARD_WIDTH.desktop) {
     return `${BLOB_BASE_URL}/${bucket}/thumb/${encodedPath}`;
   }
@@ -367,7 +358,7 @@ export const getImageUrl = getSupabaseImageUrl;
  * `images_nobg/closed-plates/`. The variant is picked deterministically
  * from the seed so the same canteen+day always shows the same plate.
  */
-export function getClosedPlateUrl(seed: string, options?: { width?: number; height?: number; format?: string; quality?: number }) {
+export function getClosedPlateUrl(seed: string, options?: { width?: number }) {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash + seed.charCodeAt(i)) | 0;
   const variant = (Math.abs(hash) % 3) + 1;

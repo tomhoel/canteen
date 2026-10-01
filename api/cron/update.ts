@@ -13,7 +13,7 @@ import { publishStaticMenu } from "../../src/server/services/menu-publish.servic
  *
  * It used to live in a GitHub Actions workflow, but scheduled workflows are
  * disabled automatically after 60 days without repository activity — and this
- * repo intentionally gets no commits, because the menu lives in Supabase
+ * repo intentionally gets no commits, because the menu lives in Redis
  * rather than in git. Vercel Cron has no such rule.
  *
  * Scheduled from vercel.json. Vercel sends `Authorization: Bearer $CRON_SECRET`

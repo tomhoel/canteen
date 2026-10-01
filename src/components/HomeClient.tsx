@@ -269,7 +269,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   useEffect(() => {
     cleanupLocalStorage();
     // Menu, origins, descriptions arrive as props from the server component
-    // (loaded directly from Supabase). No fetch waterfall on initial paint.
+    // (loaded directly from Blob). No fetch waterfall on initial paint.
     setMounted(true);
   }, []);
 
@@ -436,7 +436,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     CANTEEN_ORDER.forEach(name => {
       const plateImage = plateImages[`${dk}|${name}`];
       if (!plateImage) return;
-      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth, format: "webp", quality: 75 });
+      const src = getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth });
 
       if (preloadedRef.current.has(src)) return;
       preloadedRef.current.add(src);
@@ -501,7 +501,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const imageSlug = CANTEEN_IMAGE_SLUGS[canteenName] || canteenName.toLowerCase().replace(/\s+/g, "_");
 
         // Closed canteens point at one of 3 static cutlery-and-napkin plates
-        // hosted in Supabase. We don't generate dish images for closed days,
+        // hosted in Blob. We don't generate dish images for closed days,
         // so without this branch the slot URL would resolve to a stale image
         // from whenever the canteen was last open on this weekday.
         const isClosed = !mainDish || ["stengt", "closed", "lukket"].some(kw => mainDish.dish.toLowerCase().includes(kw));
@@ -513,20 +513,17 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         // backdrop instead of the studio dark-grey from the bg version.
         const plateImage = plateImages[`${dk}|${canteenName}`];
         const imagePath = isClosed
-          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: plateWidth, format: "webp", quality: 75 })
+          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: plateWidth })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth, format: "webp", quality: 75 })
+            ? getSupabaseImageUrl("images_nobg", plateImage, { width: plateWidth })
             : "";
-        // Sized, not untransformed. The bare URL serves the original PNG —
-        // 1.66 MB for a picture no phone screen can show more than a fraction
-        // of, downloaded the moment anyone taps a plate. 1080px WebP is wider
-        // than the largest phone viewport and about 5% of the bytes, and the
-        // transparency the gradient backdrop depends on survives it: WebP has
-        // an alpha channel and `images_nobg` is the cut-out bucket.
+        // The lightbox asks for 1080, which is past the thumb cut-off, so it gets
+        // the full 1024px plate: WebP with alpha, so the cut-out still sits on
+        // the gradient backdrop. Card widths get the 512px thumb instead.
         const highResImagePath = isClosed
-          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 1080, format: "webp", quality: 85 })
+          ? getClosedPlateUrl(`${canteenName}-${dk}`, { width: 1080 })
           : plateImage
-            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 1080, format: "webp", quality: 85 })
+            ? getSupabaseImageUrl("images_nobg", plateImage, { width: 1080 })
             : "";
         // CanteenDayItem models "no usable week label" as undefined, not null.
         const canteenWeekNum = parseCanteenWeekNumber(canteen.week) ?? undefined;

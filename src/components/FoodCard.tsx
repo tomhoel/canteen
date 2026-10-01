@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, memo } from "react";
+import { useState, useLayoutEffect, useRef, memo } from "react";
 import { Users, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";

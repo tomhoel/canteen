@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Menus change at most twice a day (see the cron schedule), so let the browser
     // and CDN absorb the traffic and serve stale copies while it refreshes in the
-    // background rather than hitting Supabase for every visitor.
+    // background rather than hitting Redis for every visitor.
     //
     // s-maxage was 600s. On an app used in one 45-minute window a day that is
     // long enough to go stale between two colleagues, and the visitor who finds

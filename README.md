@@ -11,8 +11,8 @@ Production: <https://fbueat.vercel.app>
 ## The one rule
 
 **A page view never scrapes anything.** The canteens are scraped, enriched and
-photographed twice a day by a cron job that writes to Supabase; the app only
-ever reads what is already stored.
+photographed twice a day by a cron job that writes to Upstash Redis and Vercel
+Blob; the app only ever reads what is already stored.
 
 This is worth stating first because the app broke this rule once and it was
 invisible: `src/server/*` was imported straight into components, and since the
@@ -32,24 +32,23 @@ Everything server-side now sits behind `/api`.
         │   1. scrape 3 canteen widgets │
         │   2. ask Gemini for origins,  │
         │      descriptions, plates     │
-        │   3. upsert the week          │
+        │   3. store the week           │
+        │   4. publish the response     │
         └───────────────┬───────────────┘
                         │
           ┌─────────────┴──────────────┐
           ▼                            ▼
-   Supabase Postgres            Supabase Storage
-   weekly_menus                 plate images
-   dish_cache                   (dish-addressed)
-   canteen_attendance
-          │
-          ▼
+   Upstash Redis                Vercel Blob
+   menu:<week>, dish_cache      plates (+ 512px thumbs),
+   attendance:<date>, caches    menu-response/current.json
+          │                            │
+          ▼                            ▼
    ┌──────────────┐     ┌─────────────────────────┐
-   │  /api/*      │◀────│  React SPA (Vite +      │
-   │  functions   │     │  TanStack Router)       │
-   └──────────────┘     └─────────────────────────┘
-          │
-          ▼
-    Upstash Redis (optional cache)
+   │  /api/*      │◀────│  React SPA (Vite)       │
+   │  functions   │     │  reads the static menu  │
+   └──────────────┘     │  file Mon–Fri, /api/menu│
+          │             │  at weekends            │
+          ▼             └─────────────────────────┘
     Gemini · kassal.app · meny.no · Slack
 ```
 
@@ -61,11 +60,10 @@ that hangs in the canteen — which is HTML meant for a TV, not an API. Most of
 
 | Piece | Choice |
 | --- | --- |
-| App | React 19 + Vite, TanStack Router / Query / Store, plain CSS |
+| App | React 19 + Vite, TanStack Query, plain CSS |
 | Server | Vercel Functions under `api/`, thin wrappers over `src/server/*` |
-| Database | Supabase Postgres (`supabase/schema.sql`) |
-| Images | Supabase Storage, generated with Gemini and background-removed |
-| Cache | Upstash Redis, optional everywhere |
+| Data | Upstash Redis: stored weeks, `dish_cache`, attendance, response caches |
+| Images | Vercel Blob, generated with Gemini and background-removed; each plate has a 512px thumb under `images_nobg/thumb/` |
 | Schedule | Vercel Cron (`vercel.json`) |
 
 It is a PWA: `public/manifest.json` plus the iOS meta tags in `index.html`, and
@@ -75,7 +73,7 @@ display are real constraints rather than nice-to-haves.
 ### Why Vercel Cron and not GitHub Actions
 
 GitHub disables scheduled workflows after 60 days without repository activity,
-and this repo intentionally goes quiet — the menu lives in Supabase, not in git.
+and this repo intentionally goes quiet — the menu lives in Redis, not in git.
 The updater moved to Vercel Cron, which has no such rule. CI still runs on
 GitHub, because push and pull_request triggers are never disabled.
 
@@ -102,9 +100,9 @@ loads the same handler modules through Vite's SSR pipeline and adapts Node's
 req/res to the slice of the Vercel signature they use, so endpoint edits
 hot-reload and no `vercel dev` is needed.
 
-The client itself needs no environment: the two public Supabase values have
-hardcoded fallbacks in `src/lib/constants.ts`, which is why the client build
-works with nothing set. The functions are what read `.env`.
+The client itself needs no environment: the Blob base URL has a hardcoded
+fallback in `src/lib/constants.ts`, which is why the client build works with
+nothing set. The functions are what read `.env`.
 
 To run the pipeline by hand — after a prompt change, to backfill a week, or to
 debug a scrape without waiting for the schedule:
@@ -118,17 +116,16 @@ npm run update -- --week 2026-W34 # a specific week
 `--force` costs real money — it regenerates every plate. `--week` writes to the
 week you name, so a typo overwrites a real one.
 
-This writes to the same Supabase the deployed app reads, so it needs the write
-credentials — `SUPABASE_SERVICE_ROLE_KEY` and `GEMINI_API_KEY` — in `.env`, not
-just the two public values. Without the service-role key it refuses to run
-rather than falling back to the anon key, and says so.
+This writes to the same Redis and Blob the deployed app reads, so it needs
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, `BLOB_READ_WRITE_TOKEN`
+and `GEMINI_API_KEY` in `.env`.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Vite dev server |
-| `npm run build` | `tsr generate` then `vite build` into `dist/` |
+| `npm run build` | `vite build` into `dist/` |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint, zero warnings tolerated |
 | `npm test` | `node --test` over `src/**/*.test.ts` |
@@ -181,24 +178,35 @@ specifiers** on relative imports. Node's ESM resolver requires the extension at
 runtime; omit it and the build stays green while every function dies on
 invocation.
 
-## Database
+## Data
 
-`supabase/schema.sql` describes what is actually deployed and is safe to re-run
-against a live database — every statement is idempotent.
+Everything lives in Upstash Redis and Vercel Blob. There is no SQL database:
+Supabase was the original store, was migrated away from, and nothing at runtime
+reads it any more. `supabase/schema.sql` and the `migrate-*`/`backup-supabase`
+scripts are kept as the record of that schema and move.
 
-| Table | Contents |
+| Key / path | Contents |
 | --- | --- |
-| `weekly_menus` | One row per ISO week, keyed `2026-W34` |
-| `dish_cache` | One row per distinct dish: origin, description, plate path, retry counters |
-| `canteen_attendance` | One row per canteen per day, with `cast_attendance_vote()` |
+| `menu:<week>` / `menu:weeks` | One record per ISO week (`2026-W34`) and the sorted index of weeks |
+| `dish_cache` (hash) | One entry per distinct dish: origin, description, plate path, retry counters |
+| `attendance:<date>` | Votes per canteen per day |
+| `response:menu:v5:*` | Short-lived caches of the `/api/menu` response |
+| Blob `images_nobg/archive/*` | Plates, addressed by dish; `images_nobg/thumb/*` holds the 512px card thumbs |
+| Blob `menu-response/current.json` | The finished `/api/menu` response, rewritten by every cron run |
 
 `dish_cache` is what keeps the twice-daily cron from re-billing the model for
 dishes it has already seen: a dish means the same thing in every week it
 appears, so its origin, description and plate are produced once and reused.
 
-The app only ever SELECTs. Every writer — the cron updater and the maintenance
-scripts — authenticates with the service-role key, which bypasses RLS, so the
-tables carry read policies and no write policies at all.
+**First load.** Monday to Friday (Europe/Oslo) the page reads
+`menu-response/current.json` directly: no function, so no cold start. At
+weekends it uses `/api/menu`, because the live endpoint switches to next week at
+Saturday 00:00 with no cron run to rewrite the file. A missing file falls back
+to `/api/menu`. A returning visitor is painted from `localStorage` at once and
+the fresh response replaces it when it arrives.
+
+Any plate written outside `uploadToStorage` has no thumb; run
+`node --env-file=.env scripts/backfill-thumbs.cjs` (idempotent).
 
 ## Deploying
 
