@@ -81,6 +81,7 @@
     <!-- Preconnect to Vercel Blob Storage for plate images -->
     <link rel="preconnect" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" />
     <link rel="dns-prefetch" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" />
+    <link rel="preconnect" href="https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com" crossorigin />
 
     <!-- Starts the menu request in parallel with the JS bundle, so the app has
          its data before React has finished booting. api-client picks the result
@@ -163,10 +164,41 @@
             return ["monday", "friday"];
           }
 
-          window.__MENU_FETCH_PROMISE__ = fetch("/api/menu")
-            .then(function (res) {
-              return res.ok ? res.json() : null;
-            })
+          function getJson(url) {
+            return fetch(url)
+              .then(function (res) {
+                return res.ok ? res.json() : null;
+              })
+              .catch(function () {
+                return null;
+              });
+          }
+
+          // Monday-Friday (Europe/Oslo) the cron's static copy of the response:
+          // no function behind it, so no cold start (2.7s measured on a CDN
+          // miss of /api/menu). Weekends keep /api/menu, because from Saturday
+          // the live endpoint switches to next week with no cron run to
+          // rewrite the file. A missing or unreadable file falls through to
+          // /api/menu either way.
+          var weekday = false;
+          try {
+            weekday =
+              ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(
+                new Intl.DateTimeFormat("en-US", {
+                  timeZone: "Europe/Oslo",
+                  weekday: "short",
+                }).format(new Date())
+              ) >= 0;
+          } catch (e) {}
+
+          window.__MENU_FETCH_PROMISE__ = (weekday
+            ? getJson(
+                "https://z1dv5lqxedbnyu6v.public.blob.vercel-storage.com/menu-response/current.json"
+              ).then(function (data) {
+                return data && data.menuData ? data : getJson("/api/menu");
+              })
+            : getJson("/api/menu")
+          )
             .then(function (data) {
               if (!data || !data.menuData) return data;
               window.__INITIAL_MENU_DATA__ = data;

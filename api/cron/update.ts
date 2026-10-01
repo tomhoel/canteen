@@ -6,6 +6,7 @@ import {
 } from "../../src/server/services/menu.service.js";
 import { processAllCanteenAIImages } from "../../src/server/services/image.service.js";
 import { sendCronAlert } from "../../src/server/notify.js";
+import { publishStaticMenu } from "../../src/server/services/menu-publish.service.js";
 
 /**
  * The weekly updater. This is the only thing that writes menu data.
@@ -194,6 +195,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `The menu for ${record.weekId} was stored successfully.`,
     ]);
   }
+
+  // The static copy index.html reads on weekdays. Published after the cache
+  // drop above so it is built from the finished record, and before the warm
+  // below, which only helps /api/menu. Failure is not fatal: the head script
+  // falls back to /api/menu when the file is missing.
+  await publishStaticMenu()
+    .then((url) => console.log(`📄 [cron] published static menu → ${url}`))
+    .catch((err) => console.warn("⚠️ [cron] static menu publish failed:", err.message));
 
   // The cron is the only writer, and it has just dropped the response cache.
   // Whoever arrives next would otherwise pay the cold origin — measured at
