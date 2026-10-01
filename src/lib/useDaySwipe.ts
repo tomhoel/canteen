@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { shouldTurnPage } from "@/lib/sheet-drag";
+import { flushSync } from "react-dom";
 
 /**
  * Everything that turns a finger or a trackpad into a day change.
@@ -74,11 +74,48 @@ export interface DaySwipe {
 }
 
 /** Below this the gesture is a tap, not a swipe. */
-const MIN_SWIPE_PX = 28;
+const MIN_SWIPE_PX = 24;
+/** A release turns the page when where the finger was heading passes this share of the width (a quarter). */
+const TURN_FRACTION = 0.25;
+/** How far ahead of the finger, in ms, "where it was heading" looks. */
+const PROJECT_MS = 200;
+/** Only the last stretch of the drag counts as its speed; a pause before lifting means zero. */
+const VELOCITY_WINDOW_MS = 100;
+/** Past this share of the width the day-bar pill already shows the target day. */
+const PREVIEW_FRACTION = 0.5;
+/** The gap between two day panels, matching `--day-gap` in the CSS. */
+const DAY_GAP_PX = 16;
 /** How early the axis is committed. See the comment at the decision point. */
 const AXIS_LOCK_PX = 4;
 /** Trackpad flicks arrive in bursts; one page turn per burst. */
 const WHEEL_COOLDOWN_MS = 350;
+
+/**
+ * Whether a release turns the page: where the finger was heading (position plus
+ * a short run-out at its release speed) must pass a quarter of the width, in the
+ * direction it is already displaced. A slow nudge never turns; a short quick
+ * flick does; a flick against the displacement cancels.
+ */
+export function shouldTurn(offset: number, velocity: number, width: number): boolean {
+  if (Math.abs(offset) < MIN_SWIPE_PX) return false;
+  const projected = offset + velocity * PROJECT_MS;
+  return Math.sign(projected) === Math.sign(offset) && Math.abs(projected) > width * TURN_FRACTION;
+}
+
+/** Finger speed in px/ms over the last VELOCITY_WINDOW_MS, 0 if it paused before lifting. */
+export function recentVelocity(points: { x: number; t: number }[], now: number): number {
+  const live = points.filter((p) => now - p.t <= VELOCITY_WINDOW_MS);
+  if (live.length < 2) return 0;
+  const first = live[0];
+  const last = live[live.length - 1];
+  return (last.x - first.x) / Math.max(1, last.t - first.t);
+}
+
+/** iOS-style rubber band: follows the finger at first, then gives up toward `width`. */
+export function rubberBand(distance: number, width: number): number {
+  const d = Math.abs(distance);
+  return Math.sign(distance) * (1 - 1 / ((d * 0.35) / width + 1)) * width;
+}
 
 export function useDaySwipe({
   scrollRef,
@@ -116,11 +153,15 @@ export function useDaySwipe({
   const swipeAxis = useRef<"undecided" | "x" | "y">("undecided");
 
   const trackRef = useRef<HTMLDivElement | null>(null);
+  /** Where the track sits, in px from centre. Zero whenever nothing is dragging or settling. */
   const offsetRef = useRef(0);
+  /** Where the track was when this finger landed: zero, or wherever a settle was caught. */
+  const baseRef = useRef(0);
   const recentRef = useRef<{ x: number; t: number }[]>([]);
   const limitRef = useRef(0);
-  const settlingRef = useRef(false);
+  const settlingRef = useRef<"turn" | "cancel" | null>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const previewedRef = useRef<number | null>(null);
 
   const onNeighborChangeRef = useRef(onNeighborChange);
   useEffect(() => {
@@ -134,23 +175,33 @@ export function useDaySwipe({
 
   const activeNeighborRef = useRef<{ day: number; position: -1 | 1 } | null>(null);
 
+  const setPreview = useCallback((day: number | null) => {
+    if (previewedRef.current === day) return;
+    previewedRef.current = day;
+    onPreviewDayRef.current?.(day);
+  }, []);
+
+  const clearSettleTimer = useCallback(() => {
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    settleTimer.current = undefined;
+  }, []);
+
   /**
    * Hand the element back: no transition, and no transform at all.
    */
   const releaseTrack = useCallback(() => {
     const el = trackRef.current;
-    settlingRef.current = false;
-    if (settleTimer.current) {
-      clearTimeout(settleTimer.current);
-      settleTimer.current = undefined;
-    }
+    settlingRef.current = null;
+    offsetRef.current = 0;
+    baseRef.current = 0;
+    clearSettleTimer();
     if (!el) return;
     el.style.transition = "";
     el.style.transform = "";
     el.classList.remove("is-swiping");
     activeNeighborRef.current = null;
     onNeighborChangeRef.current?.(null);
-  }, []);
+  }, [clearSettleTimer]);
 
   /**
    * Take the element for a drag: freeze wherever the settle had painted it.
@@ -159,17 +210,13 @@ export function useDaySwipe({
     const el = trackRef.current;
     if (!el) return;
     if (settlingRef.current) {
-      const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
-      offsetRef.current = m.m41;
-      settlingRef.current = false;
-      if (settleTimer.current) {
-        clearTimeout(settleTimer.current);
-        settleTimer.current = undefined;
-      }
+      offsetRef.current = new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
+      settlingRef.current = null;
+      clearSettleTimer();
     }
     el.style.transition = "none";
     el.classList.add("is-swiping");
-  }, []);
+  }, [clearSettleTimer]);
 
   const writeOffset = useCallback((px: number) => {
     offsetRef.current = px;
@@ -188,74 +235,113 @@ export function useDaySwipe({
   }, [selectedDay]);
 
   /**
-   * Settle a completed page turn: smoothly glide track into destination with 16px gap,
-   * then commit day state on completion without layout jigger.
+   * Glide the track to `transform` and call `done` the moment it arrives.
+   *
+   * The duration follows the distance left and how fast the finger was moving, so
+   * a flick glides out quickly and a slow release does not snap. `transitionend`
+   * is the real signal; the timer is only a backstop for when it never fires (the
+   * tab hidden mid-glide, say). Reduced motion skips the glide.
    */
-  const settleTurn = useCallback(
-    (dir: -1 | 1, targetDay: number) => {
+  const settle = useCallback(
+    (kind: "turn" | "cancel", transform: string, remainingPx: number, speed: number, done: () => void) => {
       const el = trackRef.current;
       if (!el) {
-        onSelectDay(targetDay);
+        done();
         return;
       }
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const duration = reduce
+        ? 0
+        : Math.round(Math.min(kind === "turn" ? 320 : 240, Math.max(150, remainingPx / Math.max(Math.abs(speed), 0.8))));
 
-      settlingRef.current = true;
-      const duration = 240;
-      el.style.transition = `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-      el.style.transform = dir === -1
-        ? "translate3d(calc(-100% - 16px), 0, 0)"
-        : "translate3d(calc(100% + 16px), 0, 0)";
+      clearSettleTimer();
+      settlingRef.current = kind;
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        el.removeEventListener("transitionend", onEnd);
+        clearSettleTimer();
+        done();
+      };
+      const onEnd = (e: TransitionEvent) => {
+        if (e.target === el && e.propertyName === "transform") finish();
+      };
+      el.addEventListener("transitionend", onEnd);
+      settleTimer.current = setTimeout(finish, duration + 80);
+
+      el.style.transition = duration ? `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)` : "none";
+      el.style.transform = transform;
       offsetRef.current = 0;
-
-      // Update bottom day-bar pill immediately on release
-      onPreviewDayRef.current?.(targetDay);
-
-      settleTimer.current = setTimeout(() => {
-        settlingRef.current = false;
-        markSwipe();
-        onSelectDay(targetDay);
-        onPreviewDayRef.current?.(null);
-        releaseTrack();
-      }, duration);
+      if (!duration) finish();
     },
-    [markSwipe, onSelectDay, releaseTrack]
+    [clearSettleTimer]
+  );
+
+  /**
+   * Settle a completed page turn: glide into the destination, then commit the day
+   * in the same synchronous flush that clears the transform, so no frame ever shows
+   * the track recentred over the old day.
+   */
+  const settleTurn = useCallback(
+    (dir: -1 | 1, targetDay: number, from: number, speed: number) => {
+      setPreview(targetDay);
+      const travel = window.innerWidth + DAY_GAP_PX;
+      settle(
+        "turn",
+        `translate3d(${dir === -1 ? "calc(-100% - 16px)" : "calc(100% + 16px)"}, 0, 0)`,
+        Math.abs(travel * dir - from),
+        speed,
+        () => {
+          // handleDaySelect refuses while a turn is settling, so this one is over first.
+          settlingRef.current = null;
+          flushSync(() => {
+            markSwipe();
+            onSelectDay(targetDay);
+            previewedRef.current = null;
+            onPreviewDayRef.current?.(null);
+            releaseTrack();
+          });
+        }
+      );
+    },
+    [markSwipe, onSelectDay, releaseTrack, setPreview, settle]
   );
 
   /**
    * Settle a canceled drag: return current day to center.
    */
-  const settleCancel = useCallback(() => {
-    const el = trackRef.current;
-    if (!el) return;
+  const settleCancel = useCallback(
+    (speed = 0) => {
+      const from = offsetRef.current;
+      setPreview(null);
+      if (from === 0 && !settlingRef.current) {
+        releaseTrack();
+        return;
+      }
+      settle("cancel", "translate3d(0px, 0, 0)", Math.abs(from), speed, releaseTrack);
+    },
+    [releaseTrack, setPreview, settle]
+  );
 
-    if (offsetRef.current === 0) {
-      releaseTrack();
-      return;
-    }
-
-    settlingRef.current = true;
-    const duration = 200;
-    el.style.transition = `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-    el.style.transform = "translate3d(0px, 0, 0)";
-    offsetRef.current = 0;
-    onPreviewDayRef.current?.(null);
-
-    settleTimer.current = setTimeout(() => {
-      releaseTrack();
-    }, duration);
-  }, [releaseTrack]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (settlingRef.current) return;
-    if (e.touches.length === 1) {
-      swipeAxis.current = "undecided";
-      touchStartRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-        time: performance.now(),
-      };
-    }
-  }, []);
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      // A glide back to centre can be caught mid-flight and dragged on from where it
+      // is; a glide into the next day is committed and cannot.
+      if (settlingRef.current === "turn") return;
+      if (e.touches.length === 1) {
+        if (settlingRef.current === "cancel") grabTrack();
+        baseRef.current = offsetRef.current;
+        swipeAxis.current = "undecided";
+        touchStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          time: performance.now(),
+        };
+      }
+    },
+    [grabTrack]
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -282,36 +368,34 @@ export function useDaySwipe({
       if (swipeAxis.current !== "x") return;
       if (e.cancelable) e.preventDefault();
 
-      const atStart = dayRef.current <= 0 && dx > 0;
-      const atEnd = dayRef.current >= 4 && dx < 0;
-      const resisted = atStart || atEnd ? dx * 0.28 : dx;
+      const width = window.innerWidth;
+      const raw = baseRef.current + dx;
+      const day = dayRef.current;
+      const edge = (day <= 0 && raw > 0) || (day >= 4 && raw < 0);
       const limit = limitRef.current;
-      const next = Math.max(-limit, Math.min(limit, resisted));
+      const next = Math.max(-limit, Math.min(limit, edge ? rubberBand(raw, width) : raw));
 
       const now = performance.now();
       const pts = recentRef.current;
-      pts.push({ x: next, t: now });
-      if (pts.length > 2) pts.shift();
+      pts.push({ x: e.touches[0].clientX, t: now });
+      while (pts.length > 1 && now - pts[0].t > VELOCITY_WINDOW_MS) pts.shift();
 
-      // Mount or switch the neighbor panel in the direction of the drag
-      if (dx < -6 && dayRef.current < 4) {
-        const target = dayRef.current + 1;
-        if (!activeNeighborRef.current || activeNeighborRef.current.day !== target) {
-          activeNeighborRef.current = { day: target, position: 1 };
-          onNeighborChangeRef.current?.({ day: target, position: 1 });
+      // Mount the neighbor on the side the track is displaced toward, as soon as the
+      // axis locks (4px), so its render lands before any real movement is visible.
+      const target = next < 0 ? day + 1 : next > 0 ? day - 1 : null;
+      const hasTarget = target !== null && target >= 0 && target <= 4;
+      if (hasTarget) {
+        if (activeNeighborRef.current?.day !== target) {
+          activeNeighborRef.current = { day: target, position: next < 0 ? 1 : -1 };
+          onNeighborChangeRef.current?.(activeNeighborRef.current);
         }
-      } else if (dx > 6 && dayRef.current > 0) {
-        const target = dayRef.current - 1;
-        if (!activeNeighborRef.current || activeNeighborRef.current.day !== target) {
-          activeNeighborRef.current = { day: target, position: -1 };
-          onNeighborChangeRef.current?.({ day: target, position: -1 });
-        }
-      } else if (atStart || atEnd) {
-        if (activeNeighborRef.current !== null) {
-          activeNeighborRef.current = null;
-          onNeighborChangeRef.current?.(null);
-        }
+      } else if (activeNeighborRef.current !== null) {
+        activeNeighborRef.current = null;
+        onNeighborChangeRef.current?.(null);
       }
+
+      // The day-bar pill follows the drag: it moves once the neighbor is past halfway.
+      setPreview(hasTarget && Math.abs(next) > width * PREVIEW_FRACTION ? target : null);
 
       writeOffset(next);
     };
@@ -320,7 +404,7 @@ export function useDaySwipe({
       touchStartRef.current = null;
       const axis = swipeAxis.current;
       swipeAxis.current = "undecided";
-      if (axis === "x") settleCancel();
+      if (axis === "x" || offsetRef.current !== 0) settleCancel();
     };
 
     el.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -329,23 +413,21 @@ export function useDaySwipe({
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchcancel", onTouchCancel);
     };
-  }, [grabTrack, ready, scrollRef, settleCancel, writeOffset]);
+  }, [grabTrack, ready, scrollRef, settleCancel, setPreview, writeOffset]);
 
   const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
+    (_e: React.TouchEvent) => {
       if (settlingRef.current) return;
       if (!touchStartRef.current) return;
-      const touch = e.changedTouches[0];
-      const deltaX = touch.clientX - touchStartRef.current.x;
-      const dt = Math.max(1, performance.now() - touchStartRef.current.time);
-      const vx = deltaX / dt;
-      const width = typeof window !== "undefined" ? window.innerWidth : 360;
+      const velocity = recentVelocity(recentRef.current, performance.now());
+      const offset = offsetRef.current;
       touchStartRef.current = null;
       const axis = swipeAxis.current;
       swipeAxis.current = "undecided";
 
       if (axis !== "x") {
-        if (settlingRef.current) releaseTrack();
+        // A tap that caught a glide in flight: let it finish what it was doing.
+        if (offset !== 0) settleCancel();
         return;
       }
 
@@ -355,24 +437,20 @@ export function useDaySwipe({
         return;
       }
 
-      const willTurn =
-        Math.abs(deltaX) > MIN_SWIPE_PX &&
-        shouldTurnPage({ mx: deltaX, vx, width, fraction: 0.08, velocity: 0.25 });
+      const canGoNext = offset < 0 && dayRef.current < 4;
+      const canGoPrev = offset > 0 && dayRef.current > 0;
 
-      const canGoNext = deltaX < 0 && dayRef.current < 4;
-      const canGoPrev = deltaX > 0 && dayRef.current > 0;
-
-      if (willTurn && (canGoNext || canGoPrev)) {
-        const targetDay = canGoNext ? dayRef.current + 1 : dayRef.current - 1;
-        settleTurn(canGoNext ? -1 : 1, targetDay);
+      if ((canGoNext || canGoPrev) && shouldTurn(offset, velocity, window.innerWidth)) {
+        settleTurn(canGoNext ? -1 : 1, canGoNext ? dayRef.current + 1 : dayRef.current - 1, offset, velocity);
       } else {
-        settleCancel();
+        settleCancel(velocity);
       }
     },
-    [blocked, releaseTrack, settleTurn, settleCancel]
+    [blocked, settleTurn, settleCancel]
   );
 
-  const isSettling = useCallback(() => settlingRef.current, []);
+  const isSettling = useCallback(() => settlingRef.current === "turn", []);
+
 
   return {
     trackRef,
