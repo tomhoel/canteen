@@ -1,5 +1,5 @@
 import { getRedis } from "./redis.service.js";
-import type { DishOrigin, DishDescription } from "../../lib/types.js";
+import type { DishOrigin, DishDescription, DishCourse } from "../../lib/types.js";
 
 /**
  * Per-dish cache backed by Upstash Redis `dish_cache` hash.
@@ -27,6 +27,12 @@ export interface DishCacheRow {
    * it must not move.
    */
   shortName: string | null;
+  /**
+   * What kind of dish this is (meat plate, soup, ...), labelled once by the
+   * model and used to pick the day's headline. Null until labelled; the name
+   * rules in dish-ranking stand in for it.
+   */
+  course: DishCourse | null;
   imagePath: string | null;
   imageNoBgPath: string | null;
   /** How many consecutive runs have asked the model about this dish and got nothing. */
@@ -44,6 +50,7 @@ export interface DishCacheEntry {
   origin?: DishOrigin | null;
   description?: DishDescription | null;
   shortName?: string | null;
+  course?: DishCourse | null;
   imagePath?: string | null;
   imageNoBgPath?: string | null;
   enrichAttempts?: number | null;
@@ -146,6 +153,7 @@ export async function loadDishCache(dishNames: string[]): Promise<DishCacheLoad>
             origin: row.origin ?? null,
             description: row.description ?? null,
             shortName: row.shortName ?? row.short_name ?? null,
+            course: row.course ?? null,
             imagePath: row.imagePath ?? row.image_path ?? null,
             imageNoBgPath: row.imageNoBgPath ?? row.image_no_bg_path ?? null,
             enrichAttempts: row.enrichAttempts ?? row.enrich_attempts ?? 0,
@@ -199,6 +207,7 @@ export async function saveDishCacheEntries(entries: DishCacheEntry[]): Promise<n
         origin: entry.origin !== undefined ? entry.origin : (prev.origin ?? null),
         description: entry.description !== undefined ? entry.description : (prev.description ?? null),
         shortName: entry.shortName !== undefined ? entry.shortName : (prev.shortName ?? null),
+        course: entry.course !== undefined ? entry.course : (prev.course ?? null),
         imagePath: entry.imagePath !== undefined ? entry.imagePath : (prev.imagePath ?? null),
         imageNoBgPath: entry.imageNoBgPath !== undefined ? entry.imageNoBgPath : (prev.imageNoBgPath ?? null),
         enrichAttempts:

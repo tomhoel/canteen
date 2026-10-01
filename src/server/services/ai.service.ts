@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import type { DishOrigin, DishDescription, Recipe } from "../../lib/types.js";
+import { DISH_COURSES } from "../../lib/types.js";
+import type { DishOrigin, DishDescription, DishCourse, Recipe } from "../../lib/types.js";
 // Lives in its own module so /api/menu can trim descriptions without booting
 // this file's 14 MB of model SDK. See fit-description.ts.
 import { DESCRIPTION_MAX_CHARS } from "./fit-description.js";
@@ -231,6 +232,48 @@ Guidelines:
   }
 
   return { values: result, fromModel };
+}
+
+/**
+ * Labels each dish with the course it is, for choosing the day's headline dish.
+ *
+ * Only labels the model actually returned, and only values from the closed
+ * set, come back; the caller stores those and leaves the rest to the name
+ * rules in dish-ranking. A label is cached for good, so the prompt spells out
+ * the edge cases rather than leave them to the model's mood.
+ */
+export async function classifyCourses(dishes: string[]): Promise<Record<string, DishCourse>> {
+  const out: Record<string, DishCourse> = {};
+  if (dishes.length === 0) return out;
+
+  for (const batch of chunk(dishes, BATCH_SIZE * 2)) {
+    const prompt = `You are classifying dishes from a Norwegian office canteen menu. For each dish choose exactly one course label:
+
+- "meat_plate": meat, poultry or fish/seafood served as a plated main with sides (steak, roast, fish fillet, schnitzel, meatballs or sausages with potatoes, fish and chips, tandoori chicken with rice, baked cod).
+- "meat_mixed": a hot dish where meat or fish is mixed into the dish rather than sitting on a plate (wok, pasta, stew/gryte, curry, stroganoff, lasagne, burger, tacos, jambalaya, stir-fry with chicken).
+- "veg": a vegetarian or vegan hot dish, including porridge, bean or lentil dishes, vegetarian curry, falafel, vegetable bakes.
+- "soup": any soup, including meat or fish soups.
+- "side": pizza, salad, bread, dessert, plain rice or other sides, anything that is not a main dish.
+
+Rules:
+- Judge by the dish name only. The name may be Norwegian or English.
+- A soup is always "soup", even if it names meat or fish.
+- Pizza is always "side".
+- If it names meat or fish and is a stew, wok, pasta or curry, it is "meat_mixed"; if it is served with potatoes, rice or vegetables as separate components, it is "meat_plate".
+
+${batch.map((d, i) => `${i + 1}. ${d}`).join("\n")}
+
+Return ONLY a JSON object mapping each dish name EXACTLY as given above to its label:
+{ "Dish Name": "meat_plate" }`;
+
+    const parsed = await generateJson<Record<string, string>>(prompt, "course classification");
+    if (!parsed) continue;
+    for (const dish of batch) {
+      const label = parsed[dish];
+      if ((DISH_COURSES as readonly string[]).includes(label)) out[dish] = label as DishCourse;
+    }
+  }
+  return out;
 }
 
 /**

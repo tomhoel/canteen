@@ -41,6 +41,7 @@ import {
   MAX_ENRICH_ATTEMPTS,
   type DishCacheEntry,
 } from "./dish-cache.service.js";
+import { ensureCourses, rerankMenu } from "./course.service.js";
 
 
 /** Every distinct non-empty dish name in a week, both languages. */
@@ -703,6 +704,12 @@ export async function runWeeklyUpdateService(
     const dishOrigins = enriched.origins;
     const dishDescriptions = enriched.descriptions;
     const dishShortNames = enriched.shortNames;
+
+    // Decide each day's main dish, once, with the model's course labels. The
+    // scraper ranked by name alone; this overrides it, and everything that
+    // reads the stored week (server, client, plate drawing) follows the result.
+    const reranked = rerankMenu(weekMenuData, await ensureCourses(allDishes));
+    if (reranked > 0) console.log(`🏆 ${weekId}: ${reranked} day(s) changed main dish.`);
 
     if (unchanged) {
       console.log(`✅ ${weekId} identical to the stored week — no new food to file.`);

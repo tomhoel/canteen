@@ -193,6 +193,9 @@ mock.module("./ai.service.js", {
       return { values, fromModel };
     },
     cleanDishTitles: async (_dishes: string[]) => ({}),
+    // No labels: the run falls back to the name rules, which is what these
+    // tests (about ordering of scrape/read/enrich/write) already assume.
+    classifyCourses: async (_dishes: string[]) => ({}),
     needsShortening: (dish: string) => world.longTitles.has(dish),
     shortenDishTitles: async (dishes: string[]) => {
       world.shortTitlesAsked.push([...dishes]);

@@ -161,6 +161,27 @@ The two are coupled; change one and check the other.
 A canteen that has not published next week yet is simply absent from that row.
 The preview banner names it, so a missing card reads as "not out yet".
 
+## Which dish is the day's main
+
+Each card shows one dish as the headline, and its plate is drawn for that dish.
+`src/lib/dish-ranking.ts` ranks a day's dishes by course tier, best first: a
+meat or fish plate with sides, a hot dish with meat mixed in (wok, pasta,
+stew), a vegetarian hot dish, a soup, then pizza, salad and sides. A soup never
+wins, and a vegetarian dish only wins when nothing with meat or fish is on the
+board. Ties go to the more composed dish, then the kitchen's order.
+
+The course comes from a label Gemini gives each new dish once (stored as
+`course` in `dish_cache`); a few name rules in `forcedCourse` outrank the label
+where the name settles it (soup, pizza, a salad as the head of the dish,
+vegan/vegetarian). Without a label the name rules guess, so a model outage
+costs a worse pick, never a failed run.
+
+The updater decides once and stores the result: items in ranked order, `isMain`
+on the first. The server, the client and the image job read that and never
+re-rank (`rankItems` returns already-decided items untouched), so they cannot
+disagree. Past weeks keep the pick they were stored with. To label dishes that
+predate this: `node --env-file=.env --import tsx scripts/label-courses.ts`.
+
 ## Endpoints
 
 | Route | Method | Purpose |

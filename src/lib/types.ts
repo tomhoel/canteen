@@ -10,6 +10,14 @@ export interface CanteenData { week: string; openingHours: string; menu: DayEntr
 export interface MenuData { scrapedAt: string; canteens: Record<string, CanteenData>; }
 
 export interface DishOrigin { code: string; country: string; }
+
+/**
+ * What kind of dish this is, for picking the day's headline. Best to worst:
+ * a meat/fish plate with sides, a hot dish with meat or fish mixed in (wok,
+ * pasta, stew, curry), a vegetarian hot dish, a soup, then pizza/salad/sides.
+ */
+export type DishCourse = "meat_plate" | "meat_mixed" | "veg" | "soup" | "side";
+export const DISH_COURSES: readonly DishCourse[] = ["meat_plate", "meat_mixed", "veg", "soup", "side"];
 export interface DishDescription { en?: string; no?: string; }
 
 export interface WeeklyMenuRecord {

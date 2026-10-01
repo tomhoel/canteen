@@ -19,6 +19,7 @@ function row(overrides: Partial<DishCacheRow> = {}): DishCacheRow {
     origin: null,
     description: null,
     shortName: null,
+    course: null,
     imagePath: null,
     imageNoBgPath: null,
     enrichAttempts: 0,

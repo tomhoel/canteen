@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { scoreMainDish, rankItems, pickMainDish } from "./dish-ranking";
+import { scoreMainDish, rankItems, pickMainDish, guessCourse } from "./dish-ranking";
 import type { MenuItem } from "./types";
 
 const item = (dish: string): MenuItem => ({ dish, isMain: false, allergens: [] });
@@ -46,8 +46,8 @@ test("turkey and schnitzel count as centrepieces", () => {
 
 test("'lam' does not fire on unrelated substrings", () => {
   // Guard for the word-boundary: these must not read as lamb.
-  assert.equal(scoreMainDish("Lammefjord potetsalat", "Flow") > 0, true); // 'lamme' is intentional
-  assert.equal(scoreMainDish("Flammkuchen", "Flow"), 0);
+  assert.equal(scoreMainDish("Lammefjord lammegryte", "Flow") > 0, true); // 'lamme' is intentional
+  assert.ok(scoreMainDish("Flammkuchen", "Flow") < scoreMainDish("Lammegryte", "Flow"));
 });
 
 test("rankItems marks exactly one main and preserves order on ties", () => {
@@ -77,4 +77,64 @@ test("client, scraper and updater agree on the same winner", () => {
     pickMainDish(items, "Eat the street")?.dish,
     "Panert rødspettefilet med stekte poteter og tartarsaus"
   );
+});
+
+// ---- Course tiers (2026-10-01): plated meat/fish > mixed > veg > soup > side ----
+
+test("2026-10-01 Flow Thursday: the fish beats porridge and the soups", () => {
+  // Regression. Stekt sei has no keyword the old rules knew, Havregrøt scored
+  // the same 0, and the kitchen's listing order made the porridge the headline.
+  const items = [
+    item("Havregrøt med bakte tomater, urte, løk, selleri, persille og olje"),
+    item("Kalkunsuppe med ingefær og chili"),
+    item("Stekt sei med erter, kål og dill"),
+    item("Maissuppe"),
+  ];
+  assert.equal(pickMainDish(items, "Flow")?.dish, "Stekt sei med erter, kål og dill");
+});
+
+test("a meat soup never beats a plated dish", () => {
+  const items = [item("Fransk kjøttsuppe"), item("Vegetar jambalaya"), item("Fish & Chips med ertestuing og tartarsaus")];
+  assert.equal(pickMainDish(items, "Eat the street")?.dish, "Fish & Chips med ertestuing og tartarsaus");
+});
+
+test("vegan schnitzel and burgers are vegetarian, not meat", () => {
+  // The old rules matched 'schnitzel' inside 'Veganschnitzel'.
+  const items = [item("Veganschnitzel med ris"), item("Kyllingbryst med purreløksaus og ris")];
+  assert.equal(pickMainDish(items, "Fresh4you")?.dish, "Kyllingbryst med purreløksaus og ris");
+  assert.equal(guessCourse("Veganburger med brød og tilbehør"), "veg");
+});
+
+test("a salad is a side even with chicken in it, but 'pork with a salad' is a plate", () => {
+  assert.equal(guessCourse("Cæsarsalat med kylling og bacon"), "side");
+  assert.equal(guessCourse("Svinekam med gresk linsesalat"), "meat_plate");
+});
+
+test("a vegetarian dish wins only when nothing with meat or fish is on the board", () => {
+  assert.equal(pickMainDish([item("Risotto med sopp"), item("Tomatsuppe")], "Flow")?.dish, "Risotto med sopp");
+});
+
+test("a stored label beats the name rules, except where the name settles it", () => {
+  // The model knows 'Baccala' is fish; the rules do not.
+  assert.equal(scoreMainDish("Baccala alla Vicentina", "Flow", "meat_plate") > scoreMainDish("Risotto med sopp", "Flow", "veg"), true);
+  // A model label of 'meat_mixed' cannot turn a vegangulasj into a meat dish.
+  assert.ok(scoreMainDish("Vegangulasj med poteter", "Flow", "meat_mixed") < scoreMainDish("Chicken tikka masala med ris", "Flow", "meat_mixed"));
+  // Nor a soup into a main.
+  assert.ok(scoreMainDish("Kalkunsuppe", "Flow", "meat_plate") < scoreMainDish("Wok med nudler og grønnsaker", "Flow"));
+});
+
+test("labels force a fresh ranking; stored decisions are returned untouched", () => {
+  const stored = [{ ...item("Havregrøt"), isMain: true }, item("Stekt sei med erter")];
+  // No labels: already decided, so the stored order stands (this is what the
+  // server, the client and the image job do).
+  assert.deepEqual(rankItems(stored, "Flow").map((i) => i.dish), ["Havregrøt", "Stekt sei med erter"]);
+  // The updater passes labels, which re-ranks from scratch.
+  const redecided = rankItems(stored, "Flow", { "Stekt sei med erter": "meat_plate", Havregrøt: "veg" });
+  assert.equal(redecided[0].dish, "Stekt sei med erter");
+  assert.equal(redecided.filter((i) => i.isMain).length, 1);
+});
+
+test("the composed-dish bonus only breaks ties inside a tier", () => {
+  // Maximum bonus must stay below the smallest gap between tiers.
+  assert.ok(scoreMainDish("Tomatsuppe med ris og brød, og mer med med", "Flow", "soup") < scoreMainDish("Vegetar bolle", "Flow", "veg"));
 });
