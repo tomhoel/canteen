@@ -93,10 +93,17 @@ export function useDayStrip({ selectedDay, onSelectDay, onPreviewDay, ready }: U
       }
     };
 
+    // User input takes the strip over from a scroll of ours.
+    const takeOver = () => {
+      programmatic.current = false;
+    };
+    const inputs = ["pointerdown", "touchstart", "wheel"] as const;
+    inputs.forEach((t) => el.addEventListener(t, takeOver, { passive: true }));
     el.addEventListener("scroll", onScroll, { passive: true });
     if (HAS_SCROLLEND) el.addEventListener("scrollend", commit);
     return () => {
       clearTimeout(timer);
+      inputs.forEach((t) => el.removeEventListener(t, takeOver));
       el.removeEventListener("scroll", onScroll);
       el.removeEventListener("scrollend", commit);
     };
