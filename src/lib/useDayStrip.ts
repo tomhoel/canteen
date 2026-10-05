@@ -47,10 +47,17 @@ export function useDayStrip({ selectedDay, onSelectDay, onPreviewDay, ready }: U
   /** True while a smooth scroll that WE started is in flight; its passing days are not previews. */
   const programmatic = useRef(false);
   const placed = useRef(false);
+  const onSelectRef = useRef(onSelectDay);
+  const onPreviewRef = useRef(onPreviewDay);
 
   useEffect(() => {
     selectedRef.current = selectedDay;
   }, [selectedDay]);
+
+  useEffect(() => {
+    onSelectRef.current = onSelectDay;
+    onPreviewRef.current = onPreviewDay;
+  }, [onSelectDay, onPreviewDay]);
 
   // Strip -> state: a finger or trackpad moved it.
   useEffect(() => {
@@ -61,14 +68,14 @@ export function useDayStrip({ selectedDay, onSelectDay, onPreviewDay, ready }: U
     const dayNow = () => nearestDay(el.scrollLeft, panelLefts(el));
     const commit = () => {
       programmatic.current = false;
-      onPreviewDay(null);
+      onPreviewRef.current(null);
       const day = dayNow();
-      if (day !== selectedRef.current) onSelectDay(day);
+      if (day !== selectedRef.current) onSelectRef.current(day);
     };
     const onScroll = () => {
       if (!programmatic.current) {
         const day = dayNow();
-        onPreviewDay(day === selectedRef.current ? null : day);
+        onPreviewRef.current(day === selectedRef.current ? null : day);
       }
       if (!HAS_SCROLLEND) {
         clearTimeout(timer);
@@ -83,7 +90,7 @@ export function useDayStrip({ selectedDay, onSelectDay, onPreviewDay, ready }: U
       el.removeEventListener("scroll", onScroll);
       el.removeEventListener("scrollend", commit);
     };
-  }, [ready, onSelectDay, onPreviewDay]);
+  }, [ready]);
 
   // State -> strip: a tap, arrow key, ?day= change or the seed moved selectedDay.
   useEffect(() => {
