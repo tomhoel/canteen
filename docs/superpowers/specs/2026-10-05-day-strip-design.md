@@ -37,9 +37,11 @@ scrollbar hidden. Each day is a `.day-panel` with `flex:0 0 100%; scroll-snap-al
 scroll-snap-stop:always`. Five panels, always in the DOM, in weekday order. Desktop and
 mobile use the same track; only the panel's inner layout differs (already true).
 
-**Mounting cost.** A panel renders real cards only for `selectedDay ± 1`; other days
-render a same-size empty panel (so scroll positions are stable) and fill in once they
-become a neighbor. Panels stay `memo`.
+**Mounting cost.** (Revised 2026-10-05 after a fast chained swipe landed on empty panels:
+cards mounted around the *committed* day, which lags the scroll.) All five panels hold
+their cards; only days within one of the strip's *live* position (`previewDay ?? selectedDay`)
+fetch plate images, and once on they stay on. Far days show the card with the plate
+shimmer until they are near. Panels stay `memo`.
 
 **State.** `selectedDay` is derived from scroll position on `scrollend` (fallback: a
 short debounce on `scroll` where `scrollend` is missing). On change: `setSelectedDay`

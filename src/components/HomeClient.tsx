@@ -682,7 +682,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                 key={day}
                 day={day}
                 data={data}
-                populated={Math.abs(day - selectedDay) <= 1}
+                near={Math.abs(day - (previewDay ?? selectedDay)) <= 1}
                 current={day === selectedDay}
                 todayIndex={todayIndex}
                 votes={voting.votes}

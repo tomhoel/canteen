@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { CanteenDayItem } from "@/lib/types";
 import { isCanteenClosed } from "@/lib/canteen-utils";
 import FoodCard from "@/components/FoodCard";
@@ -10,15 +10,16 @@ import AllClosedCard from "@/components/AllClosedCard";
 /**
  * One weekday's cards, as one slide of the scroll-snap strip (`.cards-track`).
  *
- * All five exist so the strip's offsets never move; only `populated` ones hold
- * cards (the current day and its neighbors), which keeps a week's worth of plate
- * images from loading at once. Everything but the current day is `inert`: out of
- * the tab order, the accessibility tree and hit-testing, as a leaving panel was.
+ * All five hold their cards, so a fast swipe never lands on an empty panel; only
+ * the days `near` the strip fetch their plate images, which keeps a week's worth
+ * of pictures from loading at once. Everything but the current day is `inert`:
+ * out of the tab order, the accessibility tree and hit-testing.
  */
 export interface DayPanelProps {
   day: number;
   data: CanteenDayItem[];
-  populated: boolean;
+  /** Within one day of where the strip is: this panel's plates may load. */
+  near: boolean;
   current: boolean;
   todayIndex: number;
   votes: Record<string, number>;
@@ -34,7 +35,7 @@ export interface DayPanelProps {
 function DayPanel({
   day,
   data,
-  populated,
+  near,
   current,
   todayIndex,
   votes,
@@ -45,6 +46,11 @@ function DayPanel({
   yoloWinner,
   isInitial = false,
 }: DayPanelProps) {
+  // Once a panel's plates have been asked for they stay on: scrolling away must
+  // not tear down pictures that are already decoded.
+  const [imagesOn, setImagesOn] = useState(near);
+  if (near && !imagesOn) setImagesOn(true);
+
   const openCanteens = data.filter((c) => !isCanteenClosed(c));
   const closedCanteens = data.filter((c) => isCanteenClosed(c));
 
@@ -54,7 +60,7 @@ function DayPanel({
       data-day={day}
       inert={!current || undefined}
     >
-      {!populated ? null : openCanteens.length === 0 ? (
+      {openCanteens.length === 0 ? (
         <AllClosedCard closedCanteens={closedCanteens} />
       ) : (
         data.map((d, cardIdx) =>
@@ -74,6 +80,7 @@ function DayPanel({
               yoloHighlighted={yoloHighlight === cardIdx}
               yoloWinner={yoloWinner === cardIdx}
               isInitial={isInitial}
+              showImage={imagesOn}
             />
           )
         )

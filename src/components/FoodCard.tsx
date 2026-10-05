@@ -165,6 +165,8 @@ interface FoodCardProps {
   yoloWinner?: boolean;
   /** True strictly on the first initial app load, enabling card launch entrance animations. */
   isInitial?: boolean;
+  /** False for a day far from the strip: the card renders, its plate is not fetched yet. */
+  showImage?: boolean;
 }
 
 const FoodCard = memo(function FoodCard({
@@ -179,6 +181,7 @@ const FoodCard = memo(function FoodCard({
   yoloHighlighted = false,
   yoloWinner = false,
   isInitial = false,
+  showImage = true,
 }: FoodCardProps) {
   const {
     canteenName,
@@ -235,6 +238,11 @@ const FoodCard = memo(function FoodCard({
             </div>
           ) : (
             <div className="plate-float-container">
+              {!showImage ? (
+                // A day far from the strip keeps its cards mounted (so a fast
+                // swipe never lands on an empty panel) but does not fetch its plate yet.
+                <span className="image-shimmer" aria-hidden="true" />
+              ) : (
               <PlateImage
                 key={imagePath}
                 src={imagePath}
@@ -245,6 +253,7 @@ const FoodCard = memo(function FoodCard({
                 onLoad={() => markImageCached(imagePath)}
                 onError={() => setImgError(true)}
               />
+              )}
             </div>
           )}
         </div>
