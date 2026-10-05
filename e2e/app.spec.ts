@@ -547,16 +547,25 @@ test("a horizontal swipe snaps to the next day and does not add history", async 
     return Math.abs(t.scrollLeft - (t.children[1] as HTMLElement).offsetLeft + (t.children[0] as HTMLElement).offsetLeft) < 1;
   });
 
+  // Real touch events, not synthesizeScrollGesture: that helper did nothing on
+  // the Linux CI browser while passing locally, whereas a touch sequence goes
+  // through the same compositor scroll path a finger does.
   const cdp = await page.context().newCDPSession(page);
   const track = (await page.locator(".cards-track").boundingBox())!;
-  await cdp.send("Input.synthesizeScrollGesture", {
-    x: track.x + track.width / 2,
-    y: track.y + track.height / 2,
-    xDistance: 220, // finger moves right: pulls Monday in from the left
-    gestureSourceType: "touch",
-    speed: 800,
-  });
+  const x = track.x + track.width / 2;
+  const y = track.y + track.height / 2;
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  for (const dx of [10, 40, 80, 130, 190, 230]) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x + dx, y }] }); // finger right: pulls Monday in
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 
+  // Say where the strip ended up, so a failure tells "the gesture scrolled nothing"
+  // apart from "it scrolled but the app did not commit the day".
+  await expect
+    .poll(() => page.$eval(".cards-track", (t) => Math.round(t.scrollLeft)), { message: "strip scrollLeft after the swipe" })
+    .toBeLessThan(2);
   await expect(page.locator(".day-selector button.active")).toContainText("Mandag");
   await expect(page).toHaveURL(/day=monday/);
   expect(await page.evaluate(() => history.length)).toBe(historyBefore);
