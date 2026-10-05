@@ -254,7 +254,26 @@ export function mergeCanteensForWeek(
     if (!merged[name]) merged[name] = canteen;
   }
 
-  return Object.assign(merged, thisWeek);
+  Object.assign(merged, thisWeek);
+
+  // A kitchen drops a weekday from its page once that day's lunch is over, so a
+  // late or manual run would erase days the row already holds. Keep any stored
+  // day of the same week the fresh scrape no longer lists.
+  // ponytail: a day a kitchen genuinely withdraws is kept too; clear the row by hand.
+  const order = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+  for (const [name, fresh] of Object.entries(thisWeek)) {
+    const old = stored?.[name];
+    if (!old || old.week !== fresh.week) continue;
+    const listed = new Set(fresh.menu.map((d) => d.day));
+    const kept = old.menu.filter((d) => !listed.has(d.day));
+    if (kept.length === 0) continue;
+    const menu = [...fresh.menu, ...kept].sort(
+      (a, b) => order.indexOf(a.day.toLowerCase()) - order.indexOf(b.day.toLowerCase())
+    );
+    merged[name] = { ...fresh, menu };
+  }
+
+  return merged;
 }
 
 /** "friday" -> "Friday", matching the day names the weekly scraper writes. */
