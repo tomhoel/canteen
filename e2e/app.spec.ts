@@ -540,6 +540,13 @@ test("a horizontal swipe snaps to the next day and does not add history", async 
   await settled(page);
   const historyBefore = await page.evaluate(() => history.length);
 
+  // The tap's smooth scroll must have landed: a touch that arrives mid-scroll
+  // only stops it, which is the browser's behavior, not what this test pins.
+  await page.waitForFunction(() => {
+    const t = document.querySelector(".cards-track")!;
+    return Math.abs(t.scrollLeft - (t.children[1] as HTMLElement).offsetLeft + (t.children[0] as HTMLElement).offsetLeft) < 1;
+  });
+
   const cdp = await page.context().newCDPSession(page);
   const track = (await page.locator(".cards-track").boundingBox())!;
   await cdp.send("Input.synthesizeScrollGesture", {

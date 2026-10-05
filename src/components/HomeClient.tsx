@@ -94,6 +94,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       const idx = DAY_KEYS.indexOf(searchParams.day.toLowerCase() as typeof DAY_KEYS[number]);
       if (idx >= 0 && idx !== selectedDay) {
         setSelectedDay(idx);
+        setDayChanged(true);
       }
     }
     // Deliberately keyed on the search param alone. `selectedDay` is read above

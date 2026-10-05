@@ -67,6 +67,16 @@ export function useDayStrip({ selectedDay, onSelectDay, onPreviewDay, ready }: U
 
     const dayNow = () => nearestDay(el.scrollLeft, panelLefts(el));
     const commit = () => {
+      // Without scrollend, a stalled main thread can fire the idle timer midway
+      // through our own smooth scroll; reading that would revert the tap.
+      if (
+        !HAS_SCROLLEND &&
+        programmatic.current &&
+        Math.abs(el.scrollLeft - panelLefts(el)[selectedRef.current]) > 1
+      ) {
+        timer = setTimeout(commit, SCROLL_IDLE_MS);
+        return;
+      }
       programmatic.current = false;
       onPreviewRef.current(null);
       const day = dayNow();
@@ -104,7 +114,8 @@ export function useDayStrip({ selectedDay, onSelectDay, onPreviewDay, ready }: U
     }
     // Only a one-day move is worth animating; a longer one would sweep across
     // panels that hold no cards, and the first placement must not slide at all.
-    const smooth = placed.current && Math.abs(selectedDay - at) === 1;
+    const smooth = placed.current && Math.abs(selectedDay - at) === 1 &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     programmatic.current = smooth;
     el.scrollTo({ left: lefts[selectedDay], behavior: smooth ? "smooth" : "instant" });
     placed.current = true;

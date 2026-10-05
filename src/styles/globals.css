@@ -429,12 +429,8 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* The day transition slides a whole day's cards in from 80px away, and for
-     the length of that animation the incoming block genuinely sticks out past
-     the right edge. Without this the browser answers with a real horizontal
-     scrollbar across the bottom of the page, appearing and disappearing on
-     every single swipe. The mobile block already had this; the desktop one
-     never did. */
+  /* The day strip scrolls horizontally inside; this guards against any other
+     sideways overflow growing a page-level scrollbar. */
   overflow-x: hidden;
   width: 100%;
 }
@@ -450,6 +446,11 @@ body {
   margin: 0 auto;
   overflow-x: auto;
   overflow-y: clip; /* vertical scrolling stays on .cards-container */
+  /* overflow-x: auto makes the track clip on y too, so give plates (they stick
+     out above their card), hover lifts and shadows room inside it, then cancel
+     the room with a negative margin so layout is unchanged. */
+  padding-block: 72px 40px;
+  margin-block: -72px -40px;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
@@ -460,6 +461,7 @@ body {
 
 .cards-track > .cards-animated-wrapper {
   flex: 0 0 100%;
+  align-self: center; /* desktop: the cards sit vertically centered, as the grid did */
   scroll-snap-align: start;
   scroll-snap-stop: always;
   display: flex;
@@ -2031,6 +2033,13 @@ body {
     height: 220px;
     margin-top: -60px;
   }
+
+  .cards-track {
+    /* The container pads only 20px below here, so the bottom bleed stops at
+       20px or it would add page scroll. */
+    padding-block: 64px 20px;
+    margin-block: -64px -20px;
+  }
 }
 
 /* ─── Main Content Wrapper ─── */
@@ -2168,12 +2177,20 @@ body {
   /* Day strip, mobile specifics: the strip fills the container's height. */
   .cards-track {
     --day-gap: 16px;
-    height: 100%;
+    /* Room for card shadows and the plate hanging 8px off the card's left
+       edge; cancelled by the negative margins so the stack is unchanged. */
+    padding: 12px 8px;
+    margin: -12px -8px;
+    scroll-padding-inline: 8px;
+    height: calc(100% + 24px);
+    width: calc(100% + 16px);
+    max-width: none;
     flex: 1;
     min-height: 0;
     align-items: stretch;
   }
   .cards-track > .cards-animated-wrapper {
+    align-self: stretch;
     flex-direction: column;
     align-items: stretch;
     justify-content: space-between;
@@ -2797,7 +2814,6 @@ body {
   justify-content: inherit;
   gap: inherit;
   width: 100%;
-  will-change: transform, opacity;
 }
 
 /* ─── Header Actions ─── */
