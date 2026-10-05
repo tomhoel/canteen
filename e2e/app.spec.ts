@@ -195,6 +195,7 @@ test("an open overlay is usable and the page behind it is not", async ({ page })
   expect(state.behindReachable).toBe(0);
 });
 
+// Guards a multi-day jump: lands on the day, cards in view, panels intact.
 test("tapping a far day lands on it with its cards visible", async ({ page }) => {
   await page.goto("/");
   await loaded(page);
@@ -207,6 +208,7 @@ test("tapping a far day lands on it with its cards visible", async ({ page }) =>
   await expect(page.locator(".day-selector button.active")).toContainText(opensOnFriday ? "Mandag" : "Fredag");
   const dayIdx = target - 1;
   await expect(page.locator(`.day-panel[data-day="${dayIdx}"]`)).not.toHaveAttribute("inert", /.*/);
+  // Not CARD: the target panel may still be inert mid-assertion.
   await expect(page.locator(`.day-panel[data-day="${dayIdx}"] .food-card`).first()).toBeInViewport();
   expect(await page.$$eval(".day-panel", (p) => p.length)).toBe(5);
   await settled(page);
@@ -218,13 +220,40 @@ test("tapping a far day lands on it with its cards visible", async ({ page }) =>
   expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
 });
 
+// Guards the first placement: a shared link must open ON its day, not open on
+// today and slide there. Records every strip scroll position from page start.
 test("a shared ?day= link opens on that day with no slide", async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __stripScrolls: number[] };
+    w.__stripScrolls = [];
+    document.addEventListener(
+      "scroll",
+      (e) => {
+        const t = e.target as HTMLElement;
+        if (t?.classList?.contains("cards-track")) w.__stripScrolls.push(t.scrollLeft);
+      },
+      true
+    );
+  });
   await page.goto("/?day=thursday");
   await loaded(page);
+  // Not CARD: the target panel may still be inert mid-assertion.
   await expect(page.locator(".day-panel[data-day='3'] .food-card").first()).toBeInViewport();
   await expect(page.locator(".day-selector button.active")).toContainText("Torsdag");
+
+  await page.waitForTimeout(600); // waits out a would-be slide animation
+  const { target, scrolls } = await page.evaluate(() => {
+    const panels = [...document.querySelectorAll<HTMLElement>(".day-panel")];
+    return {
+      target: panels[3].offsetLeft - panels[0].offsetLeft,
+      scrolls: (window as unknown as { __stripScrolls: number[] }).__stripScrolls,
+    };
+  });
+  expect(scrolls.length).toBeGreaterThan(0);
+  expect(scrolls.every((x) => Math.abs(x - target) <= 1)).toBe(true);
 });
 
+// Guards that the strip is frozen while an overlay is open.
 test("an open overlay locks the strip", async ({ page }) => {
   await page.goto("/");
   await loaded(page);
