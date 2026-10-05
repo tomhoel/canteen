@@ -71,7 +71,7 @@ export default function DaySelector({
     }
     const barHeight = barRef.current.offsetHeight;
     const viewportH = window.innerHeight;
-    const lastCard = cardsRef.current.querySelector(".cards-animated-wrapper")?.lastElementChild;
+    const lastCard = cardsRef.current.querySelector(".cards-animated-wrapper:not([inert])")?.lastElementChild;
     const cardsBottom = lastCard
       ? lastCard.getBoundingClientRect().bottom
       : cardsRef.current.getBoundingClientRect().bottom;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCloseRequest";
 import { fireConfetti, showToast } from "@/lib/lazy-effects";
@@ -29,7 +29,7 @@ import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import DayPanel from "@/components/DayPanel";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useShellInert } from "@/lib/useShellInert";
-import { useDaySwipe } from "@/lib/useDaySwipe";
+import { useDayStrip } from "@/lib/useDayStrip";
 import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 
 // These only render once the user opens a modal or overlay — a recipe's
@@ -123,24 +123,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setDishDescriptions(initialDescriptions);
     setDishShortNames(initialShortNames);
   }, [initialMenu, initialOrigins, initialDescriptions, initialShortNames]);
-  /**
-   * The day change, as two panels instead of an AnimatePresence.
-   *
-   * `current` is the day on screen and `leaving` is the one still sliding out;
-   * `seq` is what keys them, so returning to a day that is still leaving gets a
-   * brand-new panel rather than reversing the old one. Both live in the track's
-   * single grid cell — see DayPanel for why that is enough.
-   */
-  const [current, setCurrent] = useState({ seq: 0, day: selectedDay });
-  const [leaving, setLeaving] = useState<{ seq: number; day: number; dir: number } | null>(null);
-  const [dayDir, setDayDir] = useState(0);
-  const [swipingNeighbor, setSwipingNeighbor] = useState<{ day: number; position: -1 | 1 } | null>(null);
-  const handleNeighborChange = useCallback((neighbor: { day: number; position: -1 | 1 } | null) => {
-    if (neighbor) {
-      setLeaving(null);
-    }
-    setSwipingNeighbor(neighbor);
-  }, []);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -231,34 +213,18 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     }, 200);
   }, []);
 
-  /**
-   * Did this day change come from a swipe rather than a tap on the day bar?
-   *
-   * A tap runs one animation: the day's own entrance. A swipe runs two — the
-   * strip springing home from where the finger left it, AND the day's entrance
-   * inside it — two springs on nested elements, the outer one carrying six
-   * cards while popLayout has both days mounted. That is why a swipe felt worse
-   * than tapping a day that plays the identical transition.
-   *
-   * When it was a swipe the day stops sliding and lets the strip carry the
-   * horizontal movement, so there is one spring on one element and the gesture
-   * resolves into the transition instead of racing it.
-   *
-   * Owned here rather than inside useDaySwipe because clearing it belongs to
-   * every day change, and a day-bar tap never reaches that hook.
-   */
-  const [fromSwipe, setFromSwipe] = useState(false);
-  const markSwipe = useCallback(() => setFromSwipe(true), []);
   const [previewDay, setPreviewDay] = useState<number | null>(null);
-  const isSettlingRef = useRef<() => boolean>(() => false);
+  // False until the user first changes the day; only the day shown at launch
+  // plays the card entrance animation.
+  const [dayChanged, setDayChanged] = useState(false);
 
   const handleDaySelect = useCallback((i: number) => {
-    if (isSettlingRef.current()) return;
     setSelectedDay(prev => (i === prev ? prev : i));
+    setDayChanged(true);
     // replaceState, as before: tapping through the weekdays must not stack
     // history entries, or Back walks Friday -> Thursday instead of leaving the
     // app. setSearchParam rewrites this one key and leaves the rest of the
-    // query string alone, which is what the old spread of `prev` did.
+    // query string alone.
     setSearchParam("day", DAY_KEYS[i]);
   }, []);
 
@@ -443,21 +409,13 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     });
   }, [plateImages, plateWidth]);
 
-  // Finger and trackpad -> day change. Extracted whole: the axis lock, the
-  // MotionValue the strip rides on, the non-passive listener and the release
-  // threshold are one mechanism, and every bug here came from moving one
-  // without the others.
-  const { trackRef, handleWheel, handleTouchStart, handleTouchEnd, isSettling } = useDaySwipe({
-    scrollRef,
+  // The strip scrolls and snaps natively; this reads the day back and steers it.
+  const { trackRef } = useDayStrip({
     selectedDay,
     onSelectDay: handleDaySelect,
-    blocked: anyOverlayOpen,
-    ready: menuData !== null,
-    markSwipe,
-    onNeighborChange: handleNeighborChange,
     onPreviewDay: setPreviewDay,
+    ready: menuData !== null,
   });
-  isSettlingRef.current = isSettling;
 
   const fullDayLabels = FULL_DAYS_NO;
 
@@ -587,7 +545,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           const winnerName = cardsForDay[cardIdx]?.canteenName;
           if (winnerName) {
             const el = scrollRef.current?.querySelector<HTMLElement>(
-              `[data-yolo-card-key="${CSS.escape(winnerName)}"]`
+              `.day-panel[data-day="${dayIdx}"] [data-yolo-card-key="${CSS.escape(winnerName)}"]`
             );
             el?.scrollIntoView({ behavior: "smooth", block: "center" });
 
@@ -660,53 +618,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // There is no SSR any more — `menuData` arrives from the route loader before
   // this component exists — so the only thing left to wait for is the effect
   // flush, and waiting for it just showed the placeholder one frame longer.
-  /*
-    Derive the transition during render, not in an effect — an effect would
-    start it one painted frame late, so the new day would be visible at rest
-    before it slid. This is React's sanctioned derived-state escape hatch: the
-    guard makes the re-render terminate, and every setter targets this
-    component's own state.
-
-    Gated on `menuData` because two effects move `selectedDay` while the menu
-    is still loading (the `?day=` reader and the seed that picks the default
-    day). `<AnimatePresence>` was not mounted during that phase, so those moves
-    produced no transition; without the gate they would mount a whole second
-    DayPanel — three FoodCards and their plates — for a day that has never been
-    on screen, and the first frame the user sees would be it sliding away.
-
-    `fromSwipe` is consumed here rather than in `handleDaySelect` because that
-    is the only place it is read. It used to be cleared only on the tap path,
-    so after any swipe it stayed true and the next day change arriving from the
-    URL — a shared link, browser Back — was told it came from a finger and
-    cross-faded in place with no slide and no strip movement to stand in.
-  */
-  if (current.day !== selectedDay) {
-    if (!menuData) {
-      // Keep the panels in step with the day, without producing a transition.
-      setCurrent({ seq: 0, day: selectedDay });
-    } else if (fromSwipe) {
-      // Handled by touch swipe and swipingNeighbor — commit day without creating a duplicate leaving panel.
-      setFromSwipe(false);
-      setDayDir(0);
-      setCurrent({ seq: current.seq + 1, day: selectedDay });
-    } else {
-      const d = selectedDay > current.day ? 1 : -1;
-      setDayDir(d);
-      setLeaving({ seq: current.seq, day: current.day, dir: d });
-      setCurrent({ seq: current.seq + 1, day: selectedDay });
-    }
-  }
-
-  // Synchronously reset track transform before browser paint when a swipe commit lands
-  useLayoutEffect(() => {
-    const el = trackRef.current;
-    if (el && el.classList.contains("is-swiping")) {
-      el.style.transition = "";
-      el.style.transform = "";
-      el.classList.remove("is-swiping");
-    }
-  }, [current.seq, trackRef]);
-
   if (!menuData) {
     return <LoadingScreen />;
   }
@@ -759,84 +670,29 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         className="cards-container"
         ref={scrollRef}
         onScroll={handleScroll}
-        onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
-          <div className="cards-track" ref={trackRef}>
-            {/*
-              The day change: at most two panels, stacked in this element's
-              single grid cell. `<AnimatePresence mode="popLayout">` used to do
-              this by pinning the outgoing day with `position: absolute` and a
-              measured top/left; the grid stack the stylesheet already declares
-              does it with no positioning at all, which is both simpler and
-              free of popLayout's desktop failure mode (the pinned offsets
-              resolve against the stretched grid AREA, not the box the panel
-              was standing in).
-
-              The leaving panel is rendered FIRST, and that ordering is
-              load-bearing: it means React appends the arriving panel rather
-              than inserting before it, and `insertBefore` would take the
-              leaving node out of the tree and cancel its running transition.
-            */}
-            {leaving && (
+          <div
+            className={"cards-track" + (anyOverlayOpen ? " is-locked" : "")}
+            ref={trackRef}
+          >
+            {allDaysData.map((data, day) => (
               <DayPanel
-                key={leaving.seq}
-                day={leaving.day}
-                data={allDaysData[leaving.day] ?? []}
-                phase="exit"
-                dir={leaving.dir}
+                key={day}
+                day={day}
+                data={data}
+                populated={Math.abs(day - selectedDay) <= 1}
+                current={day === selectedDay}
                 todayIndex={todayIndex}
                 votes={voting.votes}
                 maxVotes={maxVotes}
                 onImageClick={handleImageClick}
                 onCardClick={handleCardClick}
-                /* Forced off: tapping Today both starts the YOLO spin and
-                   changes the day, and the glow belongs to the day arriving,
-                   not the one leaving. AnimatePresence hid this by freezing the
-                   exiting child's props; this panel renders live. */
-                yoloHighlight={-1}
-                yoloWinner={-1}
-                isInitial={false}
-                onExited={() =>
-                  setLeaving(l => (l && l.seq === leaving.seq ? null : l))
-                }
+                yoloHighlight={day === selectedDay ? yoloHighlight : -1}
+                yoloWinner={day === selectedDay ? yoloWinner : -1}
+                isInitial={!dayChanged && day === selectedDay}
               />
-            )}
-            <DayPanel
-              key={current.seq}
-              day={current.day}
-              data={allDaysData[current.day] ?? canteenDayData}
-              phase={current.seq === 0 ? "static" : "enter"}
-              dir={dayDir}
-              todayIndex={todayIndex}
-              votes={voting.votes}
-              maxVotes={maxVotes}
-              onImageClick={handleImageClick}
-              onCardClick={handleCardClick}
-              yoloHighlight={yoloHighlight}
-              yoloWinner={yoloWinner}
-              isInitial={current.seq === 0}
-            />
-            {swipingNeighbor && (
-              <DayPanel
-                key={`swiping-${swipingNeighbor.day}`}
-                day={swipingNeighbor.day}
-                data={allDaysData[swipingNeighbor.day] ?? []}
-                phase="static"
-                dir={0}
-                todayIndex={todayIndex}
-                votes={voting.votes}
-                maxVotes={maxVotes}
-                onImageClick={handleImageClick}
-                onCardClick={handleCardClick}
-                yoloHighlight={-1}
-                yoloWinner={-1}
-                swipePosition={swipingNeighbor.position}
-                isInitial={false}
-              />
-            )}
+            ))}
           </div>
         </ErrorBoundary>
       </main>

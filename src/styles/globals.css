@@ -439,80 +439,36 @@ body {
   width: 100%;
 }
 
-/* ─── Cards Track (CSS Grid Stack to prevent height jumping during transitions) ─── */
+/* ─── Day strip: one scroll-snap row holding all five days ─── */
 .cards-track {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto;
+  --day-gap: 16px;
+  display: flex;
+  gap: var(--day-gap);
+  position: relative; /* children's offsetLeft is measured against this */
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  align-items: center;
+  overflow-x: auto;
+  overflow-y: clip; /* vertical scrolling stays on .cards-container */
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
 }
+.cards-track::-webkit-scrollbar { display: none; }
+/* An overlay owns the screen: a swipe underneath must not turn the page. */
+.cards-track.is-locked { overflow-x: hidden; }
 
 .cards-track > .cards-animated-wrapper {
-  grid-column: 1;
-  grid-row: 1;
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   display: flex;
   flex-direction: row;
   justify-content: center;
   gap: 24px;
-  width: 100%;
-  will-change: transform, opacity;
+  min-width: 0;
 }
 
-/* ─── The day change ───
-   Was `<AnimatePresence mode="popLayout">` with motion variants. The spring was
-   300/30/0.8 — damping ratio 0.97, so it never overshot, and this curve was
-   fitted numerically against its step response: within 0.53px of the 44px
-   mobile throw and 0.96px of the 80px desktop one over the whole travel.
-
-   Both panels are `.cards-animated-wrapper`, so they are already pinned to
-   `grid-column: 1; grid-row: 1` above and stack in the one cell. Nothing here
-   positions anything absolutely, which is what keeps the leaving day exactly
-   where it was standing.
-
-   Direction arrives as a unitless `--day-dir` written inline by DayPanel: 1 for
-   a later day, -1 for an earlier one, and 0 when the change came from a swipe —
-   `calc(0 * 44px)` is `0px`, so the panel does not translate and the strip's own
-   movement carries it, which is what `fromSwipe` meant to the old variants. */
-.day-panel {
-  --day-travel: 44px;
-  --day-scale: 1;
-  transition:
-    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
-    opacity 0.24s linear;
-}
-
-.day-panel-enter {
-  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel)), 0, 0)
-    scale(var(--day-scale));
-  opacity: 0;
-}
-
-.day-panel-exit {
-  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel) * -1), 0, 0)
-    scale(var(--day-scale));
-  opacity: 0;
-  /* Leaves faster than it arrives, as the old exit variant did (0.2/0.18
-     against 0.28/0.24). */
-  transition:
-    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
-    opacity 0.18s linear;
-}
-
-@media (min-width: 769px) {
-  .day-panel {
-    /* The desktop has three cards across a wide viewport and can afford the
-       full throw; a phone card is nearly the screen, so 80px there reads as
-       the whole layout lurching. */
-    --day-travel: 80px;
-    /* Desktop only, and deliberately: scaling a box full of text makes WebKit
-       re-rasterise every glyph in it on each frame, which is the cost a phone
-       cannot absorb. */
-    --day-scale: 0.98;
-  }
-}
 
 /* ─── Food Card ─── */
 .food-card-3d-wrapper {
@@ -2207,109 +2163,29 @@ body {
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    /* Declares that only vertical panning is the browser's to handle, so a
-       sideways flick is never taken as a scroll gesture in the first place.
-       The touchmove handler cancels the rest; this is the half that works
-       before any JavaScript has had a chance to run. */
-    touch-action: pan-y;
   }
 
-  /* Cards track — mobile grid stack ensuring enter and exit share same bounds */
+  /* Day strip, mobile specifics: the strip fills the container's height. */
   .cards-track {
     --day-gap: 16px;
-    display: grid;
-    grid-template-columns: 100%;
-    grid-template-rows: 100%;
-    width: 100%;
     height: 100%;
     flex: 1;
     min-height: 0;
+    align-items: stretch;
   }
-
-  /* Animated wrapper — fills parent, distributes space to cards */
   .cards-track > .cards-animated-wrapper {
-    grid-column: 1;
-    grid-row: 1;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: space-between;
+    min-height: 0;
     /* The same value the container pads with, so the three gaps cannot drift. */
     gap: var(--stack-gap);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    will-change: transform, opacity;
-  }
-
-  /* Mobile day slide & continuous swiping */
-  .cards-track.is-swiping {
-    will-change: transform;
-  }
-
-  .day-panel {
-    --day-travel: calc(100% + var(--day-gap));
-    --day-scale: 1;
-    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* Only the initial page launch runs card/chip entrance animations; all day-to-day panels are completely static */
   .day-panel:not(.day-panel-initial) .food-card,
-  .day-panel:not(.day-panel-initial) .allergen-chip,
-  .cards-track.is-swiping .food-card {
+  .day-panel:not(.day-panel-initial) .allergen-chip {
     animation: none !important;
-  }
-
-  .day-panel-enter,
-  .day-panel-exit {
-    opacity: 1;
-  }
-
-  .day-panel-neighbor-left {
-    transform: translate3d(calc(-100% - var(--day-gap)), 0, 0) !important;
-    opacity: 1 !important;
-    transition: none !important;
-  }
-
-  .day-panel-neighbor-right {
-    transform: translate3d(calc(100% + var(--day-gap)), 0, 0) !important;
-    opacity: 1 !important;
-    transition: none !important;
-  }
-
-  .cards-track.is-swiping .day-panel {
-    transition: none !important;
-  }
-
-  /* A push, not a slide: the day you leave only travels 30% as far as your finger and
-     recedes beneath, while the day that arrives glides over it, carrying its own shadow.
-     useDaySwipe writes --swipe-x (the track's px offset) and --swipe-p (0..1) on every
-     move and sets both to their end values when it releases. */
-  .cards-track.is-swiping .day-panel {
-    translate: calc(var(--swipe-x, 0px) * -0.7) 0;
-    scale: calc(1 - var(--swipe-p, 0) * 0.06);
-  }
-  .cards-track.is-swiping .day-panel-neighbor-left,
-  .cards-track.is-swiping .day-panel-neighbor-right {
-    translate: none;
-    scale: 1;
-    position: relative;
-    z-index: 2;
-    background: var(--bg-cream);
-  }
-  .cards-track.is-swiping .day-panel-neighbor-right {
-    box-shadow: calc(-18px * (1 - var(--swipe-p, 0))) 0 calc(36px * (1 - var(--swipe-p, 0))) rgba(60, 40, 10, 0.2);
-  }
-  .cards-track.is-swiping .day-panel-neighbor-left {
-    box-shadow: calc(18px * (1 - var(--swipe-p, 0))) 0 calc(36px * (1 - var(--swipe-p, 0))) rgba(60, 40, 10, 0.2);
-  }
-  .cards-track.is-swiping.is-settling .day-panel {
-    transition:
-      translate var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1),
-      scale var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1) !important;
   }
 
   /* Card layout - horizontal, grows to fill viewport */
