@@ -4,6 +4,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
+const CARD = ".day-panel:not([inert]) .food-card";
+
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
 /**
@@ -96,7 +98,7 @@ test("the three cards are the same height and the page does not scroll", async (
   await page.goto("/");
   await loaded(page);
 
-  const heights = await page.$$eval(".food-card", (cards) =>
+  const heights = await page.$$eval(CARD, (cards) =>
     cards.map((c) => Math.round(c.getBoundingClientRect().height))
   );
 
@@ -160,7 +162,7 @@ test("an open overlay is usable and the page behind it is not", async ({ page })
     await page.waitForSelector(".info-modal");
     overlaySelector = ".info-modal";
   } else {
-    await page.locator(".food-card").first().click();
+    await page.locator(CARD).first().click();
     await page.waitForSelector(".action-sheet");
     overlaySelector = ".action-sheet";
   }
@@ -193,37 +195,42 @@ test("an open overlay is usable and the page behind it is not", async ({ page })
   expect(state.behindReachable).toBe(0);
 });
 
-/**
- * Guards the hand-written day transition that replaced AnimatePresence.
- *
- * popLayout put both days on screen at once; the replacement stacks them in
- * `.cards-track`'s existing grid cell. The failure mode it is watching for is a
- * leaving panel that never unmounts — the exit is driven by a timer, because
- * neither `transitionend` nor a transform change is guaranteed to fire.
- */
-test("a day change overlaps two panels and settles back to one", async ({ page }) => {
+test("tapping a far day lands on it with its cards visible", async ({ page }) => {
   await page.goto("/");
   await loaded(page);
 
-  const before = await page.$$eval(".day-panel", (p) => p.length);
-  expect(before).toBe(1);
+  // Friday, unless the app opened on Friday.
+  const opensOnFriday = (await page.locator(".day-selector button:nth-of-type(5).active").count()) > 0;
+  const target = opensOnFriday ? 1 : 5;
+  await page.click(`.day-selector button:nth-of-type(${target})`);
 
-  // Thursday, unless the app opened on Thursday: clicking the selected day
-  // changes nothing, and this test went red every Thursday.
-  const opensOnThursday = (await page.locator(".day-selector button:nth-of-type(4).active").count()) > 0;
-  await page.click(`.day-selector button:nth-of-type(${opensOnThursday ? 3 : 4})`);
-
-  // Both days share the screen for the length of the change.
-  await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 2_000 }).toBe(2);
-  // ...and the leaving one is gone afterwards.
-  await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 3_000 }).toBe(1);
+  await expect(page.locator(".day-selector button.active")).toContainText(opensOnFriday ? "Mandag" : "Fredag");
+  const dayIdx = target - 1;
+  await expect(page.locator(`.day-panel[data-day="${dayIdx}"]`)).not.toHaveAttribute("inert", /.*/);
+  await expect(page.locator(`.day-panel[data-day="${dayIdx}"] .food-card`).first()).toBeInViewport();
+  expect(await page.$$eval(".day-panel", (p) => p.length)).toBe(5);
   await settled(page);
 
-  const heights = await page.$$eval(".food-card", (cards) =>
+  const heights = await page.$$eval(CARD, (cards) =>
     cards.map((c) => Math.round(c.getBoundingClientRect().height))
   );
   expect(heights).toHaveLength(3);
   expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
+});
+
+test("a shared ?day= link opens on that day with no slide", async ({ page }) => {
+  await page.goto("/?day=thursday");
+  await loaded(page);
+  await expect(page.locator(".day-panel[data-day='3'] .food-card").first()).toBeInViewport();
+  await expect(page.locator(".day-selector button.active")).toContainText("Torsdag");
+});
+
+test("an open overlay locks the strip", async ({ page }) => {
+  await page.goto("/");
+  await loaded(page);
+  await page.locator(CARD).first().click();
+  await expect(page.locator(".cards-track.is-locked")).toHaveCount(1);
+  expect(await page.$eval(".cards-track", (t) => getComputedStyle(t).overflowX)).toBe("hidden");
 });
 
 /**
@@ -324,7 +331,7 @@ test("a platform close request closes the overlay instead of the app", async ({ 
     await page.waitForSelector(".info-modal");
     overlaySelector = ".info-modal";
   } else {
-    await page.locator(".food-card").first().click();
+    await page.locator(CARD).first().click();
     await page.waitForSelector(".action-sheet");
     overlaySelector = ".action-sheet";
   }
@@ -339,7 +346,7 @@ test("a platform close request closes the overlay instead of the app", async ({ 
 
   // ...and the app behind it is alive, i.e. the request closed a layer rather
   // than tearing anything else down.
-  await expect(page.locator(".food-card").first()).toBeVisible();
+  await expect(page.locator(CARD).first()).toBeVisible();
 });
 
 /**
@@ -362,7 +369,7 @@ test("the sheet animates out when dismissed instead of vanishing", async ({ page
   await page.goto("/");
   await loaded(page);
 
-  await page.locator(".food-card").first().click();
+  await page.locator(CARD).first().click();
   await page.waitForSelector(".action-sheet");
   await page.waitForTimeout(600); // let it finish opening
 
@@ -406,7 +413,7 @@ test("the sheet still animates its close AFTER it has been dragged", async ({ pa
   await page.goto("/");
   await loaded(page);
 
-  await page.locator(".food-card").first().click();
+  await page.locator(CARD).first().click();
   await page.waitForSelector(".action-sheet");
   await page.waitForTimeout(600);
 
@@ -467,7 +474,7 @@ test("flicking the sheet upward cancels the drag instead of dismissing it", asyn
   await page.goto("/");
   await loaded(page);
 
-  await page.locator(".food-card").first().click();
+  await page.locator(CARD).first().click();
   await page.waitForSelector(".action-sheet");
   await page.waitForTimeout(600);
 
@@ -495,42 +502,27 @@ test("flicking the sheet upward cancels the drag instead of dismissing it", asyn
   ).toHaveCount(1);
 });
 
-test("horizontal day swipe displays neighbor panel and settles cleanly on mobile", async ({ page }) => {
+test("a horizontal swipe snaps to the next day and does not add history", async ({ page }) => {
   test.skip(test.info().project.name === "desktop", "day swipe gesture is touch-only");
   await page.goto("/");
   await loaded(page);
 
-  // Start on Tuesday (day index 1)
-  await page.click(".day-selector button:nth-of-type(2)");
-  await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 3_000 }).toBe(1);
+  await page.click(".day-selector button:nth-of-type(2)"); // Tuesday
   await settled(page);
+  const historyBefore = await page.evaluate(() => history.length);
 
   const cdp = await page.context().newCDPSession(page);
   const track = (await page.locator(".cards-track").boundingBox())!;
-  const startX = track.x + track.width / 2;
-  const startY = track.y + track.height / 2;
+  await cdp.send("Input.synthesizeScrollGesture", {
+    x: track.x + track.width / 2,
+    y: track.y + track.height / 2,
+    xDistance: 220, // finger moves right: pulls Monday in from the left
+    gestureSourceType: "touch",
+    speed: 800,
+  });
 
-  // 1. Swipe right (pulling Monday from the left)
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: startX, y: startY }] });
-  for (const dx of [20, 60, 110]) {
-    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: startX + dx, y: startY }] });
-    await page.waitForTimeout(20);
-  }
-
-  // Both the current and the left-neighbor panels are mounted during the swipe
-  const panelCountDuringSwipe = await page.$$eval(".day-panel", (p) => p.length);
-  expect(panelCountDuringSwipe).toBe(2);
-  const hasLeftNeighbor = await page.locator(".day-panel-neighbor-left").count();
-  expect(hasLeftNeighbor).toBe(1);
-
-  // Release and let it turn to Monday
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await page.waitForTimeout(450);
-
-  // Monday should now be active, and panel count settles back to 1
-  const activeBtn = page.locator(".day-selector button.active");
-  await expect(activeBtn).toContainText("Mandag");
-  const panelCountAfter = await page.$$eval(".day-panel", (p) => p.length);
-  expect(panelCountAfter).toBe(1);
+  await expect(page.locator(".day-selector button.active")).toContainText("Mandag");
+  await expect(page).toHaveURL(/day=monday/);
+  expect(await page.evaluate(() => history.length)).toBe(historyBefore);
+  expect(await page.$$eval(".day-panel", (p) => p.length)).toBe(5);
 });
-
