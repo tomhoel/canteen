@@ -119,6 +119,17 @@ test("mergeCanteensForWeek - keeps stored canteens this scrape did not route her
   assert.equal(merged["Eat the street"].week, "Uke 33");
 });
 
+test("mergeCanteensForWeek - keeps a stored weekday the fresh scrape no longer lists", () => {
+  // Flow drops Monday from its page after Monday's lunch; a late run must not erase it.
+  const day = (d: string) => ({ day: d }) as MenuData["canteens"][string]["menu"][number];
+  const merged = mergeCanteensForWeek(
+    { Flow: { ...c("Uke 41"), menu: [day("Monday"), day("Tuesday")] } },
+    {},
+    { Flow: { ...c("Uke 41"), menu: [day("Tuesday"), day("Wednesday")] } }
+  );
+  assert.deepEqual(merged.Flow.menu.map((d) => d.day), ["Monday", "Tuesday", "Wednesday"]);
+});
+
 test("mergeCanteensForWeek - seeds a laggard into a brand-new week's row", () => {
   // Next week's row is created by the two kitchens that rolled over. Flow has
   // not, so without seeding it would be missing entirely once week 34 arrives.
