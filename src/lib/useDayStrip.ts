@@ -37,7 +37,7 @@ export interface UseDayStripOptions {
   onSelectDay: (day: number) => void;
   /** The day the strip is passing over, or null at rest; drives the day-bar pill. */
   onPreviewDay: (day: number | null) => void;
-  /** True once the track element exists (the menu has loaded). */
+  /** True once the track element exists (the menu has loaded) and the strip is in use (phone layout). */
   ready: boolean;
 }
 

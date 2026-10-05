@@ -471,6 +471,42 @@ body {
   min-width: 0;
 }
 
+/* Desktop is not a strip: one day shows at a time and a change just plays an
+   entrance on the new current day. A scroll-snap strip fights rapid input here
+   (hold an arrow key and the programmatic scrolls restart or jump), whereas a
+   CSS animation on whichever panel is current simply restarts. The strip is
+   mobile only; useDayStrip is switched off at this width. */
+@media (min-width: 769px) {
+  .cards-track {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 0;
+    overflow: visible;
+    padding: 0;
+    margin: 0 auto;
+    scroll-snap-type: none;
+  }
+  .cards-track.is-locked { overflow: visible; }
+  .cards-track > .cards-animated-wrapper {
+    grid-column: 1;
+    grid-row: 1;
+    flex: none;
+    scroll-snap-align: none;
+  }
+  .cards-track > .day-panel[inert] { display: none; }
+  .cards-track.day-switched > .day-panel:not([inert]) {
+    animation: day-in 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97);
+  }
+}
+@keyframes day-in {
+  from { opacity: 0; transform: translate3d(calc(var(--day-dir, 1) * 80px), 0, 0) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cards-track.day-switched > .day-panel:not([inert]) { animation: none; }
+}
+
 
 /* ─── Food Card ─── */
 .food-card-3d-wrapper {

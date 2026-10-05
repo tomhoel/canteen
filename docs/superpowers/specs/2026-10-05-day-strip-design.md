@@ -92,3 +92,12 @@ the same slide as mobile. `scrollend` needs a fallback on older Safari.
   `?day=` updates via replaceState without adding history, day-bar tap scrolls.
 - Manual: iPhone Safari + Android Chrome real-device swipe, plus desktop trackpad.
 - `npm run typecheck`, `npm test`, `npm run lint`.
+
+## Revision 2026-10-05 (late): desktop is not a strip
+
+Holding or spamming an arrow key on desktop made the strip stick and then jump (measured:
+0 -> 2640 -> 5280 px in single frames), because a programmatic smooth scroll started
+mid-scroll is restarted or skipped. Desktop (>= 769px) therefore shows one day at a time
+(`display:none` on the other panels) and a change plays a CSS entrance (`day-in`, 320 ms,
+direction from `--day-dir`) on the new current panel; `useDayStrip` is switched off there.
+The strip stays on phones, where the browser's own gesture is what drives it.

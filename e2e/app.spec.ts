@@ -53,7 +53,9 @@ async function instrument(page: Page) {
 
 /** Waits for the real cards, not the skeletons the shell paints immediately. */
 async function loaded(page: Page) {
-  await page.waitForSelector(".food-card:not(.skeleton-card)", { timeout: 15_000 });
+  // Scoped to the current day: on desktop the other days are display:none, and the
+  // first `.food-card` in the DOM belongs to Monday whatever day the page opened on.
+  await page.waitForSelector(".day-panel:not([inert]) .food-card", { timeout: 15_000 });
   await settled(page);
 }
 
@@ -224,8 +226,11 @@ test("tapping a far day lands on it with its cards visible", async ({ page }) =>
 // today and slide there. Records every strip scroll position from page start.
 test("a shared ?day= link opens on that day with no slide", async ({ page }) => {
   await page.addInitScript(() => {
-    const w = window as unknown as { __stripScrolls: number[] };
+    const w = window as unknown as { __stripScrolls: number[]; __dayIn: number };
     w.__stripScrolls = [];
+    w.__dayIn = 0;
+    // The desktop day entrance: it must not play for the day the page opens on.
+    document.addEventListener("animationstart", (e) => { if (e.animationName === "day-in") w.__dayIn++; }, true);
     document.addEventListener(
       "scroll",
       (e) => {
@@ -249,8 +254,28 @@ test("a shared ?day= link opens on that day with no slide", async ({ page }) => 
       scrolls: (window as unknown as { __stripScrolls: number[] }).__stripScrolls,
     };
   });
-  expect(scrolls.length).toBeGreaterThan(0);
-  expect(scrolls.every((x) => Math.abs(x - target) <= 1)).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as { __dayIn: number }).__dayIn)).toBe(0);
+  // Desktop has no strip to scroll: it shows one day at a time.
+  if (test.info().project.name !== "desktop") {
+    expect(scrolls.length).toBeGreaterThan(0);
+    expect(scrolls.every((x) => Math.abs(x - target) <= 1)).toBe(true);
+  }
+});
+
+// Guards desktop key-spam: a held arrow key used to restart or skip programmatic
+// scrolls and the pages stuck then jumped. Desktop now swaps one panel per press.
+test("spamming the arrow key walks the days and ends on the right one", async ({ page }) => {
+  test.skip(test.info().project.name !== "desktop", "the strip (phone) has no arrow-key spam to guard");
+  await page.goto("/?day=monday");
+  await loaded(page);
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(40);
+  }
+  await expect(page.locator(".day-selector button.active")).toContainText("Fredag");
+  await expect(page).toHaveURL(/day=friday/);
+  expect(await page.$$eval(".day-panel:not([inert])", (p) => p.length)).toBe(1);
+  await expect(page.locator(".day-panel[data-day='4'] .food-card").first()).toBeVisible();
 });
 
 // Guards that the strip is frozen while an overlay is open.
@@ -259,7 +284,10 @@ test("an open overlay locks the strip", async ({ page }) => {
   await loaded(page);
   await page.locator(CARD).first().click();
   await expect(page.locator(".cards-track.is-locked")).toHaveCount(1);
-  expect(await page.$eval(".cards-track", (t) => getComputedStyle(t).overflowX)).toBe("hidden");
+  // Only the phone's strip scrolls, so only there is there anything to lock.
+  if (test.info().project.name !== "desktop") {
+    expect(await page.$eval(".cards-track", (t) => getComputedStyle(t).overflowX)).toBe("hidden");
+  }
 });
 
 /**

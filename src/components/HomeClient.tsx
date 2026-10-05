@@ -219,7 +219,13 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // plays the card entrance animation.
   const [dayChanged, setDayChanged] = useState(false);
 
+  // Which way the last change went, for the desktop entrance animation.
+  const [dayDir, setDayDir] = useState(1);
+  const selectedDayRef = useRef(selectedDay);
+  selectedDayRef.current = selectedDay;
+
   const handleDaySelect = useCallback((i: number) => {
+    setDayDir(i > selectedDayRef.current ? 1 : -1);
     setSelectedDay(prev => (i === prev ? prev : i));
     setDayChanged(true);
     // replaceState, as before: tapping through the weekdays must not stack
@@ -415,7 +421,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     selectedDay,
     onSelectDay: handleDaySelect,
     onPreviewDay: setPreviewDay,
-    ready: menuData !== null,
+    // Desktop shows one day at a time (see the .cards-track rules in globals.css).
+    ready: menuData !== null && !isDesktop,
   });
 
   const fullDayLabels = FULL_DAYS_NO;
@@ -674,7 +681,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       >
         <ErrorBoundary>
           <div
-            className={"cards-track" + (anyOverlayOpen ? " is-locked" : "")}
+            className={"cards-track" + (anyOverlayOpen ? " is-locked" : "") + (dayChanged ? " day-switched" : "")}
+            style={{ "--day-dir": dayDir } as React.CSSProperties}
             ref={trackRef}
           >
             {allDaysData.map((data, day) => (
