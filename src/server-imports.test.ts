@@ -55,13 +55,13 @@ test("every relative import under api/ and what it loads ends in .js", () => {
     }
   };
   collect(path.join(root, "api"));
-  assert.ok(entries.length > 5, "found the api functions");
+  assert.ok(entries.length >= 3, "found the api functions");
 
   const seen = new Map<string, string[]>();
   for (const entry of entries) walk(entry, seen);
 
   const offenders = [...seen].filter(([, bad]) => bad.length).map(([file, bad]) => `${path.relative(root, file)}: ${bad.join(", ")}`);
   assert.deepEqual(offenders, [], "these would crash the serverless function at invocation");
-  assert.ok(seen.size > 30, `walked ${seen.size} files`);
+  assert.ok(seen.size > 20, `walked ${seen.size} files`);
   assert.ok([...seen.keys()].some((f) => f.endsWith("menu.service.ts")), "the walk must reach menu.service.ts (multi-line imports)");
 });

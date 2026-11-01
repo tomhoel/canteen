@@ -19,7 +19,6 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx }: ClosedCardProps) 
     <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
       <article
         className="food-card closed"
-        data-yolo-card-key={data.canteenName}
       >
         <div className="card-image-wrapper closed">
           <div className="card-image-circle">

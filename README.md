@@ -3,8 +3,7 @@
 The lunch menu for three workplace canteens — **Eat the street**, **Fresh4you**
 and **Flow** — as an installable phone app. It shows the week's dishes in
 Norwegian, a plate photo for each day's main dish, where the dish
-comes from, a recipe for it, grocery prices for its ingredients, and a vote for
-where people are eating today.
+comes from, and a vote for where people are eating today.
 
 Production: <https://fbueat.vercel.app>
 
@@ -49,7 +48,7 @@ Everything server-side now sits behind `/api`.
    └──────────────┘     │  file for the week, /api│
           │             │  /menu only as fallback │
           ▼             └─────────────────────────┘
-    Gemini · kassal.app · meny.no · Slack
+    Gemini · Slack (cron alerts)
 ```
 
 The menu is scraped from each canteen's InSign display widget — the same screen
@@ -62,7 +61,7 @@ that hangs in the canteen — which is HTML meant for a TV, not an API. Most of
 | --- | --- |
 | App | React 19 + Vite, TanStack Query, plain CSS |
 | Server | Vercel Functions under `api/`, thin wrappers over `src/server/*` |
-| Data | Upstash Redis: stored weeks, `dish_cache`, attendance, response caches |
+| Data | Upstash Redis: stored weeks, `dish_cache`, attendance |
 | Images | Supabase Storage, generated with Gemini and background-removed; each plate has a 512px thumb under `images_nobg/thumb/` |
 | Schedule | Vercel Cron (`vercel.json`) |
 
@@ -192,10 +191,6 @@ predate this: `node --env-file=.env --import tsx scripts/label-courses.ts`.
 | --- | --- | --- |
 | `/api/menu` | GET | The stored week. `?week=2026-W34` pins one. CDN-cached. |
 | `/api/attendance` | GET / POST | Today's vote tally, and casting a vote |
-| `/api/recipe` | POST | AI recipe for a dish |
-| `/api/meny` | POST | meny.no product search for its ingredients |
-| `/api/deals` | POST | kassal.app grocery prices |
-| `/api/notify` | POST | Posts the lunch vote result to Slack |
 | `/api/cron/update` | GET | The updater. Requires `Authorization: Bearer $CRON_SECRET` |
 
 Every file under `api/` that imports from `src/server` must use **`.js`

@@ -80,8 +80,6 @@ export interface DayPanelProps {
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
-  yoloHighlight: number;
-  yoloWinner: number;
   /** Fired once when the exit is over. Only passed to a leaving panel. */
   onExited?: () => void;
   /** Position offset for swiping neighbor on mobile (-1 for left, 1 for right). */
@@ -100,8 +98,6 @@ function DayPanel({
   maxVotes,
   onImageClick,
   onCardClick,
-  yoloHighlight,
-  yoloWinner,
   onExited,
   swipePosition,
   isInitial = false,
@@ -179,8 +175,6 @@ function DayPanel({
                 maxVotes={maxVotes}
                 onImageClick={onImageClick}
                 onCardClick={onCardClick}
-                yoloHighlighted={yoloHighlight === cardIdx}
-                yoloWinner={yoloWinner === cardIdx}
                 isInitial={isInitial}
               />
             )

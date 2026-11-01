@@ -1,8 +1,4 @@
 import type {
-  DealsResponse,
-  MenyResponse,
-  Recipe,
-  RecipeIngredient,
   MenuData,
   DishOrigin,
   DishDescription,
@@ -271,27 +267,6 @@ export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> 
   return fresh;
 }
 
-export function fetchDeals(payload: {
-  ingredients: RecipeIngredient[];
-  dishName: string;
-}): Promise<DealsResponse> {
-  return post<DealsResponse>("/api/deals", payload);
-}
-
-export function searchMeny(payload: {
-  ingredients: RecipeIngredient[];
-  dishName: string;
-  storeId?: string;
-}): Promise<MenyResponse> {
-  return post<MenyResponse>("/api/meny", payload);
-}
-
-export function generateRecipe(payload: {
-  dishName: string;
-}): Promise<Recipe> {
-  return post<Recipe>("/api/recipe", payload);
-}
-
 export function submitVote(payload: { canteenId: string }): Promise<{ canteens: Record<string, number> }> {
   return post("/api/attendance", payload);
 }
@@ -315,12 +290,4 @@ export function getAttendanceHistory(
   signal?: AbortSignal
 ): Promise<{ entries: AttendanceHistoryEntry[] }> {
   return request("/api/attendance", { signal });
-}
-
-export function sendSlackNotification(payload: {
-  canteens: Record<string, number>;
-  dishes: Record<string, string>;
-  date: string;
-}): Promise<{ skipped?: boolean }> {
-  return post("/api/notify", payload);
 }

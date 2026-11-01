@@ -159,10 +159,6 @@ interface FoodCardProps {
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
-  /** True while the YOLO spinner has the cycling highlight on this card. */
-  yoloHighlighted?: boolean;
-  /** True after YOLO landed and this card is the chosen one. */
-  yoloWinner?: boolean;
   /** True strictly on the first initial app load, enabling card launch entrance animations. */
   isInitial?: boolean;
 }
@@ -176,8 +172,6 @@ const FoodCard = memo(function FoodCard({
   maxVotes,
   onImageClick,
   onCardClick,
-  yoloHighlighted = false,
-  yoloWinner = false,
   isInitial = false,
 }: FoodCardProps) {
   const {
@@ -190,7 +184,6 @@ const FoodCard = memo(function FoodCard({
     isAhead,
     canteenWeekNum,
     origin,
-    description,
     displayDishName,
     availabilityNotes,
   } = data;
@@ -204,7 +197,7 @@ const FoodCard = memo(function FoodCard({
   return (
     <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
     <article
-      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
+      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
       style={
         isInitial
           ? {
@@ -216,7 +209,6 @@ const FoodCard = memo(function FoodCard({
           : undefined
       }
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
-      data-yolo-card-key={canteenName}
     >
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
@@ -328,9 +320,6 @@ const FoodCard = memo(function FoodCard({
           </div>
         )}
 
-        {description && (
-          <p className="dish-description">{description}</p>
-        )}
       </div>
 
       {isOutdated && (

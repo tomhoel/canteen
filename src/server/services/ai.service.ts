@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { DISH_COURSES } from "../../lib/types.js";
-import type { DishOrigin, DishDescription, DishCourse, Recipe } from "../../lib/types.js";
+import type { DishOrigin, DishDescription, DishCourse } from "../../lib/types.js";
 // Lives in its own module so /api/menu can trim descriptions without booting
 // this file's 14 MB of model SDK. See fit-description.ts.
 import { DESCRIPTION_MAX_CHARS } from "./fit-description.js";
@@ -648,49 +648,4 @@ Return ONLY JSON: {"plating": "..."}`;
   const parsed = await generateJson<{ plating?: string }>(prompt, `plating brief: ${dishName}`);
   const plating = parsed?.plating?.trim();
   return plating ? plating : null;
-}
-
-export async function generateAIRecipe(dishName: string): Promise<Recipe> {
-  const promptText = `You are an expert Scandinavian chef with a touch of culinary wit. Generate a home recipe for: "${dishName}".
-
-Respond entirely in Norwegian (bokmål).
-
-Return ONLY valid JSON:
-{
-  "title": "${dishName}",
-  "servings": 4,
-  "prepTime": "20 min",
-  "cookTime": "30 min",
-  "ingredients": [
-    { "amount": "4", "unit": "fileter", "item": "Salmon", "itemLocal": "Laks" }
-  ],
-  "steps": [
-    "Step 1 instruction...",
-    "Step 2 instruction..."
-  ],
-  "tip": "Useful and witty cooking tip"
-}
-Also include an "itemLocal" field with the Norwegian name for each ingredient.`;
-
-  const recipe = await generateJson<Recipe>(promptText, `recipe: ${dishName}`);
-  if (recipe) return recipe;
-
-  // Fallback recipe structure
-  return {
-    title: dishName,
-    servings: 4,
-    prepTime: "15 min",
-    cookTime: "25 min",
-    ingredients: [
-      { amount: "500", unit: "g", item: dishName, itemLocal: dishName },
-      { amount: "2", unit: "ss", item: "Olive oil", itemLocal: "Olivenolje" },
-      { amount: "1", unit: "klype", item: "Salt and pepper", itemLocal: "Salt og pepper" },
-    ],
-    steps: [
-      "Forbered ingrediensene og varm opp pannen eller gryten.",
-      `Tilbered ${dishName} over middels varme til det er gjennomvarmt og saftig.`,
-      "Server varmt med friskt tilbehør.",
-    ],
-    tip: "Server med et smil og et ekstra dryss kjærlighet!",
-  };
 }

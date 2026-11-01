@@ -3,13 +3,10 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCloseRequest";
-import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
-import { Share2 } from "lucide-react";
 import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, getImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import {
-  getLocalDateKey,
   computeDisplayContext,
   compareWeeks,
   parseCanteenWeekNumber,
@@ -17,9 +14,6 @@ import {
   formatLongDate,
 } from "@/lib/dateUtils";
 import { useVoting } from "@/lib/useVoting";
-import { useRecipe } from "@/lib/useRecipe";
-import { useDeals } from "@/lib/useDeals";
-import { useMenySearch } from "@/lib/useMenySearch";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useIsDesktop } from "@/lib/useIsDesktop";
@@ -32,17 +26,14 @@ import { useShellInert } from "@/lib/useShellInert";
 import { useDaySwipe } from "@/lib/useDaySwipe";
 import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 
-// These only render once the user opens a modal or overlay — a recipe's
-// price comparison, the Meny search, the feedback form, the vote/leaderboard/
-// image-lightbox/week-overview overlays. Importing them eagerly put every one
+// These only render once the user opens an overlay: the action sheet, the
+// plate lightbox and the info panel. Importing them eagerly put every one
 // of them (and their own dependencies, e.g. Lightbox's copy of `motion`) in
 // the same chunk the very first paint has to wait on. Splitting them out, and
 // only mounting each one once its own "open" condition is true (see the call
 // sites below), means a visitor who never opens any of these never pays for
 // their JS at all.
 const Lightbox = lazy(() => import("@/components/Lightbox"));
-const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
-const WeekOverview = lazy(() => import("@/components/WeekOverview"));
 // The action sheet belongs in that list too, and was the one overlay left out
 // of it. It is only reachable by tapping a card, but importing it eagerly put
 // `ui/sheet.tsx` and with it the whole of `@use-gesture/react` — the
@@ -50,7 +41,6 @@ const WeekOverview = lazy(() => import("@/components/WeekOverview"));
 // the first paint waits on.
 const ActionSheet = lazy(() => import("@/components/ActionSheet"));
 const InfoModal = lazy(() => import("@/components/InfoModal"));
-const RecipeModal = lazy(() => import("@/components/RecipeModal"));
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -112,7 +102,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
   const [dateTick, setDateTick] = useState(0);
-  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "" });
   const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
   const [dishShortNames, setDishShortNames] = useState<Record<string, string>>(initialShortNames);
@@ -141,25 +131,13 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     }
     setSwipingNeighbor(neighbor);
   }, []);
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // YOLO randomiser: cycles a glow through the open canteens for ~5s then
-  // settles on one. yoloHighlight is the currently-lit card during the spin;
-  // yoloWinner is the finalist after deceleration completes.
-  const [yoloSpinning, setYoloSpinning] = useState(false);
-  const [yoloHighlight, setYoloHighlight] = useState<number>(-1);
-  const [yoloWinner, setYoloWinner] = useState<number>(-1);
-  const yoloTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Custom hooks — extracted state management. Everything below reaches voting
   // state through `voting.x`; the destructure that used to sit here bound ten
   // names nothing referenced.
   const voting = useVoting();
-  const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe();
-  const { dealsView, handleDealsClick, closeDeals } = useDeals();
-  const { menyView, handleMenyClick, closeMeny } = useMenySearch();
 
   /**
    * Is anything layered over the day view?
@@ -180,24 +158,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    * decision — Escape inside the Meny sub-view returns to the recipe rather
    * than closing everything.
    */
-  const anyOverlayOpen =
-    infoOpen ||
-    leaderboardOpen ||
-    weekOverviewOpen ||
-    actionSheet.isOpen ||
-    recipeModal.isOpen ||
-    menyView.isOpen ||
-    dealsView.isOpen ||
-    lightboxIndex >= 0;
+  const anyOverlayOpen = infoOpen || actionSheet.isOpen || lightboxIndex >= 0;
 
-  // The overlays that render inline in this file rather than as components
-  // that claim it themselves. ActionSheet claims via ui/sheet, and the
-  // leaderboard and week overview each claim in their own component — the
-  // refcount makes an overlap harmless, but listing only the inline ones keeps
-  // it obvious which surface owns which claim.
-  useShellInert(
-    infoOpen || recipeModal.isOpen || menyView.isOpen || dealsView.isOpen || lightboxIndex >= 0
-  );
+  // The overlays that render inline in this file rather than claiming the
+  // shell themselves (ActionSheet claims via ui/sheet; the refcount makes an
+  // overlap harmless).
+  useShellInert(infoOpen || lightboxIndex >= 0);
 
   /** Has the action sheet ever been opened? See its render block for why. */
   const sheetEverOpened = useRef(false);
@@ -350,29 +316,11 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const closeTopmostOverlay = useCallback(() => {
     if (infoOpen) {
       setInfoOpen(false);
-    } else if (menyView.isOpen) {
-      closeMeny();
-    } else if (dealsView.isOpen) {
-      closeDeals();
-    } else if (weekOverviewOpen) {
-      setWeekOverviewOpen(false);
-    } else if (leaderboardOpen) {
-      setLeaderboardOpen(false);
     } else {
       setLightboxIndex(-1);
-      setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-      closeRecipe();
+      setActionSheet((sheet) => ({ ...sheet, isOpen: false }));
     }
-  }, [
-    infoOpen,
-    menyView.isOpen,
-    closeMeny,
-    dealsView.isOpen,
-    closeDeals,
-    weekOverviewOpen,
-    leaderboardOpen,
-    closeRecipe,
-  ]);
+  }, [infoOpen]);
 
   /**
    * The Android back gesture closes the topmost overlay instead of the app.
@@ -383,14 +331,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    * menu itself. See `useCloseRequest` for why this is not `history.pushState`.
    */
   useCloseRequest(
-    (infoOpen ? 1 : 0) +
-      (menyView.isOpen ? 1 : 0) +
-      (dealsView.isOpen ? 1 : 0) +
-      (weekOverviewOpen ? 1 : 0) +
-      (leaderboardOpen ? 1 : 0) +
-      (lightboxIndex >= 0 ? 1 : 0) +
-      (actionSheet.isOpen ? 1 : 0) +
-      (recipeModal.isOpen ? 1 : 0),
+    (infoOpen ? 1 : 0) + (lightboxIndex >= 0 ? 1 : 0) + (actionSheet.isOpen ? 1 : 0),
     closeTopmostOverlay
   );
 
@@ -533,99 +474,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
   const closedCanteens = useMemo(() => canteenDayData.filter(c => isCanteenClosed(c)), [canteenDayData]);
 
-  // YOLO runner: triggered by tapping the Today button in the day bar. Cycles
-  // a highlight only over canteens that are currently serving (open + not
-  // outdated + not ahead-of-week), dimming the rest. Lands on a random one
-  // after a ~5s decelerating sweep, scrolls it into view, then resets.
-  // No audio.
-  const runYolo = useCallback((dayIdx: number) => {
-    if (yoloSpinning) return;
-
-    // Use today's data directly so we don't race with `setSelectedDay` —
-    // by the time the setTimeout chain fires React will have re-rendered
-    // with selectedDay === dayIdx, and the cardIdx values match this array.
-    // cardsForDay is the full canteen-ordered list (open + closed) since
-    // closed canteens now render as their own ClosedCard in the same slots;
-    // eligibility just excludes them from the sweep.
-    const cardsForDay = allDaysData[dayIdx] ?? [];
-    const eligibleIndices = cardsForDay
-      .map((c, i) => (!isCanteenClosed(c) && !c.isOutdated && !c.isAhead) ? i : -1)
-      .filter(i => i !== -1);
-
-    if (eligibleIndices.length < 2) return;
-
-    yoloTimersRef.current.forEach(clearTimeout);
-    yoloTimersRef.current = [];
-
-    setYoloSpinning(true);
-    setYoloWinner(-1);
-    setYoloHighlight(-1);
-
-    const E = eligibleIndices.length;
-    const targetPos = Math.floor(Math.random() * E);
-
-    // Pick K so the LAST tick is at eligibleIndices[targetPos]:
-    // sequence is eligibleIndices[0], [1], …, [E-1], [0], [1], … and we want
-    // (K-1) % E === targetPos. Base K = ~24 ticks gives ~5s with 1.10 growth.
-    let K = 24;
-    while ((K - 1) % E !== targetPos) K++;
-
-    let cumulative = 0;
-    for (let step = 0; step < K; step++) {
-      const interval = 60 * Math.pow(1.10, step);
-      const delay = cumulative;
-      const cardIdx = eligibleIndices[step % E];
-      const isFinal = step === K - 1;
-
-      const t = setTimeout(() => {
-        setYoloHighlight(cardIdx);
-        if (isFinal) {
-          setYoloWinner(cardIdx);
-          setYoloHighlight(-1);
-          setYoloSpinning(false);
-
-          const winnerName = cardsForDay[cardIdx]?.canteenName;
-          if (winnerName) {
-            const el = scrollRef.current?.querySelector<HTMLElement>(
-              `[data-yolo-card-key="${CSS.escape(winnerName)}"]`
-            );
-            el?.scrollIntoView({ behavior: "smooth", block: "center" });
-
-            fireConfetti({
-              particleCount: 75,
-              spread: 70,
-              origin: { y: 0.65 },
-              colors: ["#c8741a", "#e8a020", "#d9604a", "#4a9e55", "#fffaf0"],
-              disableForReducedMotion: true,
-            });
-
-            showToast(
-              "success",
-              `🎲 YOLO valgte ${winnerName} for deg i dag!`,
-              { duration: 4000 }
-            );
-          }
-          // No auto-release. Winner state persists until the next YOLO spin
-          // starts (which clears it at the top of runYolo) or selectedDay
-          // changes (cleared by the effect below).
-        }
-      }, delay);
-      yoloTimersRef.current.push(t);
-      cumulative += interval;
-    }
-  }, [yoloSpinning, allDaysData]);
-
-  // Clear the winner state when the user navigates to another day.
-  useEffect(() => {
-    setYoloWinner(-1);
-    setYoloHighlight(-1);
-  }, [selectedDay]);
-
-  // Cleanup any in-flight YOLO timers on unmount.
-  useEffect(() => () => {
-    yoloTimersRef.current.forEach(clearTimeout);
-    yoloTimersRef.current = [];
-  }, []);
 
   // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
@@ -633,12 +481,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setLightboxIndex(idx >= 0 ? idx : 0);
   }, [openCanteens]);
 
-  // Every viewport opens the action sheet. A previous revision sent desktop
-  // clicks straight to the vote modal instead, which made "Lag hjemme" — and
-  // the dish description, the share button and the recipe — unreachable with a
-  // mouse, and made a click on a non-voteable day (any day that is not today)
-  // do nothing at all. The sheet is the only route to those actions, so it has
-  // to open regardless of width; voting is one of the buttons inside it.
+  // Every viewport opens the action sheet: it is the route to voting and to
+  // the canteen's building and hours, so it has to open regardless of width.
   const handleCardClick = useCallback((canteenName: string) => {
     const data = canteenDayData.find(c => c.canteenName === canteenName);
     setActionSheet({
@@ -646,13 +490,9 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       canteenName,
       dishName: data?.mainDish?.dish || "",
       imagePath: data?.imagePath || "",
-      description: data?.description || null,
     });
   }, [canteenDayData]);
 
-  const handleShareSlackWrapped = useCallback(() => {
-    voting.handleShareSlack(canteenDayData);
-  }, [voting, canteenDayData]);
 
   // `mounted` used to gate this too, which cost a painted frame of skeleton on
   // every load for no benefit: it is a leftover from when this was a Next.js
@@ -711,30 +551,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     return <LoadingScreen />;
   }
 
-  const todayKey = getLocalDateKey();
-  const alreadyShared = typeof window !== "undefined" && !!localStorage.getItem(`slack_shared_${todayKey}`);
-
-  const shareButton = (
-    <button
-      className={`share-btn${alreadyShared ? " disabled" : ""}${voting.shareState === "sent" ? " sent" : ""}`}
-      disabled={alreadyShared || voting.shareState === "loading"}
-      onClick={handleShareSlackWrapped}
-      title={alreadyShared ? ("Allerede delt i dag") : undefined}
-    >
-      {voting.shareState === "sent"
-        ? ("Sendt! \u2713")
-        : voting.shareState === "loading"
-        ? "..."
-        : (
-          <>
-            <Share2 size={14} style={{ marginRight: 6 }} />
-            {"Del resultater"}
-          </>
-        )
-      }
-    </button>
-  );
-
   return (
     <div className="app-wrapper">
       <AppHeader
@@ -742,11 +558,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         displayWeek={displayWeek}
         dayLabel={fullDayLabels[selectedDay]}
         dateStr={dateStr}
-        actions={{
-          onInfo: () => setInfoOpen(true),
-          onLeaderboard: () => setLeaderboardOpen(true),
-          onWeekOverview: () => setWeekOverviewOpen(true),
-        }}
+        actions={{ onInfo: () => setInfoOpen(true) }}
       >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
         {closedCanteens.length > 0 && openCanteens.length > 0 && (
@@ -792,12 +604,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                 maxVotes={maxVotes}
                 onImageClick={handleImageClick}
                 onCardClick={handleCardClick}
-                /* Forced off: tapping Today both starts the YOLO spin and
-                   changes the day, and the glow belongs to the day arriving,
-                   not the one leaving. AnimatePresence hid this by freezing the
-                   exiting child's props; this panel renders live. */
-                yoloHighlight={-1}
-                yoloWinner={-1}
                 isInitial={false}
                 onExited={() =>
                   setLeaving(l => (l && l.seq === leaving.seq ? null : l))
@@ -815,8 +621,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
               maxVotes={maxVotes}
               onImageClick={handleImageClick}
               onCardClick={handleCardClick}
-              yoloHighlight={yoloHighlight}
-              yoloWinner={yoloWinner}
               isInitial={current.seq === 0}
             />
             {swipingNeighbor && (
@@ -831,8 +635,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
                 maxVotes={maxVotes}
                 onImageClick={handleImageClick}
                 onCardClick={handleCardClick}
-                yoloHighlight={-1}
-                yoloWinner={-1}
                 swipePosition={swipingNeighbor.position}
                 isInitial={false}
               />
@@ -841,8 +643,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         </ErrorBoundary>
       </main>
 
-      {/* Day Selector — tapping the Today button also fires the YOLO
-          randomiser via onTodayPress. */}
+      {/* Day Selector */}
       <DaySelector
         fullDayLabels={fullDayLabels}
         dayLabelsData={dayLabelsData}
@@ -851,7 +652,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         mode={mode}
         onDaySelect={handleDaySelect}
         onDayHover={preloadDay}
-        onTodayPress={mode === "weekday-current" ? () => runYolo(todayIndex) : undefined}
         cardsRef={scrollRef}
       />
 
@@ -863,28 +663,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         </Suspense>
       )}
 
-        {leaderboardOpen && (
-          <Suspense fallback={null}>
-            <LeaderboardModal
-              isOpen={leaderboardOpen}
-              onClose={() => setLeaderboardOpen(false)}
-            />
-          </Suspense>
-        )}
-
-        {weekOverviewOpen && (
-          <Suspense fallback={null}>
-            <WeekOverview
-              allDaysData={allDaysData}
-              selectedDay={selectedDay}
-              todayIndex={todayIndex}
-              dayLabelsData={dayLabelsData}
-              fullDayLabels={fullDayLabels}
-              onDaySelect={(i) => { handleDaySelect(i); setWeekOverviewOpen(false); }}
-              onClose={() => setWeekOverviewOpen(false)}
-            />
-          </Suspense>
-        )}
 
 
 
@@ -892,12 +670,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       {/*
         Action sheet, with the 120Hz native GPU compositor transform.
 
-        Not mobile-only. A width check used to stand here as well as in
-        handleCardClick, so on a desktop the sheet was unreachable twice over
-        and "Lag hjemme", the dish description, the share button and the recipe
-        had no route at all — a click on a card either opened the vote modal or,
-        on any day that was not today, did nothing. Every `.action-sheet` rule
-        is top-level (globals.css:3184+), capped at 440px and anchored to the
+        Not mobile-only: the sheet is the route to voting on every width. Every
+        `.action-sheet` rule is top-level, capped at 440px and anchored to the
         bottom, so it is already dressed for a wide window.
       */}
       {(() => {
@@ -923,7 +697,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           // sheet's content mid-slide. The next open overwrites them anyway.
           setActionSheet((s) => ({ ...s, isOpen: false }));
           voting.setVoteSuccess(false);
-          voting.setShareState("idle");
+          voting.setVoteError(false);
         };
         const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
         const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
@@ -935,16 +709,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             canteenName={actionSheet.canteenName}
             dishName={actionSheet.dishName}
             imagePath={actionSheet.imagePath}
-            description={actionSheet.description}
             canVote={!!canVote}
             hasVoted={voting.hasVoted}
             isVoting={voting.isVoting}
             votedCanteen={voting.votedCanteen}
             voteSuccess={voting.voteSuccess}
+            voteError={voting.voteError}
             onVote={voting.handleVote}
-            onRecipeClick={handleRecipeClick}
             onClose={closeSheet}
-            shareButton={shareButton}
           />
           </Suspense>
         );
@@ -963,27 +735,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           </Suspense>
         )}
 
-      {/* The recipe panel and the Meny/Deals views over it, in their own chunk.
-          It is reached by two taps and brings `@/lib/ingredientImg` with it —
-          6.6 KB imported nowhere else — so none of it belongs in the chunk the
-          first paint waits on. */}
-      {recipeModal.isOpen && (
-        <Suspense fallback={null}>
-          <RecipeModal
-            recipeModal={recipeModal}
-            recipeServings={recipeServings}
-            setRecipeServings={setRecipeServings}
-            menyView={menyView}
-            dealsView={dealsView}
-            handleRecipeClick={handleRecipeClick}
-            handleMenyClick={handleMenyClick}
-            handleDealsClick={handleDealsClick}
-            closeRecipe={closeRecipe}
-            closeMeny={closeMeny}
-            closeDeals={closeDeals}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }

@@ -11,9 +11,6 @@ interface DaySelectorProps {
   onDaySelect: (i: number) => void;
   /** Preload pictures for a day when hovered or touched */
   onDayHover?: (i: number) => void;
-  /** Tapping the Today button always fires this in addition to onDaySelect.
-      Used to trigger the YOLO randomiser from the day bar itself. */
-  onTodayPress?: () => void;
   cardsRef?: React.RefObject<HTMLElement | null>;
   /** Set while the menu is loading. The bar still renders — it holds the same
       space and shows the same dates either way — but there is no day to change
@@ -29,7 +26,6 @@ export default function DaySelector({
   mode,
   onDaySelect,
   onDayHover,
-  onTodayPress,
   cardsRef,
   disabled = false,
 }: DaySelectorProps) {
@@ -153,14 +149,7 @@ export default function DaySelector({
             disabled={disabled}
             onMouseEnter={() => onDayHover?.(i)}
             onTouchStart={() => onDayHover?.(i)}
-            onClick={() => {
-              // YOLO fires only on a second tap of Today (i.e. user is
-              // already on today and tapped it again). First tap from
-              // another day just navigates, no spin.
-              const isYoloTap = i === todayIndex && selectedDay === todayIndex;
-              onDaySelect(i);
-              if (isYoloTap) onTodayPress?.();
-            }}
+            onClick={() => onDaySelect(i)}
           >
             <span className="day-label-name">{dayName}</span>
             <span className="day-label-date">
