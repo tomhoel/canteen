@@ -195,10 +195,8 @@ const FoodCard = memo(function FoodCard({
       style={
         isInitial
           ? {
-              // The row cascades: card 0 leads, each following card starts 55ms
-              // later and takes 40ms longer, so they do not move at the same rate.
-              animationDelay: `${cardIdx * 55}ms`,
-              animationDuration: `${0.28 + cardIdx * 0.04}s`,
+              // The opening entrance staggers the three cards 50ms apart.
+              animationDelay: `${cardIdx * 50}ms`,
             }
           : undefined
       }
@@ -207,14 +205,14 @@ const FoodCard = memo(function FoodCard({
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
           <Users size={12} strokeWidth={2.4} className="vote-pip-icon" />
-          <span>{voteCount}</span>
+          <span key={voteCount} className="vote-count">{voteCount}</span>
         </div>
       )}
       <div
         className="card-image-wrapper"
         onClick={e => { e.stopPropagation(); if (mainDish) onImageClick(data); }}
       >
-        <div className="card-image-circle">
+        <div className="card-image-circle" data-plate={canteenName}>
           {imgError || !imagePath ? (
             <div className="image-placeholder">
               {canteenName.charAt(0)}
@@ -255,22 +253,7 @@ const FoodCard = memo(function FoodCard({
           </div>
         )}
       </div>
-      {/*
-        The third rate, on a desktop: text rises 8px and fades the last of the
-        way in, faster than either the card or the plate, so it settles first.
-        It is `cardContentEnter` in the stylesheet now rather than a spring
-        here, but `key` stays exactly where it was on initial launch.
-        On subsequent day changes, key is undefined so React does not discard
-        and rebuild the content node.
-
-        Off on a phone, which is why the rule sits behind `min-width: 769px`.
-        y and opacity are compositor properties, so the animation itself is
-        cheap — but `.card-content` has no `will-change`, so WebKit promotes it
-        to its own layer for the duration and drops it again afterwards, and
-        the layer it has to rasterise is ~190x150 CSS px of pure text at 3x.
-        Three cards, three promote-and-discard cycles, on every day change.
-      */}
-      <div key={isInitial ? selectedDay : undefined} className="card-content">
+      <div className="card-content">
         <div className="card-header">
           {(() => {
             const meta = getCanteenMetadata(canteenName);
@@ -292,7 +275,7 @@ const FoodCard = memo(function FoodCard({
         {mainAllergens && mainAllergens.length > 0 && (
           <div className="dish-meta-row">
             <div className="allergens-row">
-              {mainAllergens.map((a, aIdx) => {
+              {mainAllergens.map((a) => {
                 const displayName = (ALLERGEN_NAMES_NO[a.name] || a.name);
                 return (
                 <span
@@ -302,7 +285,6 @@ const FoodCard = memo(function FoodCard({
                     color: ALLERGEN_COLORS[a.name] || "#8E8E93",
                     background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
                     borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
-                    animationDelay: `${aIdx * 50}ms`,
                   }}
                 >
                   {displayName}

@@ -58,7 +58,8 @@
   --font-heading: "Outfit", sans-serif;
   --font-body: "Outfit", sans-serif;
   --font-serif: "Outfit", sans-serif;
-  --spring: cubic-bezier(0.34, 1.4, 0.64, 1); /* @kind other */
+  /* Settles without overshooting: the app's motion is quick and physical, never bouncy. */
+  --spring: cubic-bezier(0.22, 1, 0.36, 1); /* @kind other */
   --smooth: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
 
   /* ─── Type scale ───────────────────────────────────────────────────────────
@@ -451,16 +452,11 @@ body {
   will-change: transform;
 }
 
-/* Reduced motion: a day change does not travel. The arriving day fades in. */
+/* Reduced motion: a day change does not travel; the arriving day fades in
+   (see the Reduced Motion block at the end, which has to come last to win). */
 @keyframes dayFade {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .day-panel:not(.day-panel-initial):not(.day-panel-neighbor-left):not(.day-panel-neighbor-right) {
-    animation: dayFade 120ms ease-out;
-  }
 }
 
 /* ─── Food Card ─── */
@@ -491,7 +487,7 @@ body {
     0 1px 2px rgba(60, 30, 0, 0.04),
     0 4px 12px rgba(60, 30, 0, 0.05),
     0 12px 32px rgba(60, 30, 0, 0.06);
-  transition: transform 0.35s var(--spring), box-shadow 0.35s var(--smooth);
+  transition: transform 0.2s var(--spring), box-shadow 0.2s var(--smooth);
   position: relative;
   border: 1px solid rgba(236, 228, 216, 0.6);
   display: flex;
@@ -499,8 +495,11 @@ body {
 }
 
 /* Card cascade entrance animation ONLY on the very first initial page launch */
+/* The opening entrance, once per open: each card rises 12px and fades in,
+   50ms apart (FoodCard sets the delay). One rate for the whole card; the plate
+   fades in on its own only if it was not already cached. */
 .day-panel-initial .food-card {
-  animation: cardReveal 0.28s var(--smooth) both;
+  animation: cardReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .day-panel:not(.day-panel-initial) .food-card,
@@ -528,35 +527,28 @@ body {
   transition-duration: 0.12s;
 }
 
-/* The phone's cut of cardReveal: the same rise and fade with the scale taken
-   out. Scaling a card is scaling the text inside it, which WebKit has to
-   re-rasterise glyph by glyph; the translate and the opacity are both
-   compositor-only and cost nothing. */
-@keyframes cardRevealFlat {
-  0% {
+/* Translate and opacity only, on every width: scaling a card is scaling the
+   text inside it, which WebKit re-rasterises glyph by glyph. `cardRevealFlat`
+   is kept as a name because the phone block selects it. */
+@keyframes cardReveal {
+  from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px);
   }
-  60% {
+  to {
     opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-@keyframes cardReveal {
-  0% {
+@keyframes cardRevealFlat {
+  from {
     opacity: 0;
-    transform: translateY(20px) scale(0.97);
+    transform: translateY(12px);
   }
-  60% {
+  to {
     opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
@@ -816,7 +808,7 @@ body {
   text-align: center;
   gap: 12px;
   flex: 1;
-  animation: cardReveal 0.5s var(--smooth) both;
+  animation: cardReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .all-closed-image {
@@ -922,7 +914,7 @@ body {
   border-radius: 12px;
   padding: 9px 13px;
   margin: 0 0 10px;
-  animation: bannerSlide 0.4s var(--spring) both;
+  animation: bannerSlide 0.3s var(--spring) both;
 }
 
 @keyframes bannerSlide {
@@ -1179,33 +1171,6 @@ body {
   display: flex;
   flex-direction: column;
   padding-top: 8px;
-}
-
-/* The card text's entrance on a day change. It was a motion spring in
-   FoodCard (320/30/0.6); its damping ratio is 0.76, so it never overshot and
-   this curve is the same movement. FoodCard keys the element by the selected
-   day, so the day change remounts it and the animation re-fires — the same
-   trigger that used to replay motion's `initial`.
-
-   Behind min-width rather than the pointer, because the reason it is off on a
-   phone is cost, not input: `.card-content` has no `will-change`, so WebKit
-   promotes it to a layer for the duration and drops it again, rasterising
-   ~190x150 CSS px of text at 3x, three times per swipe. */
-@media (min-width: 769px) {
-  .day-panel-initial .card-content {
-    animation: cardContentEnter 0.26s var(--smooth) both;
-  }
-}
-
-@keyframes cardContentEnter {
-  from {
-    opacity: 0.5;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1492,23 +1457,35 @@ body {
   object-fit: contain;
   /* No border-radius: the transparent PNG already shows a round plate. */
   filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18))
-    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10))
-    blur(10px);
+    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10));
   opacity: 0;
-  transform: scale(0.97);
-  transition:
-    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, filter, transform;
+  transition: opacity 0.18s ease-out;
 }
 
 .lightbox-image.loaded {
   opacity: 1;
-  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18))
-    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10))
-    blur(0px);
-  transform: scale(1);
+}
+
+/* The plate flying between card and viewer stands in for this one: hidden for
+   the flight, and shown at once (no fade) when it lands on top of it. */
+.lightbox-image.is-flying {
+  opacity: 0;
+  transition: none;
+}
+
+.lightbox-image.landed {
+  transition: none;
+}
+
+.plate-ghost {
+  position: fixed;
+  z-index: calc(var(--z-overlay) + 1);
+  margin: 0;
+  pointer-events: none;
+  transform-origin: 0 0;
+  object-fit: contain;
+  will-change: transform;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18));
 }
 
 .lightbox-info {
@@ -2598,7 +2575,7 @@ body {
 @keyframes modalPanelIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -2606,14 +2583,26 @@ body {
   }
 }
 
-.info-overlay,
-.lightbox-overlay {
-  animation: overlayFadeIn 0.2s cubic-bezier(0, 0, 0.58, 1) both;
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
+.info-overlay,
+.lightbox-overlay {
+  animation: overlayFadeIn 0.2s ease-out both;
+}
+
+/* No overshoot: the panel settles, it does not bounce. */
 .info-modal,
 .lightbox-content {
-  animation: modalPanelIn 0.26s cubic-bezier(0.2, 0, 0.35, 1.15) both;
+  animation: modalPanelIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Closing: the plate flies home on its own layer while the viewer fades out. */
+.lightbox-overlay.is-closing {
+  animation: overlayFadeOut 0.2s ease-in both;
+  pointer-events: none;
 }
 
 .info-overlay {
@@ -3086,8 +3075,13 @@ body {
    During a drag sheet.tsx sets `transition: none` inline, which still wins. */
 .native-sheet-panel {
   transition:
-    transform 400ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 400ms cubic-bezier(0.32, 0.72, 0, 1);
+    transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Leaving is quicker than arriving. */
+.native-sheet-panel.is-closing {
+  transition-duration: 220ms;
 }
 
 .action-sheet-close {
@@ -3334,7 +3328,7 @@ body {
   padding: 20px 16px 24px;
   position: relative;
   overflow: hidden;
-  animation: successFadeIn 0.3s var(--smooth) both;
+  animation: successFadeIn 0.2s var(--smooth) both;
 }
 
 @keyframes successFadeIn {
@@ -3352,16 +3346,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: checkPop 0.5s var(--spring) both;
+  animation: checkPop 0.24s var(--spring) both;
   box-shadow: 0 4px 20px rgba(74, 158, 85, 0.3);
   position: relative;
   z-index: 1;
 }
 
 @keyframes checkPop {
-  0%   { transform: scale(0); opacity: 0; }
-  60%  { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* The head-count on a card ticks when it changes: the new number slides up
+   into place. FoodCard keys the number on its value, so it runs per change. */
+@keyframes countTick {
+  from { transform: translateY(45%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.vote-count {
+  display: inline-block;
+  animation: countTick 180ms var(--spring) both;
 }
 
 .vote-success-text {
@@ -3370,7 +3375,7 @@ body {
   color: var(--text-primary);
   position: relative;
   z-index: 1;
-  animation: successFadeIn 0.4s var(--smooth) 0.15s both;
+  animation: successFadeIn 0.2s var(--smooth) 0.06s both;
 }
 
 .vote-success-sub {
@@ -3379,7 +3384,7 @@ body {
   color: var(--accent-orange);
   position: relative;
   z-index: 1;
-  animation: successFadeIn 0.4s var(--smooth) 0.25s both;
+  animation: successFadeIn 0.2s var(--smooth) 0.1s both;
 }
 
 /* Voting in progress state */
@@ -3394,50 +3399,6 @@ body {
   .action-sheet-header { animation: none; }
   .action-sheet-actions { animation: none; }
 }
-
-/* ─── Recipe Modal Overlay ─── */
-
-/* ─── Recipe Modal Container ─── */
-
-/* Hide scrollbar on recipe modal */
-
-/* ─── Recipe Header ─── */
-
-/* ─── Recipe Meta ─── */
-
-/* ─── Recipe Content ─── */
-
-/* ─── Ingredients ─── */
-
-/* ─── Steps ─── */
-
-/* ─── Recipe Tip ─── */
-
-/* ─── Recipe Loading ─── */
-
-/* ─── Recipe Error ─── */
-
-/* ─── Recipe Mobile ─── */
-
-/* ─── Recipe Shopping Divider ─── */
-
-/* ─── Recipe Shopping Cards ─── */
-
-/* ─── Card icons ─── */
-
-/* Meny icon — checkmark in green circle */
-
-/* Deals icon — price tag in amber circle */
-
-/* ─── Card text ─── */
-
-/* ─── Meny card accent ─── */
-
-/* ─── Deals card accent ─── */
-
-/* ─── Deals Loading Cart Animation ─── */
-
-/* ─── Meny Loading Animation ─── */
 
 /* ─── Skeleton Loading Cards ─── */
 /* `.skeleton-card` is a modifier on `.food-card`, not a card in its own right.
@@ -3481,11 +3442,6 @@ body {
   animation: none;
 }
 
-/* Desktop only — cardContentEnter lives behind `min-width: 769px`. */
-.skeleton-card .card-content {
-  animation: none;
-}
-
 /* `display`, not `animation: none`. The halo is the one thing here that
    animates `filter: blur()`, which is not compositor-only, and `will-change`
    on it promotes a layer whether or not anything is running — six of them,
@@ -3519,8 +3475,6 @@ body {
 .skeleton-line-side       { width: 100%; height: 0.95em; }
 .skeleton-line-side-short { width: 62%; }
 
-/* ─── Swipe Gesture Hint ─── */
-
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -3540,9 +3494,28 @@ body {
   .skeleton-card .image-shimmer {
     background: rgba(233, 199, 160, 0.45) !important;
   }
-}
 
-/* ─── Share Results Button ─── */
+  /* Reduced motion means no travel, not no feedback. These are opacity and
+     colour only: the arriving day and the viewers fade, and a vote still
+     visibly registers. */
+  .day-panel:not(.day-panel-initial):not(.day-panel-neighbor-left):not(.day-panel-neighbor-right) {
+    animation: dayFade 120ms ease-out !important;
+  }
+
+  .info-overlay,
+  .lightbox-overlay {
+    animation: overlayFadeIn 150ms ease-out both !important;
+  }
+
+  .lightbox-overlay.is-closing {
+    animation: overlayFadeOut 150ms ease-in both !important;
+  }
+
+  .action-sheet-btn,
+  .action-sheet-btn-icon-wrap {
+    transition: background-color 150ms ease-out, color 150ms ease-out !important;
+  }
+}
 
 /* ─── Phone: no full-screen blurs ───────────────────────────────────────────
    A backdrop-filter over a full viewport is one of the most expensive things

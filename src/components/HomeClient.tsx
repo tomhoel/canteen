@@ -99,6 +99,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // single width is wrong for one of them. See PLATE_CARD_WIDTH.
   const plateWidth = isDesktop ? PLATE_CARD_WIDTH.desktop : PLATE_CARD_WIDTH.mobile;
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  /** The open lightbox's animated close, so Escape and Android back fly the plate home too. */
+  const lightboxCloseRef = useRef<(() => void) | null>(null);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
   const [dateTick, setDateTick] = useState(0);
@@ -301,6 +303,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const closeTopmostOverlay = useCallback(() => {
     if (infoOpen) {
       setInfoOpen(false);
+    } else if (lightboxCloseRef.current) {
+      lightboxCloseRef.current();
     } else {
       setLightboxIndex(-1);
       setActionSheet((sheet) => ({ ...sheet, isOpen: false }));
@@ -636,6 +640,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
               canteenDayData={openCanteens}
               onClose={() => setLightboxIndex(-1)}
               onNavigate={setLightboxIndex}
+              closeRef={lightboxCloseRef}
             />
           </Suspense>
         )}

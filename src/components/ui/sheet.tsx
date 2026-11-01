@@ -14,7 +14,7 @@ import { useShellInert } from "@/lib/useShellInert";
  * NOT on the main thread.
  *
  * Ported from sister app `mutu-web`:
- * - Vaul/iOS spring curve: cubic-bezier(0.32, 0.72, 0, 1), 400ms.
+ * - Vaul/iOS spring curve: cubic-bezier(0.32, 0.72, 0, 1), 300ms in, 220ms out.
  * - Portalled to document.body so it escapes any parent transforms/stacking contexts.
  * - Drag-to-dismiss writes to the `--sheet-drag` custom property from raw touch
  *   listeners, with no per-frame React state re-render and no gesture library.
@@ -23,7 +23,9 @@ import { useShellInert } from "@/lib/useShellInert";
  */
 
 const EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
-const DUR_MS = 400;
+/** Open. Closing is quicker (CLOSE_MS): leaving should never feel like waiting. */
+const DUR_MS = 300;
+const CLOSE_MS = 220;
 const DISMISS_FRACTION = 0.25;
 const DISMISS_VELOCITY = 0.5;
 
@@ -138,7 +140,7 @@ export function SheetContent({
     //
     // A fixed timer cannot be confused by a stale event. It costs 60ms of an
     // already-invisible layer, and that layer is now `pointer-events: none`.
-    closeTimer.current = setTimeout(() => setRendered(false), DUR_MS + 60);
+    closeTimer.current = setTimeout(() => setRendered(false), CLOSE_MS + 60);
     return () => {
       if (closeTimer.current) clearTimeout(closeTimer.current);
     };
@@ -348,7 +350,8 @@ export function SheetContent({
 
   if (typeof document === "undefined" || !rendered) return null;
 
-  const transition = `transform ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`;
+  const ms = shown ? DUR_MS : CLOSE_MS;
+  const transition = `transform ${ms}ms ${EASE}, opacity ${ms}ms ${EASE}`;
 
   return createPortal(
     <div
@@ -396,7 +399,7 @@ export function SheetContent({
         aria-modal="true"
         aria-label={ariaLabel}
         tabIndex={-1}
-        className={`native-sheet-panel ${className}`}
+        className={`native-sheet-panel${shown ? "" : " is-closing"} ${className}`}
         style={{
           position: "relative",
           width: "100%",
