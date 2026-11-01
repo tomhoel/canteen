@@ -3,7 +3,6 @@ import { Users, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { markImageCached } from "@/lib/imageCache";
-import { useIsDesktop } from "@/lib/useIsDesktop";
 
 const COUNTRY_ADJECTIVES: Record<string, string> = {
   turkey: "Tyrkisk",
@@ -80,7 +79,6 @@ function getCountryAdjective(country: string): string {
 function PlateImage({
   src,
   alt,
-  isDesktop,
   priority,
   isInitial = false,
   onLoad,
@@ -88,7 +86,6 @@ function PlateImage({
 }: {
   src: string;
   alt: string;
-  isDesktop: boolean;
   priority: boolean;
   isInitial?: boolean;
   onLoad: () => void;
@@ -118,7 +115,6 @@ function PlateImage({
   };
 
   const animate = !cached || isInitial;
-  const slide = isDesktop && isInitial;
 
   return (
     <>
@@ -130,12 +126,12 @@ function PlateImage({
         className="food-image loaded"
         style={{
           opacity: shown ? 1 : 0,
-          // Unshown plate waits slightly small (and 28px right on the desktop
-          // launch) and settles to the stylesheet's own transform, so the
-          // hover scale is not pinned by an inline value afterwards.
-          transform: shown ? undefined : slide ? "translateX(28px) scale(1.1)" : "scale(0.92)",
+          // A plate that was not in the cache arrives with a quick fade and a
+          // 4% settle, and then hands the transform back to the stylesheet.
+          // Short on purpose: it is the food arriving, not a performance.
+          transform: shown ? undefined : "scale(0.96)",
           transition: animate
-            ? "opacity 420ms ease-out, transform 560ms cubic-bezier(0.22, 1, 0.36, 1)"
+            ? "opacity 180ms ease-out, transform 240ms cubic-bezier(0.22, 1, 0.36, 1)"
             : "none",
         }}
         loading="eager"
@@ -188,7 +184,6 @@ const FoodCard = memo(function FoodCard({
   } = data;
 
   const [imgError, setImgError] = useState(false);
-  const isDesktop = useIsDesktop();
 
   const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
@@ -230,7 +225,6 @@ const FoodCard = memo(function FoodCard({
                 key={imagePath}
                 src={imagePath}
                 alt={mainDish?.dish || "Matrett"}
-                isDesktop={isDesktop}
                 priority={cardIdx === 0}
                 isInitial={isInitial}
                 onLoad={() => markImageCached(imagePath)}
