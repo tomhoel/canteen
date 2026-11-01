@@ -27,14 +27,17 @@ It is the only place the three canteens' boards sit next to each other. Each boa
 ## Capabilities and Constraints
 
 - **The three canteens**, in this order: Eat the Street (Bygg J/K, 1st floor, 10:30–14:00, dinner Mon–Thu 15:00–17:00), Fresh 4 You (Bygg C/D, 1st floor, 10:30–13:00) and Kantine M, formerly Flow (Bygg M, 2nd floor, 10:30–13:00). Bakern and the cafés publish no menu and get no card.
-- **Each card shows** the canteen, its hours and building, the main dish, a plate photo, the side dishes, allergens for the main, and the origin flag. The AI one-line description is dropped.
-- **Plates are the hero.** Tapping a plate opens it full-screen. On a phone all three canteens are visible at once, each as a wide row with the plate beside the text.
-- **Days:** opens on today, and a Mon–Fri day strip (plus swipe on phones) reaches the rest of the week. There is no separate week-overview screen.
-- **Voting** is one small "I'm eating here" tap per card with a live head-count. It loads after the menu and must never delay the first paint.
+- **The design stays as it is.** Two redesigns were mocked and rejected (2026-11-01). The current look (warm palette, Outfit, cards with the plate overlapping the top on desktop and on the left on phones, the floating day dock) is the brand. Work improves the experience and the motion, not the look.
+- **Each card shows** the canteen, the main dish, a plate photo, the origin flag, allergens for the main, and the side dishes. The AI one-line description is no longer shown.
+- **Tapping a card** opens a slide-up sheet with the plate, the dish, the canteen's building, floor and hours, and on today the vote.
+- **Tapping a plate** opens it full-screen. The plate flies out of the card and back.
+- **Days:** opens on today. The day dock, swipe, arrow keys and trackpad all move the same board. There is no separate week-overview screen.
+- **Voting** is through the sheet, with a head-count on each card. The tally loads after the menu and must never delay the first paint.
 - **Languages:** Norwegian and English, with a toggle. The canteen boards publish an English copy of each day. The scraper currently drops it (`scraper.service.ts`), so English dish names need a pipeline change. Open: what to show when a board has no English copy for a day.
-- **Removed:** AI recipe, meny.no and kassal grocery prices, the leaderboard, confetti, the Slack vote post, the week-overview modal, the "about" modal and the loading screen. This includes `/api/recipe`, `/api/meny`, `/api/deals` and `/api/notify`.
+- **Removed:** AI recipe, meny.no and kassal grocery prices, the leaderboard, confetti and toasts, the Slack vote post, the week-overview modal and the YOLO randomiser. This includes `/api/recipe`, `/api/meny`, `/api/deals` and `/api/notify`.
+- **Motion** is snappy and physical (100–320 ms, no loops, no overshoot). See `docs/superpowers/specs/2026-11-01-ux-motion-design.md`.
 - **Speed is a feature.** A page view never scrapes. The menu is a static JSON file per week in Supabase Storage, and a returning visitor is painted from `localStorage` before the network answers.
-- **Stack:** React + Vite. The UI is rewritten from scratch with no icon, toast or confetti libraries.
+- **Stack:** React + Vite, plain CSS, no animation library.
 
 ## Evidence on Hand
 
