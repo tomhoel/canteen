@@ -1,9 +1,3 @@
-export interface NotifyPayload {
-  canteens: Record<string, number>;
-  dishes?: Record<string, string>;
-  date: string;
-}
-
 /**
  * Posts an operational alert about the weekly updater to Slack.
  *
@@ -77,57 +71,4 @@ async function postToSlack(
     console.error(`${what} could not reach Slack:`, err);
     return { ok: false, detail: err?.message ?? "network error" };
   }
-}
-
-export async function sendSlackNotification(data: NotifyPayload) {
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-  if (!webhookUrl) {
-    return { skipped: true };
-  }
-
-  const { canteens, dishes = {}, date } = data;
-
-  const sorted = Object.entries(canteens)
-    .filter(([, count]) => count > 0)
-    .sort(([, a], [, b]) => b - a);
-
-  // An empty tally builds a section block with empty text, which Slack rejects
-  // outright — so sharing before anyone had voted came back "Failed to send"
-  // and looked like a broken webhook. It was reachable every time; the message
-  // was unsendable. Worth guarding rather than fixing at the call site: until
-  // today the vote endpoint returned `{}` for every vote ever cast, so this was
-  // not the edge case it looks like. It was every share.
-  if (sorted.length === 0) {
-    return { skipped: true, reason: "no votes to share yet" };
-  }
-  const maxVotes = Math.max(0, ...Object.values(canteens));
-  const totalVotes = Object.values(canteens).reduce((a, b) => a + b, 0);
-
-  const d = new Date(date.includes("T") ? date : `${date}T12:00:00`);
-  const formattedDate = d.toLocaleDateString(
-    "nb-NO",
-    { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Oslo" }
-  );
-
-  const lines = sorted.map(([name, count]) => {
-    const isWinner = count === maxVotes && count > 0;
-    const dish = dishes[name] ? ` — ${dishes[name]}` : "";
-    const filled = totalVotes > 0 ? Math.round((count / totalVotes) * 8) : 0;
-    const bar = "█".repeat(filled) + "░".repeat(8 - filled);
-    const votesLabel = "stemmer";
-    return `${isWinner ? "⭐ " : "     "}*${name}*${dish}\n${bar} ${count} ${votesLabel}`;
-  });
-
-  const headerText = `🍽️ Lunsjresultater — ${formattedDate}`;
-
-  const body = {
-    blocks: [
-      { type: "header", text: { type: "plain_text", text: headerText } },
-      { type: "section", text: { type: "mrkdwn", text: lines.join("\n\n") } },
-    ],
-  };
-
-  const result = await postToSlack(webhookUrl, body, "Lunch result");
-  if (result.ok) return { ok: true };
-  return { error: `Slack rejected the message: ${result.detail}` };
 }

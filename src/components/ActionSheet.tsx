@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChefHat, ChevronRight, Check } from "lucide-react";
+import { ChevronRight, Check } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getCanteenMetadata } from "@/lib/constants";
 
@@ -10,16 +10,14 @@ export interface ActionSheetProps {
   canteenName: string;
   dishName: string;
   imagePath: string;
-  description: string | null;
   canVote: boolean;
   hasVoted: boolean;
   isVoting: boolean;
   votedCanteen: string;
   voteSuccess: boolean;
+  voteError: boolean;
   onVote: (canteenName: string) => Promise<void>;
-  onRecipeClick: (dishName: string, canteenName: string) => void;
   onClose: () => void;
-  shareButton?: React.ReactNode;
 }
 
 export default function ActionSheet({
@@ -27,16 +25,14 @@ export default function ActionSheet({
   canteenName,
   dishName,
   imagePath,
-  description,
   canVote,
   hasVoted,
   isVoting,
   votedCanteen,
   voteSuccess,
+  voteError,
   onVote,
-  onRecipeClick,
   onClose,
-  shareButton,
 }: ActionSheetProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -95,87 +91,57 @@ export default function ActionSheet({
             );
           })()}
           <h3 className="action-sheet-dish">{dishName}</h3>
-          {description && <p className="action-sheet-desc">{description}</p>}
+          {(() => {
+            const meta = getCanteenMetadata(canteenName);
+            const where = [meta.building, meta.floor].filter(Boolean).join(" · ");
+            return (
+              <p className="action-sheet-desc">
+                {where}{where && meta.hours ? " · " : ""}{meta.hours}
+              </p>
+            );
+          })()}
         </div>
 
         {/* Actions */}
         {voteSuccess ? (
-          <div className="action-sheet-success">
-            <div className="vote-celebration">
-              <span className="celebration-emoji celebration-1">&#x1F389;</span>
-              <span className="celebration-emoji celebration-2">&#x2B50;</span>
-              <span className="celebration-emoji celebration-3">&#x1F38A;</span>
-              <span className="celebration-emoji celebration-4">&#x2728;</span>
-              <span className="celebration-emoji celebration-5">&#x1F973;</span>
-            </div>
+          <div className="action-sheet-success" role="status">
             <div className="vote-success-check">
               <Check size={28} strokeWidth={3} />
             </div>
-            <span className="vote-success-text">
-              {"Takk for stemmen!"}
-            </span>
+            <span className="vote-success-text">{"Takk for stemmen!"}</span>
             <span className="vote-success-sub">{canteenName}</span>
-            {shareButton}
           </div>
-        ) : (
+        ) : canVote ? (
           <div className="action-sheet-actions">
-            {canVote && (
-              <button
-                type="button"
-                className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}${isVoting ? " voting" : ""}`}
-                disabled={hasVoted || isVoting}
-                onClick={async () => {
-                  await onVote(canteenName);
-                }}
-              >
-                <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
-                  {isVoting ? "⏳" : hasVoted ? "✔" : "🗳️"}
-                </div>
-                <div className="action-sheet-btn-text">
-                  <span className="action-sheet-btn-label">
-                    {isVoting
-                      ? "Stemmer..."
-                      : hasVoted
-                      ? "Allerede stemt"
-                      : "Stem på denne"}
-                  </span>
-                  <span className="action-sheet-btn-sub">
-                    {hasVoted
-                      ? `Du stemte på ${votedCanteen}`
-                      : "Vis at du spiser her i dag"}
-                  </span>
-                </div>
-                {!hasVoted && !isVoting && (
-                  <ChevronRight size={18} className="action-sheet-btn-arrow" />
-                )}
-              </button>
-            )}
-
             <button
               type="button"
-              className="action-sheet-btn action-sheet-recipe"
-              onClick={() => {
-                onClose();
-                onRecipeClick(dishName, canteenName);
+              className={`action-sheet-btn action-sheet-vote${hasVoted ? " voted" : ""}${isVoting ? " voting" : ""}`}
+              disabled={hasVoted || isVoting}
+              onClick={async () => {
+                await onVote(canteenName);
               }}
             >
-              <div className="action-sheet-btn-icon-wrap action-sheet-icon-recipe">
-                <ChefHat size={18} />
+              <div className="action-sheet-btn-icon-wrap action-sheet-icon-vote">
+                <Check size={18} strokeWidth={2.6} />
               </div>
               <div className="action-sheet-btn-text">
                 <span className="action-sheet-btn-label">
-                  {"Lag hjemme"}
+                  {isVoting ? "Stemmer..." : hasVoted ? "Allerede stemt" : "Stem på denne"}
                 </span>
                 <span className="action-sheet-btn-sub">
-                  {"Få AI-generert oppskrift"}
+                  {voteError
+                    ? "Stemmen ble ikke registrert. Prøv igjen."
+                    : hasVoted
+                    ? `Du stemte på ${votedCanteen}`
+                    : "Vis at du spiser her i dag"}
                 </span>
               </div>
-              <ChevronRight size={18} className="action-sheet-btn-arrow" />
+              {!hasVoted && !isVoting && (
+                <ChevronRight size={18} className="action-sheet-btn-arrow" />
+              )}
             </button>
-
-            {canVote && shareButton}
           </div>
-        )}
+        ) : null}
       </SheetContent>
     </Sheet>
   );

@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { getLocalDateKey } from "@/lib/dateUtils";
-import type { CanteenDayItem } from "@/lib/types";
-import { submitVote, sendSlackNotification, getAttendanceHistory } from "@/lib/api-client";
+import { submitVote, getAttendanceHistory } from "@/lib/api-client";
 
 interface UseVotingReturn {
   votes: Record<string, number>;
@@ -11,11 +9,11 @@ interface UseVotingReturn {
   votedCanteen: string;
   isVoting: boolean;
   voteSuccess: boolean;
-  shareState: "idle" | "loading" | "sent";
+  /** Set when the last vote could not be recorded; cleared by the next attempt. */
+  voteError: boolean;
   handleVote: (canteenName: string) => Promise<void>;
-  handleShareSlack: (canteenDayData: CanteenDayItem[]) => Promise<void>;
   setVoteSuccess: (v: boolean) => void;
-  setShareState: (v: "idle" | "loading" | "sent") => void;
+  setVoteError: (v: boolean) => void;
 }
 
 export function useVoting(): UseVotingReturn {
@@ -23,12 +21,9 @@ export function useVoting(): UseVotingReturn {
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCanteen, setVotedCanteen] = useState("");
   const [voteSuccess, setVoteSuccess] = useState(false);
-  const [shareState, setShareState] = useState<"idle" | "loading" | "sent">(
-    "idle"
-  );
+  const [voteError, setVoteError] = useState(false);
 
   const queryClient = useQueryClient();
-  const shareInFlightRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -111,19 +106,11 @@ export function useVoting(): UseVotingReturn {
       setVotedCanteen(canteenName);
       setHasVoted(true);
       setVoteSuccess(true);
+      setVoteError(false);
       const todayKey = getLocalDateKey();
       if (typeof window !== "undefined") {
         localStorage.setItem(`voted_${todayKey}`, canteenName);
       }
-
-      fireConfetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.75 },
-        colors: ["#c8741a", "#e8a020", "#4a9e55", "#fffaf0"],
-        disableForReducedMotion: true,
-      });
-      showToast("success", `Du stemte på ${canteenName}! 🗳️`, { duration: 3000 });
 
       return previous;
     },
@@ -151,7 +138,7 @@ export function useVoting(): UseVotingReturn {
       if (typeof window !== "undefined") {
         localStorage.removeItem(`voted_${getLocalDateKey()}`);
       }
-      showToast("error", "Kunne ikke registrere stemmen din. Prøv igjen.");
+      setVoteError(true);
     },
   });
 
@@ -169,56 +156,15 @@ export function useVoting(): UseVotingReturn {
     [voteMutation]
   );
 
-  const handleShareSlack = useCallback(
-    async (canteenDayData: CanteenDayItem[]) => {
-      if (shareInFlightRef.current) return;
-      const todayKey = getLocalDateKey();
-      if (
-        typeof window !== "undefined" &&
-        localStorage.getItem(`slack_shared_${todayKey}`)
-      )
-        return;
-
-      shareInFlightRef.current = true;
-      setShareState("loading");
-      const dishes = Object.fromEntries(
-        canteenDayData.map((c) => [c.canteenName, c.mainDish?.dish ?? ""])
-      );
-
-      try {
-        await sendSlackNotification({ canteens: votes, dishes, date: todayKey });
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`slack_shared_${todayKey}`, "1");
-        }
-        setShareState("sent");
-        showToast(
-          "success",
-          "Dagens lunsjvalg er delt på Slack! 🚀"
-        );
-        setTimeout(() => setShareState("idle"), 2000);
-      } catch {
-        setShareState("idle");
-        showToast(
-          "error",
-          "Kunne ikke dele til Slack."
-        );
-      } finally {
-        shareInFlightRef.current = false;
-      }
-    },
-    [votes]
-  );
-
   return {
     votes,
     hasVoted,
     votedCanteen,
     isVoting: voteMutation.isPending,
     voteSuccess,
-    shareState,
+    voteError,
     handleVote,
-    handleShareSlack,
     setVoteSuccess,
-    setShareState,
+    setVoteError,
   };
 }

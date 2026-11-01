@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DisplayMode } from "@/lib/dateUtils";
-import { Info, Trophy, CalendarDays } from "lucide-react";
+import { Info } from "lucide-react";
 
 interface AppHeaderProps {
   mode: DisplayMode;
@@ -20,15 +20,13 @@ interface AppHeaderProps {
    */
   actions?: {
     onInfo: () => void;
-    onLeaderboard: () => void;
-    onWeekOverview: () => void;
   };
   /** The closed-canteens pill, which only exists once the menu is known. */
   children?: ReactNode;
 }
 
 /**
- * The title block and the four header buttons.
+ * The title block and the info button.
  *
  * Extracted from HomeClient so the loading screen can render the identical
  * header rather than a copy of it. Everything it shows — the mode, the week
@@ -72,24 +70,6 @@ export default function AppHeader({
           aria-label={"Om appen"}
         >
           <Info size={16} strokeWidth={2} />
-        </button>
-        <button
-          className="info-btn"
-          onClick={actions?.onLeaderboard}
-          disabled={disabled}
-          title={"Kantineseiere"}
-          aria-label={"Kantineseiere"}
-        >
-          <Trophy size={16} strokeWidth={2} />
-        </button>
-        <button
-          className="info-btn"
-          onClick={actions?.onWeekOverview}
-          disabled={disabled}
-          title={"Ukeoversikt"}
-          aria-label={"Ukeoversikt"}
-        >
-          <CalendarDays size={16} strokeWidth={2} />
         </button>
       </div>
       {children}

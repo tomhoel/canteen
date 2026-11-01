@@ -106,11 +106,6 @@ test("white text on an orange surface uses the ink, not the fill", () => {
     ratio("#ffffff", token("--accent-orange")) < TEXT,
     "white now passes on --accent-orange — re-check why the ink exists"
   );
-  assert.ok(
-    !/background:\s*#c8741a/.test(fs.readFileSync(new URL("./week-overview.css", import.meta.url), "utf8")
-      .split(".week-tab.active")[1]?.slice(0, 200) ?? ""),
-    ".week-tab.active is back on the decorative orange with white text on it"
-  );
 });
 
 test("--accent-green clears AA and the raw literals are gone", () => {

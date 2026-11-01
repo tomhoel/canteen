@@ -69,8 +69,9 @@ next-env.d.ts
 # Moat task system
 .moat/
 
-# Claude Code configuration
-.claude/
+# Claude Code configuration (project skills are committed; local settings are not)
+.claude/*
+!.claude/skills/
 .env*.local
 clear-cache.js
 .superpowers/
@@ -79,7 +80,7 @@ clear-cache.js
 .agent/
 .agents/
 .gemini/
-skills/
+/skills/
 skills-lock.json
 .ds-sync/
 ds-bundle/

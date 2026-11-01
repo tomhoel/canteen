@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { CanteenDayItem } from "@/lib/types";
-import { Wrapper3D } from "@/components/ui/3d-wrapper";
 
 interface AllClosedCardProps {
   closedCanteens: CanteenDayItem[];
@@ -15,7 +14,7 @@ export default function AllClosedCard({ closedCanteens }: AllClosedCardProps) {
   const imagePath = closedCanteens[0]?.imagePath;
 
   return (
-    <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
+    <div className="food-card-3d-wrapper">
       <article className="all-closed-card">
         {/* Plate image */}
         <div className="all-closed-image">
@@ -62,6 +61,6 @@ export default function AllClosedCard({ closedCanteens }: AllClosedCardProps) {
           ))}
         </div>
       </article>
-    </Wrapper3D>
+    </div>
   );
 }

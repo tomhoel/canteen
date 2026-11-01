@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCloseRequest";
-import { fireConfetti, showToast } from "@/lib/lazy-effects";
 import { markImageCached } from "@/lib/imageCache";
-import { Share2 } from "lucide-react";
 import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, getImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
 import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
 import {
-  getLocalDateKey,
   computeDisplayContext,
   compareWeeks,
   parseCanteenWeekNumber,
@@ -17,9 +14,6 @@ import {
   formatLongDate,
 } from "@/lib/dateUtils";
 import { useVoting } from "@/lib/useVoting";
-import { useRecipe } from "@/lib/useRecipe";
-import { useDeals } from "@/lib/useDeals";
-import { useMenySearch } from "@/lib/useMenySearch";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useIsDesktop } from "@/lib/useIsDesktop";
@@ -32,17 +26,14 @@ import { useShellInert } from "@/lib/useShellInert";
 import { useDaySwipe } from "@/lib/useDaySwipe";
 import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 
-// These only render once the user opens a modal or overlay — a recipe's
-// price comparison, the Meny search, the feedback form, the vote/leaderboard/
-// image-lightbox/week-overview overlays. Importing them eagerly put every one
+// These only render once the user opens an overlay: the action sheet, the
+// plate lightbox and the info panel. Importing them eagerly put every one
 // of them (and their own dependencies, e.g. Lightbox's copy of `motion`) in
 // the same chunk the very first paint has to wait on. Splitting them out, and
 // only mounting each one once its own "open" condition is true (see the call
 // sites below), means a visitor who never opens any of these never pays for
 // their JS at all.
 const Lightbox = lazy(() => import("@/components/Lightbox"));
-const LeaderboardModal = lazy(() => import("@/components/LeaderboardModal"));
-const WeekOverview = lazy(() => import("@/components/WeekOverview"));
 // The action sheet belongs in that list too, and was the one overlay left out
 // of it. It is only reachable by tapping a card, but importing it eagerly put
 // `ui/sheet.tsx` and with it the whole of `@use-gesture/react` — the
@@ -50,7 +41,6 @@ const WeekOverview = lazy(() => import("@/components/WeekOverview"));
 // the first paint waits on.
 const ActionSheet = lazy(() => import("@/components/ActionSheet"));
 const InfoModal = lazy(() => import("@/components/InfoModal"));
-const RecipeModal = lazy(() => import("@/components/RecipeModal"));
 
 export interface HomeClientProps {
   initialMenu: MenuData | null;
@@ -109,10 +99,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // single width is wrong for one of them. See PLATE_CARD_WIDTH.
   const plateWidth = isDesktop ? PLATE_CARD_WIDTH.desktop : PLATE_CARD_WIDTH.mobile;
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  /** The open lightbox's animated close, so Escape and Android back fly the plate home too. */
+  const lightboxCloseRef = useRef<(() => void) | null>(null);
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
   const [dateTick, setDateTick] = useState(0);
-  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string; description: string | null }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
+  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "" });
   const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
   const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
   const [dishShortNames, setDishShortNames] = useState<Record<string, string>>(initialShortNames);
@@ -124,42 +116,21 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setDishShortNames(initialShortNames);
   }, [initialMenu, initialOrigins, initialDescriptions, initialShortNames]);
   /**
-   * The day change, as two panels instead of an AnimatePresence.
-   *
-   * `current` is the day on screen and `leaving` is the one still sliding out;
-   * `seq` is what keys them, so returning to a day that is still leaving gets a
-   * brand-new panel rather than reversing the old one. Both live in the track's
-   * single grid cell — see DayPanel for why that is enough.
+   * The day mounted beside the current one while a change is under way: during
+   * a drag, and for the length of the glide a tap or key starts. Panels are
+   * keyed by day, so when the glide lands this one simply becomes the current
+   * panel; its DOM node and its loaded plates are kept.
    */
-  const [current, setCurrent] = useState({ seq: 0, day: selectedDay });
-  const [leaving, setLeaving] = useState<{ seq: number; day: number; dir: number } | null>(null);
-  const [dayDir, setDayDir] = useState(0);
   const [swipingNeighbor, setSwipingNeighbor] = useState<{ day: number; position: -1 | 1 } | null>(null);
-  const handleNeighborChange = useCallback((neighbor: { day: number; position: -1 | 1 } | null) => {
-    if (neighbor) {
-      setLeaving(null);
-    }
-    setSwipingNeighbor(neighbor);
-  }, []);
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  const [weekOverviewOpen, setWeekOverviewOpen] = useState(false);
+  /** False until the first day change, so only the first day on screen plays the opening entrance. */
+  const [navigated, setNavigated] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // YOLO randomiser: cycles a glow through the open canteens for ~5s then
-  // settles on one. yoloHighlight is the currently-lit card during the spin;
-  // yoloWinner is the finalist after deceleration completes.
-  const [yoloSpinning, setYoloSpinning] = useState(false);
-  const [yoloHighlight, setYoloHighlight] = useState<number>(-1);
-  const [yoloWinner, setYoloWinner] = useState<number>(-1);
-  const yoloTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Custom hooks — extracted state management. Everything below reaches voting
   // state through `voting.x`; the destructure that used to sit here bound ten
   // names nothing referenced.
   const voting = useVoting();
-  const { recipeModal, recipeServings, setRecipeServings, handleRecipeClick, closeRecipe } = useRecipe();
-  const { dealsView, handleDealsClick, closeDeals } = useDeals();
-  const { menyView, handleMenyClick, closeMeny } = useMenySearch();
 
   /**
    * Is anything layered over the day view?
@@ -180,24 +151,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    * decision — Escape inside the Meny sub-view returns to the recipe rather
    * than closing everything.
    */
-  const anyOverlayOpen =
-    infoOpen ||
-    leaderboardOpen ||
-    weekOverviewOpen ||
-    actionSheet.isOpen ||
-    recipeModal.isOpen ||
-    menyView.isOpen ||
-    dealsView.isOpen ||
-    lightboxIndex >= 0;
+  const anyOverlayOpen = infoOpen || actionSheet.isOpen || lightboxIndex >= 0;
 
-  // The overlays that render inline in this file rather than as components
-  // that claim it themselves. ActionSheet claims via ui/sheet, and the
-  // leaderboard and week overview each claim in their own component — the
-  // refcount makes an overlap harmless, but listing only the inline ones keeps
-  // it obvious which surface owns which claim.
-  useShellInert(
-    infoOpen || recipeModal.isOpen || menyView.isOpen || dealsView.isOpen || lightboxIndex >= 0
-  );
+  // The overlays that render inline in this file rather than claiming the
+  // shell themselves (ActionSheet claims via ui/sheet; the refcount makes an
+  // overlap harmless).
+  useShellInert(infoOpen || lightboxIndex >= 0);
 
   /** Has the action sheet ever been opened? See its render block for why. */
   const sheetEverOpened = useRef(false);
@@ -231,36 +190,30 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     }, 200);
   }, []);
 
-  /**
-   * Did this day change come from a swipe rather than a tap on the day bar?
-   *
-   * A tap runs one animation: the day's own entrance. A swipe runs two — the
-   * strip springing home from where the finger left it, AND the day's entrance
-   * inside it — two springs on nested elements, the outer one carrying six
-   * cards while popLayout has both days mounted. That is why a swipe felt worse
-   * than tapping a day that plays the identical transition.
-   *
-   * When it was a swipe the day stops sliding and lets the strip carry the
-   * horizontal movement, so there is one spring on one element and the gesture
-   * resolves into the transition instead of racing it.
-   *
-   * Owned here rather than inside useDaySwipe because clearing it belongs to
-   * every day change, and a day-bar tap never reaches that hook.
-   */
-  const [fromSwipe, setFromSwipe] = useState(false);
-  const markSwipe = useCallback(() => setFromSwipe(true), []);
+  /** The dock shows the day a glide is heading to before it is committed. */
   const [previewDay, setPreviewDay] = useState<number | null>(null);
-  const isSettlingRef = useRef<() => boolean>(() => false);
 
-  const handleDaySelect = useCallback((i: number) => {
-    if (isSettlingRef.current()) return;
+  /** Commits a day change. useDaySwipe calls it when a glide lands. */
+  const commitDay = useCallback((i: number) => {
+    setNavigated(true);
     setSelectedDay(prev => (i === prev ? prev : i));
     // replaceState, as before: tapping through the weekdays must not stack
     // history entries, or Back walks Friday -> Thursday instead of leaving the
     // app. setSearchParam rewrites this one key and leaves the rest of the
-    // query string alone, which is what the old spread of `prev` did.
+    // query string alone.
     setSearchParam("day", DAY_KEYS[i]);
   }, []);
+
+  // Finger, trackpad, dock and keys -> one day change. See useDaySwipe.
+  const { trackRef, handleTouchStart, handleTouchEnd, goToDay: handleDaySelect } = useDaySwipe({
+    scrollRef,
+    selectedDay,
+    onSelectDay: commitDay,
+    blocked: anyOverlayOpen,
+    ready: menuData !== null,
+    onNeighborChange: setSwipingNeighbor,
+    onPreviewDay: setPreviewDay,
+  });
 
   // Initial data loading + localStorage cleanup
   useEffect(() => {
@@ -350,29 +303,13 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const closeTopmostOverlay = useCallback(() => {
     if (infoOpen) {
       setInfoOpen(false);
-    } else if (menyView.isOpen) {
-      closeMeny();
-    } else if (dealsView.isOpen) {
-      closeDeals();
-    } else if (weekOverviewOpen) {
-      setWeekOverviewOpen(false);
-    } else if (leaderboardOpen) {
-      setLeaderboardOpen(false);
+    } else if (lightboxCloseRef.current) {
+      lightboxCloseRef.current();
     } else {
       setLightboxIndex(-1);
-      setActionSheet({ isOpen: false, canteenName: "", dishName: "", imagePath: "", description: null });
-      closeRecipe();
+      setActionSheet((sheet) => ({ ...sheet, isOpen: false }));
     }
-  }, [
-    infoOpen,
-    menyView.isOpen,
-    closeMeny,
-    dealsView.isOpen,
-    closeDeals,
-    weekOverviewOpen,
-    leaderboardOpen,
-    closeRecipe,
-  ]);
+  }, [infoOpen]);
 
   /**
    * The Android back gesture closes the topmost overlay instead of the app.
@@ -383,14 +320,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    * menu itself. See `useCloseRequest` for why this is not `history.pushState`.
    */
   useCloseRequest(
-    (infoOpen ? 1 : 0) +
-      (menyView.isOpen ? 1 : 0) +
-      (dealsView.isOpen ? 1 : 0) +
-      (weekOverviewOpen ? 1 : 0) +
-      (leaderboardOpen ? 1 : 0) +
-      (lightboxIndex >= 0 ? 1 : 0) +
-      (actionSheet.isOpen ? 1 : 0) +
-      (recipeModal.isOpen ? 1 : 0),
+    (infoOpen ? 1 : 0) + (lightboxIndex >= 0 ? 1 : 0) + (actionSheet.isOpen ? 1 : 0),
     closeTopmostOverlay
   );
 
@@ -443,32 +373,35 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     });
   }, [plateImages, plateWidth]);
 
-  // Finger and trackpad -> day change. Extracted whole: the axis lock, the
-  // MotionValue the strip rides on, the non-passive listener and the release
-  // threshold are one mechanism, and every bug here came from moving one
-  // without the others.
-  const { trackRef, handleWheel, handleTouchStart, handleTouchEnd, isSettling } = useDaySwipe({
-    scrollRef,
-    selectedDay,
-    onSelectDay: handleDaySelect,
-    blocked: anyOverlayOpen,
-    ready: menuData !== null,
-    markSwipe,
-    onNeighborChange: handleNeighborChange,
-    onPreviewDay: setPreviewDay,
-  });
-  isSettlingRef.current = isSettling;
+  // The days either side are what a swipe reveals, so their plates are fetched
+  // as soon as the browser is idle after each day lands. Without this the
+  // neighbour slid in as empty circles that filled in mid-glide.
+  useEffect(() => {
+    if (!menuData) return;
+    const run = () => {
+      preloadDay(selectedDay - 1);
+      preloadDay(selectedDay + 1);
+    };
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(run, { timeout: 1200 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(run, 300);
+    return () => clearTimeout(t);
+  }, [menuData, selectedDay, preloadDay]);
 
   const fullDayLabels = FULL_DAYS_NO;
+  // The header names the day the board is heading to as soon as it sets off.
+  const shownDay = previewDay ?? selectedDay;
 
   const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => voting.votes[name] ?? 0)), [sortedCanteens, voting.votes]);
 
   // Shared with LoadingScreen so the shell shown while the menu loads and the
   // header that replaces it cannot print different dates for the same week.
   const { dateStr, dayLabelsData } = useMemo(() => ({
-    dateStr: formatLongDate(displayMonday, selectedDay),
+    dateStr: formatLongDate(displayMonday, shownDay),
     dayLabelsData: weekDayLabels(displayMonday),
-  }), [selectedDay, displayMonday]);
+  }), [shownDay, displayMonday]);
 
   const allDaysData = useMemo((): CanteenDayItem[][] => {
     return DAY_KEYS.map(dk => {
@@ -533,99 +466,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
   const closedCanteens = useMemo(() => canteenDayData.filter(c => isCanteenClosed(c)), [canteenDayData]);
 
-  // YOLO runner: triggered by tapping the Today button in the day bar. Cycles
-  // a highlight only over canteens that are currently serving (open + not
-  // outdated + not ahead-of-week), dimming the rest. Lands on a random one
-  // after a ~5s decelerating sweep, scrolls it into view, then resets.
-  // No audio.
-  const runYolo = useCallback((dayIdx: number) => {
-    if (yoloSpinning) return;
-
-    // Use today's data directly so we don't race with `setSelectedDay` —
-    // by the time the setTimeout chain fires React will have re-rendered
-    // with selectedDay === dayIdx, and the cardIdx values match this array.
-    // cardsForDay is the full canteen-ordered list (open + closed) since
-    // closed canteens now render as their own ClosedCard in the same slots;
-    // eligibility just excludes them from the sweep.
-    const cardsForDay = allDaysData[dayIdx] ?? [];
-    const eligibleIndices = cardsForDay
-      .map((c, i) => (!isCanteenClosed(c) && !c.isOutdated && !c.isAhead) ? i : -1)
-      .filter(i => i !== -1);
-
-    if (eligibleIndices.length < 2) return;
-
-    yoloTimersRef.current.forEach(clearTimeout);
-    yoloTimersRef.current = [];
-
-    setYoloSpinning(true);
-    setYoloWinner(-1);
-    setYoloHighlight(-1);
-
-    const E = eligibleIndices.length;
-    const targetPos = Math.floor(Math.random() * E);
-
-    // Pick K so the LAST tick is at eligibleIndices[targetPos]:
-    // sequence is eligibleIndices[0], [1], …, [E-1], [0], [1], … and we want
-    // (K-1) % E === targetPos. Base K = ~24 ticks gives ~5s with 1.10 growth.
-    let K = 24;
-    while ((K - 1) % E !== targetPos) K++;
-
-    let cumulative = 0;
-    for (let step = 0; step < K; step++) {
-      const interval = 60 * Math.pow(1.10, step);
-      const delay = cumulative;
-      const cardIdx = eligibleIndices[step % E];
-      const isFinal = step === K - 1;
-
-      const t = setTimeout(() => {
-        setYoloHighlight(cardIdx);
-        if (isFinal) {
-          setYoloWinner(cardIdx);
-          setYoloHighlight(-1);
-          setYoloSpinning(false);
-
-          const winnerName = cardsForDay[cardIdx]?.canteenName;
-          if (winnerName) {
-            const el = scrollRef.current?.querySelector<HTMLElement>(
-              `[data-yolo-card-key="${CSS.escape(winnerName)}"]`
-            );
-            el?.scrollIntoView({ behavior: "smooth", block: "center" });
-
-            fireConfetti({
-              particleCount: 75,
-              spread: 70,
-              origin: { y: 0.65 },
-              colors: ["#c8741a", "#e8a020", "#d9604a", "#4a9e55", "#fffaf0"],
-              disableForReducedMotion: true,
-            });
-
-            showToast(
-              "success",
-              `🎲 YOLO valgte ${winnerName} for deg i dag!`,
-              { duration: 4000 }
-            );
-          }
-          // No auto-release. Winner state persists until the next YOLO spin
-          // starts (which clears it at the top of runYolo) or selectedDay
-          // changes (cleared by the effect below).
-        }
-      }, delay);
-      yoloTimersRef.current.push(t);
-      cumulative += interval;
-    }
-  }, [yoloSpinning, allDaysData]);
-
-  // Clear the winner state when the user navigates to another day.
-  useEffect(() => {
-    setYoloWinner(-1);
-    setYoloHighlight(-1);
-  }, [selectedDay]);
-
-  // Cleanup any in-flight YOLO timers on unmount.
-  useEffect(() => () => {
-    yoloTimersRef.current.forEach(clearTimeout);
-    yoloTimersRef.current = [];
-  }, []);
 
   // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
@@ -633,12 +473,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setLightboxIndex(idx >= 0 ? idx : 0);
   }, [openCanteens]);
 
-  // Every viewport opens the action sheet. A previous revision sent desktop
-  // clicks straight to the vote modal instead, which made "Lag hjemme" — and
-  // the dish description, the share button and the recipe — unreachable with a
-  // mouse, and made a click on a non-voteable day (any day that is not today)
-  // do nothing at all. The sheet is the only route to those actions, so it has
-  // to open regardless of width; voting is one of the buttons inside it.
+  // Every viewport opens the action sheet: it is the route to voting and to
+  // the canteen's building and hours, so it has to open regardless of width.
   const handleCardClick = useCallback((canteenName: string) => {
     const data = canteenDayData.find(c => c.canteenName === canteenName);
     setActionSheet({
@@ -646,107 +482,23 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       canteenName,
       dishName: data?.mainDish?.dish || "",
       imagePath: data?.imagePath || "",
-      description: data?.description || null,
     });
   }, [canteenDayData]);
 
-  const handleShareSlackWrapped = useCallback(() => {
-    voting.handleShareSlack(canteenDayData);
-  }, [voting, canteenDayData]);
 
-  // `mounted` used to gate this too, which cost a painted frame of skeleton on
-  // every load for no benefit: it is a leftover from when this was a Next.js
-  // server component and the first client render had to match the server's.
-  // There is no SSR any more — `menuData` arrives from the route loader before
-  // this component exists — so the only thing left to wait for is the effect
-  // flush, and waiting for it just showed the placeholder one frame longer.
-  /*
-    Derive the transition during render, not in an effect — an effect would
-    start it one painted frame late, so the new day would be visible at rest
-    before it slid. This is React's sanctioned derived-state escape hatch: the
-    guard makes the re-render terminate, and every setter targets this
-    component's own state.
-
-    Gated on `menuData` because two effects move `selectedDay` while the menu
-    is still loading (the `?day=` reader and the seed that picks the default
-    day). `<AnimatePresence>` was not mounted during that phase, so those moves
-    produced no transition; without the gate they would mount a whole second
-    DayPanel — three FoodCards and their plates — for a day that has never been
-    on screen, and the first frame the user sees would be it sliding away.
-
-    `fromSwipe` is consumed here rather than in `handleDaySelect` because that
-    is the only place it is read. It used to be cleared only on the tap path,
-    so after any swipe it stayed true and the next day change arriving from the
-    URL — a shared link, browser Back — was told it came from a finger and
-    cross-faded in place with no slide and no strip movement to stand in.
-  */
-  if (current.day !== selectedDay) {
-    if (!menuData) {
-      // Keep the panels in step with the day, without producing a transition.
-      setCurrent({ seq: 0, day: selectedDay });
-    } else if (fromSwipe) {
-      // Handled by touch swipe and swipingNeighbor — commit day without creating a duplicate leaving panel.
-      setFromSwipe(false);
-      setDayDir(0);
-      setCurrent({ seq: current.seq + 1, day: selectedDay });
-    } else {
-      const d = selectedDay > current.day ? 1 : -1;
-      setDayDir(d);
-      setLeaving({ seq: current.seq, day: current.day, dir: d });
-      setCurrent({ seq: current.seq + 1, day: selectedDay });
-    }
-  }
-
-  // Synchronously reset track transform before browser paint when a swipe commit lands
-  useLayoutEffect(() => {
-    const el = trackRef.current;
-    if (el && el.classList.contains("is-swiping")) {
-      el.style.transition = "";
-      el.style.transform = "";
-      el.classList.remove("is-swiping");
-    }
-  }, [current.seq, trackRef]);
 
   if (!menuData) {
     return <LoadingScreen />;
   }
-
-  const todayKey = getLocalDateKey();
-  const alreadyShared = typeof window !== "undefined" && !!localStorage.getItem(`slack_shared_${todayKey}`);
-
-  const shareButton = (
-    <button
-      className={`share-btn${alreadyShared ? " disabled" : ""}${voting.shareState === "sent" ? " sent" : ""}`}
-      disabled={alreadyShared || voting.shareState === "loading"}
-      onClick={handleShareSlackWrapped}
-      title={alreadyShared ? ("Allerede delt i dag") : undefined}
-    >
-      {voting.shareState === "sent"
-        ? ("Sendt! \u2713")
-        : voting.shareState === "loading"
-        ? "..."
-        : (
-          <>
-            <Share2 size={14} style={{ marginRight: 6 }} />
-            {"Del resultater"}
-          </>
-        )
-      }
-    </button>
-  );
 
   return (
     <div className="app-wrapper">
       <AppHeader
         mode={mode}
         displayWeek={displayWeek}
-        dayLabel={fullDayLabels[selectedDay]}
+        dayLabel={fullDayLabels[shownDay]}
         dateStr={dateStr}
-        actions={{
-          onInfo: () => setInfoOpen(true),
-          onLeaderboard: () => setLeaderboardOpen(true),
-          onWeekOverview: () => setWeekOverviewOpen(true),
-        }}
+        actions={{ onInfo: () => setInfoOpen(true) }}
       >
         {/* Closed canteens pill — inside header row on desktop, fixed banner on mobile */}
         {closedCanteens.length > 0 && openCanteens.length > 0 && (
@@ -759,80 +511,39 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         className="cards-container"
         ref={scrollRef}
         onScroll={handleScroll}
-        onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
           <div className="cards-track" ref={trackRef}>
             {/*
-              The day change: at most two panels, stacked in this element's
-              single grid cell. `<AnimatePresence mode="popLayout">` used to do
-              this by pinning the outgoing day with `position: absolute` and a
-              measured top/left; the grid stack the stylesheet already declares
-              does it with no positioning at all, which is both simpler and
-              free of popLayout's desktop failure mode (the pinned offsets
-              resolve against the stretched grid AREA, not the box the panel
-              was standing in).
-
-              The leaving panel is rendered FIRST, and that ordering is
-              load-bearing: it means React appends the arriving panel rather
-              than inserting before it, and `insertBefore` would take the
-              leaving node out of the tree and cancel its running transition.
+              The day on screen and, while a change is under way, the day it is
+              changing to. Both sit in this element's single grid cell; the
+              neighbour is offset one width plus a gap by its class, and the
+              track's own transform carries both. Keyed by day, so the
+              neighbour becomes the current panel without being remounted.
             */}
-            {leaving && (
-              <DayPanel
-                key={leaving.seq}
-                day={leaving.day}
-                data={allDaysData[leaving.day] ?? []}
-                phase="exit"
-                dir={leaving.dir}
-                todayIndex={todayIndex}
-                votes={voting.votes}
-                maxVotes={maxVotes}
-                onImageClick={handleImageClick}
-                onCardClick={handleCardClick}
-                /* Forced off: tapping Today both starts the YOLO spin and
-                   changes the day, and the glow belongs to the day arriving,
-                   not the one leaving. AnimatePresence hid this by freezing the
-                   exiting child's props; this panel renders live. */
-                yoloHighlight={-1}
-                yoloWinner={-1}
-                isInitial={false}
-                onExited={() =>
-                  setLeaving(l => (l && l.seq === leaving.seq ? null : l))
-                }
-              />
-            )}
             <DayPanel
-              key={current.seq}
-              day={current.day}
-              data={allDaysData[current.day] ?? canteenDayData}
-              phase={current.seq === 0 ? "static" : "enter"}
-              dir={dayDir}
+              key={`day-${selectedDay}`}
+              day={selectedDay}
+              data={allDaysData[selectedDay] ?? canteenDayData}
               todayIndex={todayIndex}
               votes={voting.votes}
               maxVotes={maxVotes}
               onImageClick={handleImageClick}
               onCardClick={handleCardClick}
-              yoloHighlight={yoloHighlight}
-              yoloWinner={yoloWinner}
-              isInitial={current.seq === 0}
+              isInitial={!navigated}
             />
-            {swipingNeighbor && (
+            {swipingNeighbor && swipingNeighbor.day !== selectedDay && (
               <DayPanel
-                key={`swiping-${swipingNeighbor.day}`}
+                key={`day-${swipingNeighbor.day}`}
                 day={swipingNeighbor.day}
                 data={allDaysData[swipingNeighbor.day] ?? []}
-                phase="static"
-                dir={0}
                 todayIndex={todayIndex}
                 votes={voting.votes}
                 maxVotes={maxVotes}
                 onImageClick={handleImageClick}
                 onCardClick={handleCardClick}
-                yoloHighlight={-1}
-                yoloWinner={-1}
                 swipePosition={swipingNeighbor.position}
                 isInitial={false}
               />
@@ -841,8 +552,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         </ErrorBoundary>
       </main>
 
-      {/* Day Selector — tapping the Today button also fires the YOLO
-          randomiser via onTodayPress. */}
+      {/* Day Selector */}
       <DaySelector
         fullDayLabels={fullDayLabels}
         dayLabelsData={dayLabelsData}
@@ -851,7 +561,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         mode={mode}
         onDaySelect={handleDaySelect}
         onDayHover={preloadDay}
-        onTodayPress={mode === "weekday-current" ? () => runYolo(todayIndex) : undefined}
         cardsRef={scrollRef}
       />
 
@@ -863,28 +572,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         </Suspense>
       )}
 
-        {leaderboardOpen && (
-          <Suspense fallback={null}>
-            <LeaderboardModal
-              isOpen={leaderboardOpen}
-              onClose={() => setLeaderboardOpen(false)}
-            />
-          </Suspense>
-        )}
-
-        {weekOverviewOpen && (
-          <Suspense fallback={null}>
-            <WeekOverview
-              allDaysData={allDaysData}
-              selectedDay={selectedDay}
-              todayIndex={todayIndex}
-              dayLabelsData={dayLabelsData}
-              fullDayLabels={fullDayLabels}
-              onDaySelect={(i) => { handleDaySelect(i); setWeekOverviewOpen(false); }}
-              onClose={() => setWeekOverviewOpen(false)}
-            />
-          </Suspense>
-        )}
 
 
 
@@ -892,12 +579,8 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       {/*
         Action sheet, with the 120Hz native GPU compositor transform.
 
-        Not mobile-only. A width check used to stand here as well as in
-        handleCardClick, so on a desktop the sheet was unreachable twice over
-        and "Lag hjemme", the dish description, the share button and the recipe
-        had no route at all — a click on a card either opened the vote modal or,
-        on any day that was not today, did nothing. Every `.action-sheet` rule
-        is top-level (globals.css:3184+), capped at 440px and anchored to the
+        Not mobile-only: the sheet is the route to voting on every width. Every
+        `.action-sheet` rule is top-level, capped at 440px and anchored to the
         bottom, so it is already dressed for a wide window.
       */}
       {(() => {
@@ -923,7 +606,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           // sheet's content mid-slide. The next open overwrites them anyway.
           setActionSheet((s) => ({ ...s, isOpen: false }));
           voting.setVoteSuccess(false);
-          voting.setShareState("idle");
+          voting.setVoteError(false);
         };
         const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
         const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
@@ -935,16 +618,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             canteenName={actionSheet.canteenName}
             dishName={actionSheet.dishName}
             imagePath={actionSheet.imagePath}
-            description={actionSheet.description}
             canVote={!!canVote}
             hasVoted={voting.hasVoted}
             isVoting={voting.isVoting}
             votedCanteen={voting.votedCanteen}
             voteSuccess={voting.voteSuccess}
+            voteError={voting.voteError}
             onVote={voting.handleVote}
-            onRecipeClick={handleRecipeClick}
             onClose={closeSheet}
-            shareButton={shareButton}
           />
           </Suspense>
         );
@@ -959,31 +640,11 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
               canteenDayData={openCanteens}
               onClose={() => setLightboxIndex(-1)}
               onNavigate={setLightboxIndex}
+              closeRef={lightboxCloseRef}
             />
           </Suspense>
         )}
 
-      {/* The recipe panel and the Meny/Deals views over it, in their own chunk.
-          It is reached by two taps and brings `@/lib/ingredientImg` with it —
-          6.6 KB imported nowhere else — so none of it belongs in the chunk the
-          first paint waits on. */}
-      {recipeModal.isOpen && (
-        <Suspense fallback={null}>
-          <RecipeModal
-            recipeModal={recipeModal}
-            recipeServings={recipeServings}
-            setRecipeServings={setRecipeServings}
-            menyView={menyView}
-            dealsView={dealsView}
-            handleRecipeClick={handleRecipeClick}
-            handleMenyClick={handleMenyClick}
-            handleDealsClick={handleDealsClick}
-            closeRecipe={closeRecipe}
-            closeMeny={closeMeny}
-            closeDeals={closeDeals}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }

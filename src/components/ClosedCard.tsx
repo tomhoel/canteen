@@ -2,7 +2,6 @@
 
 import { useState, memo } from "react";
 import type { CanteenDayItem } from "@/lib/types";
-import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
 import { getCanteenMetadata } from "@/lib/constants";
 
@@ -16,10 +15,9 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx }: ClosedCardProps) 
   const meta = getCanteenMetadata(data.canteenName);
 
   return (
-    <Wrapper3D maxRotation={4} translateZ={10} className="food-card-3d-wrapper">
+    <div className="food-card-3d-wrapper">
       <article
         className="food-card closed"
-        data-yolo-card-key={data.canteenName}
       >
         <div className="card-image-wrapper closed">
           <div className="card-image-circle">
@@ -63,7 +61,7 @@ const ClosedCard = memo(function ClosedCard({ data, cardIdx }: ClosedCardProps) 
           </div>
         </div>
       </article>
-    </Wrapper3D>
+    </div>
   );
 });
 

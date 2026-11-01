@@ -1,4 +1,4 @@
-import React, { Suspense, use, useCallback, useEffect, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useState } from "react";
 import { AnimatedGradient } from "@/components/ui/stripe-animated-gradient";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import HomeClient from "@/components/HomeClient";
@@ -23,10 +23,6 @@ import { onFreshMenu, type WeeklyMenuResponse } from "@/lib/api-client";
  * the data lands. That is exactly Suspense's own behaviour, so the loading
  * feel is unchanged rather than approximated.
  */
-const Toaster = React.lazy(() =>
-  import("sonner").then((m) => ({ default: m.Toaster }))
-);
-
 function Menu({ epoch }: { epoch: number }) {
   // Read the week here rather than in App, so a ?day= change re-renders only
   // this subtree and never the gradient. A same-week re-render hits an
@@ -85,19 +81,6 @@ export default function App() {
           <Menu epoch={epoch} />
         </Suspense>
       </ErrorBoundary>
-      <Suspense fallback={null}>
-        <Toaster
-          position="top-center"
-          richColors
-          toastOptions={{
-            style: {
-              fontFamily: "Outfit, sans-serif",
-              borderRadius: "16px",
-              boxShadow: "0 12px 32px rgba(60, 30, 0, 0.12)",
-            },
-          }}
-        />
-      </Suspense>
     </>
   );
 }

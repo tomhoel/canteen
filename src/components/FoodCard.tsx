@@ -2,9 +2,7 @@ import { useState, useLayoutEffect, useRef, memo } from "react";
 import { Users, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
-import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
-import { useIsDesktop } from "@/lib/useIsDesktop";
 
 const COUNTRY_ADJECTIVES: Record<string, string> = {
   turkey: "Tyrkisk",
@@ -81,7 +79,6 @@ function getCountryAdjective(country: string): string {
 function PlateImage({
   src,
   alt,
-  isDesktop,
   priority,
   isInitial = false,
   onLoad,
@@ -89,7 +86,6 @@ function PlateImage({
 }: {
   src: string;
   alt: string;
-  isDesktop: boolean;
   priority: boolean;
   isInitial?: boolean;
   onLoad: () => void;
@@ -119,7 +115,6 @@ function PlateImage({
   };
 
   const animate = !cached || isInitial;
-  const slide = isDesktop && isInitial;
 
   return (
     <>
@@ -131,12 +126,12 @@ function PlateImage({
         className="food-image loaded"
         style={{
           opacity: shown ? 1 : 0,
-          // Unshown plate waits slightly small (and 28px right on the desktop
-          // launch) and settles to the stylesheet's own transform, so the
-          // hover scale is not pinned by an inline value afterwards.
-          transform: shown ? undefined : slide ? "translateX(28px) scale(1.1)" : "scale(0.92)",
+          // A plate that was not in the cache arrives with a quick fade and a
+          // 4% settle, and then hands the transform back to the stylesheet.
+          // Short on purpose: it is the food arriving, not a performance.
+          transform: shown ? undefined : "scale(0.96)",
           transition: animate
-            ? "opacity 420ms ease-out, transform 560ms cubic-bezier(0.22, 1, 0.36, 1)"
+            ? "opacity 180ms ease-out, transform 240ms cubic-bezier(0.22, 1, 0.36, 1)"
             : "none",
         }}
         loading="eager"
@@ -159,10 +154,6 @@ interface FoodCardProps {
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
-  /** True while the YOLO spinner has the cycling highlight on this card. */
-  yoloHighlighted?: boolean;
-  /** True after YOLO landed and this card is the chosen one. */
-  yoloWinner?: boolean;
   /** True strictly on the first initial app load, enabling card launch entrance animations. */
   isInitial?: boolean;
 }
@@ -176,8 +167,6 @@ const FoodCard = memo(function FoodCard({
   maxVotes,
   onImageClick,
   onCardClick,
-  yoloHighlighted = false,
-  yoloWinner = false,
   isInitial = false,
 }: FoodCardProps) {
   const {
@@ -190,45 +179,40 @@ const FoodCard = memo(function FoodCard({
     isAhead,
     canteenWeekNum,
     origin,
-    description,
     displayDishName,
     availabilityNotes,
   } = data;
 
   const [imgError, setImgError] = useState(false);
-  const isDesktop = useIsDesktop();
 
   const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
 
   return (
-    <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
+    <div className="food-card-3d-wrapper">
     <article
-      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}${yoloHighlighted ? " yolo-active" : ""}${yoloWinner ? " yolo-winner" : ""}`}
+      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
       style={
         isInitial
           ? {
-              // The row cascades: card 0 leads, each following card starts 55ms
-              // later and takes 40ms longer, so they do not move at the same rate.
-              animationDelay: `${cardIdx * 55}ms`,
-              animationDuration: `${0.28 + cardIdx * 0.04}s`,
+              // The opening entrance staggers the three cards 50ms apart.
+              animationDelay: `${cardIdx * 50}ms`,
             }
           : undefined
       }
       onClick={mainDish ? () => onCardClick(canteenName) : undefined}
-      data-yolo-card-key={canteenName}
     >
       {isVoteable && voteCount > 0 && (
         <div className={`vote-pip${isLeader ? " leader" : ""}`}>
           <Users size={12} strokeWidth={2.4} className="vote-pip-icon" />
-          <span>{voteCount}</span>
+          <span key={voteCount} className="vote-count">{voteCount}</span>
         </div>
       )}
       <div
         className="card-image-wrapper"
         onClick={e => { e.stopPropagation(); if (mainDish) onImageClick(data); }}
       >
-        <div className="card-image-circle">
+        <div className="card-image-circle" data-plate={canteenName}>
           {imgError || !imagePath ? (
             <div className="image-placeholder">
               {canteenName.charAt(0)}
@@ -239,7 +223,6 @@ const FoodCard = memo(function FoodCard({
                 key={imagePath}
                 src={imagePath}
                 alt={mainDish?.dish || "Matrett"}
-                isDesktop={isDesktop}
                 priority={cardIdx === 0}
                 isInitial={isInitial}
                 onLoad={() => markImageCached(imagePath)}
@@ -270,22 +253,7 @@ const FoodCard = memo(function FoodCard({
           </div>
         )}
       </div>
-      {/*
-        The third rate, on a desktop: text rises 8px and fades the last of the
-        way in, faster than either the card or the plate, so it settles first.
-        It is `cardContentEnter` in the stylesheet now rather than a spring
-        here, but `key` stays exactly where it was on initial launch.
-        On subsequent day changes, key is undefined so React does not discard
-        and rebuild the content node.
-
-        Off on a phone, which is why the rule sits behind `min-width: 769px`.
-        y and opacity are compositor properties, so the animation itself is
-        cheap — but `.card-content` has no `will-change`, so WebKit promotes it
-        to its own layer for the duration and drops it again afterwards, and
-        the layer it has to rasterise is ~190x150 CSS px of pure text at 3x.
-        Three cards, three promote-and-discard cycles, on every day change.
-      */}
-      <div key={isInitial ? selectedDay : undefined} className="card-content">
+      <div className="card-content">
         <div className="card-header">
           {(() => {
             const meta = getCanteenMetadata(canteenName);
@@ -307,7 +275,7 @@ const FoodCard = memo(function FoodCard({
         {mainAllergens && mainAllergens.length > 0 && (
           <div className="dish-meta-row">
             <div className="allergens-row">
-              {mainAllergens.map((a, aIdx) => {
+              {mainAllergens.map((a) => {
                 const displayName = (ALLERGEN_NAMES_NO[a.name] || a.name);
                 return (
                 <span
@@ -317,7 +285,6 @@ const FoodCard = memo(function FoodCard({
                     color: ALLERGEN_COLORS[a.name] || "#8E8E93",
                     background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
                     borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
-                    animationDelay: `${aIdx * 50}ms`,
                   }}
                 >
                   {displayName}
@@ -328,9 +295,6 @@ const FoodCard = memo(function FoodCard({
           </div>
         )}
 
-        {description && (
-          <p className="dish-description">{description}</p>
-        )}
       </div>
 
       {isOutdated && (
@@ -369,7 +333,7 @@ const FoodCard = memo(function FoodCard({
         </div>
       </div>
     </article>
-    </Wrapper3D>
+    </div>
   );
 });
 

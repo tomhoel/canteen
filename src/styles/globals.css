@@ -58,7 +58,8 @@
   --font-heading: "Outfit", sans-serif;
   --font-body: "Outfit", sans-serif;
   --font-serif: "Outfit", sans-serif;
-  --spring: cubic-bezier(0.34, 1.4, 0.64, 1); /* @kind other */
+  /* Settles without overshooting: the app's motion is quick and physical, never bouncy. */
+  --settle: cubic-bezier(0.22, 1, 0.36, 1); /* @kind other */
   --smooth: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
 
   /* ─── Type scale ───────────────────────────────────────────────────────────
@@ -245,7 +246,6 @@ body {
 .info-btn,
 .action-sheet-btn,
 .action-sheet-close,
-.recipe-servings-btn,
 .food-card {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -268,7 +268,6 @@ body {
   border-radius: 50%;
   filter: blur(45px);
   opacity: 0.82;
-  will-change: transform;
 }
 
 .blob-1 {
@@ -276,7 +275,6 @@ body {
   height: 70vw;
   top: -15%;
   left: -10%;
-  animation: blobDrift1 22s ease-in-out infinite;
 }
 
 .blob-2 {
@@ -284,7 +282,6 @@ body {
   height: 55vw;
   bottom: -10%;
   right: -5%;
-  animation: blobDrift2 28s ease-in-out infinite;
 }
 
 .blob-3 {
@@ -292,7 +289,6 @@ body {
   height: 45vw;
   top: 40%;
   left: 35%;
-  animation: blobDrift3 19s ease-in-out infinite;
 }
 
 .blob-4 {
@@ -300,31 +296,6 @@ body {
   height: 50vw;
   bottom: 5%;
   left: 10%;
-  animation: blobDrift4 25s ease-in-out infinite;
-}
-
-@keyframes blobDrift1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(6vw, 8vh) scale(1.08); }
-  66%       { transform: translate(-4vw, 5vh) scale(0.95); }
-}
-
-@keyframes blobDrift2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  40%       { transform: translate(-8vw, -6vh) scale(1.1); }
-  70%       { transform: translate(4vw, -3vh) scale(0.92); }
-}
-
-@keyframes blobDrift3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  30%       { transform: translate(-5vw, 6vh) scale(1.06); }
-  60%       { transform: translate(6vw, -4vh) scale(0.97); }
-}
-
-@keyframes blobDrift4 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  45%       { transform: translate(7vw, -5vh) scale(1.05); }
-  75%       { transform: translate(-3vw, 4vh) scale(0.94); }
 }
 
 /* ─── Decorative Background Elements ─── */
@@ -373,7 +344,6 @@ body {
   z-index: 10;
   flex-shrink: 0;
 }
-
 
 /* ─── Hero (inline with header) ─── */
 .hero-inline {
@@ -462,56 +432,31 @@ body {
 }
 
 /* ─── The day change ───
-   Was `<AnimatePresence mode="popLayout">` with motion variants. The spring was
-   300/30/0.8 — damping ratio 0.97, so it never overshot, and this curve was
-   fitted numerically against its step response: within 0.53px of the 44px
-   mobile throw and 0.96px of the 80px desktop one over the whole travel.
-
-   Both panels are `.cards-animated-wrapper`, so they are already pinned to
-   `grid-column: 1; grid-row: 1` above and stack in the one cell. Nothing here
-   positions anything absolutely, which is what keeps the leaving day exactly
-   where it was standing.
-
-   Direction arrives as a unitless `--day-dir` written inline by DayPanel: 1 for
-   a later day, -1 for an earlier one, and 0 when the change came from a swipe —
-   `calc(0 * 44px)` is `0px`, so the panel does not translate and the strip's own
-   movement carries it, which is what `fromSwipe` meant to the old variants. */
-.day-panel {
-  --day-travel: 44px;
-  --day-scale: 1;
-  transition:
-    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
-    opacity 0.24s linear;
+   One movement for every way of changing the day (useDaySwipe): the track
+   carries the day on screen and, during a change, its neighbour, mounted one
+   width plus a gap to the side. A finger drags the track 1:1; a tap, a key or
+   a trackpad glides it. No per-panel enter/exit, no parallax, no scale. */
+.cards-track {
+  --day-gap: 16px;
 }
 
-.day-panel-enter {
-  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel)), 0, 0)
-    scale(var(--day-scale));
-  opacity: 0;
+.day-panel-neighbor-left {
+  transform: translate3d(calc(-100% - var(--day-gap)), 0, 0);
 }
 
-.day-panel-exit {
-  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel) * -1), 0, 0)
-    scale(var(--day-scale));
-  opacity: 0;
-  /* Leaves faster than it arrives, as the old exit variant did (0.2/0.18
-     against 0.28/0.24). */
-  transition:
-    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
-    opacity 0.18s linear;
+.day-panel-neighbor-right {
+  transform: translate3d(calc(100% + var(--day-gap)), 0, 0);
 }
 
-@media (min-width: 769px) {
-  .day-panel {
-    /* The desktop has three cards across a wide viewport and can afford the
-       full throw; a phone card is nearly the screen, so 80px there reads as
-       the whole layout lurching. */
-    --day-travel: 80px;
-    /* Desktop only, and deliberately: scaling a box full of text makes WebKit
-       re-rasterise every glyph in it on each frame, which is the cost a phone
-       cannot absorb. */
-    --day-scale: 0.98;
-  }
+.cards-track.is-swiping {
+  will-change: transform;
+}
+
+/* Reduced motion: a day change does not travel; the arriving day fades in
+   (see the Reduced Motion block at the end, which has to come last to win). */
+@keyframes dayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ─── Food Card ─── */
@@ -536,13 +481,13 @@ body {
   background: linear-gradient(180deg, #fffaf0 0%, #fef3e2 38%, var(--card-white) 52%);
   border-radius: 24px;
   width: 100%;
-  min-height: 520px;
+  min-height: 460px;
   padding: 0 26px 24px;
   box-shadow:
     0 1px 2px rgba(60, 30, 0, 0.04),
     0 4px 12px rgba(60, 30, 0, 0.05),
     0 12px 32px rgba(60, 30, 0, 0.06);
-  transition: transform 0.35s var(--spring), box-shadow 0.35s var(--smooth);
+  transition: transform 0.2s var(--settle), box-shadow 0.2s var(--smooth);
   position: relative;
   border: 1px solid rgba(236, 228, 216, 0.6);
   display: flex;
@@ -550,8 +495,11 @@ body {
 }
 
 /* Card cascade entrance animation ONLY on the very first initial page launch */
+/* The opening entrance, once per open: each card rises 12px and fades in,
+   50ms apart (FoodCard sets the delay). One rate for the whole card; the plate
+   fades in on its own only if it was not already cached. */
 .day-panel-initial .food-card {
-  animation: cardReveal 0.28s var(--smooth) both;
+  animation: cardReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .day-panel:not(.day-panel-initial) .food-card,
@@ -579,35 +527,28 @@ body {
   transition-duration: 0.12s;
 }
 
-/* The phone's cut of cardReveal: the same rise and fade with the scale taken
-   out. Scaling a card is scaling the text inside it, which WebKit has to
-   re-rasterise glyph by glyph; the translate and the opacity are both
-   compositor-only and cost nothing. */
-@keyframes cardRevealFlat {
-  0% {
+/* Translate and opacity only, on every width: scaling a card is scaling the
+   text inside it, which WebKit re-rasterises glyph by glyph. `cardRevealFlat`
+   is kept as a name because the phone block selects it. */
+@keyframes cardReveal {
+  from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px);
   }
-  60% {
+  to {
     opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-@keyframes cardReveal {
-  0% {
+@keyframes cardRevealFlat {
+  from {
     opacity: 0;
-    transform: translateY(20px) scale(0.97);
+    transform: translateY(12px);
   }
-  60% {
+  to {
     opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
@@ -637,10 +578,6 @@ body {
 }
 
 /* Featured card style */
-.food-card.featured {
-  background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
-  border: 2px solid var(--accent-yellow);
-}
 
 /* ─── Outdated / Stale menu card — pushed back ─── */
 /* Dim outdated cards from the 3D-wrapper so .food-card opacity stays at 1
@@ -667,7 +604,6 @@ body {
 .food-card.outdated .food-image {
   filter: grayscale(55%) saturate(0.6)
     drop-shadow(0 6px 14px rgba(0, 0, 0, 0.06));
-  animation: gentleFloat 8s ease-in-out infinite;
 }
 
 .food-card.outdated .canteen-name {
@@ -842,13 +778,11 @@ body {
   z-index: 10;
 }
 
-
 /* Mobile: header pill and in-cards pill hidden (space dedicated to cards) */
 @media (max-width: 768px) {
   header .closed-pill-wrapper {
     display: none;
   }
-
 
   .closed-pill-tooltip {
     display: none;
@@ -874,7 +808,7 @@ body {
   text-align: center;
   gap: 12px;
   flex: 1;
-  animation: cardReveal 0.5s var(--smooth) both;
+  animation: cardReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .all-closed-image {
@@ -980,7 +914,7 @@ body {
   border-radius: 12px;
   padding: 9px 13px;
   margin: 0 0 10px;
-  animation: bannerSlide 0.4s var(--spring) both;
+  animation: bannerSlide 0.3s var(--settle) both;
 }
 
 @keyframes bannerSlide {
@@ -1037,12 +971,6 @@ body {
   border-radius: 20px;
   white-space: nowrap;
   vertical-align: middle;
-  animation: tagPop 0.4s var(--spring) both;
-}
-
-@keyframes tagPop {
-  from { opacity: 0; transform: scale(0.85); }
-  to   { opacity: 1; transform: scale(1); }
 }
 
 /* ─── V3 Overhead Image Container - Transparent Background ─── */
@@ -1104,36 +1032,12 @@ body {
     transparent 78%
   );
   filter: blur(18px);
-  animation: slowFlameBurn 7s ease-in-out infinite alternate;
   pointer-events: none;
   z-index: 0;
   will-change: transform, opacity, filter;
 }
 
-@keyframes slowFlameBurn {
-  0% {
-    transform: scale(0.92) rotate(0deg);
-    opacity: 0.65;
-    filter: blur(16px);
-  }
-  50% {
-    transform: scale(1.08) rotate(6deg);
-    opacity: 0.95;
-    filter: blur(22px);
-  }
-  100% {
-    transform: scale(0.98) rotate(-5deg);
-    opacity: 0.72;
-    filter: blur(18px);
-  }
-}
-
 /* V3 Overhead food image - transparent background with float animation */
-@keyframes gentleFloat {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  35%       { transform: translateY(-7px) rotate(0.4deg); }
-  70%       { transform: translateY(-3px) rotate(-0.3deg); }
-}
 
 .plate-float-container {
   width: 100%;
@@ -1143,7 +1047,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: gentleFloat 5s ease-in-out infinite;
 }
 
 .food-image {
@@ -1175,10 +1078,6 @@ body {
 }
 
 /* Shimmer placeholder while image loads */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
 
 .image-shimmer {
   position: absolute;
@@ -1191,7 +1090,6 @@ body {
     rgba(255, 220, 185, 0.2) 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.8s ease-in-out infinite;
   pointer-events: none;
   z-index: 1; /* above the aura (::before), below the plate (.food-image is 2) */
   transition: opacity 0.42s ease-out;
@@ -1210,33 +1108,22 @@ body {
   animation: none;
 }
 
+/* The plate is its own target (it opens the plate view), so it answers the
+   pointer on its own: a small lift on hover, a press on click. Transform only;
+   the old hover animated a stacked drop-shadow filter, which repaints the
+   whole plate every frame. */
 @media (hover: hover) and (pointer: fine) {
-  .card-image-wrapper:hover .food-image {
-    animation-play-state: paused;
+  .card-image-circle {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* ─── Image floating hologram effect ─── */
-  /* Image counter-parallaxes against the card tilt — appears to float on a separate Z-plane */
-  .food-card-3d-wrapper .card-image-circle {
-    transition: transform 0.12s ease-out;
-    will-change: transform;
+  .card-image-wrapper:hover .card-image-circle {
+    transform: scale(1.04);
   }
 
-
-  .food-card-3d-wrapper:hover .card-image-circle {
-    transform:
-      translateX(calc(var(--card-mx, 0) * -22px))
-      translateY(calc(var(--card-my, 0) * -18px))
-      scale(1.09);
-  }
-
-  .food-card-3d-wrapper:hover .food-image.loaded {
-    filter:
-      drop-shadow(0 28px 56px rgba(80, 40, 0, 0.32))
-      drop-shadow(0 8px 20px rgba(80, 40, 0, 0.20))
-      saturate(1.12)
-      brightness(1.04);
-    transition: filter 0.25s ease;
+  .card-image-wrapper:active .card-image-circle {
+    transform: scale(0.98);
+    transition-duration: 0.1s;
   }
 }
 
@@ -1254,7 +1141,6 @@ body {
   color: var(--accent-orange);
   opacity: 0.6;
   filter: drop-shadow(0 8px 16px rgba(80, 40, 0, 0.10));
-  animation: gentleFloat 5s ease-in-out infinite;
 }
 
 /* Click hint */
@@ -1285,33 +1171,6 @@ body {
   display: flex;
   flex-direction: column;
   padding-top: 8px;
-}
-
-/* The card text's entrance on a day change. It was a motion spring in
-   FoodCard (320/30/0.6); its damping ratio is 0.76, so it never overshot and
-   this curve is the same movement. FoodCard keys the element by the selected
-   day, so the day change remounts it and the animation re-fires — the same
-   trigger that used to replay motion's `initial`.
-
-   Behind min-width rather than the pointer, because the reason it is off on a
-   phone is cost, not input: `.card-content` has no `will-change`, so WebKit
-   promotes it to a layer for the duration and drops it again, rasterising
-   ~190x150 CSS px of text at 3x, three times per swipe. */
-@media (min-width: 769px) {
-  .day-panel-initial .card-content {
-    animation: cardContentEnter 0.26s var(--smooth) both;
-  }
-}
-
-@keyframes cardContentEnter {
-  from {
-    opacity: 0.5;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1388,8 +1247,6 @@ body {
   letter-spacing: -0.15px;
 }
 
-
-
 /* Dish Meta Row */
 .dish-meta-row {
   display: flex;
@@ -1428,37 +1285,8 @@ body {
 }
 
 /* Allergen chip entrance animation ONLY on initial launch */
-.day-panel-initial .allergen-chip {
-  animation: chipPop 0.3s var(--spring) both;
-}
-
-@keyframes chipPop {
-  from { opacity: 0; transform: scale(0.7); }
-  to   { opacity: 1; transform: scale(1); }
-}
 
 /* Dish Description */
-.dish-description {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  line-height: 1.45;
-  text-align: center;
-  margin: 2px 0 4px;
-  padding: 0 4px;
-  font-style: italic;
-  letter-spacing: 0.1px;
-  max-width: 300px;
-  margin-left: auto;
-  margin-right: auto;
-  opacity: 0.75;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* Bottom Section */
 .card-bottom {
@@ -1571,13 +1399,6 @@ body {
   padding: 24px;
 }
 
-@keyframes votePop {
-  0%   { opacity: 0; transform: scale(0); }
-  60%  { opacity: 1; transform: scale(1.25); }
-  80%  { transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
 .lightbox-content {
   background: var(--card-white);
   border-radius: 32px;
@@ -1636,23 +1457,35 @@ body {
   object-fit: contain;
   /* No border-radius: the transparent PNG already shows a round plate. */
   filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18))
-    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10))
-    blur(10px);
+    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10));
   opacity: 0;
-  transform: scale(0.97);
-  transition:
-    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, filter, transform;
+  transition: opacity 0.18s ease-out;
 }
 
 .lightbox-image.loaded {
   opacity: 1;
-  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18))
-    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10))
-    blur(0px);
-  transform: scale(1);
+}
+
+/* The plate flying between card and viewer stands in for this one: hidden for
+   the flight, and shown at once (no fade) when it lands on top of it. */
+.lightbox-image.is-flying {
+  opacity: 0;
+  transition: none;
+}
+
+.lightbox-image.landed {
+  transition: none;
+}
+
+.plate-ghost {
+  position: fixed;
+  z-index: calc(var(--z-overlay) + 1);
+  margin: 0;
+  pointer-events: none;
+  transform-origin: 0 0;
+  object-fit: contain;
+  will-change: transform;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18));
 }
 
 .lightbox-info {
@@ -1675,31 +1508,6 @@ body {
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.3;
-}
-
-
-@keyframes panelReveal {
-  from { opacity: 0; transform: translateY(12px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-
-.allergen-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-cream);
-  padding: 8px 14px;
-  border-radius: 50px;
-  font-size: clamp(11px, 2.5vw, 13px);
-  font-weight: 500;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-light);
-}
-
-.allergen-item-name {
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 /* ─── YOLO randomiser — second-tap of Today on the day-bar ─── */
@@ -1743,28 +1551,10 @@ body {
 /* Cycling state: a single solid 3px warm ring at the card edge.
    No glow, no scale, no plate change. Discrete jump from card to card
    IS the motion of the spin. */
-.food-card.yolo-active {
-  position: relative;
-  z-index: 1100;
-  box-shadow:
-    0 0 0 3px rgba(255, 152, 56, 0.85),
-    0 12px 28px rgba(0, 0, 0, 0.14),
-    0 4px 10px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 0.18s ease;
-}
 
 /* Winner: a faint static warm ring at the edge, with a single bright
    warm arc ('comet') slowly traveling around the perimeter — like light
    moving across a polished trophy. Plate is left untouched. */
-.food-card.yolo-winner {
-  position: relative;
-  z-index: 1101;
-  isolation: isolate;
-  box-shadow:
-    0 0 0 3px rgba(255, 152, 56, 0.45),
-    0 14px 32px rgba(0, 0, 0, 0.16),
-    0 4px 10px rgba(0, 0, 0, 0.06);
-}
 
 /* The comet itself. ::before pseudo-element sits 5px outside the card,
    with mask-composite carving out the centre so only the 5px ring is
@@ -1772,64 +1562,11 @@ body {
    bright arc that fades up to nearly white at its peak and tails off
    into transparency on either side. The `from <angle>` rotates over
    6s — readable but not anxious. */
-.food-card.yolo-winner::before {
-  content: "";
-  position: absolute;
-  inset: -5px;
-  border-radius: 29px; /* card radius (24) + outset (5) */
-  padding: 5px;
-  background: conic-gradient(
-    from var(--yolo-comet-angle),
-    transparent 0deg,
-    transparent 200deg,
-    rgba(255, 200, 80, 0.45) 220deg,
-    rgba(255, 220, 120, 1) 245deg,
-    rgba(255, 250, 215, 1) 260deg,
-    rgba(255, 220, 120, 1) 275deg,
-    rgba(255, 200, 80, 0.45) 300deg,
-    transparent 320deg,
-    transparent 360deg
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  animation: yoloCometRotate 6s linear infinite;
-  pointer-events: none;
-  z-index: -1;
-  filter: drop-shadow(0 0 8px rgba(255, 220, 120, 0.65));
-}
-
-@keyframes yoloCometRotate {
-  to { --yolo-comet-angle: 360deg; }
-}
 
 /* Shockwave ring on the moment the winner state activates. ::after pseudo
    pops in as a thin warm ring at the card's edge, then expands outward
    to scale 1.10 while fading to 0 over 750ms. One-shot via forwards —
    plays once when .yolo-winner is added, then stays at opacity 0. */
-.food-card.yolo-winner::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 27px;
-  border: 3px solid rgba(255, 230, 150, 0.95);
-  filter: blur(1px) drop-shadow(0 0 12px rgba(255, 220, 120, 0.7));
-  opacity: 0;
-  animation: yoloWinShockwave 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  pointer-events: none;
-  z-index: -2;
-}
-
-@keyframes yoloWinShockwave {
-  0%   { opacity: 0; transform: scale(0.96); }
-  15%  { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.10); }
-}
 
 /* Title shimmer on the winner card — the dish name fills with a warm
    gold gradient that slowly slides across the text. background-clip:
@@ -1838,36 +1575,6 @@ body {
    light catching the letters. Plus a one-shot text-shadow glow burst
    that fires the moment the winner state activates, then fades back to
    no shadow as the persistent shimmer takes over. */
-.food-card.yolo-winner .dish-name {
-  background-image: linear-gradient(
-    100deg,
-    #b87515 0%,
-    #c9871f 20%,
-    #e9b75c 50%,
-    #c9871f 80%,
-    #b87515 100%
-  );
-  background-size: 220% 100%;
-  background-position: 0% 50%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation:
-    yoloTitleEntry 0.65s ease-out forwards,
-    yoloTitleShimmer 5s 0.65s ease-in-out infinite;
-}
-
-@keyframes yoloTitleShimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50%      { background-position: 100% 50%; }
-}
-
-@keyframes yoloTitleEntry {
-  0%   { text-shadow: 0 0 0 rgba(255, 220, 120, 0); }
-  30%  { text-shadow: 0 0 18px rgba(255, 220, 120, 0.95), 0 0 4px rgba(255, 245, 200, 0.6); }
-  100% { text-shadow: 0 0 0 rgba(255, 220, 120, 0); }
-}
 
 /* The static shell in index.html carries a copy of this bar so the page is not
    missing a chunk of itself before React boots. On mobile that copy is exactly
@@ -2069,7 +1776,6 @@ body {
     padding: 20px 20px;
   }
 
-
   .card-image-wrapper {
     width: 220px;
     height: 220px;
@@ -2125,55 +1831,6 @@ body {
   }
 
   /* Description — compact for mobile */
-  .dish-description {
-    font-size: clamp(9.5px, 1.3dvh, 13px);
-    line-height: 1.4;
-    margin: clamp(1px, 0.3dvh, 4px) 0 0;
-    padding: 0;
-    text-align: left;
-    max-width: none;
-    /* No line clamp. A clamp is a fixed number, and the number of lines that
-       fit is not fixed: it is whatever the row has left after the canteen
-       name, the dish name and the allergen row, which depends on how long the
-       title is and on how many side dishes the kitchen published that day.
-       Measured across one week, a single clamp wasted between one and six
-       lines on fourteen of fifteen cards.
-
-       The grid row above hands over exactly that leftover, so a card with one
-       side dish and a short title shows its whole description and a card with
-       three side dishes and a three-line title shows none — no gap, no
-       overflow, and nothing to keep in sync by hand.
-
-       display: block is not redundant. The desktop rule sets
-       `display: -webkit-box` with `-webkit-line-clamp: 2`, and that clamp is
-       inherited here: as a grid item the box blockifies to flow-root, the
-       clamp half-applies, and the result was two lines on one card and four on
-       the next. Both are reset explicitly. */
-    display: block;
-    -webkit-line-clamp: none;
-    line-clamp: none;
-    grid-row: 3;
-    align-self: start;
-    min-height: 0;
-    /* Whole lines, and never more than two.
-
-       Whole, because the leftover is a continuous number of pixels and almost
-       never a multiple of the line height: clipping straight to it left a
-       3-15px slice of the next line's letter-tops showing on every card,
-       measured on all fifteen. Rounding the box down cuts between lines.
-
-       Two, because this is the secondary text on the card and a third or
-       fourth line of it starts to compete with the dish it is describing. The
-       description is written to that budget upstream — see
-       DESCRIPTION_MAX_CHARS, which is the 68 characters two lines actually
-       hold — so this ceiling should almost never be the thing that bites.
-
-       The plain 100% below is the fallback: if round() is ever unavailable the
-       declaration is dropped and the box is merely un-rounded, not unbounded. */
-    max-height: 100%;
-    max-height: min(2lh, round(down, 100%, 1lh));
-    overflow: hidden;
-  }
 
   /* Cards container */
   .cards-container {
@@ -2216,7 +1873,6 @@ body {
 
   /* Cards track — mobile grid stack ensuring enter and exit share same bounds */
   .cards-track {
-    --day-gap: 16px;
     display: grid;
     grid-template-columns: 100%;
     grid-template-rows: 100%;
@@ -2244,72 +1900,11 @@ body {
     will-change: transform, opacity;
   }
 
-  /* Mobile day slide & continuous swiping */
-  .cards-track.is-swiping {
-    will-change: transform;
-  }
-
-  .day-panel {
-    --day-travel: calc(100% + var(--day-gap));
-    --day-scale: 1;
-    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  /* Only the initial page launch runs card/chip entrance animations; all day-to-day panels are completely static */
+  /* Only the opening entrance animates cards; a day change moves the track. */
   .day-panel:not(.day-panel-initial) .food-card,
   .day-panel:not(.day-panel-initial) .allergen-chip,
   .cards-track.is-swiping .food-card {
     animation: none !important;
-  }
-
-  .day-panel-enter,
-  .day-panel-exit {
-    opacity: 1;
-  }
-
-  .day-panel-neighbor-left {
-    transform: translate3d(calc(-100% - var(--day-gap)), 0, 0) !important;
-    opacity: 1 !important;
-    transition: none !important;
-  }
-
-  .day-panel-neighbor-right {
-    transform: translate3d(calc(100% + var(--day-gap)), 0, 0) !important;
-    opacity: 1 !important;
-    transition: none !important;
-  }
-
-  .cards-track.is-swiping .day-panel {
-    transition: none !important;
-  }
-
-  /* A push, not a slide: the day you leave only travels 30% as far as your finger and
-     recedes beneath, while the day that arrives glides over it, carrying its own shadow.
-     useDaySwipe writes --swipe-x (the track's px offset) and --swipe-p (0..1) on every
-     move and sets both to their end values when it releases. */
-  .cards-track.is-swiping .day-panel {
-    translate: calc(var(--swipe-x, 0px) * -0.7) 0;
-    scale: calc(1 - var(--swipe-p, 0) * 0.06);
-  }
-  .cards-track.is-swiping .day-panel-neighbor-left,
-  .cards-track.is-swiping .day-panel-neighbor-right {
-    translate: none;
-    scale: 1;
-    position: relative;
-    z-index: 2;
-    background: var(--bg-cream);
-  }
-  .cards-track.is-swiping .day-panel-neighbor-right {
-    box-shadow: calc(-18px * (1 - var(--swipe-p, 0))) 0 calc(36px * (1 - var(--swipe-p, 0))) rgba(60, 40, 10, 0.2);
-  }
-  .cards-track.is-swiping .day-panel-neighbor-left {
-    box-shadow: calc(18px * (1 - var(--swipe-p, 0))) 0 calc(36px * (1 - var(--swipe-p, 0))) rgba(60, 40, 10, 0.2);
-  }
-  .cards-track.is-swiping.is-settling .day-panel {
-    transition:
-      translate var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1),
-      scale var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow var(--settle-ms, 240ms) cubic-bezier(0.22, 1, 0.36, 1) !important;
   }
 
   /* Card layout - horizontal, grows to fill viewport */
@@ -2980,7 +2575,7 @@ body {
 @keyframes modalPanelIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -2988,18 +2583,26 @@ body {
   }
 }
 
-.info-overlay,
-.recipe-overlay,
-.lightbox-overlay,
-.leaderboard-overlay {
-  animation: overlayFadeIn 0.2s cubic-bezier(0, 0, 0.58, 1) both;
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
+.info-overlay,
+.lightbox-overlay {
+  animation: overlayFadeIn 0.2s ease-out both;
+}
+
+/* No overshoot: the panel settles, it does not bounce. */
 .info-modal,
-.recipe-modal,
-.lightbox-content,
-.leaderboard-modal {
-  animation: modalPanelIn 0.26s cubic-bezier(0.2, 0, 0.35, 1.15) both;
+.lightbox-content {
+  animation: modalPanelIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Closing: the plate flies home on its own layer while the viewer fades out. */
+.lightbox-overlay.is-closing {
+  animation: overlayFadeOut 0.2s ease-in both;
+  pointer-events: none;
 }
 
 .info-overlay {
@@ -3254,7 +2857,6 @@ body {
   letter-spacing: -0.01em;
   white-space: nowrap;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  animation: votePipIn 0.4s ease both;
 }
 
 .vote-pip-icon {
@@ -3271,16 +2873,6 @@ body {
 
 .vote-pip.leader .vote-pip-icon {
   opacity: 0.65;
-}
-
-@keyframes votePipIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes votePipInMobile {
-  from { opacity: 0; transform: translateX(-100%) translateY(4px); }
-  to { opacity: 1; transform: translateX(-100%) translateY(0); }
 }
 
 @media (max-width: 768px) {
@@ -3313,7 +2905,6 @@ body {
   cursor: pointer;
 }
 
-
 /* ─── Dish Origin Pip ─── */
 .origin-pip {
   position: absolute;
@@ -3336,7 +2927,6 @@ body {
   letter-spacing: -0.01em;
   white-space: nowrap;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  animation: votePipIn 0.4s ease both;
   animation-delay: 0.15s;
   pointer-events: none;
 }
@@ -3378,7 +2968,6 @@ body {
     display: none;
   }
 }
-
 
 /* ─── #6 Lightbox Navigation ─── */
 .lightbox-nav {
@@ -3486,8 +3075,13 @@ body {
    During a drag sheet.tsx sets `transition: none` inline, which still wins. */
 .native-sheet-panel {
   transition:
-    transform 400ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 400ms cubic-bezier(0.32, 0.72, 0, 1);
+    transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Leaving is quicker than arriving. */
+.native-sheet-panel.is-closing {
+  transition-duration: 220ms;
 }
 
 .action-sheet-close {
@@ -3638,7 +3232,7 @@ body {
   justify-content: center;
   font-size: 1.3rem;
   flex-shrink: 0;
-  transition: transform 0.25s var(--spring);
+  transition: transform 0.25s var(--settle);
 }
 
 .action-sheet-btn:hover .action-sheet-btn-icon-wrap {
@@ -3647,10 +3241,6 @@ body {
 
 .action-sheet-icon-vote {
   background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-}
-
-.action-sheet-icon-recipe {
-  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
 }
 
 /* Text */
@@ -3728,14 +3318,6 @@ body {
 }
 
 /* Recipe button */
-.action-sheet-recipe {
-  border-color: rgba(200, 116, 26, 0.15);
-  background: linear-gradient(135deg, #fffaf5 0%, #fef6ee 100%);
-}
-
-.action-sheet-recipe::before {
-  background: linear-gradient(135deg, #fdf3e6 0%, #fcecd8 100%);
-}
 
 /* Vote success celebration */
 .action-sheet-success {
@@ -3746,38 +3328,12 @@ body {
   padding: 20px 16px 24px;
   position: relative;
   overflow: hidden;
-  animation: successFadeIn 0.3s var(--smooth) both;
+  animation: successFadeIn 0.2s var(--smooth) both;
 }
 
 @keyframes successFadeIn {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }
-}
-
-.vote-celebration {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.celebration-emoji {
-  position: absolute;
-  font-size: 1.4rem;
-  animation: emojiFloat 1.4s var(--smooth) both;
-  opacity: 0;
-}
-
-.celebration-1 { left: 15%; top: 60%; animation-delay: 0s; }
-.celebration-2 { right: 18%; top: 50%; animation-delay: 0.1s; }
-.celebration-3 { left: 30%; top: 70%; animation-delay: 0.15s; }
-.celebration-4 { right: 30%; top: 65%; animation-delay: 0.2s; }
-.celebration-5 { left: 50%; top: 55%; animation-delay: 0.08s; transform: translateX(-50%); }
-
-@keyframes emojiFloat {
-  0%   { opacity: 0; transform: translateY(10px) scale(0.5); }
-  20%  { opacity: 1; transform: translateY(-20px) scale(1.1); }
-  60%  { opacity: 1; transform: translateY(-40px) scale(1); }
-  100% { opacity: 0; transform: translateY(-65px) scale(0.7); }
 }
 
 .vote-success-check {
@@ -3790,16 +3346,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: checkPop 0.5s var(--spring) both;
+  animation: checkPop 0.24s var(--settle) both;
   box-shadow: 0 4px 20px rgba(74, 158, 85, 0.3);
   position: relative;
   z-index: 1;
 }
 
 @keyframes checkPop {
-  0%   { transform: scale(0); opacity: 0; }
-  60%  { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* The head-count on a card ticks when it changes: the new number slides up
+   into place. FoodCard keys the number on its value, so it runs per change. */
+@keyframes countTick {
+  from { transform: translateY(45%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.vote-count {
+  display: inline-block;
+  animation: countTick 180ms var(--settle) both;
 }
 
 .vote-success-text {
@@ -3808,7 +3375,7 @@ body {
   color: var(--text-primary);
   position: relative;
   z-index: 1;
-  animation: successFadeIn 0.4s var(--smooth) 0.15s both;
+  animation: successFadeIn 0.2s var(--smooth) 0.06s both;
 }
 
 .vote-success-sub {
@@ -3817,7 +3384,7 @@ body {
   color: var(--accent-orange);
   position: relative;
   z-index: 1;
-  animation: successFadeIn 0.4s var(--smooth) 0.25s both;
+  animation: successFadeIn 0.2s var(--smooth) 0.1s both;
 }
 
 /* Voting in progress state */
@@ -3826,703 +3393,11 @@ body {
   cursor: wait;
 }
 
-.action-sheet-vote.voting .action-sheet-icon-vote {
-  animation: votePulse 0.8s ease infinite;
-}
-
-@keyframes votePulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(0.92); }
-}
-
-
-
 @media (prefers-reduced-motion: reduce) {
   .action-sheet { animation: none; }
   .action-sheet-img { animation: none; }
   .action-sheet-header { animation: none; }
   .action-sheet-actions { animation: none; }
-}
-
-/* ─── Recipe Modal Overlay ─── */
-.recipe-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(26, 21, 17, 0.45);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  z-index: var(--z-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-/* ─── Recipe Modal Container ─── */
-.recipe-modal {
-  background: var(--card-white);
-  border-radius: 24px;
-  max-width: 680px;
-  width: 100%;
-  max-height: 85vh;
-  overflow-y: auto;
-  position: relative;
-  box-shadow:
-    0 32px 64px rgba(26, 21, 17, 0.18),
-    0 4px 16px rgba(26, 21, 17, 0.06);
-}
-
-/* Hide scrollbar on recipe modal */
-.recipe-modal {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.recipe-modal::-webkit-scrollbar {
-  display: none;
-}
-
-.recipe-close {
-  position: sticky;
-  top: 12px;
-  float: right;
-  margin-right: 12px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--bg-cream);
-  border: 1px solid var(--border-light);
-  color: var(--text-secondary);
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  z-index: 10;
-  line-height: 1;
-}
-
-.recipe-close:hover {
-  background: var(--text-primary);
-  border-color: var(--text-primary);
-  color: white;
-}
-
-/* ─── Recipe Header ─── */
-.recipe-header {
-  padding: 32px 32px 0;
-  text-align: left;
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 20px;
-  margin-bottom: 0;
-}
-
-.recipe-canteen {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--accent-orange);
-}
-
-.recipe-dish-name {
-  font-size: clamp(20px, 3.5vw, 24px);
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.2;
-  margin-top: 6px;
-  letter-spacing: -0.3px;
-}
-
-/* ─── Recipe Meta ─── */
-.recipe-meta {
-  display: flex;
-  gap: 0;
-  padding: 0;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.recipe-meta > span {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 14px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-right: 1px solid var(--border-light);
-}
-
-.recipe-meta > span:last-child {
-  border-right: none;
-}
-
-.recipe-meta-servings {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.recipe-servings-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border-light);
-  background: var(--card-white);
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  line-height: 1;
-  padding: 0;
-}
-
-.recipe-servings-btn:hover {
-  background: var(--accent-orange);
-  border-color: var(--accent-orange);
-  color: white;
-}
-
-.recipe-servings-btn:active {
-  transform: scale(0.9);
-}
-
-.recipe-servings-value {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--text-primary);
-  min-width: 20px;
-  text-align: center;
-}
-
-.recipe-servings-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-left: 2px;
-}
-
-/* ─── Recipe Content ─── */
-.recipe-content {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ─── Ingredients ─── */
-.recipe-ingredients {
-  padding: 24px 32px;
-  background: var(--bg-cream);
-  border-bottom: 1px solid var(--border-light);
-}
-
-.recipe-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: var(--text-muted);
-  margin-bottom: 14px;
-}
-
-.recipe-ingredient-list {
-  list-style: none;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.recipe-ingredient-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13.5px;
-  line-height: 1.3;
-  padding: 8px 12px 8px 8px;
-  border-radius: 14px;
-  background: var(--card-white);
-  border: 1px solid var(--border-light);
-  animation: recipeReveal 0.4s var(--smooth) both;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.recipe-ingredient-item:hover {
-  box-shadow: 0 2px 12px rgba(200, 116, 26, 0.1);
-  transform: translateY(-1px);
-}
-
-@keyframes recipeReveal {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.recipe-ingredient-img-wrap {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-
-.recipe-ingredient-letter {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  font-weight: 800;
-  color: white;
-  border-radius: inherit;
-}
-
-.has-img .recipe-ingredient-letter {
-  display: none;
-}
-
-.recipe-ingredient-img {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  position: relative;
-  z-index: 1;
-}
-
-.recipe-ingredient-details {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.recipe-ingredient-name {
-  color: var(--text-primary);
-  font-weight: 600;
-  font-size: 13px;
-  line-height: 1.3;
-}
-
-.recipe-ingredient-amount {
-  font-weight: 700;
-  color: var(--accent-orange);
-  font-size: 11.5px;
-  white-space: nowrap;
-  letter-spacing: 0.2px;
-}
-
-/* ─── Steps ─── */
-.recipe-steps {
-  padding: 24px 32px 28px;
-}
-
-.recipe-step-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.recipe-step-item {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border-light);
-  animation: recipeReveal 0.35s var(--smooth) both;
-}
-
-.recipe-step-item:last-child {
-  border-bottom: none;
-}
-
-.recipe-step-number {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--bg-cream);
-  border: 1.5px solid var(--border-light);
-  color: var(--accent-orange);
-  font-size: 12px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1px;
-}
-
-.recipe-step-text {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-primary);
-  font-weight: 400;
-}
-
-/* ─── Recipe Tip ─── */
-.recipe-tip {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 12px 14px;
-  background: rgba(74, 158, 85, 0.06);
-  border: 1px solid rgba(74, 158, 85, 0.15);
-  border-radius: 12px;
-}
-
-.recipe-tip-icon {
-  font-size: 14px;
-  flex-shrink: 0;
-  line-height: 1.4;
-}
-
-.recipe-tip-text {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* ─── Recipe Loading ─── */
-.recipe-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 64px 32px;
-  gap: 20px;
-}
-
-.recipe-loading-emoji {
-  font-size: 40px;
-  animation: recipePulse 1.6s ease-in-out infinite;
-}
-
-@keyframes recipePulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50%      { transform: scale(1.08); opacity: 0.7; }
-}
-
-.recipe-loading-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.2px;
-}
-
-/* ─── Recipe Error ─── */
-.recipe-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 48px 32px;
-  gap: 14px;
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.recipe-retry-btn {
-  padding: 10px 24px;
-  border: 1.5px solid var(--accent-orange);
-  border-radius: 50px;
-  background: transparent;
-  color: var(--accent-orange);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.recipe-retry-btn:hover {
-  background: var(--accent-orange);
-  color: white;
-}
-
-/* ─── Recipe Mobile ─── */
-@media (max-width: 768px) {
-  .recipe-overlay {
-    padding: 0;
-    align-items: flex-end;
-  }
-
-  .recipe-modal {
-    border-radius: 20px 20px 0 0;
-    max-height: 90vh;
-    max-width: 100%;
-  }
-
-  .recipe-header {
-    padding: 24px 20px 16px;
-  }
-
-  .recipe-ingredients {
-    padding: 18px 20px;
-  }
-
-  .recipe-ingredient-list {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-
-  .recipe-ingredient-img-wrap {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-  }
-
-  .recipe-ingredient-img {
-    width: 30px;
-    height: 30px;
-  }
-
-  .recipe-steps {
-    padding: 18px 20px 24px;
-  }
-
-  .recipe-meta > span {
-    padding: 10px 8px;
-    font-size: 12px;
-  }
-
-
-  .recipe-step-text {
-    font-size: 13.5px;
-  }
-
-  .recipe-ingredient-item {
-    font-size: 13px;
-    padding: 6px 10px 6px 6px;
-    border-radius: 12px;
-  }
-
-  .recipe-close {
-    margin-right: 8px;
-  }
-}
-
-/* ─── Recipe Shopping Divider ─── */
-.recipe-shop-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 20px 0 6px;
-  animation: recipeReveal 0.4s var(--smooth) both;
-}
-
-.recipe-shop-divider::before,
-.recipe-shop-divider::after {
-  content: "";
-  flex: 1;
-  height: 0;
-  border-top: 1.5px dashed var(--border-light);
-}
-
-.shop-divider-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--text-muted);
-  opacity: 0.6;
-  flex-shrink: 0;
-  padding: 0 2px;
-}
-
-/* ─── Recipe Shopping Cards ─── */
-.recipe-shop-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 18px;
-  animation: recipeReveal 0.4s var(--smooth) both;
-}
-
-.shop-card {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 13px;
-  border-radius: 14px;
-  border: 1px solid var(--border-light);
-  background: var(--card-white);
-  cursor: pointer;
-  transition: all 0.25s var(--smooth);
-  text-align: left;
-  position: relative;
-  overflow: hidden;
-}
-
-.shop-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
-.shop-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px var(--shadow-medium);
-}
-
-.shop-card:active {
-  transform: scale(0.97);
-  transition-duration: 0.08s;
-}
-
-/* ─── Card icons ─── */
-.shop-card-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  transition: transform 0.3s var(--spring);
-}
-
-.shop-card:hover .shop-card-icon {
-  transform: scale(1.1) rotate(-3deg);
-}
-
-/* Meny icon — checkmark in green circle */
-.shop-icon-meny {
-  background: linear-gradient(140deg, #d4edda 0%, #b8dfca 100%);
-}
-
-.shop-icon-check {
-  width: 12px;
-  height: 7px;
-  border-left: 2.5px solid #2d6a3f;
-  border-bottom: 2.5px solid #2d6a3f;
-  transform: rotate(-45deg);
-  margin-top: -2px;
-}
-
-/* Deals icon — price tag in amber circle */
-.shop-icon-deals {
-  background: linear-gradient(140deg, #fde8cd 0%, #f5d5a8 100%);
-}
-
-.shop-icon-tag {
-  width: 11px;
-  height: 11px;
-  border: 2.5px solid var(--accent-orange);
-  border-radius: 2px 6px 2px 2px;
-  transform: rotate(45deg);
-  position: relative;
-}
-
-.shop-icon-tag::after {
-  content: "";
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--accent-orange);
-}
-
-/* ─── Card text ─── */
-.shop-card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-}
-
-.shop-card-label {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.3;
-}
-
-.shop-card-sub {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--text-muted);
-  line-height: 1.3;
-}
-
-/* ─── Meny card accent ─── */
-.shop-card-meny {
-  border-color: rgba(45, 106, 63, 0.15);
-}
-
-.shop-card-meny::after {
-  background: linear-gradient(135deg, rgba(45, 106, 63, 0.04) 0%, transparent 60%);
-}
-
-.shop-card-meny:hover {
-  border-color: rgba(45, 106, 63, 0.3);
-  box-shadow: 0 4px 16px rgba(45, 106, 63, 0.1);
-}
-
-.shop-card-meny:hover::after {
-  opacity: 1;
-}
-
-.shop-card-meny .shop-card-label {
-  color: #2a5f38;
-}
-
-/* ─── Deals card accent ─── */
-.shop-card-deals::after {
-  background: linear-gradient(135deg, rgba(200, 116, 26, 0.04) 0%, transparent 60%);
-}
-
-.shop-card-deals:hover {
-  border-color: rgba(200, 116, 26, 0.25);
-  box-shadow: 0 4px 16px rgba(200, 116, 26, 0.08);
-}
-
-.shop-card-deals:hover::after {
-  opacity: 1;
-}
-
-.shop-card-deals:hover .shop-card-label {
-  color: var(--accent-orange);
-}
-
-/* ─── Deals Loading Cart Animation ─── */
-.deals-loading-cart {
-  animation: dealsCartBounce 1.6s ease-in-out infinite !important;
-}
-
-@keyframes dealsCartBounce {
-  0%, 100% { transform: scale(1) translateX(0); }
-  25%      { transform: scale(1.05) translateX(4px); }
-  50%      { transform: scale(1.08) translateX(0); }
-  75%      { transform: scale(1.05) translateX(-4px); }
-}
-
-/* ─── Meny Loading Animation ─── */
-.meny-loading-bag {
-  animation: menyBagPulse 1.6s ease-in-out infinite !important;
-}
-
-@keyframes menyBagPulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.1) rotate(3deg); }
 }
 
 /* ─── Skeleton Loading Cards ─── */
@@ -4567,11 +3442,6 @@ body {
   animation: none;
 }
 
-/* Desktop only — cardContentEnter lives behind `min-width: 769px`. */
-.skeleton-card .card-content {
-  animation: none;
-}
-
 /* `display`, not `animation: none`. The halo is the one thing here that
    animates `filter: blur()`, which is not compositor-only, and `will-change`
    on it promotes a layer whether or not anything is running — six of them,
@@ -4579,11 +3449,6 @@ body {
    has no plate to glow behind. The phone block already does this. */
 .skeleton-card .card-image-circle::after {
   display: none;
-}
-
-@keyframes skeletonShimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
 }
 
 /* Sits inside the real text element it stands in for, so it inherits that
@@ -4601,7 +3466,6 @@ body {
     rgba(255, 220, 185, 0.35) 100%
   );
   background-size: 200% 100%;
-  animation: skeletonShimmer 1.8s ease-in-out infinite;
 }
 
 .skeleton-line-canteen    { width: 96px; height: 0.85em; }
@@ -4610,16 +3474,6 @@ body {
 .skeleton-line-label      { width: 72px; height: 0.9em; }
 .skeleton-line-side       { width: 100%; height: 0.95em; }
 .skeleton-line-side-short { width: 62%; }
-
-/* ─── Swipe Gesture Hint ─── */
-
-@keyframes swipeHintPulse {
-  0%   { opacity: 0; transform: translateY(-50%) scale(0.8); }
-  20%  { opacity: 1; transform: translateY(-50%) scale(1.0); }
-  50%  { opacity: 1; transform: translateY(-50%) scale(1.15); }
-  70%  { opacity: 1; transform: translateY(-50%) scale(1.0); }
-  100% { opacity: 0; transform: translateY(-50%) scale(0.8); }
-}
 
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
@@ -4639,49 +3493,29 @@ body {
   .skeleton-line,
   .skeleton-card .image-shimmer {
     background: rgba(233, 199, 160, 0.45) !important;
-    animation: skeletonPulse 2.4s ease-in-out infinite !important;
+  }
+
+  /* Reduced motion means no travel, not no feedback. These are opacity and
+     colour only: the arriving day and the viewers fade, and a vote still
+     visibly registers. */
+  .day-panel:not(.day-panel-initial):not(.day-panel-neighbor-left):not(.day-panel-neighbor-right) {
+    animation: dayFade 120ms ease-out !important;
+  }
+
+  .info-overlay,
+  .lightbox-overlay {
+    animation: overlayFadeIn 150ms ease-out both !important;
+  }
+
+  .lightbox-overlay.is-closing {
+    animation: overlayFadeOut 150ms ease-in both !important;
+  }
+
+  .action-sheet-btn,
+  .action-sheet-btn-icon-wrap {
+    transition: background-color 150ms ease-out, color 150ms ease-out !important;
   }
 }
-
-@keyframes skeletonPulse {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 1; }
-}
-
-/* ─── Share Results Button ─── */
-.share-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 12px auto 0;
-  padding: 10px 20px;
-  border-radius: 50px;
-  border: 1.5px solid rgba(200, 116, 26, 0.3);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.share-btn:hover:not(.disabled) {
-  border-color: rgba(200, 116, 26, 0.6);
-  color: var(--text-primary);
-  background: rgba(200, 116, 26, 0.06);
-}
-
-.share-btn.sent {
-  border-color: #34c759;
-  color: #34c759;
-  background: rgba(52, 199, 89, 0.08);
-}
-
-.share-btn.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 
 /* ─── Phone: no full-screen blurs ───────────────────────────────────────────
    A backdrop-filter over a full viewport is one of the most expensive things
@@ -4705,12 +3539,6 @@ body {
 
   .info-overlay {
     background: rgba(0, 0, 0, 0.62);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .recipe-overlay {
-    background: rgba(26, 21, 17, 0.74);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
