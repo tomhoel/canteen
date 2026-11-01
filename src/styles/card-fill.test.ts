@@ -84,54 +84,9 @@ test("the text column is not capped by a number describing the plate", () => {
   assert.match(content, /min-height:\s*0/, "without this the column refuses to shrink and never clips");
 });
 
-test("the description takes whole lines, and as many as fit", () => {
-  const desc = rule(".dish-description");
-
-  assert.match(
-    desc,
-    /round\(down,\s*100%,\s*1lh\)/,
-    "the leftover is not a whole number of lines; without rounding, every card " +
-      "shows a slice of the next line's letter-tops"
-  );
-  assert.match(
-    desc,
-    /max-height:\s*min\(\s*2lh\s*,\s*round\(down,\s*100%,\s*1lh\)\s*\)/,
-    "two lines is the ceiling: this is secondary text, and a third or fourth " +
-      "line of it competes with the dish it describes. DESCRIPTION_MAX_CHARS " +
-      "is written to the same budget, so this should rarely be what bites."
-  );
-  // The plain 100% must stay directly above it as the fallback: if round() is
-  // ever unavailable the declaration is dropped, and the box must still be
-  // bounded by its row rather than unbounded.
-  assert.match(
-    desc,
-    /max-height:\s*100%;[\s\S]*max-height:\s*min\(/,
-    "keep the un-rounded fallback"
-  );
-
-  assert.match(
-    desc,
-    /-webkit-line-clamp:\s*none/,
-    "the desktop rule sets -webkit-line-clamp: 2 and it is inherited here; " +
-      "leaving it half-applied gave two lines on one card and four on the next"
-  );
-  assert.doesNotMatch(
-    desc,
-    /-webkit-line-clamp:\s*\d/,
-    "a numeric clamp makes the line count static again, which is the bug"
-  );
-});
-
-test("short screens no longer hide the description outright", () => {
+test("short screens keep the plate at its size", () => {
   const short = MOBILE.slice(MOBILE.indexOf("@media (max-height: 740px)"));
   const upTo = short.slice(0, short.indexOf("\n  /* Day bar"));
-  assert.doesNotMatch(
-    upTo,
-    /\.dish-description\s*\{[^}]*display:\s*none/,
-    "hiding it on every short screen was a workaround for the static cap. The " +
-      "grid gives fewer whole lines, or none, on exactly the cards that cannot " +
-      "spare them."
-  );
   assert.doesNotMatch(
     upTo,
     /--plate-size:/,

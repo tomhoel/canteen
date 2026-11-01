@@ -2,7 +2,6 @@ import { useState, useLayoutEffect, useRef, memo } from "react";
 import { Users, Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
-import { Wrapper3D } from "@/components/ui/3d-wrapper";
 import { markImageCached } from "@/lib/imageCache";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 
@@ -195,7 +194,7 @@ const FoodCard = memo(function FoodCard({
   const isLeader = voteCount > 0 && voteCount === maxVotes;
 
   return (
-    <Wrapper3D maxRotation={6} translateZ={18} className="food-card-3d-wrapper">
+    <div className="food-card-3d-wrapper">
     <article
       className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
       style={
@@ -358,7 +357,7 @@ const FoodCard = memo(function FoodCard({
         </div>
       </div>
     </article>
-    </Wrapper3D>
+    </div>
   );
 });
 
