@@ -26,6 +26,8 @@ const EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 /** Open. Closing is quicker (CLOSE_MS): leaving should never feel like waiting. */
 const DUR_MS = 300;
 const CLOSE_MS = 220;
+/** Reduced motion: no travel, the sheet fades in and out (globals.css). */
+const REDUCED_MS = 150;
 const DISMISS_FRACTION = 0.25;
 const DISMISS_VELOCITY = 0.5;
 
@@ -117,14 +119,14 @@ export function SheetContent({
       return;
     }
     setShown(false);
-    // Under `prefers-reduced-motion` globals.css applies `* { transition: none
-    // !important }`, which beats even an inline style. No transition means no
-    // `transitionend`, so the timer below was the ONLY unmount path for those
-    // users — leaving a full-screen fixed layer over the app for 460ms after
-    // every single close. Nothing is animating; unmount now.
+    // Under `prefers-reduced-motion` the sheet does not slide: globals.css
+    // replaces its transitions with a short opacity fade, so it waits for
+    // that and no longer.
     if (prefersReducedMotion()) {
-      setRendered(false);
-      return;
+      closeTimer.current = setTimeout(() => setRendered(false), REDUCED_MS);
+      return () => {
+        if (closeTimer.current) clearTimeout(closeTimer.current);
+      };
     }
     // The timer is the ONLY unmount path, deliberately.
     //
@@ -351,6 +353,8 @@ export function SheetContent({
   if (typeof document === "undefined" || !rendered) return null;
 
   const ms = shown ? DUR_MS : CLOSE_MS;
+  // Read per render, like isDesktop: no travel, only the fade.
+  const still = prefersReducedMotion();
   const transition = `transform ${ms}ms ${EASE}, opacity ${ms}ms ${EASE}`;
 
   return createPortal(
@@ -381,6 +385,7 @@ export function SheetContent({
       <div
         role="presentation"
         aria-hidden="true"
+        className="native-sheet-backdrop"
         onClick={handleClose}
         style={{
           position: "absolute",
@@ -422,13 +427,13 @@ export function SheetContent({
           // Sliding up from the bottom edge is the phone gesture. A centred
           // card has no edge to come from, so it scales in on the spot.
           transform: isDesktop
-            ? shown
+            ? shown || still
               ? "scale(1)"
               : "scale(0.96)"
-            : shown
+            : shown || still
               ? `translateY(calc(${keyboardInset ? `-${keyboardInset}px` : "0px"} + var(--sheet-drag, 0px)))`
               : "translateY(100%)",
-          opacity: isDesktop ? (shown ? 1 : 0) : 1,
+          opacity: isDesktop || still ? (shown ? 1 : 0) : 1,
           // NO `transition` here — it lives in the `.native-sheet-panel` rule in
           // globals.css, and it has to.
           //

@@ -20,6 +20,8 @@ interface LightboxProps {
 /** Card to viewer, and back. The viewer's panel fades in under the plate. */
 const OPEN_MS = 320;
 const CLOSE_MS = 240;
+/** The viewer's own fade-out, `.lightbox-overlay.is-closing`. */
+const FADE_CLOSE_MS = 180;
 
 export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose, onNavigate, closeRef }: LightboxProps) {
   const touchStartRef = useRef<number | null>(null);
@@ -83,8 +85,10 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
     const dest = current ? cardPlate(current.canteenName) : null;
     if (prefersReducedMotion() || !img || !dest || !current) {
       setClosing(true);
-      // Reduced motion still gets the fade (see .lightbox-overlay.is-closing).
-      setTimeout(onClose, prefersReducedMotion() ? 150 : 0);
+      // No card to fly back to (it scrolled away, or there is no picture): the
+      // viewer just fades out. Reduced motion gets the same fade, a little
+      // shorter (see .lightbox-overlay.is-closing).
+      setTimeout(onClose, prefersReducedMotion() ? 150 : FADE_CLOSE_MS);
       return;
     }
     const src = ghostRef.current?.src || (imgLoaded ? img.currentSrc : current.imagePath) || "";

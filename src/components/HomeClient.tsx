@@ -42,6 +42,9 @@ const Lightbox = lazy(() => import("@/components/Lightbox"));
 const ActionSheet = lazy(() => import("@/components/ActionSheet"));
 const InfoModal = lazy(() => import("@/components/InfoModal"));
 
+/** How long the info panel takes to leave; matches `.info-overlay.is-closing`. */
+const INFO_CLOSE_MS = 180;
+
 export interface HomeClientProps {
   initialMenu: MenuData | null;
   /** The week the server actually served, so the header cannot label it wrong. */
@@ -125,6 +128,26 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   /** False until the first day change, so only the first day on screen plays the opening entrance. */
   const [navigated, setNavigated] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  /**
+   * The info panel leaves the way the other overlays do: it fades and sinks
+   * (INFO_CLOSE_MS) and only then unmounts. Every path out — its own buttons,
+   * Escape and Android back — comes through `closeInfo`, so a second press
+   * during the fade is ignored instead of restarting it.
+   */
+  const [infoClosing, setInfoClosing] = useState(false);
+  const infoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeInfo = useCallback(() => {
+    if (infoCloseTimer.current) return;
+    setInfoClosing(true);
+    infoCloseTimer.current = setTimeout(() => {
+      infoCloseTimer.current = null;
+      setInfoClosing(false);
+      setInfoOpen(false);
+    }, INFO_CLOSE_MS);
+  }, []);
+  useEffect(() => () => {
+    if (infoCloseTimer.current) clearTimeout(infoCloseTimer.current);
+  }, []);
 
 
   // Custom hooks — extracted state management. Everything below reaches voting
@@ -302,14 +325,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    */
   const closeTopmostOverlay = useCallback(() => {
     if (infoOpen) {
-      setInfoOpen(false);
+      closeInfo();
     } else if (lightboxCloseRef.current) {
       lightboxCloseRef.current();
     } else {
       setLightboxIndex(-1);
       setActionSheet((sheet) => ({ ...sheet, isOpen: false }));
     }
-  }, [infoOpen]);
+  }, [infoOpen, closeInfo]);
 
   /**
    * The Android back gesture closes the topmost overlay instead of the app.
@@ -568,7 +591,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
           nobody opens, plus its stylesheet. */}
       {infoOpen && (
         <Suspense fallback={null}>
-          <InfoModal onClose={() => setInfoOpen(false)} />
+          <InfoModal onClose={closeInfo} closing={infoClosing} />
         </Suspense>
       )}
 

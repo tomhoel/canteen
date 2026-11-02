@@ -808,6 +808,11 @@ body {
   text-align: center;
   gap: 12px;
   flex: 1;
+}
+
+/* Part of the opening entrance, like the food cards; a day change to a closed
+   day does not replay it. */
+.day-panel-initial .all-closed-card {
   animation: cardReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -914,12 +919,6 @@ body {
   border-radius: 12px;
   padding: 9px 13px;
   margin: 0 0 10px;
-  animation: bannerSlide 0.3s var(--settle) both;
-}
-
-@keyframes bannerSlide {
-  from { opacity: 0; transform: scaleY(0.6) translateY(-4px); transform-origin: top; }
-  to   { opacity: 1; transform: scaleY(1) translateY(0); }
 }
 
 .stale-banner-icon {
@@ -981,11 +980,6 @@ body {
   position: relative;
   flex-shrink: 0;
   cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.card-image-wrapper:hover {
-  transform: none;
 }
 
 .card-image-circle {
@@ -1212,7 +1206,10 @@ body {
   border-radius: 4px;
   line-height: 1.25;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    color var(--dur-fast) ease-out,
+    background-color var(--dur-fast) ease-out,
+    border-color var(--dur-fast) ease-out;
   user-select: none;
   font-family: var(--font-body, "Outfit", sans-serif);
 }
@@ -1428,14 +1425,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease, transform 0.25s ease;
+  transition: background-color var(--dur-fast) ease-out;
   z-index: 10;
   line-height: 1;
 }
 
 .lightbox-close:hover {
   background: rgba(0, 0, 0, 0.14);
-  transform: rotate(90deg);
 }
 
 .lightbox-image-container {
@@ -1510,26 +1506,6 @@ body {
   line-height: 1.3;
 }
 
-/* ─── YOLO randomiser — second-tap of Today on the day-bar ─── */
-/* Two states applied to .food-card by HomeClient:
-     yolo-active  — currently spotlit during the cycle (subtle ring only)
-     yolo-winner  — the chosen one (rotating conic-gradient ribbon)
-   Non-active cards stay completely untouched.
-
-   Crucially neither state writes to `transform` or `animation` on the
-   .food-card itself, so the base cardReveal entry animation is
-   undisturbed. That's what kept causing the entry effect to replay when
-   the winner class was removed. */
-
-/* The angle that drives the rotating comet on the winner card. Registered
-   so the conic-gradient's `from <angle>` interpolates smoothly between
-   keyframes instead of snapping. */
-@property --yolo-comet-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
 /* How far the finger has pulled the sheet down. ui/sheet.tsx writes it on every
    pointermove of a drag-to-dismiss.
 
@@ -1547,34 +1523,6 @@ body {
   initial-value: 0px;
   inherits: false;
 }
-
-/* Cycling state: a single solid 3px warm ring at the card edge.
-   No glow, no scale, no plate change. Discrete jump from card to card
-   IS the motion of the spin. */
-
-/* Winner: a faint static warm ring at the edge, with a single bright
-   warm arc ('comet') slowly traveling around the perimeter — like light
-   moving across a polished trophy. Plate is left untouched. */
-
-/* The comet itself. ::before pseudo-element sits 5px outside the card,
-   with mask-composite carving out the centre so only the 5px ring is
-   rendered. Conic-gradient is mostly transparent except for a ~120°
-   bright arc that fades up to nearly white at its peak and tails off
-   into transparency on either side. The `from <angle>` rotates over
-   6s — readable but not anxious. */
-
-/* Shockwave ring on the moment the winner state activates. ::after pseudo
-   pops in as a thin warm ring at the card's edge, then expands outward
-   to scale 1.10 while fading to 0 over 750ms. One-shot via forwards —
-   plays once when .yolo-winner is added, then stays at opacity 0. */
-
-/* Title shimmer on the winner card — the dish name fills with a warm
-   gold gradient that slowly slides across the text. background-clip:
-   text + transparent fill means the gradient is only visible inside the
-   text shape, and animating background-position 0% → 100% looks like
-   light catching the letters. Plus a one-shot text-shadow glow burst
-   that fires the moment the winner state activates, then fades back to
-   no shadow as the persistent shimmer takes over. */
 
 /* The static shell in index.html carries a copy of this bar so the page is not
    missing a chunk of itself before React boots. On mobile that copy is exactly
@@ -1669,8 +1617,8 @@ body {
      transition cannot run on an element's first style. That is what
      `initial={false}` bought. */
   transition:
-    transform 0.34s cubic-bezier(0.23, 0.25, 0.1, 1),
-    width 0.34s cubic-bezier(0.23, 0.25, 0.1, 1);
+    transform 300ms var(--settle),
+    width 300ms var(--settle);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1700,11 +1648,13 @@ body {
   padding: 10px 22px;
   border-radius: 16px;
   cursor: pointer;
+  /* The label's colour changes as the board sets off (the dock previews the
+     day it is heading to) and arrives with the pill, on the board's curve. */
   transition:
-    background 0.25s ease,
-    color 0.2s ease,
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+    background-color var(--dur-fast) ease-out,
+    color 240ms var(--settle),
+    border-color var(--dur-fast) ease-out,
+    box-shadow var(--dur-fast) ease-out;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2599,10 +2549,22 @@ body {
   animation: modalPanelIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Closing: the plate flies home on its own layer while the viewer fades out. */
-.lightbox-overlay.is-closing {
-  animation: overlayFadeOut 0.2s ease-in both;
+/* Leaving is quicker than arriving, and the panel goes back the way it came.
+   The lightbox's plate flies home on its own layer while the viewer fades. */
+@keyframes modalPanelOut {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(8px); }
+}
+
+.lightbox-overlay.is-closing,
+.info-overlay.is-closing {
+  animation: overlayFadeOut 0.18s ease-in both;
   pointer-events: none;
+}
+
+.info-modal.is-closing,
+.lightbox-content.is-closing {
+  animation: modalPanelOut 0.18s ease-in both;
 }
 
 .info-overlay {
@@ -2986,14 +2948,15 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 10;
-  transition: all 0.2s ease;
+  transition:
+    background-color var(--dur-fast) ease-out,
+    box-shadow var(--dur-fast) ease-out;
   box-shadow: 0 2px 8px var(--shadow-soft);
   line-height: 1;
 }
 
 .lightbox-nav:hover {
   background: white;
-  transform: translateY(-50%) scale(1.08);
   box-shadow: 0 4px 12px var(--shadow-medium);
 }
 
@@ -3018,7 +2981,9 @@ body {
   border-radius: 50%;
   background: var(--border-light);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s var(--settle),
+    transform 0.2s var(--settle);
 }
 
 .lightbox-dot.active {
@@ -3101,12 +3066,11 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s var(--smooth);
+  transition: background-color var(--dur-fast) ease-out;
 }
 
 .action-sheet-close:hover {
-  background: rgba(0, 0, 0, 0.4);
-  transform: scale(1.08);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 /* Hero image */
@@ -3191,7 +3155,11 @@ body {
   border-radius: 16px;
   background: var(--card-white);
   cursor: pointer;
-  transition: all 0.2s var(--smooth);
+  transition:
+    background-color 0.2s var(--smooth),
+    border-color 0.2s var(--smooth),
+    box-shadow 0.2s var(--smooth),
+    transform 0.2s var(--settle);
   text-align: left;
   position: relative;
   overflow: hidden;
@@ -3232,11 +3200,6 @@ body {
   justify-content: center;
   font-size: 1.3rem;
   flex-shrink: 0;
-  transition: transform 0.25s var(--settle);
-}
-
-.action-sheet-btn:hover .action-sheet-btn-icon-wrap {
-  transform: scale(1.08);
 }
 
 .action-sheet-icon-vote {
@@ -3304,10 +3267,6 @@ body {
   transform: none;
 }
 
-.action-sheet-vote.voted:hover .action-sheet-btn-icon-wrap {
-  transform: none;
-}
-
 .action-sheet-vote.voted .action-sheet-icon-vote {
   background: var(--border-light);
 }
@@ -3332,8 +3291,8 @@ body {
 }
 
 @keyframes successFadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
 }
 
 .vote-success-check {
@@ -3507,13 +3466,19 @@ body {
     animation: overlayFadeIn 150ms ease-out both !important;
   }
 
-  .lightbox-overlay.is-closing {
+  .lightbox-overlay.is-closing,
+  .info-overlay.is-closing {
     animation: overlayFadeOut 150ms ease-in both !important;
   }
 
-  .action-sheet-btn,
-  .action-sheet-btn-icon-wrap {
+  .action-sheet-btn {
     transition: background-color 150ms ease-out, color 150ms ease-out !important;
+  }
+
+  /* The sheet appears and leaves in place (ui/sheet.tsx drops the slide). */
+  .native-sheet-panel,
+  .native-sheet-backdrop {
+    transition: opacity 150ms ease-out !important;
   }
 }
 
