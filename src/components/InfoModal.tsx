@@ -14,20 +14,21 @@ import { createPortal } from "react-dom";
  * inert while this is open, and an overlay rendered inside that subtree is made
  * unreachable by the very attribute meant to protect the page behind it.
  *
- * The entrance is CSS (`overlayFadeIn` / `modalPanelIn`); it closes instantly,
- * as the lightbox and week overview already did. Its rules stay in globals.css:
+ * The entrance is CSS (`overlayFadeIn` / `modalPanelIn`), and so is the exit:
+ * HomeClient sets `closing`, the scrim fades and the panel sinks, and then it
+ * unmounts. Its rules stay in globals.css:
  * moving them would save about a kilobyte gzipped and means cutting blocks out
  * of shared media queries, which nothing in the test suite would catch.
  */
-export default function InfoModal({ onClose }: { onClose: () => void }) {
+export default function InfoModal({ onClose, closing = false }: { onClose: () => void; closing?: boolean }) {
   return createPortal(
     <div
-      className="info-overlay"
+      className={`info-overlay${closing ? " is-closing" : ""}`}
       role="presentation"
       onClick={() => onClose()}
     >
       <div
-        className="info-modal"
+        className={`info-modal${closing ? " is-closing" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="info-title-id"

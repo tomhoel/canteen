@@ -57,7 +57,9 @@ Two redesigns were mocked and rejected ("keep the design"). They are not part of
 - **Opening.** Cards rise 12 px and fade in, 50 ms stagger, 300 ms each, once per open. No scale.
 - **Plate view.** FLIP: measure the card plate, start the full-size plate at that rect, animate to centre (320 ms). The backdrop fades (200 ms). Closing reverses (240 ms).
 - **Sheet and vote.** The sheet slides up (300 ms) and down (220 ms). The vote button presses (100 ms) and confirms with a check, with no emoji burst.
-- **Reduced motion.** No spatial movement. The day change is a 120 ms crossfade and the plate view fades. Feedback colour changes remain.
+- **Info panel.** Rises 12 px and fades in (260 ms); leaves by fading and sinking 8 px (180 ms), like the plate view's panel.
+- **Hover and press.** Colour, shadow and a small press only. No spins, no growing icons, no `transition: all`, and nothing that scales text.
+- **Reduced motion.** No spatial movement. The day change is a 120 ms crossfade, and the plate view, sheet and info panel fade (150 ms). Feedback colour changes remain.
 
 ## Plan
 
