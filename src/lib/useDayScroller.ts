@@ -123,6 +123,7 @@ export function useDayScroller({ selectedDay, onSelectDay, onPreviewDay, ready }
         board.style.transform = "";
         el.scrollLeft = target;
         el.classList.remove("is-gliding");
+        board.classList.remove("is-blurring");
       };
       const onEnd = (e: TransitionEvent) => {
         if (e.target === board && e.propertyName === "transform") land();
@@ -141,9 +142,12 @@ export function useDayScroller({ selectedDay, onSelectDay, onPreviewDay, ready }
       // See `.is-gliding` in the CSS: no snapping, and room so the scroll
       // position is not clamped while the board is moved by transform.
       el.classList.add("is-gliding");
+      // The motion blur (`.is-blurring`) restarts with every glide, re-aims included.
+      board.classList.remove("is-blurring");
       board.style.transition = "none";
       board.style.transform = `translate3d(${base - shown}px, 0, 0)`;
       void board.offsetWidth;
+      board.classList.add("is-blurring");
       // The pill's own timing and curve (--glide-* in the CSS), so the two move as one.
       board.style.transition = "transform var(--glide-ms) var(--glide-ease)";
       board.style.transform = `translate3d(${base - target}px, 0, 0)`;

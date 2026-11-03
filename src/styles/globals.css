@@ -448,6 +448,40 @@ body {
   scroll-snap-type: none;
 }
 
+/* Motion blur on a glide (dock, keys, trackpad; never under a finger). A full
+   day's width in --glide-ms is 100+ px a frame at its fastest, and the eye
+   sees that as separate jumps; a blur that follows the speed smears them into
+   motion. It rises with the curve's fast early stretch, is gone before the
+   landing, and is a CSS animation so the compositor runs it with the glide. */
+.cards-board.is-blurring {
+  animation: boardMotionBlur var(--glide-ms) linear;
+}
+
+/* Literal values, not var(): an animation whose values need resolving can
+   fall off the compositor and onto the main thread. */
+@keyframes boardMotionBlur {
+  0%   { filter: blur(0); }
+  18%  { filter: blur(5px); }
+  45%  { filter: blur(2px); }
+  80%  { filter: blur(0); }
+  100% { filter: blur(0); }
+}
+
+/* A phone card is narrower and nearer the eye: less blur reads the same. */
+@keyframes boardMotionBlurPhone {
+  0%   { filter: blur(0); }
+  18%  { filter: blur(3px); }
+  45%  { filter: blur(1.2px); }
+  80%  { filter: blur(0); }
+  100% { filter: blur(0); }
+}
+
+@media (max-width: 768px) {
+  .cards-board.is-blurring {
+    animation-name: boardMotionBlurPhone;
+  }
+}
+
 .cards-track.is-gliding .cards-board::after {
   content: "";
   flex: 0 0 400%;
