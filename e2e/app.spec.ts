@@ -4,9 +4,6 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-/** The day on screen. The whole week sits on the board (a native scroller); the other days are inert. */
-const DAY = ".day-panel:not([inert])";
-
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
 /**
@@ -99,7 +96,7 @@ test("the three cards are the same height and the page does not scroll", async (
   await page.goto("/");
   await loaded(page);
 
-  const heights = await page.$$eval(`${DAY} .food-card`, (cards) =>
+  const heights = await page.$$eval(".food-card", (cards) =>
     cards.map((c) => Math.round(c.getBoundingClientRect().height))
   );
 
@@ -204,11 +201,11 @@ test("an open overlay is usable and the page behind it is not", async ({ page })
  * leaving panel that never unmounts — the exit is driven by a timer, because
  * neither `transitionend` nor a transform change is guaranteed to fire.
  */
-test("a day change settles on one live day, with the week mounted around it", async ({ page }) => {
+test("a day change overlaps two panels and settles back to one", async ({ page }) => {
   await page.goto("/");
   await loaded(page);
 
-  const before = await page.$$eval(DAY, (p) => p.length);
+  const before = await page.$$eval(".day-panel", (p) => p.length);
   expect(before).toBe(1);
 
   // Thursday, unless the app opened on Thursday: clicking the selected day
@@ -216,12 +213,13 @@ test("a day change settles on one live day, with the week mounted around it", as
   const opensOnThursday = (await page.locator(".day-selector button:nth-of-type(4).active").count()) > 0;
   await page.click(`.day-selector button:nth-of-type(${opensOnThursday ? 3 : 4})`);
 
-  // One day on screen afterwards, and nothing left over beyond the two days beside it.
-  await expect.poll(() => page.$$eval(DAY, (p) => p.length), { timeout: 3_000 }).toBe(1);
+  // Both days share the screen for the length of the change.
+  await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 2_000 }).toBe(2);
+  // ...and the leaving one is gone afterwards.
+  await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 3_000 }).toBe(1);
   await settled(page);
-  expect(await page.$$eval(".day-panel", (p) => p.length)).toBe(5);
 
-  const heights = await page.$$eval(`${DAY} .food-card`, (cards) =>
+  const heights = await page.$$eval(".food-card", (cards) =>
     cards.map((c) => Math.round(c.getBoundingClientRect().height))
   );
   expect(heights).toHaveLength(3);
@@ -497,39 +495,42 @@ test("flicking the sheet upward cancels the drag instead of dismissing it", asyn
   ).toHaveCount(1);
 });
 
-test("a finger drags the board natively and it snaps to the next day", async ({ page }) => {
+test("horizontal day swipe displays neighbor panel and settles cleanly on mobile", async ({ page }) => {
   test.skip(test.info().project.name === "desktop", "day swipe gesture is touch-only");
   await page.goto("/");
   await loaded(page);
 
   // Start on Tuesday (day index 1)
   await page.click(".day-selector button:nth-of-type(2)");
-  await expect(page.locator(".day-selector button.active")).toContainText("Tirsdag");
+  await expect.poll(() => page.$$eval(".day-panel", (p) => p.length), { timeout: 3_000 }).toBe(1);
   await settled(page);
 
   const cdp = await page.context().newCDPSession(page);
   const track = (await page.locator(".cards-track").boundingBox())!;
-  const y = track.y + track.height / 2;
-  const scrollLeft = () => page.$eval(".cards-track", (t) => t.scrollLeft);
-  // The dock's glide commits Tuesday as it sets off and hands over to the real
-  // scroll position when it lands; wait for the landing.
-  await expect.poll(scrollLeft, { timeout: 3_000 }).toBeGreaterThan(track.width / 2);
-  const start = await scrollLeft();
+  const startX = track.x + track.width / 2;
+  const startY = track.y + track.height / 2;
 
-  // Drag right, past halfway: Monday comes in from the left.
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 60, y }] });
-  for (let x = 80; x <= 320; x += 20) {
-    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y }] });
-    await page.waitForTimeout(16);
+  // 1. Swipe right (pulling Monday from the left)
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: startX, y: startY }] });
+  for (const dx of [20, 60, 110]) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: startX + dx, y: startY }] });
+    await page.waitForTimeout(20);
   }
-  // The board itself follows the finger: the browser scrolled it.
-  expect(await scrollLeft()).toBeLessThan(start - 100);
 
+  // Both the current and the left-neighbor panels are mounted during the swipe
+  const panelCountDuringSwipe = await page.$$eval(".day-panel", (p) => p.length);
+  expect(panelCountDuringSwipe).toBe(2);
+  const hasLeftNeighbor = await page.locator(".day-panel-neighbor-left").count();
+  expect(hasLeftNeighbor).toBe(1);
+
+  // Release and let it turn to Monday
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(450);
 
-  await expect(page.locator(".day-selector button.active")).toContainText("Mandag", { timeout: 3_000 });
-  await expect.poll(scrollLeft, { timeout: 3_000 }).toBe(0);
-  expect(await page.$$eval(DAY, (p) => p.length)).toBe(1);
+  // Monday should now be active, and panel count settles back to 1
+  const activeBtn = page.locator(".day-selector button.active");
+  await expect(activeBtn).toContainText("Mandag");
+  const panelCountAfter = await page.$$eval(".day-panel", (p) => p.length);
+  expect(panelCountAfter).toBe(1);
 });
-
 

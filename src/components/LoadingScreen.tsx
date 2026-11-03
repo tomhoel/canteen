@@ -69,20 +69,18 @@ export default function LoadingScreen() {
         aria-label={"Laster menyer"}
       >
         {/*
-          `.cards-track > .cards-board` is not decoration. Every sizing rule
-          for a day is scoped as `.cards-board > .cards-animated-wrapper`, the
-          board HomeClient renders; outside it the skeleton row loses its
-          width, gap and (on a phone) its height, and the cards jump when the
-          menu arrives — the jump this component and SkeletonCard exist to
-          prevent. So the loading shell renders the same two wrappers.
+          `.cards-track` is not decoration. Every sizing rule for a day is
+          scoped as `.cards-track > .cards-animated-wrapper`; outside a track
+          the skeleton row loses its width, gap and (on a phone) its height,
+          and the cards jump when the menu arrives — the jump this component
+          and SkeletonCard exist to prevent. HomeClient renders the track, so
+          the loading shell has to as well.
         */}
         <div className="cards-track">
-          <div className="cards-board">
-            <div className="cards-animated-wrapper">
-              {Array.from({ length: CARD_COUNT }, (_, i) => (
-                <SkeletonCard key={i} delay={i * 75} />
-              ))}
-            </div>
+          <div className="cards-animated-wrapper">
+            {Array.from({ length: CARD_COUNT }, (_, i) => (
+              <SkeletonCard key={i} delay={i * 75} />
+            ))}
           </div>
         </div>
       </main>

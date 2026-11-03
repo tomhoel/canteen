@@ -104,12 +104,12 @@ test("the shell reserves a slot for every header button", () => {
   );
 });
 
-test("the skeleton row sits inside .cards-track > .cards-board in both shells", () => {
-  // Every sizing rule for a day is scoped as `.cards-board >
-  // .cards-animated-wrapper`. Outside the board the skeleton row loses its
+test("the skeleton row sits inside .cards-track in both shells", () => {
+  // Every sizing rule for a day is scoped as `.cards-track >
+  // .cards-animated-wrapper`. Outside a track the skeleton row loses its
   // width, gap and (on a phone) its height — the card jump this whole shell
   // exists to avoid.
-  for (const cls of ["cards-track", "cards-board"]) {
+  for (const cls of ["cards-track"]) {
     assert.ok(shellClasses.has(cls), `index.html renders the skeleton row without .${cls}`);
     assert.ok(
       read("src/components/LoadingScreen.tsx").includes(`"${cls}"`),

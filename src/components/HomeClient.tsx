@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCloseRequest";
 import { markImageCached } from "@/lib/imageCache";
@@ -23,7 +23,7 @@ import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import DayPanel from "@/components/DayPanel";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useShellInert } from "@/lib/useShellInert";
-import { useDayScroller } from "@/lib/useDayScroller";
+import { useDaySwipe } from "@/lib/useDaySwipe";
 import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 
 // These only render once the user opens an overlay: the action sheet, the
@@ -115,8 +115,23 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setDishDescriptions(initialDescriptions);
     setDishShortNames(initialShortNames);
   }, [initialMenu, initialOrigins, initialDescriptions, initialShortNames]);
-  /** False until the first day change, so only the first day on screen plays the opening entrance. */
-  const [navigated, setNavigated] = useState(false);
+  /**
+   * The day change, as two panels (the 2026-09-18 motion, see DayPanel).
+   *
+   * `current` is the day on screen and `leaving` is the one still sliding out;
+   * `seq` keys them, so returning to a day that is still leaving gets a new
+   * panel rather than reversing the old one. `swipingNeighbor` is the day a
+   * finger is dragging into view. All share the track's single grid cell.
+   */
+  const [current, setCurrent] = useState({ seq: 0, day: selectedDay });
+  const [leaving, setLeaving] = useState<{ seq: number; day: number; dir: number } | null>(null);
+  const [dayDir, setDayDir] = useState(0);
+  const [swipingNeighbor, setSwipingNeighbor] = useState<{ day: number; position: -1 | 1 } | null>(null);
+  const handleNeighborChange = useCallback((neighbor: { day: number; position: -1 | 1 } | null) => {
+    // A drag that catches a tapped day change mid-slide takes over from it.
+    if (neighbor) setLeaving(null);
+    setSwipingNeighbor(neighbor);
+  }, []);
   const [infoOpen, setInfoOpen] = useState(false);
 
 
@@ -183,12 +198,20 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     }, 200);
   }, []);
 
-  /** The dock shows the day a glide is heading to before it is committed. */
+  /**
+   * Did this day change come from a finger? Then the track already carried the
+   * day across, and the panels must not run their own slide on top of it.
+   * Cleared in the render that consumes it (below), so a later change from the
+   * URL is never mistaken for a swipe.
+   */
+  const [fromSwipe, setFromSwipe] = useState(false);
+  const markSwipe = useCallback(() => setFromSwipe(true), []);
+  /** The dock shows the day a swipe is turning to before it is committed. */
   const [previewDay, setPreviewDay] = useState<number | null>(null);
+  const isSettlingRef = useRef<() => boolean>(() => false);
 
-  /** Commits a day change. useDayScroller calls it once the board comes to rest. */
-  const commitDay = useCallback((i: number) => {
-    setNavigated(true);
+  const handleDaySelect = useCallback((i: number) => {
+    if (isSettlingRef.current()) return;
     setSelectedDay(prev => (i === prev ? prev : i));
     // replaceState, as before: tapping through the weekdays must not stack
     // history entries, or Back walks Friday -> Thursday instead of leaving the
@@ -197,13 +220,18 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setSearchParam("day", DAY_KEYS[i]);
   }, []);
 
-  // Finger, trackpad, dock and keys -> one native scroll of the board. See useDayScroller.
-  const { scrollerRef: trackRef, goToDay: handleDaySelect } = useDayScroller({
+  // A finger or a trackpad -> a day change. See useDaySwipe.
+  const { trackRef, handleWheel, handleTouchStart, handleTouchEnd, isSettling } = useDaySwipe({
+    scrollRef,
     selectedDay,
-    onSelectDay: commitDay,
-    onPreviewDay: setPreviewDay,
+    onSelectDay: handleDaySelect,
+    blocked: anyOverlayOpen,
     ready: menuData !== null,
+    markSwipe,
+    onNeighborChange: handleNeighborChange,
+    onPreviewDay: setPreviewDay,
   });
+  isSettlingRef.current = isSettling;
 
   // Initial data loading + localStorage cleanup
   useEffect(() => {
@@ -480,6 +508,42 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
 
 
 
+  // A swipe's commit lands with the track still displaced; put it back in the
+  // same commit, before paint, so no frame shows the old day recentred.
+  useLayoutEffect(() => {
+    const el = trackRef.current;
+    if (el && el.classList.contains("is-swiping")) {
+      el.style.transition = "";
+      el.style.transform = "";
+      el.classList.remove("is-swiping");
+    }
+  }, [current.seq, trackRef]);
+
+  /*
+    Derive the transition during render, not in an effect: an effect would
+    start it one painted frame late, so the new day would be visible at rest
+    before it slid. The guard makes the re-render terminate.
+
+    Gated on `menuData`: while the menu loads, the day can move (the `?day=`
+    reader, the default-day seed) and that must not mount a second panel for a
+    day that was never on screen.
+  */
+  if (current.day !== selectedDay) {
+    if (!menuData) {
+      setCurrent({ seq: 0, day: selectedDay });
+    } else if (fromSwipe) {
+      // The swipe already carried the neighbour into place: commit without a leaving panel.
+      setFromSwipe(false);
+      setDayDir(0);
+      setCurrent({ seq: current.seq + 1, day: selectedDay });
+    } else {
+      const d = selectedDay > current.day ? 1 : -1;
+      setDayDir(d);
+      setLeaving({ seq: current.seq, day: current.day, dir: d });
+      setCurrent({ seq: current.seq + 1, day: selectedDay });
+    }
+  }
+
   if (!menuData) {
     return <LoadingScreen />;
   }
@@ -504,37 +568,63 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         className="cards-container"
         ref={scrollRef}
         onScroll={handleScroll}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
           <div className="cards-track" ref={trackRef}>
             {/*
-              The day on screen and, while a change is under way, the day it is
-              changing to. Both sit in this element's single grid cell; the
-              neighbour is offset one width plus a gap by its class, and the
-              track's own transform carries both. Keyed by day, so the
-              neighbour becomes the current panel without being remounted.
+              At most three panels in this element's single grid cell: the day
+              leaving, the day on screen, and the day a finger is dragging in.
+              The leaving panel is rendered FIRST: React then appends the
+              arriving one instead of inserting before it, and `insertBefore`
+              would take the leaving node out of the tree and cancel its
+              running transition.
             */}
-            {/*
-              The whole week, side by side: a native snapping scroller, so the
-              browser itself carries the board at the screen's refresh rate.
-              Keyed by day, so nothing remounts when the day changes.
-            */}
-            <div className="cards-board">
-            {DAY_KEYS.map((_, day) => (
+            {leaving && (
               <DayPanel
-                key={`day-${day}`}
-                day={day}
-                data={allDaysData[day] ?? (day === selectedDay ? canteenDayData : [])}
+                key={leaving.seq}
+                day={leaving.day}
+                data={allDaysData[leaving.day] ?? []}
+                phase="exit"
+                dir={leaving.dir}
                 todayIndex={todayIndex}
                 votes={voting.votes}
                 maxVotes={maxVotes}
                 onImageClick={handleImageClick}
                 onCardClick={handleCardClick}
-                inactive={day !== selectedDay}
-                isInitial={day === selectedDay && !navigated}
+                onExited={() => setLeaving(l => (l && l.seq === leaving.seq ? null : l))}
               />
-            ))}
-            </div>
+            )}
+            <DayPanel
+              key={current.seq}
+              day={current.day}
+              data={allDaysData[current.day] ?? canteenDayData}
+              phase={current.seq === 0 ? "static" : "enter"}
+              dir={dayDir}
+              todayIndex={todayIndex}
+              votes={voting.votes}
+              maxVotes={maxVotes}
+              onImageClick={handleImageClick}
+              onCardClick={handleCardClick}
+              isInitial={current.seq === 0}
+            />
+            {swipingNeighbor && (
+              <DayPanel
+                key={`swiping-${swipingNeighbor.day}`}
+                day={swipingNeighbor.day}
+                data={allDaysData[swipingNeighbor.day] ?? []}
+                phase="static"
+                dir={0}
+                todayIndex={todayIndex}
+                votes={voting.votes}
+                maxVotes={maxVotes}
+                onImageClick={handleImageClick}
+                onCardClick={handleCardClick}
+                swipePosition={swipingNeighbor.position}
+              />
+            )}
           </div>
         </ErrorBoundary>
       </main>

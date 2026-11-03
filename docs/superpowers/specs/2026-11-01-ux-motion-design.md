@@ -71,13 +71,12 @@ Two redesigns were mocked and rejected ("keep the design"). They are not part of
 
 The exact timing within the ranges above, how to clean up the CSS, and which dead code beyond the listed files is safe to delete.
 
-## Revision 2026-11-02: the day board is a native scroller
+## Revision 2026-11-03: the day change is the 2026-09-18 motion
 
-Approach 2 shipped and felt choppy on the owner's phone and laptop. Its drag ran on the main thread at the rate the browser delivers touch events (60 Hz on iPhone, and only when nothing else is running), so it could never match the screen, and the release glide did not start at the finger's speed. Approach 3 replaces it:
+Approach 2 shipped and the owner found it choppy (about 10 fps) on phone and laptop. A native scroll-snap board was tried next and also rejected: it did not have the flow. The owner then compared five rebuilt versions from the app's history side by side and picked the 2026-09-18 build (`99a86f7`, "solid 16px-gutter day slide without parallax"). Its motion is now the spec; everything else since (fixed card heights, inline stale tag, plate-only viewer, no blur on moving things) stays.
 
-- `.cards-track` is a horizontal `scroll-snap-type: x mandatory` scroller holding all five days (`scroll-snap-stop: always`, one day per flick). The browser runs the drag, momentum, edge bounce and axis lock on the compositor at the full refresh rate.
-- For a finger, `useDayScroller` only reads the position: it drives the dock highlight and header preview, and commits the day on `scrollend` (or 120 ms of quiet).
-- The dock, arrow keys and trackpad do not use the browser's smooth scroll: measured at 880 ms for one desktop day, nearly still for its first 150 ms, and keys pressed during it were lost. They glide `.cards-board` by a CSS transform instead, on the dock pill's own timing and curve (`--glide-ms: 340ms`, `--glide-ease: cubic-bezier(0.23, 0.25, 0.1, 1)`; one token pair for both, so pill and board move as one — the owner found the pill's gentle-start curve smooth and the board's full-speed start a jolt), commit the day as the glide starts so the next press counts from there, re-aim a glide in flight from where it is, and swap the transform for the real `scrollLeft` in the same frame when it lands. During a glide the track has no snapping (snap points follow transformed boxes) and a spacer (a left-moving board would otherwise shrink the scroll range and get its position clamped).
-- Mouse/trackpad (`hover: hover` and `pointer: fine`): the board is `overflow-x: hidden`, because a desktop day is a full window wide and native snap only moves on past halfway. A 50 px sideways swipe turns one page through the glide; the momentum tail is ignored.
-- The other days are `inert`. Five days mounted costs twelve more cards than one, which measured as no visible cost; it is what removed the mount from the first frames of every swipe.
-- Given up: the exact glide timing (the platform's own), and the hand-tuned turn threshold on touch (native paging rules apply).
+- **Desktop (tap, arrow key, trackpad):** two panels in one grid cell. The leaving day slides 80px and fades (opacity 180 ms); the arriving one slides in from 80px, fades in (240 ms) and settles from 98% scale; transform 320 ms on `cubic-bezier(0.24, 0.18, 0.2, 0.97)`. Trackpad: one day per flick burst (350 ms cooldown).
+- **Phone, tap:** the whole day slides across, 240 ms on `cubic-bezier(0.22, 1, 0.36, 1)`, no fade.
+- **Phone, finger:** the track follows the finger 1:1 with the neighbouring day mounted beside it and a 16 px gap; no parallax, scale or shadow. Release turns past 8% of the width or a 0.25 px/ms flick (`shouldTurnPage`), gliding 240 ms; otherwise it springs back in 200 ms. Rubber band (0.28) at Monday and Friday.
+- **Day dock:** the pill moves to the target day on release, on its own 340 ms curve.
+- Kept from later work: the phone track is promoted to its own layer permanently (not at the first touchmove), and nothing inside or over the moving board uses a backdrop-filter or blur filter.

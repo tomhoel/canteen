@@ -398,10 +398,9 @@ body {
 .cards-container {
   display: flex;
   justify-content: center;
-  /* No padding of its own: the board inside is a scroller, and a scroller clips
-     at its own edge, so the room the plates overhang into lives inside it
-     (.cards-track's padding) and the side gutters live on each day. */
-  padding: 0;
+  padding: 20px 48px 140px;
+  /* Full width, no max-width: it clips sideways, and a 1400px box put a hard
+     vertical edge 260px in from each side of a wide window. */
   position: relative;
   z-index: 10;
   flex: 1;
@@ -411,116 +410,72 @@ body {
   width: 100%;
 }
 
-/* ─── The day board ───
-   The whole week side by side in a native horizontal scroller that snaps one
-   day per page. The browser carries it on the compositor at the screen's
-   refresh rate, with the platform's own momentum, edge bounce and axis lock;
-   useDayScroller only watches where it is. A tap on the dock, an arrow key or
-   a link scrolls the same board. Nothing else animates on a day change. */
+/* ─── The day change ───
+   The motion the owner picked out of the app's history (the 2026-09-18 build).
+   Every day panel sits in `.cards-track`'s single grid cell, so a leaving and
+   an arriving day overlap without any absolute positioning.
+
+   Desktop (tap, arrow key, trackpad): the leaving day slides 80px and fades,
+   the arriving one slides in from 80px, fades in and settles from 98%; a
+   gentle start, ~320ms. Phone: see the phone block (a tap slides the whole day
+   across; a finger drags the track with the neighbour beside it).
+
+   Direction arrives as a unitless `--day-dir` written by DayPanel: 1 for a
+   later day, -1 for an earlier one, 0 when a swipe already moved the track. */
 .cards-track {
   --day-gap: 16px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
   width: 100%;
-  /* At least the window's height, more if a short window needs it (then the
-     container scrolls vertically, as it always did). */
-  align-self: flex-start;
-  min-height: 100%;
-  padding: 20px 0 140px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  /* Keeps a sideways flick from turning into the browser's back/forward swipe
-     or scrolling the page at the ends of the week; the edge still bounces. */
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: center;
 }
 
-.cards-track::-webkit-scrollbar {
-  display: none;
-}
-
-/* While a glide moves the board by transform (useDayScroller): no snapping,
-   since browsers place snap points from the transformed boxes and re-snapped
-   under the glide; and a spacer, since moving the board left also shrinks how
-   far the track can scroll, and the browser clamped the scroll position
-   mid-glide on the way to Thursday and Friday. */
-.cards-track.is-gliding {
-  scroll-snap-type: none;
-}
-
-/* Motion blur on a glide (dock, keys, trackpad; never under a finger). A full
-   day's width in --glide-ms is 100+ px a frame at its fastest, and the eye
-   sees that as separate jumps; a blur that follows the speed smears them into
-   motion. It rises with the curve's fast early stretch, is gone before the
-   landing, and is a CSS animation so the compositor runs it with the glide. */
-.cards-board.is-blurring {
-  animation: boardMotionBlur var(--glide-ms) linear;
-}
-
-/* Literal values, not var(): an animation whose values need resolving can
-   fall off the compositor and onto the main thread. */
-@keyframes boardMotionBlur {
-  0%   { filter: blur(0); }
-  18%  { filter: blur(5px); }
-  45%  { filter: blur(2px); }
-  80%  { filter: blur(0); }
-  100% { filter: blur(0); }
-}
-
-/* A phone card is narrower and nearer the eye: less blur reads the same. */
-@keyframes boardMotionBlurPhone {
-  0%   { filter: blur(0); }
-  18%  { filter: blur(3px); }
-  45%  { filter: blur(1.2px); }
-  80%  { filter: blur(0); }
-  100% { filter: blur(0); }
-}
-
-@media (max-width: 768px) {
-  .cards-board.is-blurring {
-    animation-name: boardMotionBlurPhone;
-  }
-}
-
-.cards-track.is-gliding .cards-board::after {
-  content: "";
-  flex: 0 0 400%;
-}
-
-/* The five days in a row. One element, so a glide (dock, keys, trackpad) is a
-   single compositor transform; promoted for good so that glide never starts
-   by rasterising the board. Its days overflow it, which is what the track
-   scrolls. Snap points are its children: snapping works on descendants. */
-.cards-board {
-  display: flex;
-  gap: var(--day-gap);
-  width: 100%;
-  position: relative; /* the days' offsetParent, for useDayScroller */
-  will-change: transform;
-}
-
-/* Mouse and trackpad: the board does not drag sideways. A desktop day is the
-   whole window wide, so native snapping would need a swipe past halfway; a
-   short swipe turns the page instead (useDayScroller's wheel handler, which
-   reads this same query), through the same smooth scroll the dock uses.
-   Scripted scrolling still works on overflow: hidden. */
-@media (hover: hover) and (pointer: fine) {
-  .cards-track {
-    overflow-x: hidden;
-  }
-}
-
-.cards-board > .cards-animated-wrapper {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-  /* One day per flick, however hard: a lunch menu is read a day at a time. */
-  scroll-snap-stop: always;
+.cards-track > .cards-animated-wrapper {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: row;
   justify-content: center;
-  align-items: center;
   gap: 24px;
-  padding: 0 48px;
+  width: 100%;
+  will-change: transform, opacity;
+}
+
+.day-panel {
+  --day-travel: 44px;
+  --day-scale: 1;
+  transition:
+    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
+    opacity 0.24s linear;
+}
+
+.day-panel-enter {
+  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel)), 0, 0)
+    scale(var(--day-scale));
+  opacity: 0;
+}
+
+.day-panel-exit {
+  transform: translate3d(calc(var(--day-dir, 0) * var(--day-travel) * -1), 0, 0)
+    scale(var(--day-scale));
+  opacity: 0;
+  /* Leaves faster than it arrives. */
+  transition:
+    transform 0.32s cubic-bezier(0.24, 0.18, 0.2, 0.97),
+    opacity 0.18s linear;
+}
+
+@media (min-width: 769px) {
+  .day-panel {
+    /* Three cards across a wide window can afford the longer throw. */
+    --day-travel: 80px;
+    /* Desktop only: scaling a box of text makes WebKit re-rasterise its glyphs
+       every frame, which a phone cannot absorb. */
+    --day-scale: 0.98;
+  }
 }
 
 /* ─── Food Card ─── */
@@ -1779,12 +1734,9 @@ body {
 
 /* ─── Tablet ─── */
 @media (max-width: 1100px) {
-  .cards-track {
-    padding: 20px 0;
-  }
-
-  .cards-board > .cards-animated-wrapper {
-    padding: 0 20px;
+  .cards-container {
+    gap: 50px 20px;
+    padding: 20px 20px;
   }
 
   .card-image-wrapper {
@@ -1866,46 +1818,79 @@ body {
        inset-independent, which is why this must not be folded into the
        constants. */
     --stack-gap: clamp(6px, 1dvh, 14px);
-    padding: 0;
+    padding:
+      calc(var(--stack-gap) + env(safe-area-inset-top, 0px))
+      8px
+      calc(74px + var(--stack-gap) + env(safe-area-inset-bottom, 0px));
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
+    /* Only vertical panning is the browser's; a sideways drag is the day swipe's. */
+    touch-action: pan-y;
   }
 
-  /* The board fills the screen between the header and the dock. Its padding
-     is the stack's top and bottom rhythm (it used to be the container's), and
-     each day carries the 8px side gutter, so a plate hanging off a card is
-     never cut by the scroller's edge. */
+  /* The track fills the screen between the header and the dock; every day
+     panel stacks in its one grid cell. */
   .cards-track {
+    display: grid;
+    grid-template-columns: 100%;
+    grid-template-rows: 100%;
+    width: 100%;
     height: 100%;
-    min-height: 0;
+    max-width: none;
     flex: 1;
-    padding:
-      calc(var(--stack-gap) + env(safe-area-inset-top, 0px))
-      0
-      calc(74px + var(--stack-gap) + env(safe-area-inset-bottom, 0px));
+    min-height: 0;
+    /* Promoted for good rather than when a drag begins: promoting at the
+       first touchmove re-rasterised every card on the drag's first frame. */
+    will-change: transform;
   }
 
-  .cards-board {
-    height: 100%;
-  }
-
-  /* One day: fills the board, distributes its height to the three cards. */
-  .cards-board > .cards-animated-wrapper {
+  /* One day: fills the track, distributes its height to the three cards. */
+  .cards-track > .cards-animated-wrapper {
     min-height: 0;
     height: 100%;
     flex-direction: column;
     align-items: stretch;
     justify-content: space-between;
-    /* The same value the board pads with, so the three gaps cannot drift. */
+    /* The same value the container pads with, so the three gaps cannot drift. */
     gap: var(--stack-gap);
-    padding: 0 8px;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 
-  /* Only the opening entrance animates cards; a day change moves the track. */
+  /* A tap slides the whole day across; a finger drags the track. */
+  .day-panel {
+    --day-travel: calc(100% + var(--day-gap));
+    --day-scale: 1;
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .day-panel-enter,
+  .day-panel-exit {
+    opacity: 1;
+  }
+
+  .day-panel-neighbor-left {
+    transform: translate3d(calc(-100% - var(--day-gap)), 0, 0) !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+
+  .day-panel-neighbor-right {
+    transform: translate3d(calc(100% + var(--day-gap)), 0, 0) !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+
+  .cards-track.is-swiping .day-panel {
+    transition: none !important;
+  }
+
+  /* Only the opening entrance animates cards; a day change moves the panels. */
   .day-panel:not(.day-panel-initial) .food-card,
-  .day-panel:not(.day-panel-initial) .allergen-chip {
+  .day-panel:not(.day-panel-initial) .allergen-chip,
+  .cards-track.is-swiping .food-card {
     animation: none !important;
   }
 

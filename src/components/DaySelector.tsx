@@ -1,7 +1,6 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
 
 import type { DisplayMode } from "@/lib/dateUtils";
-import { onDayProgress } from "@/lib/day-progress";
 
 interface DaySelectorProps {
   fullDayLabels: string[];
@@ -58,42 +57,6 @@ export default function DaySelector({
     window.addEventListener("resize", updatePill);
     return () => window.removeEventListener("resize", updatePill);
   }, [updatePill]);
-
-  /**
-   * The highlight rides between two days in step with the board, whether a
-   * finger, a trackpad or a smooth scroll from a tap is moving it. It is written
-   * straight to the element on every scroll event, without a render, and
-   * React's own value for it agrees once the day is committed.
-   */
-  const pillRef = useRef<HTMLDivElement>(null);
-  useEffect(
-    () =>
-      onDayProgress((p) => {
-        const el = pillRef.current;
-        const container = selectorRef.current;
-        if (!el || !container) return;
-        // A glide hands the pill back to React and its stylesheet transition.
-        if (!p) {
-          el.style.transition = "";
-          return;
-        }
-        const base = container.getBoundingClientRect().left;
-        const place = (left: number, width: number) => {
-          el.style.transform = `translateX(${left - base}px)`;
-          // Width is layout; writing it on every scroll event forced a reflow
-          // per frame even when the two buttons are the same width.
-          const w = `${Math.round(width)}px`;
-          if (el.style.width !== w) el.style.width = w;
-        };
-        const a = btnRefs.current[p.from]?.getBoundingClientRect();
-        if (!a) return;
-        const b = btnRefs.current[p.from + Math.sign(p.progress)]?.getBoundingClientRect() ?? a;
-        const t = Math.abs(p.progress);
-        el.style.transition = "none";
-        place(a.left + (b.left - a.left) * t, a.width + (b.width - a.width) * t);
-      }),
-    []
-  );
 
   // Desktop only: center between bottom of food cards and viewport bottom
   const updateDynamicBottom = useCallback(() => {
@@ -167,7 +130,7 @@ export default function DaySelector({
             `{ left: 0, width: 0 }` default — hence `pill &&`.
           */
           <div
-            ref={pillRef}
+           
             className="day-pill"
             style={{
               transform: `translateX(${pill.left}px)`,
