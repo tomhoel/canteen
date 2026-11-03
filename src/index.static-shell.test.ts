@@ -104,17 +104,18 @@ test("the shell reserves a slot for every header button", () => {
   );
 });
 
-test("the skeleton row sits inside a .cards-track in both shells", () => {
-  // Every sizing rule for .cards-animated-wrapper is scoped as
-  // `.cards-track > .cards-animated-wrapper`. Outside a track the wrapper
-  // falls back to `gap: inherit` / `flex-direction: inherit`, which is no gap
-  // on desktop and no height on mobile — the card jump this whole shell
+test("the skeleton row sits inside .cards-track > .cards-board in both shells", () => {
+  // Every sizing rule for a day is scoped as `.cards-board >
+  // .cards-animated-wrapper`. Outside the board the skeleton row loses its
+  // width, gap and (on a phone) its height — the card jump this whole shell
   // exists to avoid.
-  assert.ok(shellClasses.has("cards-track"), "index.html renders .cards-animated-wrapper bare");
-  assert.ok(
-    read("src/components/LoadingScreen.tsx").includes('"cards-track"'),
-    "LoadingScreen renders .cards-animated-wrapper bare"
-  );
+  for (const cls of ["cards-track", "cards-board"]) {
+    assert.ok(shellClasses.has(cls), `index.html renders the skeleton row without .${cls}`);
+    assert.ok(
+      read("src/components/LoadingScreen.tsx").includes(`"${cls}"`),
+      `LoadingScreen renders the skeleton row without .${cls}`
+    );
+  }
 });
 
 test("the static skeleton card matches SkeletonCard row for row", () => {
