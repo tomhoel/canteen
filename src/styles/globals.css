@@ -1343,7 +1343,24 @@ body {
   height: 100%;
   object-fit: contain;
   /* No border-radius: the transparent PNG already shows a round plate. */
-  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.45));
+}
+
+/* The plate's shadow, as a soft gradient under it rather than a drop-shadow
+   filter on the image: a filter shadow is scaled with the plate, so it sat dark
+   and heavy around the small plate at the start of every zoom. As its own
+   layer it simply fades in and out with the flight (Lightbox). */
+.lightbox-shadow {
+  position: absolute;
+  inset: 9% 7% 3%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.42) 55%, rgba(0, 0, 0, 0) 100%);
+  transform: translateY(5%);
+}
+
+/* The card plate's own look, copied onto the plate at the start and end of a
+   zoom (Lightbox sets its filter from the card) and faded across the flight. */
+.lightbox-card-look {
+  opacity: 0;
 }
 
 .lightbox-image-hires {

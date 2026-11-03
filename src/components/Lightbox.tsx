@@ -31,6 +31,20 @@ function transformFrom(el: HTMLElement, from: DOMRect): string {
 }
 
 /**
+ * How the card's plate looks where it sits: its own filter (a stale menu's
+ * plate is greyed and its shadow is light) and how dimmed its card is. The
+ * travelling plate starts and ends wearing exactly this, so a zoom never jumps
+ * from the card's look to the view's in a single frame.
+ */
+function cardLook(img: HTMLElement): { filter: string; opacity: number } {
+  let opacity = 1;
+  for (let n: HTMLElement | null = img; n && !n.classList.contains("day-panel"); n = n.parentElement) {
+    opacity *= Number(getComputedStyle(n).opacity) || 1;
+  }
+  return { filter: getComputedStyle(img).filter, opacity };
+}
+
+/**
  * The plate, enlarged — nothing else.
  *
  * One element makes the whole trip. The plate in this view animates from the
@@ -39,9 +53,13 @@ function transformFrom(el: HTMLElement, from: DOMRect): string {
  * swapped for this image when it landed; the swap left a frame with neither on
  * screen, which was the flicker.
  *
- * Two layers inside it: the card's thumbnail, already decoded, so the very
- * first frame is the plate and never an empty square; and the full-size
- * picture over it, faded in once its bytes are in.
+ * Layers inside it, bottom to top: a soft shadow; the card's thumbnail, already
+ * decoded, so the very first frame is the plate and never an empty square; the
+ * full-size picture, faded in once its bytes are in; and the "card look", the
+ * thumbnail wearing the card plate's own filter. On the way up the card look
+ * fades out as the shadow fades in, and on the way down the reverse, so a
+ * greyed stale plate turns to colour, and a light card shadow deepens, over the
+ * flight rather than at its first frame. All of it is opacity and transform.
  *
  * The card's own plate is hidden for as long as this one is up (it used to
  * reappear behind the scrim the moment the flight landed), and comes back in
@@ -51,6 +69,8 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const plateRef = useRef<HTMLDivElement | null>(null);
   const scrimRef = useRef<HTMLDivElement | null>(null);
+  const shadowRef = useRef<HTMLDivElement | null>(null);
+  const lookRef = useRef<HTMLImageElement | null>(null);
   const [hiResShown, setHiResShown] = useState<string | null>(null);
   const [failedIndex, setFailedIndex] = useState<number | null>(null);
   const [closing, setClosing] = useState(false);
@@ -91,10 +111,19 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
       // A hidden plate keeps its box, so its rect is still the place to grow from.
       const origin = cardPlate(current.canteenName);
       if (origin) {
-        el.animate([{ transform: transformFrom(el, origin.getBoundingClientRect()) }, { transform: "none" }], {
-          duration: OPEN_MS,
-          easing: EASE,
-        });
+        const look = cardLook(origin);
+        el.animate(
+          [
+            { transform: transformFrom(el, origin.getBoundingClientRect()), opacity: look.opacity },
+            { transform: "none", opacity: 1 },
+          ],
+          { duration: OPEN_MS, easing: EASE }
+        );
+        if (lookRef.current) {
+          lookRef.current.style.filter = look.filter;
+          lookRef.current.animate([{ opacity: 1 }, { opacity: 0 }], { duration: OPEN_MS * 0.8, easing: "ease-in-out" });
+        }
+        shadowRef.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS, easing: "ease-in" });
       }
       scrimRef.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS * 0.7, easing: "ease-out" });
     } else {
@@ -122,13 +151,25 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
     // The scrim leaves a little faster than the plate, so the plate lands on
     // the card and not on black.
     scrim.animate([{ opacity: 1 }, { opacity: 0 }], { duration: CLOSE_MS * 0.85, easing: "ease-in", fill: "forwards" });
-    const flight = dest
-      ? el.animate([{ transform: "none" }, { transform: transformFrom(el, dest.getBoundingClientRect()) }], {
-          duration: CLOSE_MS,
-          easing: EASE,
-          fill: "forwards",
-        })
-      : el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, fill: "forwards" });
+    let flight: Animation;
+    if (dest) {
+      const look = cardLook(dest);
+      flight = el.animate(
+        [
+          { transform: "none", opacity: 1 },
+          { transform: transformFrom(el, dest.getBoundingClientRect()), opacity: look.opacity },
+        ],
+        { duration: CLOSE_MS, easing: EASE, fill: "forwards" }
+      );
+      // Lands wearing the card's own look, so handing back to the card's plate is seamless.
+      if (lookRef.current) {
+        lookRef.current.style.filter = look.filter;
+        lookRef.current.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CLOSE_MS, easing: "ease-in-out", fill: "forwards" });
+      }
+      shadowRef.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: CLOSE_MS, easing: "ease-out", fill: "forwards" });
+    } else {
+      flight = el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, fill: "forwards" });
+    }
     // Unmounting restores the card's plate in the same commit (the effect
     // above), so the frame after landing shows the card's own plate in place.
     flight.finished.then(onClose, onClose);
@@ -210,6 +251,7 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
       )}
 
       <div ref={plateRef} key={currentIndex} className="lightbox-plate">
+        <div ref={shadowRef} className="lightbox-shadow" aria-hidden="true" />
         {thumb || hiRes ? (
           <>
             {thumb && <img src={thumb} alt="" className="lightbox-image" decoding="sync" />}
@@ -224,6 +266,7 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
                 onError={() => setFailedIndex(currentIndex)}
               />
             )}
+            {thumb && <img ref={lookRef} src={thumb} alt="" className="lightbox-image lightbox-card-look" decoding="sync" />}
           </>
         ) : (
           <div className="image-placeholder">{current.canteenName.charAt(0)}</div>
