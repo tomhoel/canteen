@@ -1,27 +1,17 @@
 /**
- * Where a day change in progress stands, for the day dock.
+ * Where the day board stands, for the day dock.
  *
- * The drag writes the track's transform directly on every touchmove, without a
- * React render, and the dock's highlight has to keep up with it at the same
- * rate. A tiny broadcast does that without threading a callback through
- * HomeClient or re-rendering anything: useDaySwipe emits, DaySelector writes the
- * pill's transform. `settle` glides the pill with the board when it is let go;
- * `null` means nothing is moving.
+ * The board is a native scroller and its highlight in the dock has to follow
+ * it frame by frame. A tiny broadcast does that without threading a callback
+ * through HomeClient or re-rendering anything: useDayScroller emits from the
+ * scroll position, DaySelector writes the pill's transform.
  */
-export type DayProgress =
-  | {
-      /** The day the drag started from. */
-      from: number;
-      /** -1..1: how far toward the previous (negative) or next day it has got. */
-      progress: number;
-    }
-  | {
-      /** The board was let go and is gliding to this day... */
-      settle: number;
-      /** ...over this long, on the same curve as the board. */
-      ms: number;
-    }
-  | null;
+export type DayProgress = {
+  /** The day at or before the board's position. */
+  from: number;
+  /** 0..1: how far from `from` toward the next day the board has got. */
+  progress: number;
+} | null;
 
 type Listener = (p: DayProgress) => void;
 const listeners = new Set<Listener>();

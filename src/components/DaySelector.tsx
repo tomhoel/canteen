@@ -2,7 +2,6 @@ import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react
 
 import type { DisplayMode } from "@/lib/dateUtils";
 import { onDayProgress } from "@/lib/day-progress";
-import { GLIDE_EASE } from "@/lib/useDaySwipe";
 
 interface DaySelectorProps {
   fullDayLabels: string[];
@@ -61,11 +60,10 @@ export default function DaySelector({
   }, [updatePill]);
 
   /**
-   * While a day is being dragged, the highlight rides between the two days in
-   * step with the finger. It is written straight to the element, at the rate
-   * the track moves, without a render. When the board is let go the pill is
-   * sent to the day the board is gliding to, over the same duration and curve,
-   * and React's own value for it agrees once the day is committed.
+   * The highlight rides between two days in step with the board, whether a
+   * finger, a trackpad or a smooth scroll from a tap is moving it. It is written
+   * straight to the element on every scroll event, without a render, and
+   * React's own value for it agrees once the day is committed.
    */
   const pillRef = useRef<HTMLDivElement>(null);
   useEffect(
@@ -73,21 +71,20 @@ export default function DaySelector({
       onDayProgress((p) => {
         const el = pillRef.current;
         const container = selectorRef.current;
-        if (!el || !container || !p) return;
+        if (!el || !container) return;
+        // A glide hands the pill back to React and its stylesheet transition.
+        if (!p) {
+          el.style.transition = "";
+          return;
+        }
         const base = container.getBoundingClientRect().left;
         const place = (left: number, width: number) => {
           el.style.transform = `translateX(${left - base}px)`;
-          el.style.width = `${width}px`;
+          // Width is layout; writing it on every scroll event forced a reflow
+          // per frame even when the two buttons are the same width.
+          const w = `${Math.round(width)}px`;
+          if (el.style.width !== w) el.style.width = w;
         };
-        if ("settle" in p) {
-          const btn = btnRefs.current[p.settle]?.getBoundingClientRect();
-          if (!btn) return;
-          el.style.transition = p.ms
-            ? `transform ${p.ms}ms ${GLIDE_EASE}, width ${p.ms}ms ${GLIDE_EASE}`
-            : "none";
-          place(btn.left, btn.width);
-          return;
-        }
         const a = btnRefs.current[p.from]?.getBoundingClientRect();
         if (!a) return;
         const b = btnRefs.current[p.from + Math.sign(p.progress)]?.getBoundingClientRect() ?? a;

@@ -1,4 +1,5 @@
-import { GLIDE_EASE } from "@/lib/useDaySwipe";
+/** Fast start, long gentle landing: the curve the plate flies on. */
+const GLIDE_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 /**
  * The plate that travels between a card and the plate view.
@@ -15,7 +16,7 @@ import { GLIDE_EASE } from "@/lib/useDaySwipe";
 /** The plate image of `canteen` on the day on screen, if it is visible. */
 export function cardPlate(canteen: string): HTMLElement | null {
   const circle = document.querySelector<HTMLElement>(
-    `.day-panel:not(.day-panel-neighbor-left):not(.day-panel-neighbor-right) [data-plate="${CSS.escape(canteen)}"]`
+    `.day-panel:not([inert]) [data-plate="${CSS.escape(canteen)}"]`
   );
   if (!circle) return null;
   const r = circle.getBoundingClientRect();

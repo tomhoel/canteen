@@ -146,73 +146,58 @@ export default function Lightbox({ isOpen, currentIndex, canteenDayData, onClose
   return createPortal(
     <>
       {isOpen && current && (
+        // Just the plate, enlarged. A tap anywhere sends it home; a sideways
+        // swipe or an arrow moves to the next kitchen's plate.
         <div
           className={`lightbox-overlay${closing ? " is-closing" : ""}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label={current.mainDish?.dish || current.canteenName}
           onClick={requestClose}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
         >
-          <div
-            className={`lightbox-content${closing ? " is-closing" : ""}`}
-            onClick={e => e.stopPropagation()}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            <button className="lightbox-close" onClick={requestClose} aria-label="Lukk">
-              <X size={18} strokeWidth={2.5} />
+          <button className="lightbox-close" onClick={requestClose} aria-label="Lukk">
+            <X size={20} strokeWidth={2.25} />
+          </button>
+
+          {hasPrev && (
+            <button
+              className="lightbox-nav lightbox-prev"
+              onClick={e => { e.stopPropagation(); onNavigate(currentIndex - 1); }}
+              aria-label="Forrige"
+            >
+              <ChevronLeft size={22} strokeWidth={2.25} />
             </button>
+          )}
+          {hasNext && (
+            <button
+              className="lightbox-nav lightbox-next"
+              onClick={e => { e.stopPropagation(); onNavigate(currentIndex + 1); }}
+              aria-label="Neste"
+            >
+              <ChevronRight size={22} strokeWidth={2.25} />
+            </button>
+          )}
 
-            {hasPrev && (
-              <button
-                className="lightbox-nav lightbox-prev"
-                onClick={() => onNavigate(currentIndex - 1)}
-                aria-label="Forrige"
-              >
-                <ChevronLeft size={24} strokeWidth={2.5} />
-              </button>
-            )}
-            {hasNext && (
-              <button
-                className="lightbox-nav lightbox-next"
-                onClick={() => onNavigate(currentIndex + 1)}
-                aria-label="Neste"
-              >
-                <ChevronRight size={24} strokeWidth={2.5} />
-              </button>
-            )}
-
-            <div className="lightbox-image-container">
-              {failedIndex === currentIndex || !current.highResImagePath ? (
-                <div className="image-placeholder">{current.canteenName.charAt(0)}</div>
-              ) : (
-                <img
-                  key={current.highResImagePath}
-                  src={current.highResImagePath}
-                  alt={current.mainDish?.dish || ""}
-                  className={`lightbox-image${imgLoaded ? " loaded" : ""}${flying ? " is-flying" : ""}${landed ? " landed" : ""}`}
-                  decoding="async"
-                  ref={el => {
-                    imgRef.current = el;
-                    if (el?.complete && el.naturalWidth > 0) setImgLoaded(true);
-                  }}
-                  onLoad={() => setImgLoaded(true)}
-                  onError={() => setFailedIndex(currentIndex)}
-                />
-              )}
-            </div>
-            <div className="lightbox-info">
-              <p className="lightbox-canteen">{current.canteenName}</p>
-              <h2 className="lightbox-dish-name">{current.mainDish?.dish || ""}</h2>
-              <div className="lightbox-dots">
-                {canteenDayData.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`lightbox-dot${i === currentIndex ? " active" : ""}`}
-                    onClick={() => onNavigate(i)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+          {failedIndex === currentIndex || !current.highResImagePath ? (
+            <div className="lightbox-plate image-placeholder">{current.canteenName.charAt(0)}</div>
+          ) : (
+            <img
+              key={current.highResImagePath}
+              src={current.highResImagePath}
+              alt={current.mainDish?.dish || ""}
+              className={`lightbox-plate lightbox-image${imgLoaded ? " loaded" : ""}${flying ? " is-flying" : ""}${landed ? " landed" : ""}`}
+              decoding="async"
+              ref={el => {
+                imgRef.current = el;
+                if (el?.complete && el.naturalWidth > 0) setImgLoaded(true);
+              }}
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setFailedIndex(currentIndex)}
+            />
+          )}
         </div>
       )}
     </>,

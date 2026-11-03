@@ -70,3 +70,14 @@ Two redesigns were mocked and rejected ("keep the design"). They are not part of
 ## Left to the builder
 
 The exact timing within the ranges above, how to clean up the CSS, and which dead code beyond the listed files is safe to delete.
+
+## Revision 2026-11-02: the day board is a native scroller
+
+Approach 2 shipped and felt choppy on the owner's phone and laptop. Its drag ran on the main thread at the rate the browser delivers touch events (60 Hz on iPhone, and only when nothing else is running), so it could never match the screen, and the release glide did not start at the finger's speed. Approach 3 replaces it:
+
+- `.cards-track` is a horizontal `scroll-snap-type: x mandatory` scroller holding all five days (`scroll-snap-stop: always`, one day per flick). The browser runs the drag, momentum, edge bounce and axis lock on the compositor at the full refresh rate.
+- For a finger, `useDayScroller` only reads the position: it drives the dock highlight and header preview, and commits the day on `scrollend` (or 120 ms of quiet).
+- The dock, arrow keys and trackpad do not use the browser's smooth scroll: measured at 880 ms for one desktop day, nearly still for its first 150 ms, and keys pressed during it were lost. They glide `.cards-board` by a CSS transform instead (260 ms for one day, up to 420 ms across the week, `cubic-bezier(0.22, 1, 0.36, 1)`), commit the day as the glide starts so the next press counts from there, re-aim a glide in flight from where it is, and swap the transform for the real `scrollLeft` in the same frame when it lands. During a glide the track has no snapping (snap points follow transformed boxes) and a spacer (a left-moving board would otherwise shrink the scroll range and get its position clamped).
+- Mouse/trackpad (`hover: hover` and `pointer: fine`): the board is `overflow-x: hidden`, because a desktop day is a full window wide and native snap only moves on past halfway. A 50 px sideways swipe turns one page through the glide; the momentum tail is ignored.
+- The other days are `inert`. Five days mounted costs twelve more cards than one, which measured as no visible cost; it is what removed the mount from the first frames of every swipe.
+- Given up: the exact glide timing (the platform's own), and the hand-tuned turn threshold on touch (native paging rules apply).

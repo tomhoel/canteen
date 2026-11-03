@@ -175,6 +175,7 @@ const FoodCard = memo(function FoodCard({
     sideDishes,
     mainAllergens,
     imagePath,
+    highResImagePath,
     isOutdated,
     isAhead,
     canteenWeekNum,
@@ -184,6 +185,10 @@ const FoodCard = memo(function FoodCard({
   } = data;
 
   const [imgError, setImgError] = useState(false);
+  // The thumb is written best-effort after the full plate, so it can be missing
+  // while the plate exists. Fall back to the full image before the letter.
+  const [useFullPlate, setUseFullPlate] = useState(false);
+  const plateSrc = (useFullPlate && highResImagePath) || imagePath || "";
 
   const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
   const isLeader = voteCount > 0 && voteCount === maxVotes;
@@ -220,13 +225,17 @@ const FoodCard = memo(function FoodCard({
           ) : (
             <div className="plate-float-container">
               <PlateImage
-                key={imagePath}
-                src={imagePath}
+                key={plateSrc}
+                src={plateSrc}
                 alt={mainDish?.dish || "Matrett"}
                 priority={cardIdx === 0}
                 isInitial={isInitial}
-                onLoad={() => markImageCached(imagePath)}
-                onError={() => setImgError(true)}
+                onLoad={() => markImageCached(plateSrc)}
+                onError={() =>
+                  !useFullPlate && highResImagePath && highResImagePath !== imagePath
+                    ? setUseFullPlate(true)
+                    : setImgError(true)
+                }
               />
             </div>
           )}
@@ -263,6 +272,14 @@ const FoodCard = memo(function FoodCard({
                 {isAhead && (
                   <span className="ahead-tag">{`Uke ${canteenWeekNum}`}</span>
                 )}
+                {/* Inline, so a stale card is exactly as tall as the others.
+                    The plate's own badge carries the week number. */}
+                {isOutdated && (
+                  <span className="stale-tag" title={`Ikke oppdatert – viser meny for uke ${canteenWeekNum}`}>
+                    <Clock size={10} strokeWidth={2.6} aria-hidden="true" />
+                    {"Ikke oppdatert"}
+                  </span>
+                )}
               </div>
             );
           })()}
@@ -297,15 +314,6 @@ const FoodCard = memo(function FoodCard({
 
       </div>
 
-      {isOutdated && (
-        <div className="stale-banner">
-          <Clock size={16} className="stale-banner-icon" />
-          <div className="stale-banner-text">
-            <strong>{"Ikke oppdatert"}</strong>
-            <span>{`Viser meny for uke ${canteenWeekNum}`}</span>
-          </div>
-        </div>
-      )}
       <div className="card-bottom">
         <div className="side-dishes-header">
           <span className="side-dishes-title">{"Andre retter"}</span>

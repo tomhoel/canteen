@@ -266,7 +266,8 @@ body {
 .animated-gradient-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(45px);
+  /* The soft edge is in the gradient (see AnimatedGradient), not a 45px blur
+     filter on four window-sized layers under the frosted day bar. */
   opacity: 0.82;
 }
 
@@ -391,72 +392,95 @@ body {
 .cards-container {
   display: flex;
   justify-content: center;
-  padding: 20px 48px 140px;
-  max-width: 1400px;
-  margin: 0 auto;
+  /* No padding of its own: the board inside is a scroller, and a scroller clips
+     at its own edge, so the room the plates overhang into lives inside it
+     (.cards-track's padding) and the side gutters live on each day. */
+  padding: 0;
   position: relative;
   z-index: 10;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* The day transition slides a whole day's cards in from 80px away, and for
-     the length of that animation the incoming block genuinely sticks out past
-     the right edge. Without this the browser answers with a real horizontal
-     scrollbar across the bottom of the page, appearing and disappearing on
-     every single swipe. The mobile block already had this; the desktop one
-     never did. */
   overflow-x: hidden;
   width: 100%;
 }
 
-/* ─── Cards Track (CSS Grid Stack to prevent height jumping during transitions) ─── */
-.cards-track {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto;
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  align-items: center;
-}
-
-.cards-track > .cards-animated-wrapper {
-  grid-column: 1;
-  grid-row: 1;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  gap: 24px;
-  width: 100%;
-  will-change: transform, opacity;
-}
-
-/* ─── The day change ───
-   One movement for every way of changing the day (useDaySwipe): the track
-   carries the day on screen and, during a change, its neighbour, mounted one
-   width plus a gap to the side. A finger drags the track 1:1; a tap, a key or
-   a trackpad glides it. No per-panel enter/exit, no parallax, no scale. */
+/* ─── The day board ───
+   The whole week side by side in a native horizontal scroller that snaps one
+   day per page. The browser carries it on the compositor at the screen's
+   refresh rate, with the platform's own momentum, edge bounce and axis lock;
+   useDayScroller only watches where it is. A tap on the dock, an arrow key or
+   a link scrolls the same board. Nothing else animates on a day change. */
 .cards-track {
   --day-gap: 16px;
+  display: flex;
+  width: 100%;
+  /* At least the window's height, more if a short window needs it (then the
+     container scrolls vertically, as it always did). */
+  align-self: flex-start;
+  min-height: 100%;
+  padding: 20px 0 140px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  /* Keeps a sideways flick from turning into the browser's back/forward swipe
+     or scrolling the page at the ends of the week; the edge still bounces. */
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
 }
 
-.day-panel-neighbor-left {
-  transform: translate3d(calc(-100% - var(--day-gap)), 0, 0);
+.cards-track::-webkit-scrollbar {
+  display: none;
 }
 
-.day-panel-neighbor-right {
-  transform: translate3d(calc(100% + var(--day-gap)), 0, 0);
+/* While a glide moves the board by transform (useDayScroller): no snapping,
+   since browsers place snap points from the transformed boxes and re-snapped
+   under the glide; and a spacer, since moving the board left also shrinks how
+   far the track can scroll, and the browser clamped the scroll position
+   mid-glide on the way to Thursday and Friday. */
+.cards-track.is-gliding {
+  scroll-snap-type: none;
 }
 
-.cards-track.is-swiping {
+.cards-track.is-gliding .cards-board::after {
+  content: "";
+  flex: 0 0 400%;
+}
+
+/* The five days in a row. One element, so a glide (dock, keys, trackpad) is a
+   single compositor transform; promoted for good so that glide never starts
+   by rasterising the board. Its days overflow it, which is what the track
+   scrolls. Snap points are its children: snapping works on descendants. */
+.cards-board {
+  display: flex;
+  gap: var(--day-gap);
+  width: 100%;
+  position: relative; /* the days' offsetParent, for useDayScroller */
   will-change: transform;
 }
 
-/* Reduced motion: a day change does not travel; the arriving day fades in
-   (see the Reduced Motion block at the end, which has to come last to win). */
-@keyframes dayFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Mouse and trackpad: the board does not drag sideways. A desktop day is the
+   whole window wide, so native snapping would need a swipe past halfway; a
+   short swipe turns the page instead (useDayScroller's wheel handler, which
+   reads this same query), through the same smooth scroll the dock uses.
+   Scripted scrolling still works on overflow: hidden. */
+@media (hover: hover) and (pointer: fine) {
+  .cards-track {
+    overflow-x: hidden;
+  }
+}
+
+.cards-board > .cards-animated-wrapper {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  /* One day per flick, however hard: a lunch menu is read a day at a time. */
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding: 0 48px;
 }
 
 /* ─── Food Card ─── */
@@ -481,7 +505,6 @@ body {
   background: linear-gradient(180deg, #fffaf0 0%, #fef3e2 38%, var(--card-white) 52%);
   border-radius: 24px;
   width: 100%;
-  min-height: 460px;
   padding: 0 26px 24px;
   box-shadow:
     0 1px 2px rgba(60, 30, 0, 0.04),
@@ -492,6 +515,16 @@ body {
   border: 1px solid rgba(236, 228, 216, 0.6);
   display: flex;
   flex-direction: column;
+}
+
+/* Fixed on a desktop, so a day's three cards always line up: a long dish
+   name, a fourth side dish or a stale menu never makes one stick out. The
+   phone has its own fixed share of the screen (flex: 1 1 0 in its block). */
+@media (min-width: 769px) {
+  .food-card {
+    /* The tallest real card in week 45 was 455px; 470 holds a three-line name. */
+    height: 470px;
+  }
 }
 
 /* Card cascade entrance animation ONLY on the very first initial page launch */
@@ -890,7 +923,7 @@ body {
   bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(40, 25, 15, 0.88);
   color: rgba(255, 255, 255, 0.85);
   font-size: 9px;
   font-weight: 700;
@@ -900,58 +933,28 @@ body {
   pointer-events: none;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
 }
 
-/* Dedicated stale banner — sibling of card-content, above card-bottom */
-.stale-banner {
-  display: flex;
+/* Last week's menu, said in the name row so the card keeps its height. */
+.stale-tag {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
-  padding: 9px 13px;
-  margin: 0 0 10px;
-  animation: bannerSlide 0.3s var(--settle) both;
-}
-
-@keyframes bannerSlide {
-  from { opacity: 0; transform: scaleY(0.6) translateY(-4px); transform-origin: top; }
-  to   { opacity: 1; transform: scaleY(1) translateY(0); }
-}
-
-.stale-banner-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.stale-banner-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  gap: 4px;
   min-width: 0;
-}
-
-.stale-banner-text strong {
-  font-size: 11.5px;
+  padding: 3px 8px;
+  font-size: 9.5px;
   font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
   color: var(--text-secondary);
-  letter-spacing: 0.1px;
-}
-
-.stale-banner-text span {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* Legacy stale-notice — kept for backwards compat, hidden */
+.stale-tag svg {
+  flex-shrink: 0;
+}
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
 
@@ -1013,7 +1016,6 @@ body {
     rgba(255, 230, 205, 0.08) 65%,
     transparent 80%
   );
-  filter: blur(8px);
   pointer-events: none;
   z-index: 0;
 }
@@ -1031,10 +1033,10 @@ body {
     rgba(255, 215, 90, 0.06) 60%,
     transparent 78%
   );
-  filter: blur(18px);
   pointer-events: none;
   z-index: 0;
-  will-change: transform, opacity, filter;
+  /* No blur filter: the radial gradient is already soft, and a blur on
+     fifteen plates made every repaint of the board pay for it. */
 }
 
 /* V3 Overhead food image - transparent background with float animation */
@@ -1057,7 +1059,10 @@ body {
     drop-shadow(0 2px 6px rgba(80, 40, 0, 0.10));
   position: relative;
   z-index: 2;
-  will-change: transform, opacity;
+  /* No will-change: as their own layers, fifteen plates each had their
+     drop-shadow applied by the GPU on every frame the board moved. Painted
+     into the board, the shadow costs nothing while it moves. The reveal's
+     transition promotes a plate on its own for those 400ms. */
 }
 
 .food-image.loaded {
@@ -1171,6 +1176,9 @@ body {
   display: flex;
   flex-direction: column;
   padding-top: 8px;
+  /* The card's height is fixed; this column is what gives way. */
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1292,6 +1300,7 @@ body {
 .card-bottom {
   margin-top: auto;
   padding-top: 12px;
+  flex-shrink: 0;
 }
 
 .side-dishes-header {
@@ -1385,85 +1394,65 @@ body {
      above will wrap it onto a second pill-line within its own column. */
 }
 
-/* ─── Lightbox ─── */
+/* ─── Lightbox ───
+   The plate alone, enlarged, on a warm near-black scrim. No panel, no name, no
+   blur: the dark isolates the food on its own, and a full-screen backdrop
+   filter is the most expensive thing a phone can be asked to keep on screen. */
 .lightbox-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  background: rgba(22, 14, 8, 0.9);
   z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  cursor: zoom-out;
 }
 
-.lightbox-content {
-  background: var(--card-white);
-  border-radius: 32px;
-  overflow: hidden;
-  width: min(720px, 92vw);
-  max-height: 92vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow:
-    0 40px 80px rgba(0, 0, 0, 0.35),
-    0 8px 24px rgba(0, 0, 0, 0.15);
-  position: relative;
-}
-
-.lightbox-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.08);
-  border: none;
-  color: var(--text-primary);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease, transform 0.25s ease;
-  z-index: 10;
-  line-height: 1;
-}
-
-.lightbox-close:hover {
-  background: rgba(0, 0, 0, 0.14);
-  transform: rotate(90deg);
-}
-
-.lightbox-image-container {
-  background: linear-gradient(150deg, #fff8f0 0%, #ffeedd 100%);
-  padding: 40px 40px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1 1 auto;
-  min-height: 0;
+.lightbox-plate {
+  width: min(92vw, 78vh, 720px);
+  height: min(92vw, 78vh, 720px);
 }
 
 .lightbox-image {
-  width: 100%;
-  max-width: 600px;
-  max-height: calc(92vh - 180px); /* leave room for the info block + padding */
-  height: auto;
-  aspect-ratio: 1;
   object-fit: contain;
   /* No border-radius: the transparent PNG already shows a round plate. */
-  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18))
-    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.10));
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.45));
   opacity: 0;
   transition: opacity 0.18s ease-out;
 }
 
 .lightbox-image.loaded {
   opacity: 1;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  z-index: 10;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.lightbox-close:focus-visible,
+.lightbox-nav:focus-visible {
+  outline: 2px solid var(--accent-orange);
+  outline-offset: 2px;
 }
 
 /* The plate flying between card and viewer stands in for this one: hidden for
@@ -1485,29 +1474,7 @@ body {
   transform-origin: 0 0;
   object-fit: contain;
   will-change: transform;
-  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.18));
-}
-
-.lightbox-info {
-  padding: 16px 24px 24px;
-  text-align: center;
-  border-top: 1px solid var(--border-light);
-}
-
-.lightbox-canteen {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--accent-orange);
-  margin-bottom: 6px;
-}
-
-.lightbox-dish-name {
-  font-size: clamp(17px, 4vw, 22px);
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.3;
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.45));
 }
 
 /* ─── YOLO randomiser — second-tap of Today on the day-bar ─── */
@@ -1617,9 +1584,10 @@ body {
   left: 50%;
   transform: translateX(-50%);
   right: auto;
-  background: rgba(255, 255, 255, 0.3);
-  -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
-  backdrop-filter: blur(40px) saturate(1.8) brightness(1.05);
+  /* Opaque enough to read as the glass did over the soft background, with no
+     backdrop-filter: a 40px blur of whatever is behind the bar was redone on
+     every frame the board moved under it. */
+  background: rgba(255, 248, 240, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top-color: rgba(255, 255, 255, 0.6);
   padding: 6px;
@@ -1771,9 +1739,12 @@ body {
 
 /* ─── Tablet ─── */
 @media (max-width: 1100px) {
-  .cards-container {
-    gap: 50px 20px;
-    padding: 20px 20px;
+  .cards-track {
+    padding: 20px 0;
+  }
+
+  .cards-board > .cards-animated-wrapper {
+    padding: 0 20px;
   }
 
   .card-image-wrapper {
@@ -1855,55 +1826,46 @@ body {
        inset-independent, which is why this must not be folded into the
        constants. */
     --stack-gap: clamp(6px, 1dvh, 14px);
-    padding:
-      calc(var(--stack-gap) + env(safe-area-inset-top, 0px))
-      8px
-      calc(74px + var(--stack-gap) + env(safe-area-inset-bottom, 0px));
+    padding: 0;
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    /* Declares that only vertical panning is the browser's to handle, so a
-       sideways flick is never taken as a scroll gesture in the first place.
-       The touchmove handler cancels the rest; this is the half that works
-       before any JavaScript has had a chance to run. */
-    touch-action: pan-y;
   }
 
-  /* Cards track — mobile grid stack ensuring enter and exit share same bounds */
+  /* The board fills the screen between the header and the dock. Its padding
+     is the stack's top and bottom rhythm (it used to be the container's), and
+     each day carries the 8px side gutter, so a plate hanging off a card is
+     never cut by the scroller's edge. */
   .cards-track {
-    display: grid;
-    grid-template-columns: 100%;
-    grid-template-rows: 100%;
-    width: 100%;
     height: 100%;
-    flex: 1;
     min-height: 0;
+    flex: 1;
+    padding:
+      calc(var(--stack-gap) + env(safe-area-inset-top, 0px))
+      0
+      calc(74px + var(--stack-gap) + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Animated wrapper — fills parent, distributes space to cards */
-  .cards-track > .cards-animated-wrapper {
-    grid-column: 1;
-    grid-row: 1;
-    min-height: 0;
-    width: 100%;
+  .cards-board {
     height: 100%;
-    display: flex;
+  }
+
+  /* One day: fills the board, distributes its height to the three cards. */
+  .cards-board > .cards-animated-wrapper {
+    min-height: 0;
+    height: 100%;
     flex-direction: column;
     align-items: stretch;
     justify-content: space-between;
-    /* The same value the container pads with, so the three gaps cannot drift. */
+    /* The same value the board pads with, so the three gaps cannot drift. */
     gap: var(--stack-gap);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    will-change: transform, opacity;
+    padding: 0 8px;
   }
 
   /* Only the opening entrance animates cards; a day change moves the track. */
   .day-panel:not(.day-panel-initial) .food-card,
-  .day-panel:not(.day-panel-initial) .allergen-chip,
-  .cards-track.is-swiping .food-card {
+  .day-panel:not(.day-panel-initial) .allergen-chip {
     animation: none !important;
   }
 
@@ -2063,7 +2025,6 @@ body {
     will-change: auto;
     opacity: 1;
     inset: -30px;
-    filter: blur(22px);
   }
 
   /* Prevent sticky hover from keeping food image enlarged / glowing */
@@ -2156,6 +2117,18 @@ body {
     font-size: clamp(9px, 1.2dvh, 12px);
     margin-bottom: 2px;
     letter-spacing: 1px;
+    /* A tag that does not fit beside the name drops under it, whole. */
+    flex-wrap: wrap;
+    row-gap: 3px;
+  }
+
+  .canteen-name > span:first-child {
+    white-space: nowrap;
+  }
+
+  .stale-tag {
+    font-size: 8.5px;
+    padding: 2px 6px;
   }
 
   .dish-name {
@@ -2206,60 +2179,6 @@ body {
     transition: none;
     will-change: auto;
     transform: none !important;
-  }
-
-  /* Stale banner — absolutely positioned overlay at card bottom, no height impact */
-  .stale-banner {
-    /* A real row of the card, not an overlay.
-       It used to be absolutely positioned across the bottom, which meant the
-       card had to keep the side-dish block underneath it at opacity 0 to
-       reserve the space — 82.7px of a 203px card, of which the 48px banner
-       covered 38. The remaining 45px was simply blank, and the description
-       above it was squeezed by room that showed nothing.
-       As row 2 it takes exactly the height it needs, and the hidden block can
-       be removed outright. */
-    position: static;
-    grid-column: 1 / -1;
-    grid-row: 2;
-    /* Bleeds back out through the card's asymmetric padding so it still sits
-       flush on the bottom edge, corner to corner, as it did when it was
-       absolute. */
-    margin: 0 -12px calc(-1 * var(--card-pad-y)) -16px;
-    padding: 10px 14px;
-    gap: 8px;
-    border-radius: 0 0 18px 18px;
-    border: none;
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
-    background: linear-gradient(135deg, rgba(245, 242, 238, 0.98) 0%, rgba(240, 237, 232, 0.98) 100%);
-    z-index: 5;
-    box-shadow: 0 -2px 12px rgba(200, 116, 26, 0.08);
-  }
-
-  /* An outdated card has no side dishes to show, so it does not keep their
-     space. `opacity: 0` left them invisible but still laid out, which is what
-     put 45px of nothing in the middle of the card and took those lines off the
-     description. The banner above occupies row 2 instead. */
-  .food-card.outdated .card-bottom {
-    display: none;
-  }
-
-  /* The rows swap over on a stale card: the plate and text take the height
-     they need, and the banner takes the rest.
-
-     A card with no side dishes has less to say than its neighbours, and the
-     leftover has to land somewhere. Under the normal `1fr auto` it pooled
-     between the description and the banner — 94px of nothing on a 224px card.
-     Giving the banner the flexible row hands 27px of that to the one element
-     that can use it, and it stays flush on the bottom edge where its rounded
-     corners belong. The canteen name still starts at 11.1px, level with the
-     other two cards. */
-  .food-card.outdated {
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .food-card.outdated .stale-banner {
-    align-self: stretch;
-    align-items: center;
   }
 
   /* Per-canteen closed card — row layout (image left, text right) matching
@@ -2321,18 +2240,6 @@ body {
   }
 
   /* Closed canteens mobile text — adjust position above day bar */
-
-  .stale-banner-icon {
-    font-size: 14px;
-  }
-
-  .stale-banner-text strong {
-    font-size: 10.5px;
-  }
-
-  .stale-banner-text span {
-    font-size: 9.5px;
-  }
 
   .stale-image-badge {
     bottom: -2px;
@@ -2509,14 +2416,9 @@ body {
 
 /* Hide pagination dots completely */
 
-/* ─── Cards Animated Wrapper (Powered by Motion) ─── */
+/* ─── One day of cards (a DayPanel) ─── */
 .cards-animated-wrapper {
   display: flex;
-  flex-direction: inherit;
-  justify-content: inherit;
-  gap: inherit;
-  width: 100%;
-  will-change: transform, opacity;
 }
 
 /* ─── Header Actions ─── */
@@ -2594,8 +2496,7 @@ body {
 }
 
 /* No overshoot: the panel settles, it does not bounce. */
-.info-modal,
-.lightbox-content {
+.info-modal {
   animation: modalPanelIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -2848,9 +2749,9 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.4);
-  background: rgba(255, 255, 255, 0.55);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  backdrop-filter: blur(12px) saturate(1.4);
+  /* Flat, not frosted: a backdrop-filter inside the moving board is
+     re-blurred on every frame of every day change, once per card. */
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 20px;
   z-index: 12;
@@ -2918,9 +2819,9 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.4);
-  background: rgba(255, 255, 255, 0.55);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  backdrop-filter: blur(12px) saturate(1.4);
+  /* Flat, not frosted: a backdrop-filter inside the moving board is
+     re-blurred on every frame of every day change, once per card. */
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 20px;
   z-index: 12;
@@ -2969,76 +2870,40 @@ body {
   }
 }
 
-/* ─── #6 Lightbox Navigation ─── */
+/* ─── Lightbox navigation — pointer only; a finger swipes ─── */
 .lightbox-nav {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
+  translate: 0 -50%;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--border-light);
-  color: var(--text-primary);
-  font-size: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px var(--shadow-soft);
-  line-height: 1;
+  transition: background 0.2s ease;
 }
 
 .lightbox-nav:hover {
-  background: white;
-  transform: translateY(-50%) scale(1.08);
-  box-shadow: 0 4px 12px var(--shadow-medium);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .lightbox-prev {
-  left: 12px;
+  left: 24px;
 }
 
 .lightbox-next {
-  right: 12px;
+  right: 24px;
 }
 
-.lightbox-dots {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.lightbox-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border-light);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.lightbox-dot.active {
-  background: var(--accent-orange);
-  transform: scale(1.2);
-}
-
-@media (max-width: 768px) {
+@media (hover: none) {
   .lightbox-nav {
-    width: 32px;
-    height: 32px;
-    font-size: 20px;
-  }
-
-  .lightbox-prev {
-    left: 6px;
-  }
-
-  .lightbox-next {
-    right: 6px;
+    display: none;
   }
 }
 
@@ -3498,10 +3363,6 @@ body {
   /* Reduced motion means no travel, not no feedback. These are opacity and
      colour only: the arriving day and the viewers fade, and a vote still
      visibly registers. */
-  .day-panel:not(.day-panel-initial):not(.day-panel-neighbor-left):not(.day-panel-neighbor-right) {
-    animation: dayFade 120ms ease-out !important;
-  }
-
   .info-overlay,
   .lightbox-overlay {
     animation: overlayFadeIn 150ms ease-out both !important;
@@ -3531,12 +3392,6 @@ body {
    the blur was doing part of that work. Desktop keeps all four — it has the
    GPU budget and it is where the glass actually reads.                      */
 @media (max-width: 768px) {
-  .lightbox-overlay {
-    background: rgba(0, 0, 0, 0.88);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
   .info-overlay {
     background: rgba(0, 0, 0, 0.62);
     -webkit-backdrop-filter: none;

@@ -23,7 +23,7 @@ import ClosedCanteensPill from "@/components/ClosedCanteensPill";
 import DayPanel from "@/components/DayPanel";
 import { isCanteenClosed, getRankedItems } from "@/lib/canteen-utils";
 import { useShellInert } from "@/lib/useShellInert";
-import { useDaySwipe } from "@/lib/useDaySwipe";
+import { useDayScroller } from "@/lib/useDayScroller";
 import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 
 // These only render once the user opens an overlay: the action sheet, the
@@ -115,13 +115,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setDishDescriptions(initialDescriptions);
     setDishShortNames(initialShortNames);
   }, [initialMenu, initialOrigins, initialDescriptions, initialShortNames]);
-  /**
-   * The day mounted beside the current one while a change is under way: during
-   * a drag, and for the length of the glide a tap or key starts. Panels are
-   * keyed by day, so when the glide lands this one simply becomes the current
-   * panel; its DOM node and its loaded plates are kept.
-   */
-  const [swipingNeighbor, setSwipingNeighbor] = useState<{ day: number; position: -1 | 1 } | null>(null);
   /** False until the first day change, so only the first day on screen plays the opening entrance. */
   const [navigated, setNavigated] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -193,7 +186,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   /** The dock shows the day a glide is heading to before it is committed. */
   const [previewDay, setPreviewDay] = useState<number | null>(null);
 
-  /** Commits a day change. useDaySwipe calls it when a glide lands. */
+  /** Commits a day change. useDayScroller calls it once the board comes to rest. */
   const commitDay = useCallback((i: number) => {
     setNavigated(true);
     setSelectedDay(prev => (i === prev ? prev : i));
@@ -204,15 +197,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setSearchParam("day", DAY_KEYS[i]);
   }, []);
 
-  // Finger, trackpad, dock and keys -> one day change. See useDaySwipe.
-  const { trackRef, handleTouchStart, handleTouchEnd, goToDay: handleDaySelect } = useDaySwipe({
-    scrollRef,
+  // Finger, trackpad, dock and keys -> one native scroll of the board. See useDayScroller.
+  const { scrollerRef: trackRef, goToDay: handleDaySelect } = useDayScroller({
     selectedDay,
     onSelectDay: commitDay,
-    blocked: anyOverlayOpen,
-    ready: menuData !== null,
-    onNeighborChange: setSwipingNeighbor,
     onPreviewDay: setPreviewDay,
+    ready: menuData !== null,
   });
 
   // Initial data loading + localStorage cleanup
@@ -336,10 +326,13 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         if (!CLOSE_REQUESTS_HANDLED_BY_PLATFORM) closeTopmostOverlay();
       } else if (e.key === "ArrowLeft" && !isInput) {
         if (selectedDay > 0 && !anyOverlayOpen) {
+          // Ours, not the scroller's own 40px nudge if it happens to have focus.
+          e.preventDefault();
           handleDaySelect(selectedDay - 1);
         }
       } else if (e.key === "ArrowRight" && !isInput) {
         if (selectedDay < 4 && !anyOverlayOpen) {
+          e.preventDefault();
           handleDaySelect(selectedDay + 1);
         }
       } else if (e.key === " " && !isInput) {
@@ -511,8 +504,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         className="cards-container"
         ref={scrollRef}
         onScroll={handleScroll}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
       >
         <ErrorBoundary>
           <div className="cards-track" ref={trackRef}>
@@ -523,31 +514,27 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
               track's own transform carries both. Keyed by day, so the
               neighbour becomes the current panel without being remounted.
             */}
-            <DayPanel
-              key={`day-${selectedDay}`}
-              day={selectedDay}
-              data={allDaysData[selectedDay] ?? canteenDayData}
-              todayIndex={todayIndex}
-              votes={voting.votes}
-              maxVotes={maxVotes}
-              onImageClick={handleImageClick}
-              onCardClick={handleCardClick}
-              isInitial={!navigated}
-            />
-            {swipingNeighbor && swipingNeighbor.day !== selectedDay && (
+            {/*
+              The whole week, side by side: a native snapping scroller, so the
+              browser itself carries the board at the screen's refresh rate.
+              Keyed by day, so nothing remounts when the day changes.
+            */}
+            <div className="cards-board">
+            {DAY_KEYS.map((_, day) => (
               <DayPanel
-                key={`day-${swipingNeighbor.day}`}
-                day={swipingNeighbor.day}
-                data={allDaysData[swipingNeighbor.day] ?? []}
+                key={`day-${day}`}
+                day={day}
+                data={allDaysData[day] ?? (day === selectedDay ? canteenDayData : [])}
                 todayIndex={todayIndex}
                 votes={voting.votes}
                 maxVotes={maxVotes}
                 onImageClick={handleImageClick}
                 onCardClick={handleCardClick}
-                swipePosition={swipingNeighbor.position}
-                isInitial={false}
+                inactive={day !== selectedDay}
+                isInitial={day === selectedDay && !navigated}
               />
-            )}
+            ))}
+            </div>
           </div>
         </ErrorBoundary>
       </main>

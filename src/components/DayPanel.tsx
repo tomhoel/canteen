@@ -8,15 +8,11 @@ import ClosedCard from "@/components/ClosedCard";
 import AllClosedCard from "@/components/AllClosedCard";
 
 /**
- * One weekday's cards.
+ * One weekday's cards: one page of the day board.
  *
- * Two of these can be on screen at once: the current day and, while a day
- * change is under way, the day it is changing to (`swipePosition`). They share
- * `.cards-track`'s single grid cell, so they overlap without any absolute
- * positioning; the neighbour's class offsets it one width plus a gap, and the
- * track's transform (written by useDaySwipe) moves both together. There is no
- * per-panel enter or exit animation any more: every day change is that one
- * movement of the track.
+ * All five sit side by side in `.cards-track`, a native snapping scroller (see
+ * useDayScroller), so changing the day is the browser scrolling the board and
+ * no panel ever animates on its own.
  */
 
 export interface DayPanelProps {
@@ -28,8 +24,8 @@ export interface DayPanelProps {
   maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
   onCardClick: (canteenName: string) => void;
-  /** Mounted beside the current day during a change: -1 to its left, 1 to its right. */
-  swipePosition?: -1 | 1;
+  /** Not the committed day: on the board, but out of reach until it is. */
+  inactive?: boolean;
   /** True only for the first day on screen, which plays the opening entrance. */
   isInitial?: boolean;
 }
@@ -42,30 +38,24 @@ function DayPanel({
   maxVotes,
   onImageClick,
   onCardClick,
-  swipePosition,
+  inactive = false,
   isInitial = false,
 }: DayPanelProps) {
   const openCanteens = data.filter((c) => !isCanteenClosed(c));
   const closedCanteens = data.filter((c) => isCanteenClosed(c));
 
-  const cls =
-    "cards-animated-wrapper day-panel" +
-    (isInitial ? " day-panel-initial" : "") +
-    (swipePosition === -1
-      ? " day-panel-neighbor-left"
-      : swipePosition === 1
-      ? " day-panel-neighbor-right"
-      : "");
+  const cls = "cards-animated-wrapper day-panel" + (isInitial ? " day-panel-initial" : "");
 
   return (
     <div
       className={cls}
       /*
-        `inert`, not `aria-hidden` plus `pointer-events: none`: the neighbour is
-        on screen but not yet the day, and `inert` takes it out of the tab
-        order, the accessibility tree and hit-testing together.
+        `inert`, not `aria-hidden` plus `pointer-events: none`: the other days
+        are on the board but not the day, and `inert` takes them out of the tab
+        order, the accessibility tree and hit-testing together. A touch on one
+        falls through to the scroller, so it still drags the board.
       */
-      inert={swipePosition !== undefined || undefined}
+      inert={inactive || undefined}
     >
       {openCanteens.length === 0 ? (
         <AllClosedCard closedCanteens={closedCanteens} />
