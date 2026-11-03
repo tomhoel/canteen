@@ -252,14 +252,6 @@ const FoodCard = memo(function FoodCard({
                 {isAhead && (
                   <span className="ahead-tag">{`Uke ${canteenWeekNum}`}</span>
                 )}
-                {/* Inline, so a stale card is exactly as tall as the others.
-                    The plate's own badge carries the week number. */}
-                {isOutdated && (
-                  <span className="stale-tag" title={`Ikke oppdatert – viser meny for uke ${canteenWeekNum}`}>
-                    <Clock size={10} strokeWidth={2.6} aria-hidden="true" />
-                    {"Ikke oppdatert"}
-                  </span>
-                )}
               </div>
             );
           })()}
@@ -292,6 +284,18 @@ const FoodCard = memo(function FoodCard({
           </div>
         )}
 
+        {/* Last week's menu, said as a quiet line under the allergens, in the
+            space the card already has: it keeps every card the same height,
+            and it no longer competes with the canteen name for its row. */}
+        {isOutdated && (
+          <p className="stale-note">
+            <Clock size={12} strokeWidth={2.4} aria-hidden="true" />
+            <span>
+              <strong>{"Ikke oppdatert"}</strong>
+              {canteenWeekNum ? ` · viser uke ${canteenWeekNum}` : ""}
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="card-bottom">

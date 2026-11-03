@@ -875,25 +875,28 @@ body {
   text-transform: uppercase;
 }
 
-/* Last week's menu, said in the name row so the card keeps its height. */
-.stale-tag {
-  display: inline-flex;
+/* Last week's menu: one quiet line under the allergens (FoodCard). Not a pill:
+   it is a remark about the menu, not a control, and the space under the
+   allergens is free on every card. */
+.stale-note {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  min-width: 0;
-  padding: 3px 8px;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  justify-content: center;
+  gap: 6px;
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.3;
   color: var(--text-secondary);
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 20px;
-  white-space: nowrap;
 }
 
-.stale-tag svg {
+.stale-note strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stale-note svg {
   flex-shrink: 0;
+  color: var(--accent-orange-ink);
 }
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
@@ -1771,7 +1774,16 @@ body {
     /* The plate's resting size, declared once. .card-image-wrapper renders it
        and the badges position against it; they used to carry their own copy of
        this clamp, so changing one silently mispositioned the other. */
-    --plate-size: clamp(125px, 19dvh, 210px);
+    /* The plate's slot: where its left edge sits, so the text column keeps its
+       width. The plate itself is 15% larger and spills past the card's right
+       edge (cut off by the screen; `.cards-container` clips sideways). The top
+       of its rim sits in the middle of the gap above the card (see the margin
+       on .card-image-wrapper). Measured on six phone sizes across a week, by
+       the plate's real rim: at 15% it covers no text; at 20% it reaches the
+       first side dish's allergen codes. */
+    --plate-slot: clamp(125px, 19dvh, 210px);
+    --plate-size: calc(var(--plate-slot) * 1.15);
+    --plate-grow: calc(var(--plate-size) - var(--plate-slot));
     --card-pad-y: clamp(8px, 1.2dvh, 14px);
     --plate-pull-y: clamp(-24px, -3dvh, -14px); /* @kind other */
     /* How far the plate hangs off the card's left edge. This is as far as it
@@ -1801,12 +1813,13 @@ body {
        because a row that has no more to give simply clips. The gap is gone
        because there is no gap: the text column grows into it. */
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    /* Text on the left, the plate on the right. */
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: minmax(0, 1fr) auto;
     align-items: start;
     /* Asymmetric: the left padding is what the plate hangs off, the right is
        pure gutter and gives its width to the text. */
-    padding: var(--card-pad-y) 12px var(--card-pad-y) 16px;
+    padding: var(--card-pad-y) 16px var(--card-pad-y) 12px;
     border-radius: 18px;
     position: relative;
     overflow: visible;
@@ -1863,7 +1876,7 @@ body {
        Friday's middle card (measured 4px BELOW the card edge instead of 13px
        above). The negative margins are what produce the overhang; they only
        read consistently from a fixed top edge. */
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
     align-self: start;
     width: var(--plate-size);
@@ -1875,7 +1888,14 @@ body {
        row on a three-side-dish card and the side dishes still pass behind its
        lower curve — that is the row being shorter than the plate, which is
        intended and is where the text column's room comes from. */
-    margin: var(--plate-pull-y) 0 0 var(--plate-pull-x);
+    margin:
+      /* The plate's visible rim, not its picture's box, in the middle of the
+         gap above the card. Every plate is drawn 7% in from each edge of its
+         square picture (measured: 440 of 512px), so the box goes up by that.
+         -1px is the card's border. */
+      calc(-1 * (var(--card-pad-y) + var(--stack-gap) / 2) - 1px - var(--plate-size) * 0.07)
+      calc(var(--plate-pull-x) - var(--plate-grow))
+      0 0;
     flex-shrink: 0;
     z-index: 10;
   }
@@ -1925,9 +1945,9 @@ body {
     animation: none;
   }
 
-  /* Content - right of image */
+  /* Content - left of the plate */
   .card-content {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
     /* Stretch, so the column is the height of its row rather than of its own
        text, and the clip below happens at the row. The canteen name still
@@ -1935,7 +1955,7 @@ body {
        the box is shrink-wrapped to it. */
     align-self: stretch;
     text-align: left;
-    padding: 0 2px 0 8px;
+    padding: 0 8px 0 2px;
     min-width: 0;
     /* A grid because the last row once held the dish description, which needed
        a definite "what is left" height. The description is gone; the
@@ -1982,9 +2002,12 @@ body {
     white-space: nowrap;
   }
 
-  .stale-tag {
-    font-size: 8.5px;
-    padding: 2px 6px;
+  .stale-note {
+    grid-row: 3;
+    align-self: start;
+    justify-content: flex-start;
+    margin-top: clamp(4px, 0.8dvh, 8px);
+    font-size: clamp(10px, 1.35dvh, 12px);
   }
 
   .dish-name {
@@ -2098,7 +2121,10 @@ body {
   /* Closed canteens mobile text — adjust position above day bar */
 
   .stale-image-badge {
-    bottom: -2px;
+    /* On the plate's rim rather than its foot: the plate's lower edge now
+       hangs over the first side-dish row. */
+    bottom: 16%;
+    z-index: 3; /* in front of the plate image, which it now overlaps */
     font-size: 8px;
     padding: 2px 7px;
   }
@@ -2611,12 +2637,13 @@ body {
 
 @media (max-width: 768px) {
   .origin-pip {
+    /* The plate's inner side: it hangs off the card's right edge. */
     top: clamp(14px, 3dvh, 24px);
     bottom: auto;
-    right: 4px;
-    left: auto;
+    left: 4px;
+    right: auto;
     font-size: 10px;
-    padding: 3px 7px 3px 5px;
+    padding: 3px 6px;
     gap: 2px;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
@@ -2626,7 +2653,12 @@ body {
   /* Show emoji flag on mobile, hide image flag */
   .emoji-flag {
     display: inline-block;
-    font-size: 14px;
+    /* Big enough to read the flag at a glance; at 14px it was a smudge. */
+    font-size: 22px;
+    line-height: 1;
+    /* Opaque: Chrome draws a colour emoji at the alpha of the text colour, and
+       the pip's grey is 40% black, which washed the flag out. */
+    color: #000;
   }
   .image-flag {
     display: none;
