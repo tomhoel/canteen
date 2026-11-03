@@ -15,7 +15,7 @@ import { emitDayProgress } from "@/lib/day-progress";
  * - A tap on the dock, an arrow key or a trackpad swipe is ours. The browser's
  *   smooth scroll was measured at 880 ms for one desktop day, almost still for
  *   its first 150 ms, and a key pressed during it was lost. Instead the board
- *   glides by a CSS transform (compositor again, fast start, ~280 ms), the day
+ *   glides by a CSS transform (compositor again, on the dock pill's own 340 ms curve), the day
  *   is committed the moment it sets off so the next press counts from there,
  *   and a glide already under way re-aims from wherever it is. When it lands
  *   the transform is swapped for the real scroll position in the same frame.
@@ -30,8 +30,8 @@ const IDLE_MS = 120;
 const WHEEL_TURN_PX = 50;
 /** Trackpad: no wheel event for this long means the fingers (and their momentum) are done. */
 const WHEEL_QUIET_MS = 160;
-/** The glide: fast off the mark, long soft landing. */
-const GLIDE_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+/** Longer than `--glide-ms` in the CSS; only the backstop for a hidden tab, transitionend lands it. */
+const GLIDE_BACKSTOP_MS = 500;
 
 /**
  * Mouse and trackpad boards do not scroll sideways by themselves (CSS gives
@@ -57,10 +57,6 @@ export function dayPosition(scrollLeft: number, stride: number, days = 5): numbe
   return Math.max(0, Math.min(days - 1, scrollLeft / stride));
 }
 
-/** How long a glide over `days` days takes: a hop is quick, a jump across the week a little longer. */
-export function glideMs(days: number): number {
-  return Math.round(Math.min(420, 260 + 40 * Math.max(0, Math.abs(days) - 1)));
-}
 
 const boardOf = (el: HTMLElement) => el.firstElementChild as HTMLElement | null;
 
@@ -141,7 +137,6 @@ export function useDayScroller({ selectedDay, onSelectDay, onPreviewDay, ready }
         land();
         return;
       }
-      const ms = glideMs((target - shown) / stride(el));
       glideRef.current = { land, drop };
       // See `.is-gliding` in the CSS: no snapping, and room so the scroll
       // position is not clamped while the board is moved by transform.
@@ -149,11 +144,12 @@ export function useDayScroller({ selectedDay, onSelectDay, onPreviewDay, ready }
       board.style.transition = "none";
       board.style.transform = `translate3d(${base - shown}px, 0, 0)`;
       void board.offsetWidth;
-      board.style.transition = `transform ${ms}ms ${GLIDE_EASE}`;
+      // The pill's own timing and curve (--glide-* in the CSS), so the two move as one.
+      board.style.transition = "transform var(--glide-ms) var(--glide-ease)";
       board.style.transform = `translate3d(${base - target}px, 0, 0)`;
       board.addEventListener("transitionend", onEnd);
       // transitionend is the signal; this is the backstop for a hidden tab.
-      timer.id = setTimeout(land, ms + 80);
+      timer.id = setTimeout(land, GLIDE_BACKSTOP_MS);
     },
     [commit, setPreview]
   );

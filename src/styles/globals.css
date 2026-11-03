@@ -26,6 +26,12 @@
       common failure in this codebase.
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
+  /* The day change, one movement for the dock's pill and the board under it
+     (useDayScroller sets the board's transition from these). A gentle start
+     and a long soft landing: the curve the pill always had, and the reason it
+     read as smooth while the board, on a full-speed start, read as a jolt. */
+  --glide-ms: 340ms; /* @kind other */
+  --glide-ease: cubic-bezier(0.23, 0.25, 0.1, 1); /* @kind other */
   --bg-cream: #f5f0e8;
   --bg-warm: #ede7db;
   --card-white: #ffffff;
@@ -1637,8 +1643,8 @@ body {
      transition cannot run on an element's first style. That is what
      `initial={false}` bought. */
   transition:
-    transform 0.34s cubic-bezier(0.23, 0.25, 0.1, 1),
-    width 0.34s cubic-bezier(0.23, 0.25, 0.1, 1);
+    transform var(--glide-ms) var(--glide-ease),
+    width var(--glide-ms) var(--glide-ease);
 }
 
 @media (prefers-reduced-motion: reduce) {
