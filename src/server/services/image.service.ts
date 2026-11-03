@@ -665,8 +665,9 @@ export async function processAllCanteenAIImages(
       newlyDrawn.map(({ dish, archivePath }) => ({
         cacheKey: normalizeDishName(dish),
         originalName: dish,
-        origin: null,
-        description: null,
+        // No `origin` key: the merge keeps a field an entry leaves out, and an
+        // explicit null here wiped the dish's cached origin on every new plate,
+        // so the next run paid the model to ask for it again.
         imagePath: null,
         imageNoBgPath: archivePath,
       }))

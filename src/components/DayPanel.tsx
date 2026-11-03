@@ -33,8 +33,7 @@ const EXIT_FALLBACK_MS = 360;
 export type DayPanelPhase = "static" | "enter" | "exit";
 
 export interface DayPanelProps {
-  /** The weekday this panel shows — never the app's selectedDay while exiting. */
-  day: number;
+  /** The cards of the weekday this panel shows — never the app's selected day while exiting. */
   data: CanteenDayItem[];
   /** "static" is a day already in place: the first one shown, or a swiped-in neighbour. */
   phase: DayPanelPhase;
@@ -43,11 +42,7 @@ export interface DayPanelProps {
    * track and this panel must not translate as well. Reaches CSS as `--day-dir`.
    */
   dir: number;
-  todayIndex: number;
-  votes: Record<string, number>;
-  maxVotes: number;
   onImageClick: (data: CanteenDayItem) => void;
-  onCardClick: (canteenName: string) => void;
   /** Fired once when the exit is over. Only passed to a leaving panel. */
   onExited?: () => void;
   /** Mounted beside the current day during a finger swipe: -1 to its left, 1 to its right. */
@@ -57,15 +52,10 @@ export interface DayPanelProps {
 }
 
 function DayPanel({
-  day,
   data,
   phase,
   dir,
-  todayIndex,
-  votes,
-  maxVotes,
   onImageClick,
-  onCardClick,
   onExited,
   swipePosition,
   isInitial = false,
@@ -83,7 +73,7 @@ function DayPanel({
   }, [phase, entered]);
 
   // The leaving panel's own countdown, in a ref so a re-render during the exit
-  // (a vote landing, say) cannot restart it.
+  // (a background menu refresh, say) cannot restart it.
   const onExitedRef = useRef(onExited);
   useEffect(() => {
     onExitedRef.current = onExited;
@@ -135,12 +125,7 @@ function DayPanel({
                 key={d.canteenName}
                 data={d}
                 cardIdx={cardIdx}
-                selectedDay={day}
-                todayIndex={todayIndex}
-                voteCount={votes[d.canteenName] ?? 0}
-                maxVotes={maxVotes}
                 onImageClick={onImageClick}
-                onCardClick={onCardClick}
                 isInitial={isInitial}
               />
             )

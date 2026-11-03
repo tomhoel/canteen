@@ -40,7 +40,7 @@ export default function InfoModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="info-body">
           <p className="info-intro">
-            {"En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres, stem på favorittlunsjen din, og oppdag nye oppskrifter — alt på ett sted."}
+            {"En alt-i-ett lunsjapp som henter ferske menyer fra kantinene på Telenor Fornebu hver uke. Se hva som serveres — alt på ett sted."}
           </p>
           <div className="info-features">
             <div className="info-feature">
@@ -48,34 +48,6 @@ export default function InfoModal({ onClose }: { onClose: () => void }) {
               <div>
                 <strong>{"Daglige menyer"}</strong>
                 <span>{"Tre kantiner, fem dager, komplett med allergener og bilder generert av AI."}</span>
-              </div>
-            </div>
-            <div className="info-feature">
-              <span className="info-feature-icon">&#x1F5F3;&#xFE0F;</span>
-              <div>
-                <strong>{"Stem i dag"}</strong>
-                <span>{"Se hvilken kantine kollegene dine velger. Stemmetall oppdateres i sanntid."}</span>
-              </div>
-            </div>
-            <div className="info-feature">
-              <span className="info-feature-icon">&#x1F468;&#x200D;&#x1F373;</span>
-              <div>
-                <strong>{"AI-oppskrifter"}</strong>
-                <span>{"Liker du retten? Få en komplett oppskrift med ingredienser, steg og koketips, laget av AI."}</span>
-              </div>
-            </div>
-            <div className="info-feature">
-              <span className="info-feature-icon">&#x1F6D2;</span>
-              <div>
-                <strong>{"Handle smart"}</strong>
-                <span>{"Finn de billigste ingrediensene på tvers av norske dagligvarebutikker, eller bygg en handleliste på MENY."}</span>
-              </div>
-            </div>
-            <div className="info-feature">
-              <span className="info-feature-icon">&#x1F310;</span>
-              <div>
-                <strong>{"Tospråklig"}</strong>
-                <span>{"Full norsk og engelsk støtte — bytt med en knapp."}</span>
               </div>
             </div>
           </div>

@@ -1,11 +1,11 @@
 import { getRedis } from "./redis.service.js";
-import type { DishOrigin, DishDescription, DishCourse } from "../../lib/types.js";
+import type { DishOrigin, DishCourse } from "../../lib/types.js";
 
 /**
  * Per-dish cache backed by Upstash Redis `dish_cache` hash.
  *
  * A dish name is stable across weeks — "Slakterbiff med bearnaise" means the
- * same thing in week 33 and week 41 — so its origin, description and plate
+ * same thing in week 33 and week 41 — so its origin, short title and plate
  * image only ever need producing once.
  *
  * Stored as fields in the `dish_cache` hash in Upstash Redis, keyed by `cacheKey`.
@@ -16,7 +16,6 @@ export interface DishCacheRow {
   cacheKey: string;
   originalName: string;
   origin: DishOrigin | null;
-  description: DishDescription | null;
   /**
    * A shortened form of the dish name, for the card's headline only.
    *
@@ -39,13 +38,12 @@ export interface DishCacheRow {
 
 /**
  * A partial write: only the fields actually present are touched, so a run that
- * produced an image cannot blank a description another run filled in.
+ * produced an image cannot blank a short title another run filled in.
  */
 export interface DishCacheEntry {
   cacheKey: string;
   originalName: string;
   origin?: DishOrigin | null;
-  description?: DishDescription | null;
   shortName?: string | null;
   course?: DishCourse | null;
   imagePath?: string | null;
@@ -119,7 +117,6 @@ export async function loadDishCache(dishNames: string[]): Promise<DishCacheLoad>
             cacheKey: row.cacheKey ?? row.cache_key ?? key,
             originalName: row.originalName ?? row.original_name ?? "",
             origin: row.origin ?? null,
-            description: row.description ?? null,
             shortName: row.shortName ?? row.short_name ?? null,
             course: row.course ?? null,
             imagePath: row.imagePath ?? row.image_path ?? null,
@@ -171,7 +168,6 @@ export async function saveDishCacheEntries(entries: DishCacheEntry[]): Promise<n
         cacheKey: entry.cacheKey,
         originalName: entry.originalName ?? prev.originalName ?? "",
         origin: entry.origin !== undefined ? entry.origin : (prev.origin ?? null),
-        description: entry.description !== undefined ? entry.description : (prev.description ?? null),
         shortName: entry.shortName !== undefined ? entry.shortName : (prev.shortName ?? null),
         course: entry.course !== undefined ? entry.course : (prev.course ?? null),
         imagePath: entry.imagePath !== undefined ? entry.imagePath : (prev.imagePath ?? null),

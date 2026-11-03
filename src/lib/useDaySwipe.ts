@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { shouldTurnPage } from "@/lib/sheet-drag";
+import { shouldTurnPage } from "@/lib/page-turn";
 
 /**
  * Everything that turns a finger or a trackpad into a day change.

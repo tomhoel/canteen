@@ -63,7 +63,6 @@ export function buildMenuFixture() {
     weekId,
     menuData: { scrapedAt: new Date().toISOString(), canteens },
     dishOrigins: {},
-    dishDescriptions: {},
     dishShortNames: {},
     // Keyed "<day>|<canteen>", exactly as the server emits it. The paths are
     // never fetched — the test intercepts Supabase's storage host — but they
@@ -75,9 +74,4 @@ export function buildMenuFixture() {
       )
     ),
   };
-}
-
-/** Two weeks of vote counts, so the leaderboard has something to draw. */
-export function buildAttendanceFixture() {
-  return { entries: [] as Array<{ date: string; canteens: Record<string, number> }> };
 }

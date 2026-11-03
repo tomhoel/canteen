@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -141,7 +141,7 @@ test("the app enters exactly once", async ({ page }) => {
  * Guards the fix for every overlay being unusable in production.
  *
  * `useShellInert` marks `.app-wrapper` inert while an overlay is open, and all
- * of them except the action sheet used to render *inside* it — so the attribute
+ * of them used to render *inside* it — so the attribute
  * meant to protect the page behind the overlay took the overlay with it.
  * Measured before the fix: 0 of 3 focusable elements in the info panel could be
  * focused, and a click anywhere in it fell through to the scrim and dismissed
@@ -160,15 +160,19 @@ test("an open overlay is usable and the page behind it is not", async ({ page })
     await page.waitForSelector(".info-modal");
     overlaySelector = ".info-modal";
   } else {
-    await page.locator(".food-card").first().click();
-    await page.waitForSelector(".action-sheet");
-    overlaySelector = ".action-sheet";
+    // The header (and its info button) is hidden on a phone; a card opens the plate view.
+    await page.locator(".day-panel:not([inert]) .food-card.clickable").first().click();
+    await page.waitForSelector(".lightbox-overlay");
+    overlaySelector = ".lightbox-overlay";
   }
 
   const state = await page.evaluate((sel) => {
     const wrapper = document.querySelector(".app-wrapper")!;
     const modal = document.querySelector(sel)!;
-    const focusables = [...modal.querySelectorAll("button, a[href]")];
+    // Only what is on screen: the plate view hides its arrows on a touch screen.
+    const focusables = [...modal.querySelectorAll("button, a[href]")].filter((el) =>
+      (el as HTMLElement).checkVisibility()
+    );
     const reachable = focusables.filter((el) => {
       (el as HTMLElement).focus();
       return document.activeElement === el;
@@ -266,27 +270,6 @@ test("the critical path stays within budget", async () => {
 });
 
 /**
- * The budget above is blind to lazy chunks, and one of them is not really lazy
- * in the way that matters: the sheet chunk downloads and parses at the exact
- * moment the user taps a card and is waiting for something to happen. It is the
- * one piece of deferred work that happens under the user's eye.
- *
- * It was 9,974 bytes gzipped, of which `@use-gesture/react` was 6,489 — 65% of
- * it, for a drag-to-dismiss that nothing else in the app used. Replacing it with
- * raw touch listeners took it to 3,676. Without an assertion here, that saving
- * is invisible to CI and the next dependency lands in it unnoticed.
- */
-test("the sheet chunk stays small, because it loads while the user waits", () => {
-  const dir = join(DIST, "assets");
-  const chunk = readdirSync(dir).find((f) => /^ActionSheet-.*\.js$/.test(f));
-  expect(chunk, "no ActionSheet chunk in dist — did the lazy boundary move?").toBeTruthy();
-
-  const gz = gzipSync(readFileSync(join(dir, chunk!))).length;
-  // Headroom over the 3,676 bytes it is today, well under the 9,974 it was.
-  expect(gz, `the sheet chunk is ${gz} bytes gzipped`).toBeLessThan(5_000);
-});
-
-/**
  * The Android back gesture must close an open overlay, not leave the app.
  *
  * `manifest.json` declares `display: "standalone"`, so on an installed phone
@@ -298,8 +281,8 @@ test("the sheet chunk stays small, because it loads while the user waits", () =>
  * a close request, and where `CloseWatcher` exists the platform delivers both
  * through the same channel. So Escape here exercises the exact path back takes.
  *
- * The overlay under test is deliberately the INFO MODAL and not the sheet. The
- * sheet, the lightbox and the leaderboard each carry their own keydown listener,
+ * The overlay under test is deliberately the INFO MODAL. Overlays that carry
+ * their own keydown listener
  * so they close on Escape whether or not a watcher exists — a test against one
  * of those passes with the wiring torn out, which is exactly what the first
  * draft of this test did. The info modal is closed only by HomeClient's chain,
@@ -324,9 +307,10 @@ test("a platform close request closes the overlay instead of the app", async ({ 
     await page.waitForSelector(".info-modal");
     overlaySelector = ".info-modal";
   } else {
-    await page.locator(".food-card").first().click();
-    await page.waitForSelector(".action-sheet");
-    overlaySelector = ".action-sheet";
+    // The header (and its info button) is hidden on a phone; a card opens the plate view.
+    await page.locator(".day-panel:not([inert]) .food-card.clickable").first().click();
+    await page.waitForSelector(".lightbox-overlay");
+    overlaySelector = ".lightbox-overlay";
   }
 
   await page.keyboard.press("Escape"); // the same close request the back gesture raises
@@ -340,159 +324,6 @@ test("a platform close request closes the overlay instead of the app", async ({ 
   // ...and the app behind it is alive, i.e. the request closed a layer rather
   // than tearing anything else down.
   await expect(page.locator(".food-card").first()).toBeVisible();
-});
-
-/**
- * Guards the sheet's close animation.
- *
- * `ui/sheet.tsx` has always had a two-phase close — drop `shown`, let the 400ms
- * transition run, then unmount — but HomeClient returned null the moment
- * `isOpen` went false, destroying the component on the same tick. The sheet
- * vanished instead of sliding down, which is what it was reported as.
- *
- * Asserted as "still mounted while it animates" rather than on translateY,
- * because the two breakpoints animate differently: a phone slides the panel up
- * from the bottom edge, a desktop scales a centred card that never translates.
- * Surviving its own close is the property both share, and the one that broke.
- *
- * Measured on a phone before the fix: 0 -> GONE in a single frame.
- * After: 0 -> 44 -> 233 -> 371 -> 434 -> 443 -> GONE.
- */
-test("the sheet animates out when dismissed instead of vanishing", async ({ page }) => {
-  await page.goto("/");
-  await loaded(page);
-
-  await page.locator(".food-card").first().click();
-  await page.waitForSelector(".action-sheet");
-  await page.waitForTimeout(600); // let it finish opening
-
-  const frames = await page.evaluate(async () => {
-    const wait = (ms: number) => new Promise((k) => setTimeout(k, ms));
-    const panel = document.querySelector(".action-sheet") as HTMLElement;
-    (panel.previousElementSibling as HTMLElement)?.click(); // the scrim
-    const present: boolean[] = [];
-    for (let i = 0; i < 16; i++) {
-      present.push(!!document.querySelector(".action-sheet"));
-      await wait(40);
-    }
-    return present;
-  });
-
-  // An instant unmount gives [true, false, false, ...]. A 400ms exit keeps it
-  // alive for roughly ten 40ms samples.
-  const alive = frames.filter(Boolean).length;
-  expect(alive, `panel survived only ${alive} frames — it is being unmounted, not animated`).toBeGreaterThan(4);
-  // ...and it does eventually leave.
-  expect(frames[frames.length - 1]).toBe(false);
-});
-
-/**
- * The close animation has to survive a DRAG, not just a tap.
- *
- * The test above taps the scrim on a sheet nobody touched, and that path was
- * fixed first. But `endDrag` clears the inline transition when any gesture
- * ends, and React does not write it back — it only emits an inline style whose
- * value changed, and that string is a module constant. With no stylesheet rule
- * underneath, one drag left the panel with `computed: "all / 0s"` forever
- * after: releasing without dismissing teleported it back, and the next close
- * jumped 443px in a single frame. That is most of what "it does not move
- * smoothly" meant, and the tap-only test could never see it.
- *
- * Measured on a phone before the fix: 0 -> 443 -> 443 -> ... -> GONE.
- * After: 4 -> 98 -> 303 -> 389 -> 427 -> 443 -> GONE.
- */
-test("the sheet still animates its close AFTER it has been dragged", async ({ page }) => {
-  test.skip(test.info().project.name === "desktop", "drag-to-dismiss is touch-only");
-  await page.goto("/");
-  await loaded(page);
-
-  await page.locator(".food-card").first().click();
-  await page.waitForSelector(".action-sheet");
-  await page.waitForTimeout(600);
-
-  const cdp = await page.context().newCDPSession(page);
-  const box = (await page.locator(".native-sheet-panel").boundingBox())!;
-  const x = box.x + box.width / 2;
-  const y0 = box.y + 24;
-
-  // A short pull down — well under the 25% dismiss threshold — then release.
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: y0 }] });
-  for (let d = 8; d <= 40; d += 8) {
-    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y0 + d }] });
-    await page.waitForTimeout(20);
-  }
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await page.waitForTimeout(150);
-
-  // The panel must still HAVE a transition. This is the direct assertion.
-  const duration = await page.evaluate(
-    () => getComputedStyle(document.querySelector(".native-sheet-panel")!).transitionDuration
-  );
-  expect(duration, "the drag cleared the panel transition and nothing restored it").not.toMatch(
-    /^0s/
-  );
-
-  // ...and the close it feeds must still be gradual.
-  const offsets = await page.evaluate(async () => {
-    const wait = (ms: number) => new Promise((k) => setTimeout(k, ms));
-    const panel = document.querySelector(".action-sheet") as HTMLElement;
-    (panel.previousElementSibling as HTMLElement)?.click();
-    const seen: number[] = [];
-    for (let i = 0; i < 10; i++) {
-      const el = document.querySelector(".native-sheet-panel") as HTMLElement | null;
-      if (el) seen.push(Math.round(new DOMMatrixReadOnly(getComputedStyle(el).transform).m42));
-      await wait(40);
-    }
-    return seen;
-  });
-
-  const distinct = new Set(offsets).size;
-  expect(
-    distinct,
-    `panel snapped through only ${distinct} positions (${offsets.join(", ")}) — it teleported`
-  ).toBeGreaterThan(3);
-});
-
-/**
- * A hard flick UPWARD must cancel the drag, not dismiss the sheet.
- *
- * `@use-gesture` derives velocity from `_delta.map(Math.abs)`, so `vy` is a
- * magnitude with no sign; the sign lives in `direction`, which the sheet never
- * read. The threshold `vy > 0.5` therefore fired identically in both
- * directions, and the universal "no, put it back" gesture closed the sheet.
- * Reproduced in a browser before the fix.
- */
-test("flicking the sheet upward cancels the drag instead of dismissing it", async ({ page }) => {
-  test.skip(test.info().project.name === "desktop", "drag-to-dismiss is touch-only");
-  await page.goto("/");
-  await loaded(page);
-
-  await page.locator(".food-card").first().click();
-  await page.waitForSelector(".action-sheet");
-  await page.waitForTimeout(600);
-
-  const cdp = await page.context().newCDPSession(page);
-  const box = (await page.locator(".native-sheet-panel").boundingBox())!;
-  const x = box.x + box.width / 2;
-  const y = box.y + 40;
-
-  // Engage downward (engagement latches), then flick sharply back up and lift.
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
-  for (const d of [10, 20, 25]) {
-    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y + d }] });
-    await page.waitForTimeout(24);
-  }
-  for (const d of [0, -25, -50]) {
-    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y + d }] });
-    await page.waitForTimeout(8);
-  }
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await page.waitForTimeout(700);
-
-  await expect(
-    page.locator(".action-sheet"),
-    "an upward flick dismissed the sheet — vy is unsigned, so the direction guard is missing"
-  ).toHaveCount(1);
 });
 
 test("horizontal day swipe displays neighbor panel and settles cleanly on mobile", async ({ page }) => {

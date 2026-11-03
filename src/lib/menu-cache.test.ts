@@ -22,7 +22,6 @@ const response = (over: Partial<WeeklyMenuResponse> = {}): WeeklyMenuResponse =>
   weekId: "2026-W37",
   menuData: { scrapedAt: "", canteens: {} },
   dishOrigins: {},
-  dishDescriptions: {},
   dishShortNames: {},
   plateImages: {},
   ...over,

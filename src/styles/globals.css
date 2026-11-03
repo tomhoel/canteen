@@ -87,7 +87,7 @@
      A blanket 11px floor was proposed twice by the audit and rejected twice. */
   --fs-label: 10.5px;   /* @kind font */ /* eyebrows, section labels, allergen codes, badges */
   --fs-meta: 12.5px;    /* @kind font */ /* side-dish rows, day-label dates */
-  --fs-body: 13px;      /* @kind font */ /* dish description, day names, sheet body */
+  --fs-body: 13px;      /* @kind font */ /* day names, sheet body */
   --fs-title: 16.5px;   /* @kind font */ /* dish name, and the action sheet's, so they cannot drift */
   --fs-hero: 26px;      /* @kind font */ /* page title */
 
@@ -147,12 +147,10 @@
   --e-3: 0 6px 20px rgba(60, 30, 0, 0.12);
   --e-4: 0 16px 48px rgba(60, 30, 0, 0.16), 0 2px 8px rgba(60, 30, 0, 0.08);
 
-  /* ─── Motion ───────────────────────────────────────────────────────────────
-     --dur-slow matches DUR_MS in ui/sheet.tsx; changing one without the other
-     desynchronises the sheet's CSS from its JS unmount timer. */
+  /* ─── Motion ─────────────────────────────────────────────────────────────── */
   --dur-fast: 150ms;   /* @kind other */ /* colour, background, hover, press */
   --dur-base: 250ms;   /* @kind other */ /* entrances, reveals, list items */
-  --dur-slow: 400ms;   /* @kind other */ /* sheet and modal transitions */
+  --dur-slow: 400ms;   /* @kind other */ /* modal transitions */
 
   /* ─── Stacking order ───────────────────────────────────────────────────────
      Four layers, named, so nothing has to be inferred from a bare number.
@@ -250,8 +248,6 @@ body {
 /* Disable 300ms tap delay and accidental text selection on interactive elements */
 .day-btn,
 .info-btn,
-.action-sheet-btn,
-.action-sheet-close,
 .food-card {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -540,21 +536,6 @@ body {
   cursor: pointer;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .food-card:hover {
-    transform: translateY(-4px);
-    box-shadow:
-      0 4px 8px rgba(60, 30, 0, 0.04),
-      0 12px 24px rgba(60, 30, 0, 0.07),
-      0 24px 48px rgba(60, 30, 0, 0.08);
-  }
-}
-
-.food-card.clickable:active {
-  transform: translateY(-1px) scale(0.99);
-  transition-duration: 0.12s;
-}
-
 /* Translate and opacity only, on every width: scaling a card is scaling the
    text inside it, which WebKit re-rasterises glyph by glyph. `cardRevealFlat`
    is kept as a name because the phone block selects it. */
@@ -580,31 +561,6 @@ body {
   }
 }
 
-/* ─── Active / voteable card — the hero treatment ─── */
-.food-card.voteable {
-  background: linear-gradient(180deg, #fffaf0 0%, #fef2dc 38%, var(--card-white) 52%);
-  border-color: rgba(200, 150, 60, 0.14);
-  box-shadow:
-    0 1px 3px rgba(200, 116, 26, 0.05),
-    0 6px 16px rgba(200, 116, 26, 0.06),
-    0 16px 40px rgba(60, 30, 0, 0.08);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .food-card.voteable:hover {
-    box-shadow:
-      0 4px 10px rgba(200, 116, 26, 0.06),
-      0 14px 28px rgba(200, 116, 26, 0.08),
-      0 28px 56px rgba(60, 30, 0, 0.10);
-  }
-}
-
-.food-card.voteable .food-image {
-  filter: drop-shadow(0 10px 24px rgba(80, 40, 0, 0.18))
-    drop-shadow(0 3px 8px rgba(80, 40, 0, 0.12))
-    saturate(1.08);
-}
-
 /* Featured card style */
 
 /* ─── Outdated / Stale menu card — pushed back ─── */
@@ -617,13 +573,6 @@ body {
 .food-card.outdated {
   border-color: rgba(0, 0, 0, 0.06);
   background: linear-gradient(180deg, #faf8f5 0%, #f5f2ee 100%);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.03),
-    0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.food-card.outdated:hover {
-  transform: none;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.03),
     0 4px 12px rgba(0, 0, 0, 0.03);
@@ -657,10 +606,6 @@ body {
     0 1px 2px rgba(60, 30, 0, 0.03),
     0 4px 12px rgba(60, 30, 0, 0.04),
     0 12px 32px rgba(60, 30, 0, 0.04);
-}
-
-.food-card.closed:hover {
-  transform: translateY(-2px);
 }
 
 .food-card.closed .food-image.loaded {
@@ -982,10 +927,6 @@ body {
   transition: transform 0.3s ease;
 }
 
-.card-image-wrapper:hover {
-  transform: none;
-}
-
 .card-image-circle {
   width: 100%;
   height: 100%;
@@ -1117,10 +1058,6 @@ body {
     transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .card-image-wrapper:hover .card-image-circle {
-    transform: scale(1.04);
-  }
-
   .card-image-wrapper:active .card-image-circle {
     transform: scale(0.98);
     transition-duration: 0.1s;
@@ -1141,28 +1078,6 @@ body {
   color: var(--accent-orange);
   opacity: 0.6;
   filter: drop-shadow(0 8px 16px rgba(80, 40, 0, 0.10));
-}
-
-/* Click hint */
-.click-hint {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.card-image-wrapper:hover .click-hint {
-  opacity: 1;
 }
 
 /* Card Content */
@@ -1289,8 +1204,6 @@ body {
 
 /* Allergen chip entrance animation ONLY on initial launch */
 
-/* Dish Description */
-
 /* Bottom Section */
 .card-bottom {
   margin-top: auto;
@@ -1396,7 +1309,6 @@ body {
 .lightbox-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(22, 14, 8, 0.9);
   z-index: var(--z-overlay);
   display: flex;
   align-items: center;
@@ -1405,21 +1317,46 @@ body {
   cursor: zoom-out;
 }
 
-.lightbox-plate {
-  width: min(92vw, 78vh, 720px);
-  height: min(92vw, 78vh, 720px);
+/* The dark, on its own layer: Lightbox fades it with the Web Animations API,
+   so fading it never fades the plate on top. */
+.lightbox-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(22, 14, 8, 0.9);
 }
 
+/* The one element that travels between the card and the middle of the screen
+   (Lightbox, FLIP on transform). */
+.lightbox-plate {
+  position: relative;
+  width: min(92vw, 78vh, 720px);
+  height: min(92vw, 78vh, 720px);
+  will-change: transform;
+}
+
+/* Two layers: the card's thumbnail, already decoded, so the first frame is
+   never empty; the full-size picture over it, faded in once loaded. */
 .lightbox-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   /* No border-radius: the transparent PNG already shows a round plate. */
   filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.45));
-  opacity: 0;
-  transition: opacity 0.18s ease-out;
 }
 
-.lightbox-image.loaded {
+.lightbox-image-hires {
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+
+.lightbox-image-hires.loaded {
   opacity: 1;
+}
+
+.lightbox-overlay.is-closing {
+  pointer-events: none;
 }
 
 .lightbox-close {
@@ -1449,94 +1386,6 @@ body {
   outline: 2px solid var(--accent-orange);
   outline-offset: 2px;
 }
-
-/* The plate flying between card and viewer stands in for this one: hidden for
-   the flight, and shown at once (no fade) when it lands on top of it. */
-.lightbox-image.is-flying {
-  opacity: 0;
-  transition: none;
-}
-
-.lightbox-image.landed {
-  transition: none;
-}
-
-.plate-ghost {
-  position: fixed;
-  z-index: calc(var(--z-overlay) + 1);
-  margin: 0;
-  pointer-events: none;
-  transform-origin: 0 0;
-  object-fit: contain;
-  will-change: transform;
-  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.45));
-}
-
-/* ─── YOLO randomiser — second-tap of Today on the day-bar ─── */
-/* Two states applied to .food-card by HomeClient:
-     yolo-active  — currently spotlit during the cycle (subtle ring only)
-     yolo-winner  — the chosen one (rotating conic-gradient ribbon)
-   Non-active cards stay completely untouched.
-
-   Crucially neither state writes to `transform` or `animation` on the
-   .food-card itself, so the base cardReveal entry animation is
-   undisturbed. That's what kept causing the entry effect to replay when
-   the winner class was removed. */
-
-/* The angle that drives the rotating comet on the winner card. Registered
-   so the conic-gradient's `from <angle>` interpolates smoothly between
-   keyframes instead of snapping. */
-@property --yolo-comet-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-/* How far the finger has pulled the sheet down. ui/sheet.tsx writes it on every
-   pointermove of a drag-to-dismiss.
-
-   Registered for `inherits: false`, which is the whole reason this block
-   exists. An unregistered custom property inherits, so setting it on the panel
-   invalidated the computed style of everything inside the panel — the plate
-   image, the vote button, the share row, every line of text — once per frame,
-   on the main thread, during the one gesture that has to stay at 120Hz.
-   Declaring it non-inheriting scopes the invalidation to the panel itself.
-
-   The panel is also the only element that reads it, so nothing below needs to
-   inherit it. */
-@property --sheet-drag {
-  syntax: "<length>";
-  initial-value: 0px;
-  inherits: false;
-}
-
-/* Cycling state: a single solid 3px warm ring at the card edge.
-   No glow, no scale, no plate change. Discrete jump from card to card
-   IS the motion of the spin. */
-
-/* Winner: a faint static warm ring at the edge, with a single bright
-   warm arc ('comet') slowly traveling around the perimeter — like light
-   moving across a polished trophy. Plate is left untouched. */
-
-/* The comet itself. ::before pseudo-element sits 5px outside the card,
-   with mask-composite carving out the centre so only the 5px ring is
-   rendered. Conic-gradient is mostly transparent except for a ~120°
-   bright arc that fades up to nearly white at its peak and tails off
-   into transparency on either side. The `from <angle>` rotates over
-   6s — readable but not anxious. */
-
-/* Shockwave ring on the moment the winner state activates. ::after pseudo
-   pops in as a thin warm ring at the card's edge, then expands outward
-   to scale 1.10 while fading to 0 over 750ms. One-shot via forwards —
-   plays once when .yolo-winner is added, then stays at opacity 0. */
-
-/* Title shimmer on the winner card — the dish name fills with a warm
-   gold gradient that slowly slides across the text. background-clip:
-   text + transparent fill means the gradient is only visible inside the
-   text shape, and animating background-position 0% → 100% looks like
-   light catching the letters. Plus a one-shot text-shadow glow burst
-   that fires the moment the winner state activates, then fades back to
-   no shadow as the persistent shimmer takes over. */
 
 /* The static shell in index.html carries a copy of this bar so the page is not
    missing a chunk of itself before React boots. On mobile that copy is exactly
@@ -1793,8 +1642,6 @@ body {
     animation: none !important;
   }
 
-  /* Description — compact for mobile */
-
   /* Cards container */
   .cards-container {
     flex-direction: column;
@@ -1905,7 +1752,7 @@ body {
     flex: 1 1 0;
     min-height: 0 !important;
     /* The plate's resting size, declared once. .card-image-wrapper renders it
-       and .vote-pip positions against it; both used to carry their own copy of
+       and the badges position against it; they used to carry their own copy of
        this clamp, so changing one silently mispositioned the other. */
     --plate-size: clamp(125px, 19dvh, 210px);
     --card-pad-y: clamp(8px, 1.2dvh, 14px);
@@ -1913,7 +1760,7 @@ body {
     /* How far the plate hangs off the card's left edge. This is as far as it
        can go: the card sits 8px from the screen, its own padding is 16px, so
        -24px puts the plate's left edge at x=0. Anything more and the plate is
-       clipped by the viewport rather than by the card. .vote-pip positions
+       clipped by the viewport rather than by the card. The badges position
        against the plate and reads the same token. */
     --plate-pull-x: -24px; /* @kind other */
     /* Grid, not wrapped flex.
@@ -1935,7 +1782,7 @@ body {
        With `minmax(0, 1fr)` on the first row the text column is handed exactly
        what is left over, on every card, for free — and it cannot overflow,
        because a row that has no more to give simply clips. The gap is gone
-       because there is no gap: the description grows into it. */
+       because there is no gap: the text column grows into it. */
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
@@ -1962,25 +1809,12 @@ body {
     min-height: 0;
   }
 
-  .food-card:hover {
-    transform: none;
-  }
-
-  .food-card.voteable {
-    background: linear-gradient(135deg, #fffbf5 0%, var(--card-white) 40%);
-    border-color: rgba(200, 150, 60, 0.12);
-    box-shadow:
-      0 1px 3px rgba(200, 116, 26, 0.05),
-      0 6px 16px rgba(60, 30, 0, 0.06);
-  }
-
   .food-card.outdated {
     background: #f7f5f2;
     border-color: rgba(0, 0, 0, 0.04);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
   }
 
-  .food-card.outdated:hover,
   .food-card.outdated:active {
     transform: none;
   }
@@ -1992,7 +1826,7 @@ body {
     top: auto;
     transform: none !important;
     /* --plate-size is the resting size and the ONE place it is written.
-       .vote-pip positions itself against the plate edge and used to carry its
+       .origin-pip positions itself against the plate edge and used to carry its
        own literal copy of this clamp, so the two could drift silently. */
     /* A fixed square. It deliberately does NOT grow into leftover space.
 
@@ -2023,14 +1857,10 @@ body {
        nothing left to correct. The plate still hangs past the bottom of its
        row on a three-side-dish card and the side dishes still pass behind its
        lower curve — that is the row being shorter than the plate, which is
-       intended and is where the description's room comes from. */
+       intended and is where the text column's room comes from. */
     margin: var(--plate-pull-y) 0 0 var(--plate-pull-x);
     flex-shrink: 0;
     z-index: 10;
-  }
-
-  .card-image-wrapper:hover {
-    transform: none !important;
   }
 
   .card-image-circle {
@@ -2052,11 +1882,6 @@ body {
     inset: -30px;
   }
 
-  /* Prevent sticky hover from keeping food image enlarged / glowing */
-  .food-card-3d-wrapper:hover .card-image-circle {
-    transform: none !important;
-  }
-
   /* The transform declarations that used to sit here were `!important`, which
      outranks an inline style and an animation alike — so every transform
      Motion wrote to the plate on a phone was silently discarded. The spring
@@ -2067,7 +1892,6 @@ body {
      FoodCard no longer asks for that transform on a phone, so there is nothing
      left to block. The drop-shadow stays: it is the plate's only shadow and
      the thing that makes the food read as sitting above the card. */
-  .food-card-3d-wrapper:hover .food-image.loaded,
   .food-image.loaded {
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
@@ -2084,32 +1908,22 @@ body {
     animation: none;
   }
 
-  .click-hint {
-    display: none;
-  }
-
   /* Content - right of image */
   .card-content {
     grid-column: 2;
     grid-row: 1;
     /* Stretch, so the column is the height of its row rather than of its own
-       text. That is what gives .dish-description something to grow into. The
-       canteen name still starts at the top because of the column direction
-       below, not because the box is shrink-wrapped to it. */
+       text, and the clip below happens at the row. The canteen name still
+       starts at the top because of the column direction below, not because
+       the box is shrink-wrapped to it. */
     align-self: stretch;
     text-align: left;
     padding: 0 2px 0 8px;
     min-width: 0;
-    /* Grid rather than a flex column, for one reason: the description needs a
-       containing block whose height is the leftover, so it can round that
-       height down to whole lines (see .dish-description). A flex item's
-       percentage heights resolve against the whole column, not against the
-       space it was actually given, and there is no way to ask for the latter.
-       A grid area is definite, so `100%` there means exactly "what is left".
-
-       The rows are explicit because .dish-meta-row and .dish-description are
-       both conditional — a card with no allergens must not promote the
-       description into the auto row. */
+    /* A grid because the last row once held the dish description, which needed
+       a definite "what is left" height. The description is gone; the
+       `minmax(0, 1fr)` row now just takes up the leftover, so the header and
+       .dish-meta-row keep their own heights. */
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr);
     /* The pair that makes the row a real ceiling: without min-height: 0 a grid
@@ -2334,26 +2148,17 @@ body {
      Everything above is sized for a 844px screen, where a card gets 224px and
      the numbers work out with a pixel to spare. At 667px a card gets 166px:
      take off the padding and the ANDRE RETTER block and only 68px is left for
-     the plate row, against a plate whose margin box alone is 93px. Three side
-     dishes, a plate at 19dvh and a description do not fit, and no amount of
-     tuning makes them.
+     the plate row, against a plate whose margin box alone is 93px.
 
-     So on a short screen the two cheapest things give way — the plate drops to
-     15dvh and the AI-written description is dropped entirely — and the side
-     dishes, which are the actual information, all stay on screen. Nothing here
-     applies at 844px, so the layout on a normal phone is untouched. */
+     So on a short screen the text gives way and the side dishes, which are
+     the actual information, all stay on screen. Nothing here applies at
+     844px, so the layout on a normal phone is untouched. */
   @media (max-height: 740px) {
     /* The plate is NOT shrunk here. It was, briefly, to 15dvh — and that is a
        change to the one element the whole card is built around, on any screen
        under 740px including a desktop browser window that happens to be short.
        It stays at 19dvh everywhere. Room on a short screen comes out of the
-       text instead.
-
-       The description is not hidden here either. It was, when the text column
-       was capped by hand and a short screen genuinely had no room for it. The
-       grid works that out per card now: on a 667px screen the description
-       simply gets fewer whole lines, or none, on exactly the cards that cannot
-       spare them — rather than every card losing it because one might. */
+       text instead. */
 
     /* 22px of fixed overhead for a row of allergen chips that are 14px tall. */
     .dish-meta-row {
@@ -2510,25 +2315,13 @@ body {
   }
 }
 
-@keyframes overlayFadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-.info-overlay,
-.lightbox-overlay {
+.info-overlay {
   animation: overlayFadeIn 0.2s ease-out both;
 }
 
 /* No overshoot: the panel settles, it does not bounce. */
 .info-modal {
   animation: modalPanelIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* Closing: the plate flies home on its own layer while the viewer fades out. */
-.lightbox-overlay.is-closing {
-  animation: overlayFadeOut 0.2s ease-in both;
-  pointer-events: none;
 }
 
 .info-overlay {
@@ -2762,75 +2555,6 @@ body {
   }
 }
 
-/* ─── Vote Feature ─── */
-.vote-pip {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 8px 4px 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.4);
-  /* Flat, not frosted: a backdrop-filter inside the moving board is
-     re-blurred on every frame of every day change, once per card. */
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  z-index: 12;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.vote-pip-icon {
-  width: 13px;
-  height: 13px;
-  opacity: 0.5;
-}
-
-.vote-pip.leader {
-  color: rgba(180, 110, 20, 0.6);
-  background: rgba(255, 240, 210, 0.55);
-  border-color: rgba(200, 160, 60, 0.2);
-}
-
-.vote-pip.leader .vote-pip-icon {
-  opacity: 0.65;
-}
-
-@media (max-width: 768px) {
-  .vote-pip {
-    /* bottom-right of image, matching origin-pip position (swapped) */
-    top: calc(var(--card-pad-y) + var(--plate-pull-y) + var(--plate-size) - 21px);
-    right: auto;
-    left: calc(16px + var(--plate-pull-x) + var(--plate-size) - 4px);
-    transform: translateX(-100%);
-    z-index: 11;
-    font-size: 10px;
-    padding: 3px 9px 3px 7px;
-    gap: 2px;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    background: rgba(255, 255, 255, 0.94);
-    animation: none !important;
-  }
-  .vote-pip.leader {
-    background: rgba(255, 243, 220, 0.96) !important;
-  }
-  .vote-pip-icon {
-    width: 11px;
-    height: 11px;
-  }
-}
-
-.food-card.voteable,
-.food-card.clickable {
-  cursor: pointer;
-}
-
 /* ─── Dish Origin Pip ─── */
 .origin-pip {
   position: absolute;
@@ -2932,294 +2656,7 @@ body {
   }
 }
 
-/* ─── Action Sheet ─── */
-
-.action-sheet {
-  width: 100%;
-  max-width: 440px;
-  background: var(--card-white);
-  border-radius: 24px 24px 0 0;
-  padding: 0 0 calc(env(safe-area-inset-bottom, 8px) + 12px);
-  display: flex;
-  flex-direction: column;
-  box-shadow:
-    0 100px 0 0 var(--card-white),
-    0 -4px 20px rgba(60, 30, 0, 0.08),
-    0 -16px 60px rgba(60, 30, 0, 0.12);
-  position: relative;
-  overflow: hidden;
-  touch-action: pan-y;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  will-change: transform;
-}
-
-/* The bottom sheet's open/close transition.
-   This MUST be a stylesheet rule and not an inline style. `endDrag` in
-   sheet.tsx clears the inline transition (`style.transition = ""`) when a
-   gesture ends, and React never writes it back — it only emits an inline style
-   when the value it holds changed, and that value is a module constant. With
-   nothing underneath, the panel lost its transition from the first drag onward:
-   measured in a browser as `computed: "all / 0s"`, a release that teleported
-   back instead of settling, and a close that jumped 443px in one frame.
-   During a drag sheet.tsx sets `transition: none` inline, which still wins. */
-.native-sheet-panel {
-  transition:
-    transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-/* Leaving is quicker than arriving. */
-.native-sheet-panel.is-closing {
-  transition-duration: 220ms;
-}
-
-.action-sheet-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 3;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.38);
-  color: white;
-  font-size: 1.2rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s var(--smooth);
-}
-
-.action-sheet-close:hover {
-  background: rgba(0, 0, 0, 0.4);
-  transform: scale(1.08);
-}
-
-/* Hero image */
-.action-sheet-hero {
-  position: relative;
-  width: 100%;
-  height: 160px;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
-  flex-shrink: 0;
-}
-
-.action-sheet-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  filter: drop-shadow(0 8px 24px rgba(60, 30, 0, 0.12));
-  opacity: 1;
-}
-
-.action-sheet-hero-fade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 48px;
-  background: linear-gradient(to top, var(--card-white) 0%, transparent 100%);
-  pointer-events: none;
-}
-
-/* Header */
-.action-sheet-header {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 4px 24px 14px;
-  text-align: center;
-}
-
-.action-sheet-canteen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent-orange);
-}
-
-.action-sheet-dish {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.25;
-  margin: 0;
-}
-
-.action-sheet-desc {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  margin-top: 2px;
-}
-
-/* Actions */
-.action-sheet-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 16px;
-}
-
-.action-sheet-btn {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border: 1px solid var(--border-light);
-  border-radius: 16px;
-  background: var(--card-white);
-  cursor: pointer;
-  transition: all 0.2s var(--smooth);
-  text-align: left;
-  position: relative;
-  overflow: hidden;
-}
-
-.action-sheet-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-  border-radius: inherit;
-  z-index: 0;
-}
-
-.action-sheet-btn:hover::before {
-  opacity: 1;
-}
-
-.action-sheet-btn > * {
-  position: relative;
-  z-index: 1;
-}
-
-.action-sheet-btn:active {
-  transform: scale(0.98);
-  transition-duration: 0.1s;
-}
-
-/* Icon wrap */
-.action-sheet-btn-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  flex-shrink: 0;
-  transition: transform 0.25s var(--settle);
-}
-
-.action-sheet-btn:hover .action-sheet-btn-icon-wrap {
-  transform: scale(1.08);
-}
-
-.action-sheet-icon-vote {
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-}
-
-/* Text */
-.action-sheet-btn-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  flex: 1;
-  min-width: 0;
-}
-
-.action-sheet-btn-label {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.3;
-}
-
-.action-sheet-btn-sub {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  line-height: 1.3;
-}
-
-/* Arrow chevron */
-.action-sheet-btn-arrow {
-  font-size: 1.5rem;
-  color: var(--text-muted);
-  font-weight: 300;
-  flex-shrink: 0;
-  transition: transform 0.2s var(--smooth);
-  line-height: 1;
-}
-
-.action-sheet-btn:hover .action-sheet-btn-arrow {
-  transform: translateX(3px);
-  color: var(--text-secondary);
-}
-
-/* Vote button */
-.action-sheet-vote {
-  border-color: rgba(74, 158, 85, 0.2);
-  background: linear-gradient(135deg, #f6faf6 0%, #f0f9f1 100%);
-}
-
-.action-sheet-vote::before {
-  background: linear-gradient(135deg, #e8f5e9 0%, #dcf0de 100%);
-}
-
-.action-sheet-vote.voted {
-  opacity: 0.6;
-  cursor: default;
-  background: var(--bg-warm);
-  border-color: var(--border-light);
-}
-
-.action-sheet-vote.voted::before { display: none; }
-
-.action-sheet-vote.voted:hover {
-  transform: none;
-}
-
-.action-sheet-vote.voted:hover .action-sheet-btn-icon-wrap {
-  transform: none;
-}
-
-.action-sheet-vote.voted .action-sheet-icon-vote {
-  background: var(--border-light);
-}
-
-.action-sheet-vote.voted .action-sheet-btn-label {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
 /* Recipe button */
-
-/* Vote success celebration */
-.action-sheet-success {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 20px 16px 24px;
-  position: relative;
-  overflow: hidden;
-  animation: successFadeIn 0.2s var(--smooth) both;
-}
 
 @keyframes successFadeIn {
   from { opacity: 0; transform: scale(0.95); }
@@ -3254,11 +2691,6 @@ body {
   to { transform: none; opacity: 1; }
 }
 
-.vote-count {
-  display: inline-block;
-  animation: countTick 180ms var(--settle) both;
-}
-
 .vote-success-text {
   font-size: 1.1rem;
   font-weight: 700;
@@ -3275,19 +2707,6 @@ body {
   position: relative;
   z-index: 1;
   animation: successFadeIn 0.2s var(--smooth) 0.1s both;
-}
-
-/* Voting in progress state */
-.action-sheet-vote.voting {
-  opacity: 0.7;
-  cursor: wait;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .action-sheet { animation: none; }
-  .action-sheet-img { animation: none; }
-  .action-sheet-header { animation: none; }
-  .action-sheet-actions { animation: none; }
 }
 
 /* ─── Skeleton Loading Cards ─── */
@@ -3388,19 +2807,10 @@ body {
   /* Reduced motion means no travel, not no feedback. These are opacity and
      colour only: the arriving day and the viewers fade, and a vote still
      visibly registers. */
-  .info-overlay,
-  .lightbox-overlay {
+  .info-overlay {
     animation: overlayFadeIn 150ms ease-out both !important;
   }
 
-  .lightbox-overlay.is-closing {
-    animation: overlayFadeOut 150ms ease-in both !important;
-  }
-
-  .action-sheet-btn,
-  .action-sheet-btn-icon-wrap {
-    transition: background-color 150ms ease-out, color 150ms ease-out !important;
-  }
 }
 
 /* ─── Phone: no full-screen blurs ───────────────────────────────────────────

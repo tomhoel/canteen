@@ -30,7 +30,7 @@ Everything server-side now sits behind `/api`.
         │  api/cron/update.ts           │   the only writer
         │   1. scrape 3 canteen widgets │
         │   2. ask Gemini for origins,  │
-        │      descriptions, plates     │
+        │      short titles, plates     │
         │   3. store the week           │
         │   4. publish the response     │
         └───────────────┬───────────────┘
@@ -207,14 +207,14 @@ in git history if ever needed).
 | Key / path | Contents |
 | --- | --- |
 | `menu:<week>` / `menu:weeks` | One record per ISO week (`2026-W34`) and the sorted index of weeks |
-| `dish_cache` (hash) | One entry per distinct dish: origin, description, short title, course label, plate path |
+| `dish_cache` (hash) | One entry per distinct dish: origin, short title, course label, plate path |
 | `attendance:<date>` | Votes per canteen per day |
 | Storage `images_nobg/archive/*` | Plates, addressed by dish; `images_nobg/thumb/*` holds the 512px card thumbs |
 | Storage `menu-response/<week>.json` | The finished menu response for one week, rewritten by every cron run |
 
 `dish_cache` is what keeps the twice-daily cron from re-billing the model for
 dishes it has already seen: a dish means the same thing in every week it
-appears, so its origin, description and plate are produced once and reused.
+appears, so its origin, short title and plate are produced once and reused.
 
 **First load.** The page works out the week from the Oslo calendar and reads
 `menu-response/<week>.json` directly: no function, so no cold start. On a

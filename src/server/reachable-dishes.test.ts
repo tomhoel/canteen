@@ -7,13 +7,13 @@ import type { MenuData, MenuItem } from "../lib/types.js";
  * `/api/menu` no longer ships enrichment for every dish it stores, only for the
  * ones a card can look up. That is a correctness risk, not just a size one: if
  * the server's idea of "reachable" ever drifts from the client's, a dish
- * quietly loses its description and its flag with nothing failing.
+ * quietly loses its flag and its short title with nothing failing.
  *
  * These tests pin the rule from the client's side. HomeClient does:
  *
  *   const items = getRankedItems(dayEntry?.no?.items, canteenName);
  *   const mainDish = items.find(i => i.isMain && i.dish.trim());
- *   dishDescriptions[mainDish?.dish || ""]
+ *   dishOrigins[mainDish?.dish || ""]
  *
  * so whatever that expression can produce must survive the trim.
  */

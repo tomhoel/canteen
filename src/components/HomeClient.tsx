@@ -5,7 +5,7 @@ import { useSearch, setSearchParam } from "@/lib/useSearch";
 import { useCloseRequest, CLOSE_REQUESTS_HANDLED_BY_PLATFORM } from "@/lib/useCloseRequest";
 import { markImageCached } from "@/lib/imageCache";
 import { FULL_DAYS_NO, DAY_KEYS, CANTEEN_ORDER, getImageUrl, getClosedPlateUrl, PLATE_CARD_WIDTH } from "@/lib/constants";
-import type { MenuData, CanteenData, CanteenDayItem, DishOrigin, DishDescription } from "@/lib/types";
+import type { MenuData, CanteenData, CanteenDayItem, DishOrigin } from "@/lib/types";
 import {
   computeDisplayContext,
   compareWeeks,
@@ -13,7 +13,6 @@ import {
   weekDayLabels,
   formatLongDate,
 } from "@/lib/dateUtils";
-import { useVoting } from "@/lib/useVoting";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useIsDesktop } from "@/lib/useIsDesktop";
@@ -26,20 +25,19 @@ import { useShellInert } from "@/lib/useShellInert";
 import { useDaySwipe } from "@/lib/useDaySwipe";
 import { cleanupLocalStorage } from "@/lib/cleanupLocalStorage";
 
-// These only render once the user opens an overlay: the action sheet, the
-// plate lightbox and the info panel. Importing them eagerly put every one
-// of them (and their own dependencies, e.g. Lightbox's copy of `motion`) in
-// the same chunk the very first paint has to wait on. Splitting them out, and
-// only mounting each one once its own "open" condition is true (see the call
-// sites below), means a visitor who never opens any of these never pays for
-// their JS at all.
-const Lightbox = lazy(() => import("@/components/Lightbox"));
-// The action sheet belongs in that list too, and was the one overlay left out
-// of it. It is only reachable by tapping a card, but importing it eagerly put
-// `ui/sheet.tsx` and with it the whole of `@use-gesture/react` — the
-// drag-to-dismiss gesture, needed by nothing else in the app — into the chunk
-// the first paint waits on.
-const ActionSheet = lazy(() => import("@/components/ActionSheet"));
+// The plate view and the info panel only render once opened, so they stay out
+// of the chunk the first paint waits on. The plate view is fetched as soon as
+// the page is idle (see the mount effect) and then rendered directly, not
+// through React.lazy + Suspense: React holds a just-resolved Suspense boundary
+// back ~300ms before revealing it, and that was a 300ms pause between the tap
+// and the plate leaving its card, every first open.
+type LightboxComponent = (typeof import("@/components/Lightbox"))["default"];
+let LightboxImpl: LightboxComponent | null = null;
+const loadLightbox = () =>
+  import("@/components/Lightbox").then((m) => {
+    LightboxImpl = m.default;
+    return m.default;
+  });
 const InfoModal = lazy(() => import("@/components/InfoModal"));
 
 export interface HomeClientProps {
@@ -47,7 +45,6 @@ export interface HomeClientProps {
   /** The week the server actually served, so the header cannot label it wrong. */
   servedWeekId: string;
   initialOrigins: Record<string, DishOrigin>;
-  initialDescriptions: Record<string, DishDescription>;
   /** Dish name -> shortened headline. Empty for a week nothing was shortened in. */
   initialShortNames: Record<string, string>;
   /**
@@ -59,7 +56,7 @@ export interface HomeClientProps {
 }
 
 
-export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, initialDescriptions, initialShortNames, plateImages }: HomeClientProps) {
+export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, initialShortNames, plateImages }: HomeClientProps) {
   const searchParams = useSearch();
 
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -104,17 +101,14 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   const [mounted, setMounted] = useState(false);
   // Bumped on visibilitychange + every 5 min to refresh date logic without reload.
   const [dateTick, setDateTick] = useState(0);
-  const [actionSheet, setActionSheet] = useState<{ isOpen: boolean; canteenName: string; dishName: string; imagePath: string }>({ isOpen: false, canteenName: "", dishName: "", imagePath: "" });
   const [dishOrigins, setDishOrigins] = useState<Record<string, DishOrigin>>(initialOrigins);
-  const [dishDescriptions, setDishDescriptions] = useState<Record<string, DishDescription>>(initialDescriptions);
   const [dishShortNames, setDishShortNames] = useState<Record<string, string>>(initialShortNames);
 
   useEffect(() => {
     setMenuData(initialMenu);
     setDishOrigins(initialOrigins);
-    setDishDescriptions(initialDescriptions);
     setDishShortNames(initialShortNames);
-  }, [initialMenu, initialOrigins, initialDescriptions, initialShortNames]);
+  }, [initialMenu, initialOrigins, initialShortNames]);
   /**
    * The day change, as two panels (the 2026-09-18 motion, see DayPanel).
    *
@@ -133,12 +127,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
     setSwipingNeighbor(neighbor);
   }, []);
   const [infoOpen, setInfoOpen] = useState(false);
-
-
-  // Custom hooks — extracted state management. Everything below reaches voting
-  // state through `voting.x`; the destructure that used to sit here bound ten
-  // names nothing referenced.
-  const voting = useVoting();
 
   /**
    * Is anything layered over the day view?
@@ -159,15 +147,10 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    * decision — Escape inside the Meny sub-view returns to the recipe rather
    * than closing everything.
    */
-  const anyOverlayOpen = infoOpen || actionSheet.isOpen || lightboxIndex >= 0;
+  const anyOverlayOpen = infoOpen || lightboxIndex >= 0;
 
-  // The overlays that render inline in this file rather than claiming the
-  // shell themselves (ActionSheet claims via ui/sheet; the refcount makes an
-  // overlap harmless).
-  useShellInert(infoOpen || lightboxIndex >= 0);
-
-  /** Has the action sheet ever been opened? See its render block for why. */
-  const sheetEverOpened = useRef(false);
+  // Takes the page behind an open overlay out of the tab order.
+  useShellInert(anyOverlayOpen);
 
   const scrollRef = useRef<HTMLElement>(null);
 
@@ -236,9 +219,18 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // Initial data loading + localStorage cleanup
   useEffect(() => {
     cleanupLocalStorage();
-    // Menu, origins, descriptions arrive as props from the server component
+    // Menu, origins, short titles arrive as props from the server component
     // (loaded directly from storage). No fetch waterfall on initial paint.
     setMounted(true);
+    // Warm the plate view's chunk once the first paint is done, so the first
+    // tap on a card animates at once.
+    const warm = () => void loadLightbox();
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(warm, { timeout: 2000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = setTimeout(warm, 1200);
+    return () => clearTimeout(t);
   }, []);
 
   // Refresh date-derived state on visibility change + every 5 minutes.
@@ -257,7 +249,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   }, []);
 
   // Single source of truth for which week to render and the mode that
-  // drives header copy / banner / vote gating. Lives above the keyboard
+  // drives header copy and the banner. Lives above the keyboard
   // effect so its dep array can reference todayIndex.
   const sortedCanteens = useMemo(() => {
     if (!menuData) return [];
@@ -325,7 +317,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
       lightboxCloseRef.current();
     } else {
       setLightboxIndex(-1);
-      setActionSheet((sheet) => ({ ...sheet, isOpen: false }));
     }
   }, [infoOpen]);
 
@@ -338,7 +329,7 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
    * menu itself. See `useCloseRequest` for why this is not `history.pushState`.
    */
   useCloseRequest(
-    (infoOpen ? 1 : 0) + (lightboxIndex >= 0 ? 1 : 0) + (actionSheet.isOpen ? 1 : 0),
+    (infoOpen ? 1 : 0) + (lightboxIndex >= 0 ? 1 : 0),
     closeTopmostOverlay
   );
 
@@ -415,7 +406,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // The header names the day the board is heading to as soon as it sets off.
   const shownDay = previewDay ?? selectedDay;
 
-  const maxVotes = useMemo(() => Math.max(0, ...sortedCanteens.map(([name]) => voting.votes[name] ?? 0)), [sortedCanteens, voting.votes]);
 
   // Shared with LoadingScreen so the shell shown while the menu loads and the
   // header that replaces it cannot print different dates for the same week.
@@ -465,10 +455,6 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         const isOutdated = cmp === -1;
         const isAhead = cmp === 1;
         const origin = dishOrigins[mainDish?.dish || ""] ?? null;
-        const descEntry = dishDescriptions[mainDish?.dish || ""];
-        const description = descEntry
-          ? (typeof descEntry === "string" ? descEntry : descEntry["no"] || null)
-          : null;
         const availabilityNotes = dayEntry?.no?.availabilityNotes || [];
         // The headline the card prints: the short title when the updater made one.
         const displayDishName =
@@ -476,12 +462,12 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
         return {
           canteenName, canteen, dayEntry, items, mainDish, sideDishes,
           mainAllergens, imagePath, highResImagePath,
-          isOutdated, isAhead, canteenWeekNum, origin, description,
+          isOutdated, isAhead, canteenWeekNum, origin,
           displayDishName, availabilityNotes,
         };
       });
     });
-  }, [sortedCanteens, dishOrigins, dishDescriptions, dishShortNames, displayWeek, plateImages, plateWidth]);
+  }, [sortedCanteens, dishOrigins, dishShortNames, displayWeek, plateImages, plateWidth]);
 
   const canteenDayData = useMemo(() => allDaysData[selectedDay] ?? [], [allDaysData, selectedDay]);
   const openCanteens = useMemo(() => canteenDayData.filter(c => !isCanteenClosed(c)), [canteenDayData]);
@@ -491,20 +477,13 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
   // #6 — Lightbox image click handler using open canteen index
   const handleImageClick = useCallback((data: { canteenName: string }) => {
     const idx = openCanteens.findIndex(c => c.canteenName === data.canteenName);
-    setLightboxIndex(idx >= 0 ? idx : 0);
+    const open = () => setLightboxIndex(idx >= 0 ? idx : 0);
+    // Normally already loaded (warmed after first paint); a very early tap waits for it.
+    if (LightboxImpl) open();
+    else void loadLightbox().then(open);
   }, [openCanteens]);
 
-  // Every viewport opens the action sheet: it is the route to voting and to
-  // the canteen's building and hours, so it has to open regardless of width.
-  const handleCardClick = useCallback((canteenName: string) => {
-    const data = canteenDayData.find(c => c.canteenName === canteenName);
-    setActionSheet({
-      isOpen: true,
-      canteenName,
-      dishName: data?.mainDish?.dish || "",
-      imagePath: data?.imagePath || "",
-    });
-  }, [canteenDayData]);
+
 
 
 
@@ -585,43 +564,28 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
             {leaving && (
               <DayPanel
                 key={leaving.seq}
-                day={leaving.day}
                 data={allDaysData[leaving.day] ?? []}
                 phase="exit"
                 dir={leaving.dir}
-                todayIndex={todayIndex}
-                votes={voting.votes}
-                maxVotes={maxVotes}
                 onImageClick={handleImageClick}
-                onCardClick={handleCardClick}
                 onExited={() => setLeaving(l => (l && l.seq === leaving.seq ? null : l))}
               />
             )}
             <DayPanel
               key={current.seq}
-              day={current.day}
               data={allDaysData[current.day] ?? canteenDayData}
               phase={current.seq === 0 ? "static" : "enter"}
               dir={dayDir}
-              todayIndex={todayIndex}
-              votes={voting.votes}
-              maxVotes={maxVotes}
               onImageClick={handleImageClick}
-              onCardClick={handleCardClick}
               isInitial={current.seq === 0}
             />
             {swipingNeighbor && (
               <DayPanel
                 key={`swiping-${swipingNeighbor.day}`}
-                day={swipingNeighbor.day}
                 data={allDaysData[swipingNeighbor.day] ?? []}
                 phase="static"
                 dir={0}
-                todayIndex={todayIndex}
-                votes={voting.votes}
-                maxVotes={maxVotes}
                 onImageClick={handleImageClick}
-                onCardClick={handleCardClick}
                 swipePosition={swipingNeighbor.position}
               />
             )}
@@ -653,73 +617,16 @@ export default function HomeClient({ initialMenu, servedWeekId, initialOrigins, 
 
 
 
-      {/*
-        Action sheet, with the 120Hz native GPU compositor transform.
-
-        Not mobile-only: the sheet is the route to voting on every width. Every
-        `.action-sheet` rule is top-level, capped at 440px and anchored to the
-        bottom, so it is already dressed for a wide window.
-      */}
-      {(() => {
-        // Stays mounted once it has been opened, rather than unmounting the
-        // moment `isOpen` goes false.
-        //
-        // ui/sheet.tsx has a proper two-phase close — it drops `shown`, lets the
-        // 400ms translateY run, and only then unmounts — but it never got to
-        // use it: returning null here destroyed the whole component on the same
-        // tick, so the sheet vanished instead of sliding down. Keeping it
-        // mounted hands the close animation back to the thing that owns it.
-        //
-        // The latch is what keeps it lazy. The chunk is still not fetched until
-        // the first tap; afterwards the component stays mounted and renders
-        // nothing while closed, which costs one null render.
-        if (actionSheet.isOpen) sheetEverOpened.current = true;
-        if (!sheetEverOpened.current) return null;
-
-        const closeSheet = () => {
-          // Only the flag. Wiping the canteen and dish here used to be
-          // invisible because the component was destroyed in the same tick —
-          // now that it survives to animate out, clearing them would empty the
-          // sheet's content mid-slide. The next open overwrites them anyway.
-          setActionSheet((s) => ({ ...s, isOpen: false }));
-          voting.setVoteSuccess(false);
-          voting.setVoteError(false);
-        };
-        const sheetCanteen = canteenDayData.find(c => c.canteenName === actionSheet.canteenName);
-        const canVote = mode === "weekday-current" && selectedDay === todayIndex && sheetCanteen && !sheetCanteen.isOutdated && !sheetCanteen.isAhead;
-
-        return (
-          <Suspense fallback={null}>
-          <ActionSheet
-            isOpen={actionSheet.isOpen}
-            canteenName={actionSheet.canteenName}
-            dishName={actionSheet.dishName}
-            imagePath={actionSheet.imagePath}
-            canVote={!!canVote}
-            hasVoted={voting.hasVoted}
-            isVoting={voting.isVoting}
-            votedCanteen={voting.votedCanteen}
-            voteSuccess={voting.voteSuccess}
-            voteError={voting.voteError}
-            onVote={voting.handleVote}
-            onClose={closeSheet}
-          />
-          </Suspense>
-        );
-      })()}
-
       {/* Lightbox with canteen swipe */}
-        {lightboxIndex >= 0 && (
-          <Suspense fallback={null}>
-            <Lightbox
-              isOpen={lightboxIndex >= 0}
-              currentIndex={lightboxIndex}
-              canteenDayData={openCanteens}
-              onClose={() => setLightboxIndex(-1)}
-              onNavigate={setLightboxIndex}
-              closeRef={lightboxCloseRef}
-            />
-          </Suspense>
+        {lightboxIndex >= 0 && LightboxImpl && (
+          <LightboxImpl
+            isOpen={lightboxIndex >= 0}
+            currentIndex={lightboxIndex}
+            canteenDayData={openCanteens}
+            onClose={() => setLightboxIndex(-1)}
+            onNavigate={setLightboxIndex}
+            closeRef={lightboxCloseRef}
+          />
         )}
 
     </div>

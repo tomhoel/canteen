@@ -2,7 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildMenuFixture, buildAttendanceFixture } from "./fixture.js";
+import { buildMenuFixture } from "./fixture.js";
 
 /**
  * Serves the production build against a fixed menu.
@@ -40,11 +40,6 @@ const server = http.createServer((req, res) => {
   if (url.pathname === "/api/menu") {
     res.writeHead(200, { "content-type": TYPES[".json"], "cache-control": "no-store" });
     return res.end(JSON.stringify(buildMenuFixture()));
-  }
-
-  if (url.pathname === "/api/attendance") {
-    res.writeHead(200, { "content-type": TYPES[".json"], "cache-control": "no-store" });
-    return res.end(JSON.stringify(buildAttendanceFixture()));
   }
 
   // Anything else under /api is a route these tests do not exercise. Answering

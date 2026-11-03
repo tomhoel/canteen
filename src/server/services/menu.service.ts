@@ -6,7 +6,6 @@ import type {
   MenuItem,
   WeeklyMenuRecord,
   DishOrigin,
-  DishDescription,
 } from "../../lib/types.js";
 import {
   getWeekId,
@@ -25,12 +24,10 @@ import {
 } from "./scraper.service.js";
 import {
   detectDishOrigins,
-  generateDishDescriptions,
   cleanDishTitles,
   shortenDishTitles,
   needsShortening,
   fallbackOrigin,
-  fallbackDescription,
 } from "./ai.service.js";
 import {
   loadDishCache,
@@ -122,7 +119,7 @@ export interface EnrichmentCounts {
   sentToModel: number;
   /** Dishes that gained at least one durably cached field this run. */
   durablyCached: number;
-  /** Dishes still rendering a pattern fallback for origin or description. */
+  /** Dishes still rendering a pattern fallback for their origin. */
   unresolved: string[];
 }
 
@@ -494,7 +491,7 @@ function isEmptyScrape(menuData: MenuData): boolean {
  * Scrapes, enriches and persists one week of menus. The only writer.
  *
  * Enrichment is incremental: dish names already in `dish_cache` reuse their
- * stored origin and description, so the model is only asked about dishes
+ * stored origin and short title, so the model is only asked about dishes
  * nobody has seen before. On a typical run that is zero, and the whole pass
  * costs one table read.
  */
@@ -672,13 +669,11 @@ export async function runWeeklyUpdateService(
       allDishes,
       {
         origins: existing?.dishOrigins ?? {},
-        descriptions: existing?.dishDescriptions ?? {},
         shortNames: existing?.dishShortNames ?? {},
       },
       enrichmentRun
     );
     const dishOrigins = enriched.origins;
-    const dishDescriptions = enriched.descriptions;
     const dishShortNames = enriched.shortNames;
 
     // Decide each day's main dish, once, with the model's course labels. The
@@ -695,7 +690,6 @@ export async function runWeeklyUpdateService(
       weekId,
       menuData: weekMenuData,
       dishOrigins,
-      dishDescriptions,
       dishShortNames,
       scrapedAt,
     };
@@ -810,7 +804,6 @@ async function readStoredRecord(weekId: string): Promise<WeeklyMenuRecord | null
       weekId: data.weekId ?? weekId,
       menuData: data.menuData,
       dishOrigins: data.dishOrigins ?? {},
-      dishDescriptions: data.dishDescriptions ?? {},
       dishShortNames: data.dishShortNames ?? {},
       scrapedAt: data.scrapedAt ?? new Date().toISOString(),
     };
@@ -823,7 +816,6 @@ async function readStoredRecord(weekId: string): Promise<WeeklyMenuRecord | null
 interface StoredRow {
   fingerprint?: string;
   dishOrigins: Record<string, DishOrigin>;
-  dishDescriptions: Record<string, DishDescription>;
   dishShortNames: Record<string, string>;
   /** The stored week, so a partial scrape can be merged into it. */
   menuData: MenuData | null;
@@ -847,8 +839,7 @@ async function getStoredRow(
       row: {
         fingerprint: data.menuData?.fingerprint,
         dishOrigins: data.dishOrigins ?? {},
-        dishDescriptions: data.dishDescriptions ?? {},
-        dishShortNames: data.dishShortNames ?? {},
+          dishShortNames: data.dishShortNames ?? {},
         menuData: (data.menuData as MenuData) ?? null,
       },
     };
@@ -860,7 +851,6 @@ async function getStoredRow(
 /** What the row already holds, so a fallback never overwrites a real answer. */
 interface StoredEnrichment {
   origins: Record<string, DishOrigin>;
-  descriptions: Record<string, DishDescription>;
   shortNames: Record<string, string>;
 }
 
@@ -878,20 +868,21 @@ interface EnrichmentRun {
 }
 
 /**
- * Resolves an origin and description for every dish, using the cache first.
+ * Resolves an origin (and, for a long name, a short title) for every dish,
+ * using the cache first.
  *
  * Three rules, each of which cost something to learn:
  *
- * 1. **Per field.** The two passes are asked about different dish lists — only
- *    the dishes actually missing *that* field. They used to be asked the same
- *    list, and a dish was only cached when both came back, so a run where the
- *    origins landed and the descriptions timed out threw away a perfectly good
- *    origin and paid to ask for it again.
- * 2. **A fallback never wins over something real.** Both passes guarantee full
- *    coverage by filling gaps with canned copy, which is right for rendering
- *    and wrong for storing. The canned value is used only where neither the
+ * 1. **Per field.** Each pass is asked about a different dish list — only the
+ *    dishes actually missing *that* field. They used to be asked the same
+ *    list, and a dish was only cached when every pass came back, so a run
+ *    where one landed and another timed out threw away a perfectly good
+ *    answer and paid to ask for it again.
+ * 2. **A fallback never wins over something real.** The origin pass guarantees
+ *    full coverage by filling gaps with a pattern guess, which is right for
+ *    rendering and wrong for storing. The guess is used only where neither the
  *    cache nor the stored row has anything better — otherwise a single bad
- *    afternoon at the model would rewrite the whole week as boilerplate and the
+ *    afternoon at the model would rewrite the whole week as guesses and the
  *    fingerprint would then freeze it there.
  * 3. **Retry next run.** A dish the model does not answer for is simply asked
  *    again on the next run, until it does. That is a few tokens per run for a
@@ -906,7 +897,6 @@ async function enrichDishes(
   run: EnrichmentRun
 ): Promise<{
   origins: Record<string, DishOrigin>;
-  descriptions: Record<string, DishDescription>;
   shortNames: Record<string, string>;
 } & EnrichmentCounts> {
   const { rows: cache, failed: cacheUnreadable } = await loadDishCache(dishes);
@@ -919,20 +909,16 @@ async function enrichDishes(
   if (cacheUnreadable) {
     console.warn("⚠️  dish_cache unreadable — reusing the stored enrichment and asking nothing.");
     const origins: Record<string, DishOrigin> = {};
-    const descriptions: Record<string, DishDescription> = {};
     const unresolved: string[] = [];
 
     for (const dish of dishes) {
       const origin = stored.origins[dish];
-      const description = stored.descriptions[dish];
       origins[dish] = origin ?? fallbackOrigin(dish);
-      descriptions[dish] = description ?? fallbackDescription(dish);
-      if (!origin || !description) unresolved.push(dish);
+      if (!origin) unresolved.push(dish);
     }
 
     return {
       origins,
-      descriptions,
       // Whatever the row already holds. There is no fallback for a short title
       // — a dish without one renders its full name, which is correct.
       shortNames: { ...stored.shortNames },
@@ -944,17 +930,14 @@ async function enrichDishes(
   }
 
   const origins: Record<string, DishOrigin> = {};
-  const descriptions: Record<string, DishDescription> = {};
   const shortNames: Record<string, string> = {};
   const needOrigin: string[] = [];
-  const needDescription: string[] = [];
   const needShortName: string[] = [];
   let fromCache = 0;
 
   for (const dish of dishes) {
     const hit = cache.get(normalizeDishName(dish));
     if (hit?.origin) origins[dish] = hit.origin;
-    if (hit?.description) descriptions[dish] = hit.description;
     if (hit?.shortName) shortNames[dish] = hit.shortName;
 
     // A short title is only wanted for a name too long for the card, and is
@@ -962,7 +945,7 @@ async function enrichDishes(
     // "could not be shortened" marker written further down.
     const wantsShortName = needsShortening(dish) && !hit?.shortName;
 
-    if (hit?.origin && hit?.description && !wantsShortName) {
+    if (hit?.origin && !wantsShortName) {
       fromCache++;
       continue;
     }
@@ -973,54 +956,44 @@ async function enrichDishes(
     if (run.attempted.has(dish)) continue;
 
     if (!hit?.origin) needOrigin.push(dish);
-    if (!hit?.description) needDescription.push(dish);
     if (wantsShortName) needShortName.push(dish);
   }
 
-  const asked = new Set([...needOrigin, ...needDescription, ...needShortName]);
+  const asked = new Set([...needOrigin, ...needShortName]);
   for (const dish of asked) run.attempted.add(dish);
   console.log(
     `🗃️  ${fromCache} dishes fully cached, ${asked.size} to ask about ` +
-      `(${needOrigin.length} origins, ${needDescription.length} descriptions, ` +
-      `${needShortName.length} long titles).`
+      `(${needOrigin.length} origins, ${needShortName.length} long titles).`
   );
 
-  // detectDishOrigins/generateDishDescriptions short-circuit on an empty list,
-  // so a fully-cached week costs no model call at all.
-  const [newOrigins, newDescriptions, newShortNames] = await Promise.all([
+  // detectDishOrigins/shortenDishTitles short-circuit on an empty list, so a
+  // fully-cached week costs no model call at all.
+  const [newOrigins, newShortNames] = await Promise.all([
     detectDishOrigins(needOrigin),
-    generateDishDescriptions(needDescription),
     shortenDishTitles(needShortName),
   ]);
 
   for (const dish of needOrigin) {
     if (newOrigins.fromModel.has(dish)) origins[dish] = newOrigins.values[dish];
   }
-  for (const dish of needDescription) {
-    if (newDescriptions.fromModel.has(dish)) descriptions[dish] = newDescriptions.values[dish];
-  }
   for (const dish of needShortName) {
     if (newShortNames.fromModel.has(dish)) shortNames[dish] = newShortNames.values[dish];
   }
 
-  // `origins[dish]`/`descriptions[dish]` now hold only durable values — a cache
+  // `origins[dish]` now holds only durable values — a cache
   // hit or a fresh model answer. Anything still blank gets the best available
   // stand-in, preferring what the row already holds over new boilerplate.
   const durableOrigins = new Set(Object.keys(origins));
-  const durableDescriptions = new Set(Object.keys(descriptions));
   const unresolved: string[] = [];
 
   for (const dish of dishes) {
     if (!durableOrigins.has(dish)) origins[dish] = stored.origins[dish] ?? fallbackOrigin(dish);
-    if (!durableDescriptions.has(dish)) {
-      descriptions[dish] = stored.descriptions[dish] ?? fallbackDescription(dish);
-    }
     // No fallback: a dish with no short title renders its full name. Only the
     // stored row can supply one this run did not get.
     if (!shortNames[dish] && stored.shortNames[dish]) {
       shortNames[dish] = stored.shortNames[dish];
     }
-    if (!durableOrigins.has(dish) || !durableDescriptions.has(dish)) unresolved.push(dish);
+    if (!durableOrigins.has(dish)) unresolved.push(dish);
   }
 
   const askedShortName = new Set(needShortName);
@@ -1030,15 +1003,13 @@ async function enrichDishes(
   for (const dish of asked) {
     const key = normalizeDishName(dish);
     const gainedOrigin = newOrigins.fromModel.has(dish);
-    const gainedDescription = newDescriptions.fromModel.has(dish);
 
-    if (gainedOrigin || gainedDescription || newShortNames.fromModel.has(dish)) {
+    if (gainedOrigin || newShortNames.fromModel.has(dish)) {
       durablyCached++;
     }
 
     const entry: DishCacheEntry = { cacheKey: key, originalName: dish };
     if (gainedOrigin) entry.origin = newOrigins.values[dish];
-    if (gainedDescription) entry.description = newDescriptions.values[dish];
 
     // A title the model looked at and declined to shorten is stored as itself.
     // That is the "asked, and nothing better exists" marker: it renders as the
@@ -1055,7 +1026,7 @@ async function enrichDishes(
 
     // Only an answer is worth a row: a dish the model stayed silent on is simply
     // asked again next run, and writing an empty row for it would be noise.
-    if (entry.origin || entry.description || entry.shortName !== undefined) entries.push(entry);
+    if (entry.origin || entry.shortName !== undefined) entries.push(entry);
   }
 
   const saved = await saveDishCacheEntries(entries);
@@ -1067,7 +1038,6 @@ async function enrichDishes(
 
   return {
     origins,
-    descriptions,
     shortNames,
     fromCache,
     sentToModel: asked.size,

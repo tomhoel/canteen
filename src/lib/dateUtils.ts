@@ -288,7 +288,7 @@ export interface DisplayContext {
   todayIndex: number;
   /** Day index (0..4) the UI should land on by default. */
   defaultSelectedDay: number;
-  /** Drives header copy, banner, and voting affordances. */
+  /** Drives header copy and the banner. */
   mode: DisplayMode;
 }
 
@@ -330,8 +330,7 @@ export function computeDisplayContext(
         pinnedMonday.getDate(),
       ),
       // Today is not in the week being shown, so nothing is "today" and the
-      // week opens on its Monday. Voting keys off weekday-current and stays
-      // off, which is correct: you cannot vote on a lunch you are not at.
+      // week opens on its Monday.
       todayIndex: -1,
       defaultSelectedDay: 0,
       mode: 'pinned-week',

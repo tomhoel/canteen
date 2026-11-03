@@ -73,7 +73,6 @@ function record(weekId: string, canteens: Record<string, CanteenData>): WeeklyMe
     weekId,
     menuData: { scrapedAt: "2026-08-14T00:00:00.000Z", canteens } as any,
     dishOrigins: {},
-    dishDescriptions: {},
     dishShortNames: {},
     scrapedAt: "2026-08-14T00:00:00.000Z",
   };
@@ -139,6 +138,22 @@ test("a plate that dish_cache can address is served by dish", async () => {
   const menu = await getWeeklyMenu();
 
   assert.equal(menu.plateImages["monday|Flow"], "archive/fiskesuppe.png");
+});
+
+test("a week stored while descriptions were still written serves without them", async () => {
+  // Rows from before descriptions were dropped still carry the map. It must
+  // neither break the read nor leak back into the response.
+  const old = {
+    ...record(THIS_WEEK, { Flow: canteen({ Monday: ["Fiskesuppe"] }) }),
+    dishOrigins: { Fiskesuppe: { code: "no", country: "Norway" } },
+    dishDescriptions: { Fiskesuppe: { no: "gammel" } },
+  };
+  reset({ record: old });
+
+  const menu = await getWeeklyMenu();
+
+  assert.deepEqual(menu.dishOrigins, { Fiskesuppe: { code: "no", country: "Norway" } });
+  assert.equal("dishDescriptions" in menu, false);
 });
 
 test("a dish with no recorded plate gets no picture rather than the wrong one", async () => {

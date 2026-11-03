@@ -1,7 +1,6 @@
 import type {
   MenuData,
   DishOrigin,
-  DishDescription,
 } from "@/lib/types";
 
 /**
@@ -20,7 +19,6 @@ export interface WeeklyMenuResponse {
   weekId: string;
   menuData: MenuData;
   dishOrigins: Record<string, DishOrigin>;
-  dishDescriptions: Record<string, DishDescription>;
   /**
    * Dish name -> a shortened headline for it. See the server-side type; the
    * full name is still what `menuData` carries and what the lightbox shows.
@@ -57,10 +55,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return (await res.json()) as T;
-}
-
-function post<T>(path: string, payload: unknown): Promise<T> {
-  return request<T>(path, { method: "POST", body: JSON.stringify(payload) });
 }
 
 /**
@@ -135,8 +129,8 @@ export function getCachedWeeklyMenu(week?: string): WeeklyMenuResponse | null {
  * Drop menu entries left behind by an earlier cache version.
  *
  * A prefix bump makes the old entries unreachable, not absent — and a week's
- * payload is ~23 KB, which is real against a ~5 MB budget shared with the vote
- * and attendance state. Runs once per session, off the back of a write that has
+ * payload is ~23 KB, which is real against a ~5 MB budget shared with
+ * everything else the origin stores. Runs once per session, off the back of a write that has
  * already succeeded, so it never costs a launch anything.
  */
 let sweptOldCaches = false;
@@ -265,29 +259,4 @@ export async function getWeeklyMenu(week?: string): Promise<WeeklyMenuResponse> 
     setCachedWeeklyMenu(fresh, week);
   }
   return fresh;
-}
-
-export function submitVote(payload: { canteenId: string }): Promise<{ canteens: Record<string, number> }> {
-  return post("/api/attendance", payload);
-}
-
-/** One entry per day that saw at least one vote, newest first. */
-export interface AttendanceHistoryEntry {
-  date: string;
-  canteens: Record<string, number>;
-}
-
-/**
- * The last fortnight of tallies.
- *
- * GET on the same endpoint that accepts the votes. The leaderboard used to
- * fetch `/api/attendance/history`, which is not a function that exists — and
- * because the SPA rewrite in vercel.json deliberately excludes `/api/`, that
- * path was never rewritten to index.html either. It answered a plain 404,
- * `.json()` threw, and the modal's catch left it showing its empty state.
- */
-export function getAttendanceHistory(
-  signal?: AbortSignal
-): Promise<{ entries: AttendanceHistoryEntry[] }> {
-  return request("/api/attendance", { signal });
 }

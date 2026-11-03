@@ -1,6 +1,5 @@
-import type { MenuData, DishOrigin, DishDescription } from "../lib/types.js";
+import type { MenuData, DishOrigin } from "../lib/types.js";
 import { getWeekIdOffset, isOsloWeekend } from "../lib/dateUtils.js";
-import { fitDescription } from "./services/fit-description.js";
 import { pickMainDish } from "../lib/dish-ranking.js";
 import { getWeeklyMenuService } from "./services/menu-read.service.js";
 import { loadDishCache, normalizeDishName } from "./services/dish-cache.service.js";
@@ -18,7 +17,6 @@ export interface WeeklyMenuResponse {
   weekId: string;
   menuData: MenuData;
   dishOrigins: Record<string, DishOrigin>;
-  dishDescriptions: Record<string, DishDescription>;
   /**
    * Dish name -> a shortened form of it, for the card's headline only.
    *
@@ -41,11 +39,10 @@ export interface WeeklyMenuResponse {
 /**
  * The dish names the cards can actually look up.
  *
- * `dishOrigins` and `dishDescriptions` are stored for every dish of every day,
+ * `dishOrigins` and `dishShortNames` are keyed by every dish of every day,
  * mains and sides, but the cards read them by one key per canteen-day: the
  * ranked main dish's name. Sides are never asked about. On a live payload that
- * is 14 keys out of 87, and the two maps were ~58% of the response, so the
- * response carries only the reachable ones.
+ * is 14 keys out of 87, so the response carries only the reachable ones.
  */
 function reachableDishNames(menuData: MenuData): Set<string> {
   const names = new Set<string>();
@@ -58,26 +55,6 @@ function reachableDishNames(menuData: MenuData): Set<string> {
   }
 
   return names;
-}
-
-/**
- * Trims every description to the two lines a phone card can show.
- *
- * Done here, on the way out, rather than where descriptions are generated. The
- * dish_cache holds hundreds written when the prompt asked for "under 110
- * characters" — three and a half lines — and those are the ones being cut off
- * mid-sentence on the card today. Fitting at read time reaches all of them at
- * once, with no regeneration and no model calls, and leaves the full text in
- * the cache in case a future layout has room for it.
- *
- * Idempotent: anything already inside the budget is returned untouched.
- */
-function fitDescriptions(
-  d: Record<string, DishDescription>
-): Record<string, DishDescription> {
-  const out: Record<string, DishDescription> = {};
-  for (const [dish, entry] of Object.entries(d)) out[dish] = fitDescription(entry);
-  return out;
 }
 
 /** Keeps only the entries `reachableDishNames` says a card can ask for. */
@@ -182,7 +159,7 @@ async function resolvePlateImages(menuData: MenuData): Promise<Record<string, st
  *
  * Handing back next week's row restores it with no client change at all: the
  * labels read `[34, 34, 34]` against a current week of 33, `allCanteensAhead`
- * is true, and the UI shifts the dates, lands on Monday, hides voting and shows
+ * is true, and the UI shifts the dates, lands on Monday and shows
  * its preview banner exactly as it was written to.
  *
  * A canteen that has not published yet is simply absent from that row, which is
@@ -220,7 +197,6 @@ export async function getWeeklyMenu(weekId?: string): Promise<WeeklyMenuResponse
     weekId: record.weekId,
     menuData: record.menuData,
     dishOrigins: pickReachable(record.dishOrigins, reachable),
-    dishDescriptions: fitDescriptions(pickReachable(record.dishDescriptions, reachable)),
     dishShortNames: pickReachable(record.dishShortNames ?? {}, reachable),
     // Keyed off the week that was actually served, which is not always the one
     // that was asked for: the read falls back to the most recent stored week.

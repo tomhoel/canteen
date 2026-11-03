@@ -1,9 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { DISH_COURSES } from "../../lib/types.js";
-import type { DishOrigin, DishDescription, DishCourse } from "../../lib/types.js";
-// Lives in its own module so /api/menu can trim descriptions without booting
-// this file's 14 MB of model SDK. See fit-description.ts.
-import { DESCRIPTION_MAX_CHARS } from "./fit-description.js";
+import type { DishOrigin, DishCourse } from "../../lib/types.js";
 
 let client: { key: string; ai: GoogleGenAI } | undefined;
 
@@ -115,37 +112,11 @@ export function fallbackOrigin(dish: string): DishOrigin {
   return match ? { code: match.code, country: match.country } : { code: "no", country: "Norway" };
 }
 
-/** Canned Norwegian copy, keyed off whatever the dish name gives away. */
-export function fallbackDescription(dish: string): DishDescription {
-  const lower = dish.toLowerCase();
-  let noDesc = `Chef's special fra kantinens helter. Tilberedt med stolthet og friske råvarer.`;
-
-  if (lower.includes("suppe") || lower.includes("soup")) {
-    noDesc = `Varmende trøst på boks. Garanti mot vestavind og dårlig mandagsstemning.`;
-  } else if (lower.includes("pizza")) {
-    noDesc = `Nystekt italiensk magi. Kantinens ubestridte stjerne – kom før kollegaene spiser alt.`;
-  } else if (lower.includes("pasta")) {
-    noDesc = `Karbo-glede på sitt beste. Serveres med nok parmesan til å glemme neste møte.`;
-  } else if (lower.includes("gryte") || lower.includes("stew") || lower.includes("curry")) {
-    noDesc = `Langsomt kokt kjærlighet. Så mør og smaksrik at du vurderer porsjon nummer to.`;
-  } else if (lower.includes("schnitzel") || lower.includes("panert")) {
-    noDesc = `Sprø utside, saftig innside. Gylden lykke som løfter humøret tre hakk.`;
-  } else if (lower.includes("biff") || lower.includes("beef") || lower.includes("karbonad") || lower.includes("pølse")) {
-    noDesc = `Saftig proteinkick tilberedt med tradisjon. Kjøkkenets stolthet i dag.`;
-  } else if (lower.includes("fisk") || lower.includes("fish") || lower.includes("rødspette") || lower.includes("torsk") || lower.includes("laks")) {
-    noDesc = `Fersk fangst i gourmetdrakt. Så godt at selv fiskeskeptikere blir omvendt.`;
-  } else if (lower.includes("taco") || lower.includes("burrito") || lower.includes("tortilla") || lower.includes("meksikansk")) {
-    noDesc = `Fiesta midt i arbeidsdagen. Litt krydder for å våkne før ettermiddagsøkta.`;
-  }
-
-  return { no: noDesc };
-}
-
 /**
  * An enrichment pass plus the provenance of each entry.
  *
- * Both passes below guarantee full coverage by filling gaps with a pattern
- * fallback, which is right for rendering — no dish should show up blank — but
+ * The origin pass below guarantees full coverage by filling gaps with a
+ * pattern fallback, which is right for rendering — no dish should show up blank — but
  * wrong to persist: a rate-limited run would otherwise write canned copy into
  * dish_cache, where it is reused forever and never retried. Callers that cache
  * must consult `fromModel` and store only those.
@@ -191,60 +162,6 @@ Return ONLY a JSON object mapping each dish name EXACTLY as given above to its o
   // still gets an origin, so no dish renders without a flag.
   for (const dish of dishes) {
     if (!result[dish]) result[dish] = fallbackOrigin(dish);
-  }
-
-  return { values: result, fromModel };
-}
-
-export async function generateDishDescriptions(
-  dishes: string[]
-): Promise<EnrichmentPass<DishDescription>> {
-  if (dishes.length === 0) return { values: {}, fromModel: new Set() };
-
-  const result: Record<string, DishDescription> = {};
-  const fromModel = new Set<string>();
-
-  for (const batch of chunk(dishes, BATCH_SIZE)) {
-    const prompt = `Generate witty, mouth-watering, and quietly funny 1-2 sentence descriptions for these canteen dishes:
-
-${batch.map((d, i) => `${i + 1}. ${d}`).join("\n")}
-
-Guidelines:
-- Make them sound delicious with subtle Scandinavian/workday humor, light sarcasm, or gourmet chef flair.
-- SPACE IS THE HARD CONSTRAINT. Each description is printed on a phone card in a
-  column about 34 characters wide, and it gets exactly two lines. That is
-  ${DESCRIPTION_MAX_CHARS} characters INCLUDING spaces and punctuation. Anything longer is cut off
-  mid-sentence on the card, so a shorter description is always better than a
-  truncated one.
-- Write ONE short sentence, or two very short ones, and count the characters.
-- Do not end with an ellipsis; finish the thought inside the budget.
-- Describe the dish named, not a different one.
-- Return ONLY a JSON object mapping each dish name EXACTLY as given above to a Norwegian (Bokmål) description of at most ${DESCRIPTION_MAX_CHARS} characters:
-{
-  "Dish Name": {
-    "no": "Appetizing and quietly witty description in Norwegian (Bokmål)"
-  }
-}`;
-
-    const parsed = await generateJson<Record<string, DishDescription>>(
-      prompt,
-      "description generation"
-    );
-    if (parsed) {
-      for (const dish of batch) {
-        const entry = parsed[dish];
-        if (entry?.no) {
-          result[dish] = entry;
-          fromModel.add(dish);
-        }
-      }
-    }
-  }
-
-  // Any dish the model skipped falls back to the canned copy, so every dish
-  // carries a description rather than rendering blank.
-  for (const dish of dishes) {
-    if (!result[dish]) result[dish] = fallbackDescription(dish);
   }
 
   return { values: result, fromModel };
@@ -442,7 +359,7 @@ If nothing needs fixing, respond with {}`;
  * usable width at a 15.2px bold face, which is a little over 25 characters a
  * line. Two lines is what the card is budgeted for: the plate is 160px tall
  * and the ANDRE RETTER block below it takes the rest, so a title that runs to
- * three lines eats the description's only line.
+ * three lines eats into that block.
  *
  * TARGET is what the model is asked to hit. MAX is what the validator will
  * still accept — a title between the two costs a third line but is not
@@ -601,7 +518,7 @@ Format: {"original title": "shortened title"}`;
     }
   }
 
-  // No fallback here, unlike origins and descriptions. A dish with no short
+  // No fallback here, unlike origins. A dish with no short
   // title renders its full name, which is correct — there is nothing canned to
   // put in its place.
   return { values: result, fromModel, answered };

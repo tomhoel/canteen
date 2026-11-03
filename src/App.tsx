@@ -40,7 +40,6 @@ function Menu({ epoch }: { epoch: number }) {
     weekId,
     menuData,
     dishOrigins,
-    dishDescriptions,
     dishShortNames,
     plateImages,
   } = fresh && fresh.week === week ? fresh.data : initial;
@@ -50,7 +49,6 @@ function Menu({ epoch }: { epoch: number }) {
       initialMenu={menuData}
       servedWeekId={weekId}
       initialOrigins={dishOrigins}
-      initialDescriptions={dishDescriptions}
       initialShortNames={dishShortNames ?? {}}
       plateImages={plateImages ?? {}}
     />

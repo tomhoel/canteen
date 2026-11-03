@@ -12,20 +12,12 @@ import fs from "node:fs";
  * `--plate-size + --plate-pull-y + --plate-pull-b`: a number describing the
  * PLATE, used as the budget for the TEXT. It was 114px on a 390x844 screen
  * against a real budget of 116px, 140px or 159px depending on how many side
- * dishes the kitchen published that day, so the description was clamped to one
- * line and fourteen of the week's fifteen cards threw away between one and six
- * lines of room.
+ * dishes the kitchen published that day, so fourteen of the week's fifteen
+ * cards threw away between one and six lines of room.
  *
- * Two rules replaced it, and both are easy to undo by accident:
- *
- *   1. `grid-template-rows: minmax(0, 1fr) auto` — ANDRE RETTER takes what it
- *      needs and the text column gets the rest. Reintroducing a static
- *      max-height on .card-content puts the cap back.
- *   2. `max-height: round(down, 100%, 1lh)` on the description — the leftover
- *      is a continuous number of pixels and almost never a whole number of
- *      lines, so without the rounding every card showed a 3-15px slice of the
- *      next line's letter-tops. Reintroducing a numeric `-webkit-line-clamp`
- *      makes the count static again.
+ * `grid-template-rows: minmax(0, 1fr) auto` replaced it, and it is easy to undo
+ * by accident: ANDRE RETTER takes what it needs and the text column gets the
+ * rest. Reintroducing a static max-height on .card-content puts the cap back.
  *
  * This reads the shipped stylesheet, not a copy of the values.
  */
@@ -80,7 +72,7 @@ test("the text column is not capped by a number describing the plate", () => {
       "grid row is the ceiling; anything static here is smaller than the real " +
       "budget on every card with fewer than three side dishes."
   );
-  assert.match(content, /display:\s*grid/, "the description needs a grid area for its 100% to mean 'what is left'");
+  assert.match(content, /display:\s*grid/, "the text column is a grid whose last row takes what is left");
   assert.match(content, /min-height:\s*0/, "without this the column refuses to shrink and never clips");
 });
 

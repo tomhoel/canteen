@@ -119,7 +119,6 @@ test("opacity is not what makes any of these inks quiet", () => {
   // Each of these shipped as an AA failure that a computed-style audit reads as
   // a pass, because the audit sees the token and the eye sees the composite.
   const wasFailing: Array<[string, string, string, number]> = [
-    [".dish-description", "#6b6158", GROUND.card, 0.75],
     [".info-btn", "#a09890", GROUND.cream, 0.55],
     [".leaderboard-dot-date", "#a09890", GROUND.card, 0.7],
     [".outdated .canteen-name", "#c8741a", GROUND.card, 0.48],
@@ -127,8 +126,8 @@ test("opacity is not what makes any of these inks quiet", () => {
   for (const [what, ink, bg, alpha] of wasFailing) {
     assert.ok(ratio(over(ink, bg, alpha), bg) < TEXT, `sanity: ${what} was a real failure`);
   }
-  // At full strength, on the corrected inks, all four clear.
-  atLeast(token("--text-secondary"), GROUND.card, TEXT, ".dish-description at full opacity");
+  // At full strength, on the corrected inks, they clear.
+  atLeast(token("--text-secondary"), GROUND.card, TEXT, "--text-secondary on card at full opacity");
   atLeast(token("--text-secondary"), GROUND.cream, TEXT, ".info-btn at full opacity");
   atLeast(token("--accent-orange-ink"), GROUND.card, TEXT, ".outdated .canteen-name on ink");
 });

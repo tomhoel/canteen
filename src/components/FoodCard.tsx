@@ -1,5 +1,5 @@
 import { useState, useLayoutEffect, useRef, memo } from "react";
-import { Users, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { markImageCached } from "@/lib/imageCache";
@@ -147,13 +147,8 @@ function PlateImage({
 interface FoodCardProps {
   data: CanteenDayItem;
   cardIdx: number;
-  selectedDay: number;
-  /** -1 on weekends; voteable styling hides automatically. */
-  todayIndex: number;
-  voteCount: number;
-  maxVotes: number;
+  /** Opens the enlarged plate. The whole card is the target. */
   onImageClick: (data: CanteenDayItem) => void;
-  onCardClick: (canteenName: string) => void;
   /** True strictly on the first initial app load, enabling card launch entrance animations. */
   isInitial?: boolean;
 }
@@ -161,12 +156,7 @@ interface FoodCardProps {
 const FoodCard = memo(function FoodCard({
   data,
   cardIdx,
-  selectedDay,
-  todayIndex,
-  voteCount,
-  maxVotes,
   onImageClick,
-  onCardClick,
   isInitial = false,
 }: FoodCardProps) {
   const {
@@ -190,13 +180,13 @@ const FoodCard = memo(function FoodCard({
   const [useFullPlate, setUseFullPlate] = useState(false);
   const plateSrc = (useFullPlate && highResImagePath) || imagePath || "";
 
-  const isVoteable = todayIndex >= 0 && selectedDay === todayIndex && !isOutdated && !isAhead;
-  const isLeader = voteCount > 0 && voteCount === maxVotes;
+  // A tap anywhere on the card opens its plate; a card with no plate to show does nothing.
+  const canOpen = !!mainDish && !!imagePath && !imgError;
 
   return (
     <div className="food-card-3d-wrapper">
     <article
-      className={`food-card${mainDish ? " clickable" : ""}${isVoteable ? " voteable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
+      className={`food-card${canOpen ? " clickable" : ""}${isOutdated ? " outdated" : ""}${isAhead ? " ahead" : ""}`}
       style={
         isInitial
           ? {
@@ -205,18 +195,9 @@ const FoodCard = memo(function FoodCard({
             }
           : undefined
       }
-      onClick={mainDish ? () => onCardClick(canteenName) : undefined}
+      onClick={canOpen ? () => onImageClick(data) : undefined}
     >
-      {isVoteable && voteCount > 0 && (
-        <div className={`vote-pip${isLeader ? " leader" : ""}`}>
-          <Users size={12} strokeWidth={2.4} className="vote-pip-icon" />
-          <span key={voteCount} className="vote-count">{voteCount}</span>
-        </div>
-      )}
-      <div
-        className="card-image-wrapper"
-        onClick={e => { e.stopPropagation(); if (mainDish) onImageClick(data); }}
-      >
+      <div className="card-image-wrapper">
         <div className="card-image-circle" data-plate={canteenName}>
           {imgError || !imagePath ? (
             <div className="image-placeholder">
@@ -245,7 +226,6 @@ const FoodCard = memo(function FoodCard({
             {`Uke ${canteenWeekNum}`}
           </div>
         )}
-        <span className="click-hint">{"Klikk for større"}</span>
         {origin && mainDish && (
           <div className="origin-pip">
             <span className="emoji-flag">{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>

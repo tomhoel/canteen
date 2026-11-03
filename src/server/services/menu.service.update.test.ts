@@ -37,7 +37,6 @@ import * as realDateUtils from "../../lib/dateUtils.js?real";
 interface StoredRowShape {
   menu_data: Record<string, unknown> | null;
   dish_origins: Record<string, unknown>;
-  dish_descriptions: Record<string, unknown>;
   dish_short_names?: Record<string, unknown>;
 }
 
@@ -55,7 +54,6 @@ interface World {
   rejectUpsert: Set<string>;
   /** Dish names the model refuses to answer for, per pass. */
   silentOrigins: Set<string>;
-  silentDescriptions: Set<string>;
   /** Dish names long enough that the updater should ask for a short title. */
   longTitles: Set<string>;
   /** Long titles the model looks at and declines to shorten. */
@@ -79,7 +77,6 @@ interface World {
   upserts: Upsert[];
   cacheWrites: Array<Record<string, unknown>[]>;
   originsAsked: string[][];
-  descriptionsAsked: string[][];
   shortTitlesAsked: string[][];
   redisSets: string[];
   redisGets: string[];
@@ -126,7 +123,6 @@ function reset(overrides: Partial<World> = {}) {
     rows: new Map(),
     rejectUpsert: new Set(),
     silentOrigins: new Set(),
-    silentDescriptions: new Set(),
     longTitles: new Set(),
     declinedShortTitles: new Set(),
     shortTitleCallFails: false,
@@ -141,7 +137,6 @@ function reset(overrides: Partial<World> = {}) {
     upserts: [],
     cacheWrites: [],
     originsAsked: [],
-    descriptionsAsked: [],
     shortTitlesAsked: [],
     redisSets: [],
     redisGets: [],
@@ -194,16 +189,6 @@ mock.module("./ai.service.js", {
       }
       return { values, fromModel };
     },
-    generateDishDescriptions: async (dishes: string[]) => {
-      world.descriptionsAsked.push([...dishes]);
-      const values: Record<string, unknown> = {};
-      const fromModel = new Set<string>();
-      for (const d of dishes) {
-        values[d] = { no: `om ${d}`, en: `about ${d}` };
-        if (!world.silentDescriptions.has(d)) fromModel.add(d);
-      }
-      return { values, fromModel };
-    },
     cleanDishTitles: async (dishes: string[]) => {
       world.titlesAsked.push([...dishes]);
       if (world.proofreadFails) return { corrections: {}, answered: new Set<string>() };
@@ -232,12 +217,7 @@ mock.module("./ai.service.js", {
       }
       return { values, fromModel, answered };
     },
-    // Identity here on purpose: the trimming rules have their own tests in
-    // fit-description.test.ts, and these assertions are about which dishes get
-    // asked about and what reaches the cache, not about text length.
-    fitDescription: (d: unknown) => d,
     fallbackOrigin: (dish: string) => ({ code: "fb", country: `fallback:${dish}` }),
-    fallbackDescription: (dish: string) => ({ no: `fallback:${dish}`, en: `fallback:${dish}` }),
   },
 });
 
@@ -264,7 +244,6 @@ mock.module("@upstash/redis", {
             weekId,
             menuData: stored.menu_data,
             dishOrigins: stored.dish_origins,
-            dishDescriptions: stored.dish_descriptions,
             dishShortNames: stored.dish_short_names,
             scrapedAt: (stored.menu_data as any)?.scrapedAt ?? new Date().toISOString(),
           };
@@ -284,14 +263,12 @@ mock.module("@upstash/redis", {
             week_id: weekId,
             menu_data: value.menuData,
             dish_origins: value.dishOrigins,
-            dish_descriptions: value.dishDescriptions,
             dish_short_names: value.dishShortNames,
           };
           world.upserts.push({ weekId, payload });
           world.rows.set(weekId, {
             menu_data: value.menuData,
             dish_origins: value.dishOrigins,
-            dish_descriptions: value.dishDescriptions,
             dish_short_names: value.dishShortNames,
           });
         }
@@ -315,7 +292,6 @@ mock.module("@upstash/redis", {
                 cacheKey: row.cache_key ?? row.cacheKey ?? f,
                 originalName: row.original_name ?? row.originalName ?? f,
                 origin: row.origin ?? null,
-                description: row.description ?? null,
                 shortName: row.short_name ?? row.shortName ?? null,
                 imagePath: row.image_path ?? row.imagePath ?? null,
                 imageNoBgPath: row.image_no_bg_path ?? row.imageNoBgPath ?? null,
@@ -344,7 +320,6 @@ mock.module("@upstash/redis", {
               cache_key: parsed.cacheKey ?? k,
               original_name: parsed.originalName ?? "",
               origin: parsed.origin ?? undefined,
-              description: parsed.description ?? undefined,
               short_name: parsed.shortName ?? undefined,
             };
             world.cacheRows.set(k, row);
@@ -378,7 +353,6 @@ function storedRow(canteens: Record<string, CanteenData>, fingerprint?: string):
   return {
     menu_data: { scrapedAt: "old", canteens, ...(fingerprint ? { fingerprint } : {}) },
     dish_origins: {},
-    dish_descriptions: {},
   };
 }
 
@@ -668,58 +642,60 @@ test("a fully cached week costs no model call", async () => {
     cache_key: "fiskesuppe",
     original_name: "Fiskesuppe",
     origin: { code: "no", country: "Norway" },
-    description: { no: "lagret", en: "stored" },
   });
 
   const result = await runWeeklyUpdateService();
 
   assert.deepEqual(world.originsAsked, [[]]);
-  assert.deepEqual(world.descriptionsAsked, [[]]);
+  assert.deepEqual(world.shortTitlesAsked, [[]]);
   assert.equal(result.stats.fromCache, 1);
   assert.equal(result.stats.sentToModel, 0);
 });
 
 test("each pass is asked only about the field it is missing", async () => {
-  // The AND-filter this replaces threw away a model-answered origin whenever
-  // the description pass failed for the same dish, then paid to ask again.
-  reset({ scrape: makeScrape({ Flow: makeCanteen(label(0), ["Fiskesuppe"]) }) });
-  world.cacheRows.set("fiskesuppe", {
-    cache_key: "fiskesuppe",
-    original_name: "Fiskesuppe",
+  // The AND-filter this replaces threw away a model-answered field whenever
+  // another pass failed for the same dish, then paid to ask again.
+  reset({
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["En veldig lang rett"]) }),
+    longTitles: new Set(["En veldig lang rett"]),
+  });
+  world.cacheRows.set("en veldig lang rett", {
+    cache_key: "en veldig lang rett",
+    original_name: "En veldig lang rett",
     origin: { code: "no", country: "Norway" },
-    description: null,
   });
 
   await runWeeklyUpdateService();
 
   assert.deepEqual(world.originsAsked, [[]], "the cached origin is not re-asked");
-  assert.deepEqual(world.descriptionsAsked, [["Fiskesuppe"]]);
+  assert.deepEqual(world.shortTitlesAsked, [["En veldig lang rett"]]);
 });
 
 test("a half-answered dish keeps the half that worked", async () => {
-  // The exact case the AND-filter threw away: the origin pass lands, the
-  // description pass times out, and both answers were discarded — so the next
-  // run paid to ask for an origin it had already been given.
+  // The exact case the AND-filter threw away: the short title lands, the
+  // origin pass times out, and both answers were discarded — so the next run
+  // paid to ask for a title it had already been given.
   reset({
-    scrape: makeScrape({ Flow: makeCanteen(label(0), ["Fiskesuppe"]) }),
-    silentDescriptions: new Set(["Fiskesuppe"]),
+    scrape: makeScrape({ Flow: makeCanteen(label(0), ["En veldig lang rett"]) }),
+    longTitles: new Set(["En veldig lang rett"]),
+    silentOrigins: new Set(["En veldig lang rett"]),
   });
 
   const first = await runWeeklyUpdateService();
 
-  const row = world.cacheRows.get("fiskesuppe")!;
-  assert.ok(row.origin, "the origin the model did answer is persisted");
-  assert.equal(row.description, undefined, "the fallback description is not");
-  assert.deepEqual(first.stats.unresolved, ["Fiskesuppe"]);
+  const row = world.cacheRows.get("en veldig lang rett")!;
+  assert.equal(row.short_name, "kort:En veldig lang rett", "the title the model did answer is persisted");
+  assert.equal(row.origin, undefined, "the fallback origin is not");
+  assert.deepEqual(first.stats.unresolved, ["En veldig lang rett"]);
 
   // Second run: only the missing half is re-asked.
-  world.silentDescriptions = new Set();
+  world.silentOrigins = new Set();
   world.originsAsked = [];
-  world.descriptionsAsked = [];
+  world.shortTitlesAsked = [];
   const second = await runWeeklyUpdateService();
 
-  assert.deepEqual(world.originsAsked, [[]], "the stored origin is not paid for twice");
-  assert.deepEqual(world.descriptionsAsked, [["Fiskesuppe"]]);
+  assert.deepEqual(world.shortTitlesAsked, [[]], "the stored title is not paid for twice");
+  assert.deepEqual(world.originsAsked, [["En veldig lang rett"]]);
   assert.deepEqual(second.stats.unresolved, []);
 });
 
@@ -821,7 +797,6 @@ test("a title the model declines to shorten is settled, not re-asked", async () 
 
   const row = world.cacheRows.get("uforkortbar rett")!;
   assert.ok(row.origin, "the origin still landed");
-  assert.ok(row.description, "so did the description");
 
   world.shortTitlesAsked = [];
   await runWeeklyUpdateService();
@@ -830,11 +805,12 @@ test("a title the model declines to shorten is settled, not re-asked", async () 
 
 test("a partial write does not blank the field another run filled in", async () => {
   // postgrest builds the request's column list from the union of the keys across
-  // the batch, so an origin-only row travelling with a full one would NULL that
-  // row's description. Every upsert batch must therefore be homogeneous.
+  // the batch, so a title-only row travelling with a full one would NULL that
+  // row's origin. Every upsert batch must therefore be homogeneous.
   reset({
     scrape: makeScrape({ Flow: makeCanteen(label(0), ["Halvveis", "Komplett"]) }),
-    silentDescriptions: new Set(["Halvveis"]),
+    longTitles: new Set(["Halvveis", "Komplett"]),
+    silentOrigins: new Set(["Halvveis"]),
   });
 
   await runWeeklyUpdateService();
@@ -843,15 +819,15 @@ test("a partial write does not blank the field another run filled in", async () 
     const shapes = new Set(batch.map((row) => Object.keys(row).sort().join(",")));
     assert.equal(shapes.size, 1, `mixed shapes in one upsert: ${[...shapes].join(" | ")}`);
   }
-  assert.ok(world.cacheRows.get("komplett")!.description, "the complete dish keeps its description");
-  assert.equal(world.cacheRows.get("halvveis")!.description, undefined);
+  assert.ok(world.cacheRows.get("komplett")!.origin, "the complete dish keeps its origin");
+  assert.equal(world.cacheRows.get("halvveis")!.origin, undefined);
+  assert.equal(world.cacheRows.get("halvveis")!.short_name, "kort:Halvveis");
 });
 
 test("a dish the model never answers for is asked again every run, and nothing is cached for it", async () => {
   reset({
     scrape: makeScrape({ Flow: makeCanteen(label(0), ["Ukjent rett"]) }),
     silentOrigins: new Set(["Ukjent rett"]),
-    silentDescriptions: new Set(["Ukjent rett"]),
   });
 
   // No attempt counter and no cap: a failed dish costs a few tokens per run
@@ -871,12 +847,10 @@ test("a fallback never overwrites what the row already stores", async () => {
   reset({
     scrape: makeScrape({ Flow: makeCanteen(label(0), ["Fiskesuppe"]) }),
     silentOrigins: new Set(["Fiskesuppe"]),
-    silentDescriptions: new Set(["Fiskesuppe"]),
   });
   world.rows.set(W_A, {
     menu_data: { scrapedAt: "old", canteens: { Flow: makeCanteen(label(0), ["Fiskesuppe"]) } },
     dish_origins: { Fiskesuppe: { code: "se", country: "Sweden" } },
-    dish_descriptions: { Fiskesuppe: { no: "ekte", en: "real" } },
   });
 
   const result = await runWeeklyUpdateService();
@@ -886,7 +860,6 @@ test("a fallback never overwrites what the row already stores", async () => {
     { code: "se", country: "Sweden" },
     "a rate-limited run must not rewrite a good answer as boilerplate"
   );
-  assert.deepEqual(result.dishDescriptions.Fiskesuppe, { no: "ekte", en: "real" });
 });
 
 test("an unchanged week still tops up the dishes that are missing enrichment", async () => {
@@ -896,7 +869,6 @@ test("an unchanged week still tops up the dishes that are missing enrichment", a
   reset({
     scrape: makeScrape({ Flow: makeCanteen(label(0), ["Fiskesuppe"]) }),
     silentOrigins: new Set(["Fiskesuppe"]),
-    silentDescriptions: new Set(["Fiskesuppe"]),
   });
 
   await runWeeklyUpdateService();
@@ -904,7 +876,6 @@ test("an unchanged week still tops up the dishes that are missing enrichment", a
   assert.ok(fingerprint, "the fingerprint rides inside menu_data");
 
   world.silentOrigins = new Set();
-  world.silentDescriptions = new Set();
   world.originsAsked = [];
   const second = await runWeeklyUpdateService();
 
@@ -919,7 +890,7 @@ test("two dish names that normalise to one key do not abort the batch", async ()
   // normaliser strips the punctuation that separates them, so both entries
   // carry the same cache_key. Postgres aborts the entire statement on a
   // duplicate conflict target, which would silently discard every other dish's
-  // origin, description and attempt counter along with it.
+  // origin, short title and attempt counter along with it.
   reset({
     scrape: makeScrape({
       Flow: makeCanteen(label(0), ["Kylling m/ ris", "Kylling m ris", "Fiskesuppe"]),
@@ -946,7 +917,6 @@ test("a rollover asks about a failing dish once per run, not once per week", asy
       Fresh4you: makeCanteen(label(1), ["Ukjent rett"]),
     }),
     silentOrigins: new Set(["Ukjent rett"]),
-    silentDescriptions: new Set(["Ukjent rett"]),
   });
 
   const result = await runWeeklyUpdateService();
@@ -1063,8 +1033,8 @@ test("today's board replaces what the weekly widget planned", async () => {
 
 test("the overridden dish is enriched, not filed past the model", async () => {
   // The override runs before extractAllDishes, so today's real food gets an
-  // origin and a description like any other dish. If it ran after, the card
-  // would show the right dish with the wrong (or no) description.
+  // an origin like any other dish. If it ran after, the card would show the
+  // right dish with the wrong (or no) flag.
   reset({
     todayIndex: 0,
     scrape: makeScrape({ Flow: makeCanteen(label(0), ["Planlagt rett"]) }),

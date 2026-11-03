@@ -18,13 +18,11 @@ export interface DishOrigin { code: string; country: string; }
  */
 export type DishCourse = "meat_plate" | "meat_mixed" | "veg" | "soup" | "side";
 export const DISH_COURSES: readonly DishCourse[] = ["meat_plate", "meat_mixed", "veg", "soup", "side"];
-export interface DishDescription { no?: string; }
 
 export interface WeeklyMenuRecord {
   weekId: string;
   menuData: MenuData;
   dishOrigins: Record<string, DishOrigin>;
-  dishDescriptions: Record<string, DishDescription>;
   /**
    * Dish name -> a shortened form of it, for the card's headline only.
    *
@@ -55,7 +53,6 @@ export interface CanteenDayItem {
   isAhead?: boolean;
   canteenWeekNum?: number;
   origin?: DishOrigin | null;
-  description?: string | null;
   /**
    * What the card's headline should say. Equals `mainDish.dish` unless the
    * enricher produced something shorter for a name too long to fit. The full
