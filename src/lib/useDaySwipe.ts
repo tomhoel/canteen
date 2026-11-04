@@ -203,8 +203,8 @@ export function useDaySwipe({
       const duration = 240;
       el.style.transition = `transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`;
       el.style.transform = dir === -1
-        ? "translate3d(calc(-100% - 16px), 0, 0)"
-        : "translate3d(calc(100% + 16px), 0, 0)";
+        ? "translate3d(calc(-100% - var(--day-gap)), 0, 0)"
+        : "translate3d(calc(100% + var(--day-gap)), 0, 0)";
       offsetRef.current = 0;
 
       // Update bottom day-bar pill immediately on release

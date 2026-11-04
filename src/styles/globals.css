@@ -1765,6 +1765,9 @@ button {
   /* The track fills the screen between the header and the dock; every day
      panel stacks in its one grid cell. */
   .cards-track {
+    /* Wider than the plate and its glow reach past a card's edge (~63px at
+       430px), so a neighbouring day's plates stay off-screen until it arrives. */
+    --day-gap: 72px;
     display: grid;
     grid-template-columns: 100%;
     grid-template-rows: 100%;
