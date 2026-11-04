@@ -512,9 +512,21 @@ body {
    name, a fourth side dish or a stale menu never makes one stick out. The
    phone has its own fixed share of the screen (flex: 1 1 0 in its block). */
 @media (min-width: 769px) {
+  /* One shared grid across the three cards: the logo row is the same height
+     whatever the logo (each is sized to its own optical weight inside it), and
+     the side dishes always take room for three rows (a card shows at most
+     three), so titles, chips and ANDRE RETTER line up card to card. */
+  .canteen-name {
+    height: 40px;
+  }
+
+  .card-bottom {
+    min-height: 122px;
+  }
+
   .food-card {
-    /* The tallest real card in week 45 was 455px; 470 holds a three-line name. */
-    height: 470px;
+    /* Room for a three-line dish name under a canteen logo; measured on a full week with nothing clipped. */
+    height: 490px;
   }
 }
 
@@ -857,46 +869,11 @@ body {
   color: var(--accent-orange);
 }
 
-/* Small pill badge overlaid on the image */
-.stale-image-badge {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(40, 25, 15, 0.88);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 9px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  white-space: nowrap;
-  pointer-events: none;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-/* Last week's menu: one quiet line under the allergens (FoodCard). Not a pill:
-   it is a remark about the menu, not a control, and the space under the
-   allergens is free on every card. */
-.stale-note {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 2px 0 0;
-  font-size: 12px;
-  line-height: 1.3;
+/* Last week's menu: the week, after the canteen's name, in grey. The greyed
+   card already says "old"; this just says how old. */
+.stale-week {
   color: var(--text-secondary);
-}
-
-.stale-note strong {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.stale-note svg {
-  flex-shrink: 0;
-  color: var(--accent-orange-ink);
+  white-space: nowrap;
 }
 
 /* ─── Ahead / Next-week menu card (positive highlight) ─── */
@@ -947,13 +924,16 @@ body {
   content: "";
   position: absolute;
   inset: 0px;
-  border-radius: 50%;
+  /* closest-side, so 100% is the box's edge and the light has fully faded
+     there. It used to fade against the farthest corner while the box was
+     clipped to a circle, which cut it off mid-fade: a faint hard ring. */
   background: radial-gradient(
-    circle at 50% 50%,
+    closest-side,
     rgba(255, 255, 255, 0.4) 0%,
-    rgba(255, 245, 235, 0.2) 40%,
-    rgba(255, 230, 205, 0.08) 65%,
-    transparent 80%
+    rgba(255, 248, 240, 0.26) 35%,
+    rgba(255, 240, 225, 0.12) 60%,
+    rgba(255, 235, 215, 0.04) 80%,
+    rgba(255, 235, 215, 0) 100%
   );
   pointer-events: none;
   z-index: 0;
@@ -964,13 +944,18 @@ body {
   content: "";
   position: absolute;
   inset: -12px;
-  border-radius: 50%;
+  /* The glow's original colours and spread, re-scaled to the box (closest-side)
+     so it fades to exactly zero at its edge. It used to fade against the
+     farthest corner while clipped to a circle, which cut it off mid-fade: a
+     faint hard ring. */
   background: radial-gradient(
-    ellipse at 50% 55%,
-    rgba(255, 125, 30, 0.30) 0%,
-    rgba(255, 175, 45, 0.18) 35%,
-    rgba(255, 215, 90, 0.06) 60%,
-    transparent 78%
+    closest-side at 50% 54%,
+    rgba(255, 125, 30, 0.3) 0%,
+    rgba(255, 150, 40, 0.25) 30%,
+    rgba(255, 175, 45, 0.18) 49%,
+    rgba(255, 200, 75, 0.1) 70%,
+    rgba(255, 215, 90, 0.045) 85%,
+    rgba(255, 215, 90, 0) 100%
   );
   pointer-events: none;
   z-index: 0;
@@ -1115,7 +1100,39 @@ body {
   text-transform: uppercase;
   letter-spacing: 1.2px;
   color: var(--accent-orange);
-  margin-bottom: 3px;
+  margin-bottom: 10px;
+}
+
+/* The kitchen's own logo stands for its name. Heights are tuned per logo so
+   they read as the same weight: the wide Fresh4you wordmark sits lower, the
+   compact stamp and the stacked "M" taller. */
+.canteen-logo {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
+.canteen-logo[data-canteen="fresh4you"] {
+  height: 26px;
+}
+
+/* The building, beside the logo: a quiet caps label in the type the canteen
+   name used to have, so the logo stays the loud part. Space alone separates
+   them; a divider line read as clutter. */
+.canteen-building {
+  align-self: center;
+  margin-left: 6px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Thin hand-stamped lines: it needs more size to carry the same weight. */
+.canteen-logo[data-canteen="street"] {
+  height: 40px;
+}
+
+.canteen-logo[data-canteen="m"] {
+  height: 32px;
 }
 
 .canteen-building-tag {
@@ -1189,20 +1206,27 @@ body {
   flex-wrap: wrap;
 }
 
-/* Full-name allergen chip — used on cards */
+/* Allergen chip: an icon and the name, in one calm warm tone. The icon tells
+   allergens apart at a glance, so the chips no longer each wear their own
+   bright colour (a row of them read as a rainbow competing with the food). */
 .allergen-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 9.5px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  border: 1px solid;
+  gap: 4px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: rgba(60, 40, 20, 0.055);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 500;
   line-height: 1.2;
+  white-space: nowrap;
   flex-shrink: 0;
+}
+
+.allergen-chip svg {
+  flex-shrink: 0;
+  color: var(--accent-orange-ink);
 }
 
 /* Allergen chip entrance animation ONLY on initial launch */
@@ -1270,13 +1294,29 @@ body {
   text-overflow: ellipsis;
 }
 
+/* A side dish's allergens: the same icons, small and grey, named in a
+   tooltip and for screen readers. They replace two-letter codes ("Eg Gl")
+   nobody could read without a key. */
 .side-allergens {
-  font-size: 10px;
-  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding-left: 8px;
-  font-weight: 500;
-  white-space: nowrap;
+  color: var(--text-secondary);
   flex-shrink: 0;
+}
+
+.side-allergen {
+  display: inline-flex;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Canteen-wide availability notes (e.g. "Halal tilgjengelig") shown inline
@@ -1775,14 +1815,14 @@ body {
        and the badges position against it; they used to carry their own copy of
        this clamp, so changing one silently mispositioned the other. */
     /* The plate's slot: where its left edge sits, so the text column keeps its
-       width. The plate itself is 15% larger and spills past the card's right
+       width. The plate itself is 32% larger and spills past the card's right
        edge (cut off by the screen; `.cards-container` clips sideways). The top
        of its rim sits in the middle of the gap above the card (see the margin
        on .card-image-wrapper). Measured on six phone sizes across a week, by
        the plate's real rim: at 15% it covers no text; at 20% it reaches the
        first side dish's allergen codes. */
     --plate-slot: clamp(125px, 19dvh, 210px);
-    --plate-size: calc(var(--plate-slot) * 1.15);
+    --plate-size: calc(var(--plate-slot) * 1.32);
     --plate-grow: calc(var(--plate-size) - var(--plate-slot));
     --card-pad-y: clamp(8px, 1.2dvh, 14px);
     --plate-pull-y: clamp(-24px, -3dvh, -14px); /* @kind other */
@@ -1894,8 +1934,12 @@ body {
          square picture (measured: 440 of 512px), so the box goes up by that.
          -1px is the card's border. */
       calc(-1 * (var(--card-pad-y) + var(--stack-gap) / 2) - 1px - var(--plate-size) * 0.07)
-      calc(var(--plate-pull-x) - var(--plate-grow))
-      0 0;
+      calc(var(--plate-pull-x) - var(--plate-grow) + var(--plate-size) * 0.07 + 10px)
+      0
+      /* The same 7% sideways: the rim, not the box, starts where the text
+         column ends, so there is no dead strip between the title and the
+         plate. The column keeps its width (the right margin gives it back). */
+      calc(var(--plate-size) * -0.07 - 10px);
     flex-shrink: 0;
     z-index: 10;
   }
@@ -1935,12 +1979,6 @@ body {
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
   }
 
-  .stale-image-badge {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    background: rgba(40, 25, 15, 0.88);
-  }
-
   .food-image {
     animation: none;
   }
@@ -1955,7 +1993,9 @@ body {
        the box is shrink-wrapped to it. */
     align-self: stretch;
     text-align: left;
-    padding: 0 8px 0 2px;
+    /* 14px on the plate side: the plate's rim starts exactly where this column
+       ends, and a long title line needs air before it. */
+    padding: 0 14px 0 2px;
     min-width: 0;
     /* A grid because the last row once held the dish description, which needed
        a definite "what is left" height. The description is gone; the
@@ -1991,7 +2031,7 @@ body {
        back to centring. Flex items need a flex property. */
     justify-content: flex-start;
     font-size: clamp(9px, 1.2dvh, 12px);
-    margin-bottom: 2px;
+    margin-bottom: clamp(5px, 1dvh, 9px);
     letter-spacing: 1px;
     /* A tag that does not fit beside the name drops under it, whole. */
     flex-wrap: wrap;
@@ -2002,16 +2042,24 @@ body {
     white-space: nowrap;
   }
 
-  .stale-note {
-    grid-row: 3;
-    align-self: start;
-    justify-content: flex-start;
-    margin-top: clamp(4px, 0.8dvh, 8px);
-    font-size: clamp(10px, 1.35dvh, 12px);
+  .canteen-logo {
+    height: clamp(20px, 3dvh, 28px);
+  }
+
+  .canteen-logo[data-canteen="fresh4you"] {
+    height: clamp(17px, 2.6dvh, 24px);
+  }
+
+  .canteen-logo[data-canteen="street"] {
+    height: clamp(26px, 4dvh, 36px);
+  }
+
+  .canteen-logo[data-canteen="m"] {
+    height: clamp(22px, 3.3dvh, 30px);
   }
 
   .dish-name {
-    font-size: clamp(12px, 1.8dvh, 17px);
+    font-size: clamp(13px, 2.05dvh, 19px);
     font-weight: 700;
     line-height: 1.3;
     margin-bottom: 0;
@@ -2032,8 +2080,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 3px 0 0 0;
-    min-height: 22px;
+    margin: clamp(2px, 0.5dvh, 5px) 0 0 0;
+    min-height: clamp(14px, 2dvh, 18px);
     width: 100%;
     gap: 6px;
   }
@@ -2048,9 +2096,18 @@ body {
   }
 
   .allergen-chip {
-    font-size: 8.5px;
-    padding: 2px 6px;
-    letter-spacing: 0.2px;
+    font-size: clamp(10px, 1.3dvh, 11.5px);
+    padding: 2px 8px 2px 6px;
+  }
+
+  .allergen-chip svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .side-allergen svg {
+    width: 12px;
+    height: 12px;
   }
 
   /* Disable image counter-parallax on touch devices */
@@ -2120,15 +2177,6 @@ body {
 
   /* Closed canteens mobile text — adjust position above day bar */
 
-  .stale-image-badge {
-    /* On the plate's rim rather than its foot: the plate's lower edge now
-       hangs over the first side-dish row. */
-    bottom: 16%;
-    z-index: 3; /* in front of the plate image, which it now overlaps */
-    font-size: 8px;
-    padding: 2px 7px;
-  }
-
   .ahead-tag {
     font-size: 8.5px;
     padding: 2px 6px;
@@ -2185,6 +2233,44 @@ body {
 
   .side-dish-item:last-child {
     padding-bottom: 0;
+  }
+
+  /* Side-dish allergens follow the dish name instead of the card's right edge,
+     where the plate hangs: they read as part of that dish and never sit under
+     the plate. The name still ellipsises, the icons never do. */
+  .side-dish-text {
+    flex: 0 1 auto;
+  }
+
+  .side-dish-item {
+    align-items: center;
+    /* The rule fades out to the right, toward the plate, instead of running
+       hard into it: a 1px gradient drawn where the border was. */
+    border-top: none;
+    background: linear-gradient(to right, var(--border-light) 40%, transparent) top / 100% 1px no-repeat;
+  }
+
+  .side-allergens {
+    padding-left: 6px;
+    /* Low-key: a hint beside the dish, not a second voice. */
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+
+  /* One allergen style on the phone: the main dish's allergens are the same
+     quiet grey icon-and-name as the side dishes', not a pill of their own. */
+  .allergen-chip {
+    padding: 0;
+    background: none;
+    gap: 3px;
+  }
+
+  .allergen-chip svg {
+    color: var(--text-secondary);
+  }
+
+  .allergens-row {
+    column-gap: 10px;
   }
 
   /* ─── Short phones (iPhone SE class, <=740px tall) ───────────────────────
@@ -2640,7 +2726,7 @@ body {
     /* The plate's inner side: it hangs off the card's right edge. */
     top: clamp(14px, 3dvh, 24px);
     bottom: auto;
-    left: 4px;
+    left: 16px;
     right: auto;
     font-size: 10px;
     padding: 3px 6px;

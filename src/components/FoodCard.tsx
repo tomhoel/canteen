@@ -1,6 +1,6 @@
 import { useState, useLayoutEffect, useRef, memo } from "react";
-import { Clock } from "lucide-react";
-import { ALLERGEN_COLORS, ALLERGEN_NAMES_NO, ALLERGEN_ABBREV_NO, getCanteenMetadata } from "@/lib/constants";
+import { Milk, Fish, Wheat, Egg, Nut, Shrimp, Shell, Bean, Leaf, Sprout, Droplet, Flower, Wine, CircleAlert, type LucideIcon } from "lucide-react";
+import { ALLERGEN_NAMES_NO, getCanteenMetadata } from "@/lib/constants";
 import type { CanteenDayItem } from "@/lib/types";
 import { markImageCached } from "@/lib/imageCache";
 
@@ -41,6 +41,28 @@ const COUNTRY_ADJECTIVES: Record<string, string> = {
   hungary: "Ungarsk",
   austria: "Østerriksk",
   barbados: "Barbadisk",
+};
+
+/**
+ * One icon per allergen, from the app's own icon set. The icon is what tells
+ * allergens apart at a glance; the name (on main dishes, and as a tooltip and
+ * screen-reader text on side dishes) is what makes it certain.
+ */
+const ALLERGEN_ICONS: Record<string, LucideIcon> = {
+  Milk: Milk,
+  Fish: Fish,
+  Gluten: Wheat,
+  Egg: Egg,
+  Nuts: Nut,
+  Peanuts: Nut,
+  Shellfish: Shrimp,
+  Molluscs: Shell,
+  Soya: Bean,
+  Celery: Leaf,
+  "Sesame seeds": Sprout,
+  Mustard: Droplet,
+  Lupin: Flower,
+  Sulphites: Wine,
 };
 
 function getCountryAdjective(country: string): string {
@@ -221,11 +243,6 @@ const FoodCard = memo(function FoodCard({
             </div>
           )}
         </div>
-        {isOutdated && (
-          <div className="stale-image-badge">
-            {`Uke ${canteenWeekNum}`}
-          </div>
-        )}
         {origin && mainDish && (
           <div className="origin-pip">
             <span className="emoji-flag">{origin.code.toUpperCase().split("").map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join("")}</span>
@@ -248,9 +265,20 @@ const FoodCard = memo(function FoodCard({
             const meta = getCanteenMetadata(canteenName);
             return (
               <div className="canteen-name">
-                <span>{meta.name}</span>
+                {meta.logo ? (
+                  <>
+                    <img className="canteen-logo" data-canteen={meta.id} src={meta.logo} alt={meta.name} decoding="async" />
+                    {/* Where to walk to, beside who is cooking: "Bygg M", not "Bygg M, 2. etasje". */}
+                    <span className="canteen-building">{meta.building.split(",")[0]}</span>
+                  </>
+                ) : (
+                  <span>{meta.name}</span>
+                )}
                 {isAhead && (
                   <span className="ahead-tag">{`Uke ${canteenWeekNum}`}</span>
+                )}
+                {isOutdated && canteenWeekNum && (
+                  <span className="stale-week" title="Ikke oppdatert">{`· Uke ${canteenWeekNum}`}</span>
                 )}
               </div>
             );
@@ -265,37 +293,18 @@ const FoodCard = memo(function FoodCard({
           <div className="dish-meta-row">
             <div className="allergens-row">
               {mainAllergens.map((a) => {
-                const displayName = (ALLERGEN_NAMES_NO[a.name] || a.name);
+                const Icon = ALLERGEN_ICONS[a.name] ?? CircleAlert;
                 return (
-                <span
-                  key={a.id}
-                  className="allergen-chip"
-                  style={{
-                    color: ALLERGEN_COLORS[a.name] || "#8E8E93",
-                    background: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}1a`,
-                    borderColor: `${ALLERGEN_COLORS[a.name] || "#8E8E93"}44`,
-                  }}
-                >
-                  {displayName}
-                </span>
+                  <span key={a.id} className="allergen-chip">
+                    <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                    {ALLERGEN_NAMES_NO[a.name] || a.name}
+                  </span>
                 );
               })}
             </div>
           </div>
         )}
 
-        {/* Last week's menu, said as a quiet line under the allergens, in the
-            space the card already has: it keeps every card the same height,
-            and it no longer competes with the canteen name for its row. */}
-        {isOutdated && (
-          <p className="stale-note">
-            <Clock size={12} strokeWidth={2.4} aria-hidden="true" />
-            <span>
-              <strong>{"Ikke oppdatert"}</strong>
-              {canteenWeekNum ? ` · viser uke ${canteenWeekNum}` : ""}
-            </span>
-          </p>
-        )}
       </div>
 
       <div className="card-bottom">
@@ -314,7 +323,18 @@ const FoodCard = memo(function FoodCard({
             <div key={idx} className="side-dish-item">
               <span className="side-dish-text">{item.dish}</span>
               {item.allergens?.length > 0 && (
-                <span className="side-allergens">{item.allergens.map(a => (ALLERGEN_ABBREV_NO[a.name] || a.name.slice(0, 2))).join(" ")}</span>
+                <span className="side-allergens">
+                  {item.allergens.map((a) => {
+                    const Icon = ALLERGEN_ICONS[a.name] ?? CircleAlert;
+                    const name = ALLERGEN_NAMES_NO[a.name] || a.name;
+                    return (
+                      <span key={a.id ?? a.name} className="side-allergen" title={name}>
+                        <Icon size={13} strokeWidth={2} aria-hidden="true" />
+                        <span className="sr-only">{name}</span>
+                      </span>
+                    );
+                  })}
+                </span>
               )}
             </div>
           )) : (

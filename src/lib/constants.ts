@@ -3,26 +3,11 @@ export const DAYS_NO = ["Man", "Tir", "Ons", "Tor", "Fre"];
 export const FULL_DAYS_NO = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag"];
 export const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
-export const ALLERGEN_COLORS: Record<string, string> = {
-  Egg: "#FF9500", Fish: "#30B0C7", Gluten: "#FFCC00", Milk: "#8E8E93",
-  Nuts: "#A05A2C", Peanuts: "#A05A2C", Celery: "#34C759", Mustard: "#FFCC00",
-  "Sesame seeds": "#C7A000", Shellfish: "#FF3B30", Soya: "#5856D6",
-  Sulphites: "#AF52DE", Molluscs: "#5AC8FA", Lupin: "#34C759"
-};
-
 export const ALLERGEN_NAMES_NO: Record<string, string> = {
   Egg: "Egg", Fish: "Fisk", Gluten: "Gluten", Milk: "Melk",
   Nuts: "N\u00F8tter", Peanuts: "Pean\u00F8tter", Celery: "Selleri", Mustard: "Sennep",
   "Sesame seeds": "Sesamfr\u00F8", Shellfish: "Skalldyr", Soya: "Soya",
   Sulphites: "Sulfitter", Molluscs: "Bl\u00F8tdyr", Lupin: "Lupin"
-};
-
-/** Norwegian abbreviations for allergens on side dishes. */
-export const ALLERGEN_ABBREV_NO: Record<string, string> = {
-  Egg: "Eg", Fish: "Fi", Gluten: "Gl", Milk: "Me",
-  Nuts: "Nø", Peanuts: "Pn", Celery: "Se", Mustard: "Sn",
-  "Sesame seeds": "Ss", Shellfish: "Sk", Soya: "So",
-  Sulphites: "Su", Molluscs: "Bl", Lupin: "Lu",
 };
 
 export const CANTEEN_ORDER = ["Eat the street", "Fresh4you", "Flow"];
@@ -40,6 +25,8 @@ export interface CanteenLocationInfo {
   hours: string;
   lunchHours?: string;
   type: "canteen" | "bakery" | "cafe" | "dinner";
+  /** The kitchen's own logo (cut from its menu screen), shown in place of its name. */
+  logo?: string;
   coordinates: { x: number; y: number };
   color: string;
   darkColor: string;
@@ -53,6 +40,7 @@ export interface CanteenLocationInfo {
 export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
   {
     id: "street",
+    logo: "/logos/eat-the-street.png",
     canonicalKey: "Eat the street",
     name: "Eat The Street",
     shortName: "Eat The Street",
@@ -77,6 +65,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
   },
   {
     id: "fresh4you",
+    logo: "/logos/fresh4you.png",
     canonicalKey: "Fresh4you",
     name: "Fresh 4 You",
     shortName: "Fresh 4 You",
@@ -98,6 +87,7 @@ export const CANTEEN_LOCATIONS: CanteenLocationInfo[] = [
   },
   {
     id: "m",
+    logo: "/logos/kantine-m.png",
     canonicalKey: "Flow",
     name: "Kantine M",
     shortName: "Kantine M",
