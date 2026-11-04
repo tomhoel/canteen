@@ -1110,6 +1110,8 @@ body {
   display: block;
   height: 30px;
   width: auto;
+  /* Context, not headline: where you are, quieter than what you'll eat. */
+  opacity: 0.62;
 }
 
 .canteen-logo[data-canteen="fresh4you"] {
@@ -1123,6 +1125,7 @@ body {
   align-self: center;
   margin-left: 6px;
   color: var(--text-secondary);
+  opacity: 0.75;
   white-space: nowrap;
 }
 
@@ -1173,16 +1176,20 @@ body {
   border-color: rgba(251, 146, 60, 0.3);
 }
 
+/* The dish is what the eye should land on: heavier than the bold around it,
+   set tighter, and broken into even lines (no lone word on line two). The
+   logo and building above it step back to make the room. */
 .dish-name {
-  font-size: clamp(14px, 3.5vw, 16.5px);
-  font-weight: 700;
+  font-size: clamp(15px, 3.5vw, 19px);
+  font-weight: 760;
   color: var(--text-primary);
-  line-height: 1.35;
+  line-height: 1.22;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   text-align: center;
-  letter-spacing: -0.15px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 /* Dish Meta Row */
@@ -2060,8 +2067,8 @@ body {
 
   .dish-name {
     font-size: clamp(13px, 2.05dvh, 19px);
-    font-weight: 700;
-    line-height: 1.3;
+    font-weight: 760;
+    line-height: 1.2;
     margin-bottom: 0;
     text-align: left;
     justify-content: flex-start;
