@@ -245,6 +245,12 @@ body {
   overscroll-behavior: none;
 }
 
+/* Buttons do not inherit the page font by default; without this the day bar
+   (and every other button) was drawn in Arial beside Outfit. */
+button {
+  font-family: inherit;
+}
+
 /* Disable 300ms tap delay and accidental text selection on interactive elements */
 .day-btn,
 .info-btn,
@@ -1612,16 +1618,27 @@ body {
   box-shadow: none;
 }
 
-/* Today — warm glass tint */
+/* Today: an orange date and a small dot under it, not a pill of its own, so
+   only the selected day is ever a shape (a tinted "today" pill beside the
+   selected one read as two days chosen). */
 .day-btn.today:not(.active) {
-  background: rgba(200, 116, 26, 0.09);
-  border-color: rgba(200, 116, 26, 0.13);
   color: var(--text-primary);
 }
 
-.day-btn.today:not(.active):hover {
-  background: rgba(200, 116, 26, 0.15);
-  border-color: rgba(200, 116, 26, 0.2);
+.day-btn.today::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--accent-orange);
+}
+
+.day-btn.today.active::after {
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .day-label-name {
@@ -1637,6 +1654,7 @@ body {
   opacity: 0.55;
   letter-spacing: 0.02em;
   color: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
 .day-btn.active .day-label-date {
@@ -2340,21 +2358,24 @@ body {
     min-height: 44px;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.22);
+    /* Plain text: only the selected day's pill is a shape. */
+    border: 1px solid transparent;
+    background: transparent;
     text-shadow: none;
     font-weight: 600;
     color: var(--text-secondary);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: none;
     flex-direction: column;
     gap: 1px;
   }
 
   .day-btn.today:not(.active) {
-    background: rgba(200, 116, 26, 0.12);
-    border-color: rgba(200, 116, 26, 0.15);
     color: var(--text-primary);
     font-weight: 800;
+  }
+
+  .day-btn.today::after {
+    bottom: 3px;
   }
 
   .day-btn.active {
